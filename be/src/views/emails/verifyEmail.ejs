@@ -1,0 +1,163 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="UTF-8" />
+    <title>Xác thực Email</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <style>
+      body {
+        margin: 0;
+        padding: 0;
+        background-color: #f2f6f8;
+        font-family: "Segoe UI", Arial, sans-serif;
+      }
+
+      .wrapper {
+        width: 100%;
+        padding: 30px 12px;
+        background-color: #f2f6f8;
+      }
+
+      .container {
+        max-width: 520px;
+        margin: 0 auto;
+        background: #ffffff;
+        border-radius: 10px;
+        overflow: hidden;
+        box-shadow: 0 4px 16px rgba(0, 0, 0, 0.06);
+      }
+
+      .header {
+        background: #5a9cb5;
+        padding: 20px;
+        text-align: center;
+        color: #ffffff;
+      }
+
+      .header h1 {
+        margin: 0;
+        font-size: 22px;
+        font-weight: 600;
+      }
+
+      .content {
+        padding: 28px 24px;
+        color: #333333;
+        line-height: 1.6;
+      }
+
+      .content h2 {
+        margin-top: 0;
+        font-size: 20px;
+        color: #1f2937;
+      }
+
+      .content p {
+        margin: 10px 0;
+        font-size: 15px;
+      }
+
+      .btn-wrapper {
+        text-align: center;
+        margin: 24px 0;
+      }
+
+      .btn {
+        display: inline-block;
+        padding: 12px 22px;
+        background: #5a9cb5;
+        color: #ffffff !important;
+        text-decoration: none;
+        border-radius: 6px;
+        font-size: 15px;
+        font-weight: 600;
+      }
+
+      .btn:hover {
+        background: #4a8aa1;
+      }
+
+      .link-box {
+        background: #f6f9fb;
+        padding: 12px;
+        border-radius: 6px;
+        word-break: break-all;
+        font-size: 13px;
+        color: #374151;
+        border: 1px dashed #d1d5db;
+      }
+
+      .footer {
+        padding: 16px 24px;
+        background: #f8fafc;
+        text-align: center;
+        font-size: 12px;
+        color: #6b7280;
+      }
+
+      .footer p {
+        margin: 4px 0;
+      }
+
+      @media (max-width: 480px) {
+        .content {
+          padding: 20px 16px;
+        }
+
+        .header h1 {
+          font-size: 20px;
+        }
+      }
+    </style>
+  </head>
+
+  <body>
+    <div class="wrapper">
+      <div class="container">
+        <!-- Header -->
+        <div class="header">
+          <h1>XÁC THỰC TÀI KHOẢN</h1>
+        </div>
+
+        <!-- Content -->
+        <div class="content">
+          <h2>Xin chào <%= username %></h2>
+
+          <p>Cảm ơn bạn đã đăng ký tài khoản tại hệ thống của chúng tôi.</p>
+
+          <p>
+            Để hoàn tất quá trình đăng ký, vui lòng xác thực địa chỉ email của
+            bạn bằng cách nhấn vào nút bên dưới:
+          </p>
+
+          <div class="btn-wrapper">
+            <a href="<%= verifyUrl %>" class="btn">Xác thực Email</a>
+          </div>
+
+          <p>
+            Nếu bạn không thể nhấn vào nút, hãy sao chép và dán liên kết sau vào
+            trình duyệt:
+          </p>
+
+          <div class="link-box"><%= verifyUrl %></div>
+
+          <p>
+            Liên kết này sẽ hết hạn sau
+            <strong><%= expiresIn %> giờ</strong>.
+          </p>
+
+          <p>
+            Nếu bạn không thực hiện đăng ký tài khoản này, vui lòng bỏ qua
+            email.
+          </p>
+        </div>
+
+        <!-- Footer -->
+        <div class="footer">
+          <p>© <%= new Date().getFullYear() %> Ebay. All rights reserved.</p>
+          <p>Email này được gửi tự động, vui lòng không trả lời.</p>
+        </div>
+      </div>
+    </div>
+  </body>
+</html>
