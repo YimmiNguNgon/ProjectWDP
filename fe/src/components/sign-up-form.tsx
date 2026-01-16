@@ -23,14 +23,13 @@ import { toast } from 'sonner';
 
 export function SignupForm({ ...props }: React.ComponentProps<typeof Card>) {
   const [username, setUsername] = React.useState('');
-  const [email, setEmail] = React.useState('');
   const [password, setPassword] = React.useState('');
 
   const { signUp } = useAuth();
 
   const handleSubmit = async () => {
     try {
-      await signUp(username, email, password);
+      await signUp(username, password);
       toast.info('Sign up successfully', {
         position: 'top-center',
         closeButton: true,
@@ -63,17 +62,6 @@ export function SignupForm({ ...props }: React.ComponentProps<typeof Card>) {
               required
               value={username}
               onChange={(e) => setUsername(e.target.value)}
-            />
-          </Field>
-          <Field>
-            <FieldLabel htmlFor='email'>Email</FieldLabel>
-            <Input
-              id='email'
-              type='email'
-              placeholder='Enter your email'
-              required
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
             />
           </Field>
           <Field>

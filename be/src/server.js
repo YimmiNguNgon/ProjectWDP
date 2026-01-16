@@ -10,6 +10,7 @@ const cookieParser = require("cookie-parser");
 const connectDB = require("./config/db");
 const errorHandler = require("./middleware/errorHandler");
 const authRoutes = require("./routes/authRoutes");
+const productRoutes = require("./routes/products");
 const { protectedRoute } = require("./middleware/authMiddleware");
 
 dotenv.config();
@@ -40,6 +41,7 @@ app.use(morgan("dev"));
 
 // Import routes
 app.use("/api/v1/auth", authRoutes);
+app.use("/api/v1/products", productRoutes);
 
 // health check
 app.get("/health", (req, res) => res.json({ ok: true }));
