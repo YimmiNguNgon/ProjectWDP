@@ -5,6 +5,7 @@ import SignInPage from "@/pages/sign-in";
 import SignUpPage from "@/pages/sign-up";
 import ProductsPage from "@/pages/products";
 import ProductDetailPage from "@/pages/product-detail";
+import VerifyEmailPage from "@/pages/verify-email";
 
 import { MainLayout } from "@/layouts/main";
 import AuthLayout from "@/layouts/auth";
@@ -28,6 +29,10 @@ export const AppRouter = () => {
           element: <ProductDetailPage />,
         },
       ],
+    },
+    {
+      path: "/verify-email",
+      element: <VerifyEmailPage />,
     },
     {
       path: "/auth",

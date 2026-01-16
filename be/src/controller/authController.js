@@ -6,6 +6,7 @@ const nodemailer = require("nodemailer");
 const User = require("../models/User.js");
 const Session = require("../models/Session.js");
 const sendEmail = require("../utils/sendEmail.js");
+
 const ACCESS_TOKEN_TTL = "15m";
 const REFRESH_TOKEN_TTL = 14 * 24 * 60 * 60 * 1000;
 
@@ -40,7 +41,7 @@ exports.register = async (req, res, next) => {
       email,
       passwordHash: hashPassword,
       role: role || "buyer",
-      isEmailVerified: true, // Tạm thời set true cho môi trường dev
+      isEmailVerified: false, // Tạm thời set true cho môi trường dev
       emailVerificationToken: hashedToken,
       emailVerificationExpires: Date.now() + 24 * 60 * 60 * 1000, // 24h
     });
@@ -90,11 +91,11 @@ exports.login = async (req, res, next) => {
     }
 
     // Tạm thời tắt kiểm tra email verification cho môi trường dev
-    // if (!user.isEmailVerified) {
-    //   return res
-    //     .status(403)
-    //     .json({ message: "Please verify your email to log in" });
-    // }
+    if (!user.isEmailVerified) {
+      return res
+        .status(403)
+        .json({ message: "Please verify your email to log in" });
+    }
 
     const isMatch = await bcrypt.compare(password, user.passwordHash);
 
