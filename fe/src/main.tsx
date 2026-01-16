@@ -34,11 +34,13 @@ export function AuthProvider({ children }: PropsWithChildren) {
 
   const signUp = async (
     username: string,
+    email: string,
     password: string,
     role: string = 'buyer'
   ) => {
     const res = await api.post('/api/v1/auth/register', {
       username,
+      email,
       password,
       role,
     });

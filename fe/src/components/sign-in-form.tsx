@@ -58,9 +58,9 @@ export function SignInForm({
         <CardContent>
           <FieldGroup>
             <Field>
-              <FieldLabel htmlFor='email'>Username</FieldLabel>
+              <FieldLabel htmlFor='username'>Username</FieldLabel>
               <Input
-                id='email'
+                id='username'
                 type='text'
                 placeholder='Enter your username'
                 required

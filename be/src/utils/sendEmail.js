@@ -5,9 +5,8 @@ const path = require("path");
 const sendEmail = async ({ to, subject, template, data }) => {
   // 1. Cấu hình transporter
   if (!process.env.EMAIL_USER || !process.env.EMAIL_PASSWORD) {
-    throw new Error(
-      "Missing EMAIL_USER or EMAIL_PASS in environment variables"
-    );
+    console.log("⚠️ Email credentials not configured, skipping email send");
+    return; // Bỏ qua gửi email nếu không có config
   }
 
   const transporter = nodemailer.createTransport({

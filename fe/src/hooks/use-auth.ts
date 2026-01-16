@@ -14,7 +14,7 @@ export interface Payload {
 export interface AuthContextProps {
   user?: User;
   payload?: Payload;
-  signUp: (username: string, password: string, role?: string) => Promise<void>;
+  signUp: (username: string, email: string, password: string, role?: string) => Promise<void>;
   signIn: (username: string, password: string) => Promise<void>;
   signOut: () => void;
 }

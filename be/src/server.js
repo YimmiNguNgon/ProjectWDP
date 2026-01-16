@@ -59,8 +59,8 @@ async function start() {
     console.log(`Server is running on port ${PORT}`);
   });
 }
-
-start().catch((error) => {
+start().catch((err) => {
   console.error("Failed to start server:", err);
   process.exit(1);
 });
+

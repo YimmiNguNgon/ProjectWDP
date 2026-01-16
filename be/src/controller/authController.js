@@ -40,25 +40,30 @@ exports.register = async (req, res, next) => {
       email,
       passwordHash: hashPassword,
       role: role || "buyer",
+      isEmailVerified: true, // Tạm thời set true cho môi trường dev
       emailVerificationToken: hashedToken,
       emailVerificationExpires: Date.now() + 24 * 60 * 60 * 1000, // 24h
     });
 
     await newUser.save();
 
-    // Gửi email xác thực
-    const verifyUrl = `${process.env.CLIENT_URL}/verify-email?token=${verificationToken}`;
+    // Gửi email xác thực (optional - sẽ bỏ qua nếu không có email config)
+    try {
+      const verifyUrl = `${process.env.CLIENT_URL}/verify-email?token=${verificationToken}`;
 
-    await sendEmail({
-      to: email,
-      subject: "Xác thực tài khoản của bạn",
-      template: "verifyEmail.ejs",
-      data: {
-        username,
-        verifyUrl,
-        expiresIn: 24,
-      },
-    });
+      await sendEmail({
+        to: email,
+        subject: "Xác thực tài khoản của bạn",
+        template: "verifyEmail.ejs",
+        data: {
+          username,
+          verifyUrl,
+          expiresIn: 24,
+        },
+      });
+    } catch (emailError) {
+      console.log("Email sending failed (skipped in dev):", emailError.message);
+    }
 
     return res.sendStatus(204);
   } catch (error) {
@@ -68,25 +73,28 @@ exports.register = async (req, res, next) => {
 
 exports.login = async (req, res, next) => {
   try {
-    const { email, password } = req.body;
+    console.log("Login request body:", req.body); // Debug log
+    const { username, password } = req.body;
 
-    if (!email || !password) {
+    if (!username || !password) {
+      console.log("Missing fields - username:", username, "password:", password ? "exists" : "missing");
       return res
         .status(400)
-        .json({ message: "Email and password are required" });
+        .json({ message: "Username and password are required" });
     }
 
-    const user = await User.findOne({ email });
+    const user = await User.findOne({ username });
 
     if (!user) {
-      return res.status(401).json({ message: "Invalid email or password" });
+      return res.status(401).json({ message: "Invalid username or password" });
     }
 
-    if (!user.isEmailVerified) {
-      return res
-        .status(403)
-        .json({ message: "Please verify your email to log in" });
-    }
+    // Tạm thời tắt kiểm tra email verification cho môi trường dev
+    // if (!user.isEmailVerified) {
+    //   return res
+    //     .status(403)
+    //     .json({ message: "Please verify your email to log in" });
+    // }
 
     const isMatch = await bcrypt.compare(password, user.passwordHash);
 
@@ -119,10 +127,17 @@ exports.login = async (req, res, next) => {
       maxAge: REFRESH_TOKEN_TTL,
     });
 
-    // return access token
+    // return access token and user data
     return res.status(200).json({
       message: `User ${user.username} logged in`,
-      accessToken,
+      data: {
+        user: {
+          username: user.username,
+          email: user.email,
+          role: user.role,
+        },
+        token: accessToken,
+      },
     });
   } catch (error) {
     next(error);
