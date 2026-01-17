@@ -74,7 +74,8 @@ exports.register = async (req, res, next) => {
 
 exports.login = async (req, res, next) => {
   try {
-    console.log("Login request body:", req.body); // Debug log
+    console.log("=== LOGIN REQUEST START ===");
+    console.log("Login request body:", req.body);
     const { username, password } = req.body;
 
     if (!username || !password) {
@@ -84,24 +85,47 @@ exports.login = async (req, res, next) => {
         .json({ message: "Username and password are required" });
     }
 
+    console.log("Finding user with username:", username);
     const user = await User.findOne({ username });
 
     if (!user) {
+      console.log("User not found:", username);
       return res.status(401).json({ message: "Invalid username or password" });
     }
 
-    // Tạm thời tắt kiểm tra email verification cho môi trường dev
-    if (!user.isEmailVerified) {
-      return res
-        .status(403)
-        .json({ message: "Please verify your email to log in" });
+    console.log("User found:", {
+      id: user._id,
+      username: user.username,
+      hasPasswordHash: !!user.passwordHash,
+      passwordHash: user.passwordHash ? "exists" : "MISSING"
+    });
+
+    // Kiểm tra xem user có passwordHash không
+    if (!user.passwordHash) {
+      console.error("❌ User has no passwordHash! User data:", JSON.stringify(user, null, 2));
+      return res.status(500).json({
+        message: "Account configuration error. Please contact administrator."
+      });
     }
 
+    // Tạm thời tắt kiểm tra email verification cho môi trường dev
+    // if (!user.isEmailVerified) {
+    //   return res
+    //     .status(403)
+    //     .json({ message: "Please verify your email to log in" });
+    // }
+
+    console.log("Comparing password...");
     const isMatch = await bcrypt.compare(password, user.passwordHash);
+    console.log("Password match:", isMatch);
 
     if (!isMatch) {
+      console.log("Password mismatch for user:", username);
       return res.status(401).json({ message: "Invalid email or password" });
     }
+
+    console.log("Creating access token...");
+    console.log("ACCESS_TOKEN_SECRET exists:", !!process.env.ACCESS_TOKEN_SECRET);
 
     // tạo access token
     const accessToken = jwt.sign(
@@ -109,18 +133,24 @@ exports.login = async (req, res, next) => {
       process.env.ACCESS_TOKEN_SECRET,
       { expiresIn: ACCESS_TOKEN_TTL }
     );
+    console.log("Access token created");
 
     // tạo refresh token
+    console.log("Creating refresh token...");
     const refreshToken = crypto.randomBytes(64).toString("hex");
+    console.log("Refresh token created");
 
     // save refresh token vào db
+    console.log("Saving session to DB...");
     await Session.create({
       userId: user._id,
       refreshToken,
       expiresAt: new Date(Date.now() + REFRESH_TOKEN_TTL),
     });
+    console.log("Session saved");
 
     // trả về refresh token dưới dạng httpOnly cookie
+    console.log("Setting cookie...");
     res.cookie("refreshToken", refreshToken, {
       httpOnly: true,
       secure: true,
@@ -128,6 +158,7 @@ exports.login = async (req, res, next) => {
       maxAge: REFRESH_TOKEN_TTL,
     });
 
+    console.log("Login successful for user:", username);
     // return access token and user data
     return res.status(200).json({
       message: `User ${user.username} logged in`,
@@ -141,6 +172,8 @@ exports.login = async (req, res, next) => {
       },
     });
   } catch (error) {
+    console.error("❌ LOGIN ERROR:", error);
+    console.error("Error stack:", error.stack);
     next(error);
   }
 };

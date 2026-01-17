@@ -5,9 +5,8 @@ import axios, {
 } from "axios";
 
 const API_BASE_URL = (() => {
-  const url = import.meta.env.VITE_API_URL;
-  if (!url) throw new Error("VITE_API_BASE_URL is not set");
-  return url as string;
+  const url = import.meta.env.VITE_API_URL || 'http://localhost:8080';
+  return `${url}/api/v1`;
 })();
 
 const defaultConfig: AxiosRequestConfig = {
@@ -66,8 +65,8 @@ api.interceptors.response.use(
     const originalRequest = error.config;
 
     if (
-      error.response?.status === 401 && 
-      !originalRequest._retry && 
+      error.response?.status === 401 &&
+      !originalRequest._retry &&
       !originalRequest.url?.includes('/auth/login')
     ) {
       if (isRefreshing) {
@@ -88,7 +87,7 @@ api.interceptors.response.use(
 
       try {
         const response = await axios.post(
-          `${API_BASE_URL}/api/v1/auth/refresh`,
+          `${API_BASE_URL}/auth/refresh`,
           {},
           { withCredentials: true }
         );

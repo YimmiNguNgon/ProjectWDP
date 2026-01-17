@@ -81,3 +81,6 @@ fe/out/
 *.tmp
 *.temp
 .cache/
+
+# Custom folders to ignore
+Ebay_admina/
