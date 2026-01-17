@@ -1,0 +1,199 @@
+// src/controllers/orderController.js
+const mongoose = require("mongoose");
+const Order = require("../models/Order");
+const Product = require("../models/Product");
+
+/**
+ * Create order
+ * Body: { buyerId? (optional, admin), items: [{ productId | product, quantity }] }
+ * - Assumes items are from same seller. If mixed sellers, caller should create separate orders.
+ */
+exports.createOrder = async (req, res, next) => {
+  try {
+    const { buyerId, items } = req.body;
+    const buyer =
+      buyerId && req.user && req.user.role === "admin"
+        ? buyerId
+        : req.user && req.user._id;
+
+    if (!buyer || !Array.isArray(items) || items.length === 0) {
+      return res.status(400).json({ message: "buyer and items required" });
+    }
+
+    // normalize product ids from payload
+    const productIds = items
+      .map((it) => it.productId || it.product)
+      .filter(Boolean);
+
+    if (productIds.length === 0) {
+      return res.status(400).json({ message: "items must include productId" });
+    }
+
+    // validate product existence
+    const products = await Product.find({ _id: { $in: productIds } }).lean();
+    const productMap = {};
+    products.forEach((p) => (productMap[p._id.toString()] = p));
+
+    const orderItems = [];
+    let total = 0;
+    let sellerId = null;
+
+    for (const it of items) {
+      const pid = it.productId || it.product;
+      const p = productMap[pid];
+      if (!p)
+        return res.status(400).json({ message: `Product ${pid} not found` });
+
+      if (!sellerId) sellerId = p.sellerId || p.seller || null;
+      // If sellerId already set but different, reject (simpler) — avoid cross-seller order
+      if (
+        sellerId &&
+        (p.sellerId || p.seller) &&
+        (p.sellerId || p.seller).toString() !== sellerId.toString()
+      ) {
+        return res.status(400).json({
+          message:
+            "Items belong to multiple sellers; create separate orders per seller",
+        });
+      }
+
+      const qty = Number(it.quantity || 1);
+
+      // <-- KEY FIX: use `productId` to match Order model schema
+      orderItems.push({
+        productId: p._id, // schema requires productId
+        title: p.title,
+        price: p.price,
+        quantity: qty,
+      });
+
+      total += (p.price || 0) * qty;
+    }
+
+    // eBay Rule: Seller cannot buy their own products
+    if (sellerId && buyer.toString() === sellerId.toString()) {
+      return res.status(403).json({
+        message: 'You cannot purchase your own products',
+        error: 'SELF_PURCHASE_NOT_ALLOWED'
+      });
+    }
+
+    const orderDoc = {
+      buyer,
+      seller: sellerId,
+      items: orderItems,
+      totalAmount: total,
+      status: "created",
+    };
+
+    const order = await Order.create(orderDoc);
+
+    // Populate using the schema's field name: items.productId
+    const populated = await Order.findById(order._id)
+      .populate("buyer", "username")
+      .populate("seller", "username")
+      .populate("items.productId", "title price") // <- note productId
+      .lean();
+
+    return res.status(201).json({ data: populated });
+  } catch (err) {
+    next(err);
+  }
+};
+
+/**
+ * Get order by id (req.params.id)
+ */
+exports.getOrder = async (req, res, next) => {
+  try {
+    const id = req.params.id;
+    if (!id || !mongoose.isValidObjectId(id))
+      return res.status(400).json({ message: "Invalid id" });
+
+    // populate đúng path: "items.productId"
+    const o = await Order.findById(id)
+      .populate("buyer", "username")
+      .populate("seller", "username")
+      .populate("items.productId", "title price")
+      .lean(); // trả về plain object
+
+    if (!o) return res.status(404).json({ message: "Order not found" });
+
+    // auth: buyer, seller, admin can view
+    const me = req.user;
+    // an toàn với cả ObjectId/object/string: convert toString() or compare with equals if ObjectId
+    const meId = me._id ? me._id.toString() : String(me);
+
+    const buyerId =
+      o.buyer && o.buyer._id ? o.buyer._id.toString() : String(o.buyer);
+    const sellerId =
+      o.seller && o.seller._id ? o.seller._id.toString() : String(o.seller);
+
+    const isBuyer = buyerId === meId;
+    const isSeller = sellerId === meId;
+
+    if (!isBuyer && !isSeller && me.role !== "admin")
+      return res.status(403).json({ message: "Forbidden" });
+
+    return res.json({ data: o });
+  } catch (err) {
+    // Nếu bạn đang dùng Mongoose v7+ và nghi ngờ lỗi do strictPopulate,
+    // thông tin lỗi sẽ nằm trong err.message — không recommended disable.
+    next(err);
+  }
+};
+/**
+ * List orders for user (buyer or seller). If admin, can pass ?userId=
+ */
+exports.listOrdersForUser = async (req, res, next) => {
+  try {
+    const queryUser = req.query.userId;
+    const me = req.user;
+
+    let userId;
+    if (me.role === "admin" && queryUser) {
+      userId = queryUser;
+    } else {
+      userId = me._id;
+    }
+
+    if (!userId) return res.status(400).json({ message: "userId required" });
+
+    const role = req.query.role; // 'buyer' or 'seller'
+    let filter = { $or: [{ buyer: userId }, { seller: userId }] };
+
+    console.log('=== ORDER FILTER DEBUG ===');
+    console.log('User ID:', userId);
+    console.log('Role:', role);
+
+    if (role === 'buyer') {
+      filter = { buyer: userId };
+      console.log('Filtering as BUYER');
+    } else if (role === 'seller') {
+      filter = { seller: userId };
+      console.log('Filtering as SELLER');
+    }
+
+    console.log('Filter:', JSON.stringify(filter));
+
+
+    const rows = await Order.find(filter)
+      .sort({ createdAt: -1 })
+      .limit(200)
+      .populate("buyer", "username")
+      .populate("seller", "username")
+      .populate("items.productId", "title price")
+      .lean();
+
+    console.log('Orders found:', rows.length);
+    if (rows.length > 0) {
+      console.log('First order - Buyer:', rows[0].buyer?.username, 'Seller:', rows[0].seller?.username);
+    }
+    console.log('=== END DEBUG ===\n');
+
+
+    return res.json({ data: rows });
+  } catch (err) {
+    next(err);
+  }
+};
