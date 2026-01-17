@@ -1,3 +1,4 @@
+const Category = require("../models/Category");
 const Product = require("../models/Product");
 
 exports.createProduct = async (req, res, next) => {
@@ -39,12 +40,44 @@ exports.listProducts = async (req, res, next) => {
     const page = Math.max(1, parseInt(req.query.page) || 1);
     const limit = Math.min(parseInt(req.query.limit) || 20, 100);
     const skip = (page - 1) * limit;
-    const products = await Product.find()
+
+    const { categories, minPrice, maxPrice } = req.query;
+
+    const filter = {};
+
+    if (categories) {
+      const categorySlugs = categories.split(",");
+
+      const categoryDocs = await Category.find({
+        slug: { $in: categorySlugs },
+      }).select("_id");
+
+      if (categoryDocs.length > 0) {
+        filter.categories = {
+          $in: categoryDocs.map((c) => c._id),
+        };
+      }
+    }
+
+    // Price filter
+    if (minPrice !== undefined || maxPrice !== undefined) {
+      filter.price = {};
+      if (minPrice !== undefined) {
+        filter.price.$gte = parseFloat(minPrice);
+      }
+      if (maxPrice !== undefined) {
+        filter.price.$lte = parseFloat(maxPrice);
+      }
+    }
+
+    const total = await Product.countDocuments(filter);
+    const products = await Product.find(filter)
       .sort({ createdAt: -1 })
       .skip(skip)
       .limit(limit)
+      .populate("categories", "name slug")
       .lean();
-    return res.json({ data: products });
+    return res.json({ page, limit, total, data: products });
   } catch (err) {
     next(err);
   }
