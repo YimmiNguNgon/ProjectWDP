@@ -22,7 +22,7 @@ createRoot(document.getElementById("root")!).render(
       </BrowserRouter>
       <Toaster />
     </AuthProvider>
-  </StrictMode>
+  </StrictMode>,
 );
 
 export function AuthProvider({ children }: PropsWithChildren) {
@@ -59,19 +59,16 @@ export function AuthProvider({ children }: PropsWithChildren) {
     username: string,
     email: string,
     password: string,
-    role: string = "buyer"
+    role: string = "buyer",
   ) => {
     try {
-      setLoading(true)
-      const res = await api.post("/api/v1/auth/register", {
-      username,
-      email,
-      password,
-      role,
-    });
-    const { user, token } = res.data.data;
-    setUser({ username: user.username, role: user.role });
-    setAuthToken(token);
+      setLoading(true);
+      await api.post("/api/v1/auth/register", {
+        username,
+        email,
+        password,
+        role,
+      });
     } catch (error) {
       console.error("Failed to sign up:", error);
       throw error;
@@ -82,7 +79,7 @@ export function AuthProvider({ children }: PropsWithChildren) {
 
   const signIn = async (username: string, password: string) => {
     try {
-      setLoading(true)
+      setLoading(true);
       const res = await api.post("/api/v1/auth/login", { username, password });
       const { user, token } = res.data.data;
       setUser({ username: user.username, role: user.role });
@@ -97,7 +94,7 @@ export function AuthProvider({ children }: PropsWithChildren) {
 
   const fetchMe = async () => {
     try {
-      setLoading(true)
+      setLoading(true);
       const res = await api.get("/api/v1/users/me");
       const { user } = res.data;
       setUser(user);
@@ -131,17 +128,21 @@ export function AuthProvider({ children }: PropsWithChildren) {
     try {
       setLoading(true);
       // Call refresh endpoint with credentials (cookies)
-      const res = await api.post("/api/v1/auth/refresh", {}, {
-        withCredentials: true
-      });
+      const res = await api.post(
+        "/api/v1/auth/refresh",
+        {},
+        {
+          withCredentials: true,
+        },
+      );
       // Backend returns new access token in res.data.accessToken based on userController.js
       const { accessToken } = res.data;
 
       setAuthToken(accessToken);
-      
+
       const payload = jwtDecode<Payload>(accessToken);
       setPayload(payload);
-      
+
       toast.success("Làm mới token thành công!");
     } catch (error) {
       console.error("Refresh token failed:", error);
