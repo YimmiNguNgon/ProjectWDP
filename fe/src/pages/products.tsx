@@ -95,7 +95,7 @@ export default function ProductsPage() {
   useEffect(() => {
     const fetchCategories = async () => {
       try {
-        const res = await api.get("/categories");
+        const res = await api.get("/api/categories");
         setCategories(res.data.data || []);
       } catch (error) {
         console.error("Failed to fetch categories:", error);
@@ -114,7 +114,7 @@ export default function ProductsPage() {
 
         params.append("minPrice", debouncedPriceRange[0].toString());
         params.append("maxPrice", debouncedPriceRange[1].toString());
-        const res = await api.get(`/products?${params.toString()}`);
+        const res = await api.get(`/api/products?${params.toString()}`);
         setProducts(res.data.data);
         setTotalPages(Math.ceil((res.data.total || 0) / itemsPerPage));
       } catch (error) {

@@ -63,7 +63,7 @@ export function AuthProvider({ children }: PropsWithChildren) {
   ) => {
     try {
       setLoading(true);
-      await api.post("/auth/register", {
+      await api.post("/api/auth/register", {
         username,
         email,
         password,
@@ -80,7 +80,7 @@ export function AuthProvider({ children }: PropsWithChildren) {
   const signIn = async (username: string, password: string) => {
     try {
       setLoading(true);
-      const res = await api.post("/auth/login", { username, password });
+      const res = await api.post("/api/auth/login", { username, password });
       const { user, token } = res.data.data;
       setUser({ username: user.username, role: user.role });
       setAuthToken(token);
@@ -95,7 +95,7 @@ export function AuthProvider({ children }: PropsWithChildren) {
   const fetchMe = async () => {
     try {
       setLoading(true);
-      const res = await api.get("/users/me");
+      const res = await api.get("/api/users/me");
       const { user } = res.data;
       setUser(user);
     } catch (error) {
@@ -108,7 +108,7 @@ export function AuthProvider({ children }: PropsWithChildren) {
 
   const signOut = async () => {
     try {
-      await api.post("/auth/logout");
+      await api.post("/api/auth/logout");
       setAuthToken(null);
       setUser(undefined);
       setPayload(undefined);
@@ -129,7 +129,7 @@ export function AuthProvider({ children }: PropsWithChildren) {
       setLoading(true);
       // Call refresh endpoint with credentials (cookies)
       const res = await api.post(
-        "/auth/refresh",
+        "/api/auth/refresh",
         {},
         {
           withCredentials: true,

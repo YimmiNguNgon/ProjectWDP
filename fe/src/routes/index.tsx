@@ -14,6 +14,8 @@ import { MainLayout } from "@/layouts/main";
 import AuthLayout from "@/layouts/auth";
 import UserProfilePage from "@/pages/profile";
 import AdminLayout from "@/layouts/admin";
+import PurchaseHistoryPage from "@/pages/purchases/purchase-history-page";
+import LeaveFeedbackPage from "@/pages/purchases/leave-feedback-page";
 
 // Placeholder components for admin pages
 const AdminComplaints = () => (
@@ -51,6 +53,14 @@ export const AppRouter = () => {
         {
           path: "products/:productId",
           element: <ProductDetailPage />,
+        },
+        {
+          path: "my-ebay/activity/purchases",
+          element: <PurchaseHistoryPage />,
+        },
+        {
+          path: "purchases/:orderId/feedback/:productId",
+          element: <LeaveFeedbackPage />,
         },
       ],
     },
