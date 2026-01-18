@@ -49,31 +49,43 @@ export const uploadImageToCloudinary = async (file: File): Promise<string> => {
 export const updateUserProfile = async (
   payload: UpdateProfilePayload,
 ): Promise<UpdateProfileResponse> => {
-  const response = await api.put<UpdateProfileResponse>(
-    "/users/update-user-profile",
-    payload,
-  );
-  return response.data;
+  try {
+    const response = await api.put<UpdateProfileResponse>(
+      "/api/users/update-user-profile",
+      payload,
+    );
+    return response.data;
+  } catch (error) {
+    throw error;
+  }
 };
 
 /**
  * Update user email
  */
 export const updateUserEmail = async (email: string): Promise<any> => {
-  const response = await api.put("/users/update-user-email", { email });
-  return response.data;
+  try {
+    const response = await api.put("/api/users/update-user-email", { email });
+    return response.data;
+  } catch (error) {
+    throw error;
+  }
 };
 
 /**
  * Change user password
  */
 export const changeUserPassword = async (
-  oldPassword: string,
+  currentPassword: string,
   newPassword: string,
 ): Promise<any> => {
-  const response = await api.put("/users/change-password", {
-    oldPassword,
-    newPassword,
-  });
-  return response.data;
+  try {
+    const response = await api.put("/api/users/change-password", {
+      currentPassword,
+      newPassword,
+    });
+    return response.data;
+  } catch (error) {
+    throw error;
+  }
 };

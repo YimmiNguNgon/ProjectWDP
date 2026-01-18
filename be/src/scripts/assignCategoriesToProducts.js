@@ -23,7 +23,7 @@ const Category = require("../models/Category.js");
         },
       },
       {
-        $set: { categories: [electronics._id] },
+        $set: { categoryId: electronics._id },
       },
     );
 
@@ -31,7 +31,7 @@ const Category = require("../models/Category.js");
     await Product.updateMany(
       { title: { $regex: "chair", $options: "i" } },
       {
-        $set: { categories: [homeGarden._id] },
+        $set: { categoryId: homeGarden._id },
       },
     );
 

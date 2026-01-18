@@ -29,6 +29,7 @@ export function AuthProvider({ children }: PropsWithChildren) {
   const [user, setUser] = React.useState<User>();
   const [payload, setPayload] = React.useState<Payload>();
   const [loading, setLoading] = React.useState<boolean>(false);
+  const [accessToken, setAccessToken] = React.useState<string | null>(null);
 
   React.useEffect(() => {
     const checkAuth = async () => {
@@ -39,6 +40,7 @@ export function AuthProvider({ children }: PropsWithChildren) {
         const payload = jwtDecode<Payload>(token);
         const currentTime = Date.now() / 1000;
 
+        setAccessToken(token);
         if (payload.exp && payload.exp < currentTime) {
           await refresh();
         } else {
@@ -81,9 +83,13 @@ export function AuthProvider({ children }: PropsWithChildren) {
     try {
       setLoading(true);
       const res = await api.post("/api/auth/login", { username, password });
-      const { user, token } = res.data.data;
-      setUser({ username: user.username, role: user.role });
+      const { token } = res.data.data;
       setAuthToken(token);
+      localStorage.setItem("token", token);
+      setAccessToken(token);
+      
+      // Fetch full user profile immediately
+      await fetchMe();
     } catch (error) {
       console.error("Failed to sign in:", error);
       throw error;
@@ -112,14 +118,16 @@ export function AuthProvider({ children }: PropsWithChildren) {
       setAuthToken(null);
       setUser(undefined);
       setPayload(undefined);
+      setAccessToken(null);
       localStorage.removeItem("token");
-      toast.success("Đăng xuất thành công!");
+      toast.success("Log out successfully!");
     } catch (error) {
       console.error(error);
-      toast.error("Đăng xuất thất bại!");
+      toast.error("Failed to log out!");
       setAuthToken(null);
       setUser(undefined);
       setPayload(undefined);
+      setAccessToken(null);
       localStorage.removeItem("token");
     }
   };
@@ -127,7 +135,6 @@ export function AuthProvider({ children }: PropsWithChildren) {
   const refresh = async () => {
     try {
       setLoading(true);
-      // Call refresh endpoint with credentials (cookies)
       const res = await api.post(
         "/api/auth/refresh",
         {},
@@ -135,10 +142,11 @@ export function AuthProvider({ children }: PropsWithChildren) {
           withCredentials: true,
         },
       );
-      // Backend returns new access token in res.data.accessToken based on userController.js
       const { accessToken } = res.data;
 
       setAuthToken(accessToken);
+      localStorage.setItem("token", accessToken);
+      setAccessToken(accessToken);
 
       const payload = jwtDecode<Payload>(accessToken);
       setPayload(payload);
@@ -161,6 +169,7 @@ export function AuthProvider({ children }: PropsWithChildren) {
     signOut,
     refresh,
     fetchMe,
+    accessToken,
     setUser,
     setToken: (token: string) => {
       setAuthToken(token);

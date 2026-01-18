@@ -2,6 +2,8 @@
 const mongoose = require("mongoose");
 const User = require("../models/User");
 
+const bcrypt = require("bcryptjs");
+
 // ----------------- ADMIN: BAN USER -----------------
 exports.adminBanUser = async (req, res, next) => {
   try {
@@ -277,6 +279,37 @@ exports.updateEmail = async (req, res, next) => {
     await user.save();
 
     return res.status(200).json({ message: "Email updated successfully" });
+  } catch (error) {
+    next(error);
+  }
+};
+
+exports.changePassword = async (req, res, next) => {
+  try {
+    const userId = req.user._id;
+    const { currentPassword, newPassword } = req.body;
+
+    const user = await User.findById(userId);
+
+    if (!user) {
+      return res.status(404).json({ message: "User not found" });
+    }
+
+    const isPasswordValid = await bcrypt.compare(
+      currentPassword,
+      user.passwordHash,
+    );
+
+    if (!isPasswordValid) {
+      return res.status(400).json({ message: "Current password is incorrect" });
+    }
+
+    const hashedNewPassword = await bcrypt.hash(newPassword, 10);
+
+    user.passwordHash = hashedNewPassword;
+    await user.save();
+
+    return res.status(200).json({ message: "Password updated successfully" });
   } catch (error) {
     next(error);
   }
