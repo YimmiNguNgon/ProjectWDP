@@ -161,6 +161,12 @@ export function AuthProvider({ children }: PropsWithChildren) {
     signOut,
     refresh,
     fetchMe,
+    setUser,
+    setToken: (token: string) => {
+      setAuthToken(token);
+      const payload = jwtDecode<Payload>(token);
+      setPayload(payload);
+    },
   };
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
