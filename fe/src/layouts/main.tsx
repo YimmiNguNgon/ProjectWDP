@@ -23,9 +23,9 @@ import {
 import { toast } from 'sonner';
 
 const LEFT_NAV_ITEMS = [
-  { name: 'Daily Deals', to: '/products' },
-  { name: 'Brand Outlet', to: '/products' },
-  { name: 'Gift Cards', to: '/products' },
+  { name: 'Daily Deals', to: '#' },
+  { name: 'Brand Outlet', to: '#' },
+  { name: 'Gift Cards', to: '#' },
   { name: 'Help & Contact', to: '#' },
 ] as const;
 
