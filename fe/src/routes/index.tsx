@@ -12,6 +12,7 @@ import ProductManagement from "@/pages/admin/product-management";
 
 import { MainLayout } from "@/layouts/main";
 import AuthLayout from "@/layouts/auth";
+import UserProfilePage from "@/pages/profile";
 import AdminLayout from "@/layouts/admin";
 
 // Placeholder components for admin pages
@@ -38,6 +39,10 @@ export const AppRouter = () => {
         {
           index: true,
           element: <HomePage />,
+        },
+        {
+          path: "profile",
+          element: <UserProfilePage />,
         },
         {
           path: "products",

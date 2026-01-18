@@ -37,7 +37,10 @@ export default function UserMenu() {
         align="start"
         className="mt-2 p-4 w-56 flex flex-col gap-2"
       >
-        <div className="flex flex-row gap-2 items-center">
+        <div
+          className="flex flex-row gap-2 items-center cursor-pointer"
+          onClick={() => navigate("/profile")}
+        >
           <Avatar className="h-10 w-10">
             <AvatarImage src={user.avatarUrl} alt={user.username} />
             <AvatarFallback className="bg-[#AAED56] text-[#324E0F] font-bold text-lg">

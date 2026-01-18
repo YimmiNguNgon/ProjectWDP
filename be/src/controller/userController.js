@@ -226,3 +226,58 @@ exports.authMe = async (req, res) => {
     return res.status(500).json({ message: "Internal Server Error" });
   }
 };
+
+exports.updateProfile = async (req, res, next) => {
+  try {
+    const userId = req.user._id;
+    const { username, avatarUrl } = req.body;
+
+    if (!username) {
+      return res.status(400).json({ message: "Username is required" });
+    }
+
+    const user = await User.findById(userId);
+
+    if (!user) {
+      return res.status(404).json({ message: "User not found" });
+    }
+
+    user.username = username;
+    if (avatarUrl !== undefined) {
+      user.avatarUrl = avatarUrl;
+    }
+
+    await user.save();
+
+    return res.status(200).json({ message: "Profile updated successfully" });
+  } catch (error) {
+    next(error);
+  }
+};
+
+exports.updateEmail = async (req, res, next) => {
+  try {
+    const userId = req.user._id;
+    const { email } = req.body;
+
+    if (!email) {
+      return res.status(400).json({ message: "Email is required" });
+    }
+
+    const user = await User.findById(userId);
+
+    if (!user) {
+      return res.status(404).json({ message: "User not found" });
+    }
+
+    // sau này làm login google thì check provider
+    // nếu provider != local thì ko cho đổi email
+
+    user.email = email;
+    await user.save();
+
+    return res.status(200).json({ message: "Email updated successfully" });
+  } catch (error) {
+    next(error);
+  }
+};
