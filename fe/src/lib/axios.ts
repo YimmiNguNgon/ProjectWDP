@@ -6,8 +6,9 @@ import axios, {
 
 const API_BASE_URL = (() => {
   const url = import.meta.env.VITE_API_URL;
-  if (!url) throw new Error("VITE_API_BASE_URL is not set");
-  return url as string;
+  if (!url) throw new Error("VITE_API_URL is not set");
+  // Ensure URL ends with /api
+  return url.endsWith('/api') ? url : `${url}/api`;
 })();
 
 const defaultConfig: AxiosRequestConfig = {
