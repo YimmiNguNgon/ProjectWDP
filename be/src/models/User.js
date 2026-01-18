@@ -16,6 +16,7 @@ const userSchema = new mongoose.Schema(
       index: true,
     },
     passwordHash: String,
+    avatarUrl: { type: String, default: "" },
     reputationScore: { type: Number, default: 0 }, // computed
 
     // Email verification
@@ -45,8 +46,15 @@ const userSchema = new mongoose.Schema(
     lastViolationAt: { type: Date },
     warningCount: { type: Number, default: 0 },
     lastWarningAt: { type: Date },
+
+    // để sau làm login google
+    // provider: {
+    //   type: String,
+    //   enum: ["local", "google", "github"],
+    //   default: "local",
+    // },
   },
-  { timestamps: true }
+  { timestamps: true },
 );
 
 module.exports = mongoose.model("User", userSchema);
