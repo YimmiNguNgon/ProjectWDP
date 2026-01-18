@@ -104,12 +104,12 @@ export function SignInForm({
               <Field>
                 <div className='flex items-center'>
                   <FieldLabel htmlFor='password'>Password</FieldLabel>
-                  <a
-                    href='#'
+                  <Link
+                    to='/auth/forgot-password'
                     className='ml-auto inline-block text-sm underline-offset-4 hover:underline'
                   >
                     Forgot your password?
-                  </a>
+                  </Link>
                 </div>
                 <Password
                   id='password'
@@ -123,7 +123,14 @@ export function SignInForm({
                 <Button type='submit' className="w-full cursor-pointer">
                   Login
                 </Button>
-                <Button variant='outline' type='button' className="w-full cursor-pointer">
+                <Button
+                  variant='outline'
+                  type='button'
+                  className="w-full cursor-pointer"
+                  onClick={() => {
+                    window.location.href = `${import.meta.env.VITE_API_URL}/api/auth/google`;
+                  }}
+                >
                   Login with Google
                 </Button>
                 <FieldDescription className='text-center'>

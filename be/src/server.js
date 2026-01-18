@@ -6,6 +6,10 @@ const morgan = require("morgan");
 const dotenv = require("dotenv");
 const cookieParser = require("cookie-parser");
 const bcrypt = require("bcryptjs");
+const passport = require("passport");
+
+// Load environment variables FIRST
+dotenv.config();
 
 // Import Files
 const connectDB = require("./config/db");
@@ -19,7 +23,8 @@ const adminRoutes = require("./routes/adminRoutes");
 const orderRoutes = require("./routes/orders");
 const User = require("./models/User");
 
-dotenv.config();
+// Passport config (sau khi dotenv.config())
+require("./config/passport");
 
 const app = express();
 
@@ -43,10 +48,12 @@ app.use(
 app.use(
   helmet({
     crossOriginResourcePolicy: { policy: "cross-origin" },
+    contentSecurityPolicy: false, // Tắt CSP để tránh conflict với OAuth
   }),
 );
 app.use(express.json({ limit: "10mb" }));
 app.use(cookieParser());
+app.use(passport.initialize());
 app.use(morgan("dev"));
 
 // Import routes
