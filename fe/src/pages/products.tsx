@@ -26,12 +26,13 @@ import api from "@/lib/axios";
 import { cn } from "@/lib/utils";
 import { Heart, ShoppingCart, Star, Package } from "lucide-react";
 import React, { useEffect } from "react";
-import { Link } from "react-router-dom";
+import { Link, useSearchParams } from "react-router-dom";
 
 interface Category {
   _id: string;
   name: string;
   slug: string;
+  imageUrl?: string;
 }
 
 const ratings = [1, 2, 3, 4, 5];
@@ -55,19 +56,41 @@ export interface Product {
 }
 
 export default function ProductsPage() {
+  const [searchParams, setSearchParams] = useSearchParams();
   const [products, setProducts] = React.useState<Product[]>([]);
   const [categories, setCategories] = React.useState<Category[]>([]);
+
+  // Initialize state from URL params
   const [selectedCategories, setSelectedCategories] = React.useState<string[]>(
-    [],
+    searchParams.get("categories")
+      ? searchParams.get("categories")!.split(",")
+      : [],
   );
   const [priceRange, setPriceRange] = React.useState<[number, number]>([
-    0, 10000,
+    parseInt(searchParams.get("minPrice") || "0"),
+    parseInt(searchParams.get("maxPrice") || "10000"),
   ]);
-  const [currentPage, setCurrentPage] = React.useState(1);
+  const [currentPage, setCurrentPage] = React.useState(
+    parseInt(searchParams.get("page") || "1"),
+  );
   const [totalPages, setTotalPages] = React.useState(1);
   const itemsPerPage = 10;
 
   const debouncedPriceRange = useDebounce(priceRange, 300);
+
+  // Update URL when filters change
+  useEffect(() => {
+    const params = new URLSearchParams();
+    if (selectedCategories.length > 0) {
+      params.set("categories", selectedCategories.join(","));
+    }
+    params.set("minPrice", priceRange[0].toString());
+    params.set("maxPrice", priceRange[1].toString());
+    if (currentPage > 1) {
+      params.set("page", currentPage.toString());
+    }
+    setSearchParams(params);
+  }, [selectedCategories, priceRange, currentPage, setSearchParams]);
 
   useEffect(() => {
     const fetchCategories = async () => {

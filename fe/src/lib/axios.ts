@@ -5,8 +5,9 @@ import axios, {
 } from "axios";
 
 const API_BASE_URL = (() => {
-  const url = import.meta.env.VITE_API_URL || 'http://localhost:8080';
-  return `${url}/api`;
+  const url = import.meta.env.VITE_API_URL;
+  if (!url) throw new Error("VITE_API_BASE_URL is not set");
+  return url as string;
 })();
 
 const defaultConfig: AxiosRequestConfig = {
@@ -28,14 +29,7 @@ let failedQueue: Array<{
 }> = [];
 
 const processQueue = (error: any, token: string | null = null) => {
-  failedQueue.forEach((prom) => {
-    if (error) {
-      prom.reject(error);
-    } else {
-      prom.resolve(token!);
-    }
-  });
-  isRefreshing = false;
+  failedQueue.forEach((p) => (error ? p.reject(error) : p.resolve(token!)));
   failedQueue = [];
 };
 
@@ -56,66 +50,59 @@ api.interceptors.request.use(
     }
     return config;
   },
-  (error) => Promise.reject(error)
+  (error) => Promise.reject(error),
 );
 
 api.interceptors.response.use(
-  (response: AxiosResponse) => response,
+  (response) => response,
   async (error) => {
-    const originalRequest = error.config;
+    const originalRequest = error.config as AxiosRequestConfig & {
+      _retry?: boolean;
+    };
 
     if (
       error.response?.status === 401 &&
       !originalRequest._retry &&
-      !originalRequest.url?.includes('/auth/login')
+      !originalRequest.url?.includes("/auth/login") &&
+      !originalRequest.url?.includes("/auth/refresh")
     ) {
       if (isRefreshing) {
         return new Promise((resolve, reject) => {
           failedQueue.push({ resolve, reject });
-        })
-          .then((token) => {
-            originalRequest.headers.Authorization = `Bearer ${token}`;
-            return api(originalRequest);
-          })
-          .catch((err) => {
-            return Promise.reject(err);
-          });
+        }).then((token) => {
+          originalRequest.headers = originalRequest.headers ?? {};
+          originalRequest.headers.Authorization = `Bearer ${token}`;
+          return api(originalRequest);
+        });
       }
 
       originalRequest._retry = true;
       isRefreshing = true;
 
       try {
-        const response = await axios.post(
-          `${API_BASE_URL}/auth/refresh`,
-          {},
-          { withCredentials: true }
-        );
+        const res = await api.post("/auth/refresh");
+        const { accessToken } = res.data;
 
-        console.log("Refresh successful", response.data);
-        const { accessToken } = response.data;
         setAuthToken(accessToken);
-
         api.defaults.headers.common.Authorization = `Bearer ${accessToken}`;
-        originalRequest.headers.Authorization = `Bearer ${accessToken}`;
 
         processQueue(null, accessToken);
+
+        originalRequest.headers = originalRequest.headers ?? {};
+        originalRequest.headers.Authorization = `Bearer ${accessToken}`;
         return api(originalRequest);
       } catch (err) {
-        console.error("Interceptor refresh failed:", err);
         processQueue(err, null);
-        localStorage.removeItem("token");
+        setAuthToken(null);
         window.location.href = "/auth/sign-in";
         return Promise.reject(err);
+      } finally {
+        isRefreshing = false;
       }
     }
 
-    if (error.response?.status === 401) {
-      localStorage.removeItem("token");
-    }
-
-    throw error;
-  }
+    return Promise.reject(error);
+  },
 );
 
 export function setAuthToken(token: string | null) {
