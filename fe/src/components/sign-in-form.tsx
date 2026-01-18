@@ -19,30 +19,61 @@ import { Link, useNavigate } from 'react-router-dom';
 import React from 'react';
 import { useAuth } from '@/hooks/use-auth';
 import { toast } from 'sonner';
+import { z } from "zod";
+import { useForm } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
+
+const signInSchema = z.object({
+  username: z.string().min(3, "Username must be at least 3 characters"),
+  password: z.string(),
+});
+
+type SignInValues = z.infer<typeof signInSchema>;
 
 export function SignInForm({
   className,
   ...props
 }: React.ComponentProps<'div'>) {
-  const [username, setUsername] = React.useState('');
-  const [password, setPassword] = React.useState('');
-
   const navigate = useNavigate();
   const { signIn } = useAuth();
 
-  const handleSubmit = async () => {
+  const {
+    register,
+    handleSubmit,
+    formState: { errors },
+  } = useForm<SignInValues>({
+    resolver: zodResolver(signInSchema),
+    defaultValues: {
+      username: "",
+      password: "",
+    },
+  });
+
+  const onSubmit = async (data: SignInValues) => {
     try {
-      await signIn(username, password);
+      await signIn(data.username, data.password);
       navigate('/');
       toast.info('Sign in successfully', {
         position: 'top-center',
         closeButton: true,
       });
-    } catch {
-      toast.error('Invalid username or password', {
-        position: 'top-center',
-        closeButton: true,
-      });
+    } catch (error: any) {
+      if (error.response?.status === 401) {
+        toast.error(error.response?.data?.message || 'Invalid username or password', {
+          position: 'top-center',
+          closeButton: true,
+        });
+      } else if (error.response?.status === 403) {
+        toast.warning('Please verify your email first', {
+          position: 'top-center',
+          closeButton: true,
+        });
+      } else {
+        toast.error('Invalid username or password', {
+          position: 'top-center',
+          closeButton: true,
+        });
+      }
     }
   };
 
@@ -56,49 +87,52 @@ export function SignInForm({
           </CardDescription>
         </CardHeader>
         <CardContent>
-          <FieldGroup>
-            <Field>
-              <FieldLabel htmlFor='email'>Username</FieldLabel>
-              <Input
-                id='email'
-                type='text'
-                placeholder='Enter your username'
-                required
-                value={username}
-                onChange={(e) => setUsername(e.target.value)}
-              />
-            </Field>
-            <Field>
-              <div className='flex items-center'>
-                <FieldLabel htmlFor='password'>Password</FieldLabel>
-                <a
-                  href='#'
-                  className='ml-auto inline-block text-sm underline-offset-4 hover:underline'
-                >
-                  Forgot your password?
-                </a>
-              </div>
-              <Password
-                required
-                id='password'
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-              />
-              {/* <Input id='password' type='password' required /> */}
-            </Field>
-            <Field>
-              <Button type='submit' onClick={handleSubmit}>
-                Login
-              </Button>
-              <Button variant='outline' type='button'>
-                Login with Google
-              </Button>
-              <FieldDescription className='text-center'>
-                Don&apos;t have an account?{' '}
-                <Link to='/auth/sign-up'>Sign up</Link>
-              </FieldDescription>
-            </Field>
-          </FieldGroup>
+          <form onSubmit={handleSubmit(onSubmit)}>
+            <FieldGroup>
+              <Field>
+                <FieldLabel htmlFor='email'>Username</FieldLabel>
+                <Input
+                  id='email'
+                  type='text'
+                  placeholder='Enter your username'
+                  {...register("username")}
+                />
+                {errors.username && (
+                  <p className="text-sm text-destructive">{errors.username.message}</p>
+                )}
+              </Field>
+              <Field>
+                <div className='flex items-center'>
+                  <FieldLabel htmlFor='password'>Password</FieldLabel>
+                  <a
+                    href='#'
+                    className='ml-auto inline-block text-sm underline-offset-4 hover:underline'
+                  >
+                    Forgot your password?
+                  </a>
+                </div>
+                <Password
+                  id='password'
+                  {...register("password")}
+                />
+                {errors.password && (
+                  <p className="text-sm text-destructive">{errors.password.message}</p>
+                )}
+              </Field>
+              <Field>
+                <Button type='submit' className="w-full cursor-pointer">
+                  Login
+                </Button>
+                <Button variant='outline' type='button' className="w-full cursor-pointer">
+                  Login with Google
+                </Button>
+                <FieldDescription className='text-center'>
+                  Don&apos;t have an account?{' '}
+                  <Link to='/auth/sign-up'>Sign up</Link>
+                </FieldDescription>
+              </Field>
+            </FieldGroup>
+          </form>
         </CardContent>
       </Card>
     </div>

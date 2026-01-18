@@ -1,17 +1,20 @@
-import React, { StrictMode, type PropsWithChildren } from 'react';
-import { createRoot } from 'react-dom/client';
-import { BrowserRouter } from 'react-router-dom';
-import { AppRouter } from './routes/index.tsx';
-import './index.css';
+import React, { StrictMode, type PropsWithChildren } from "react";
+import { createRoot } from "react-dom/client";
+import { BrowserRouter } from "react-router-dom";
+import { AppRouter } from "./routes/index.tsx";
+import "./index.css";
 import {
   AuthContext,
   type AuthContextProps,
   type Payload,
   type User,
-} from './hooks/use-auth.ts';
-import api, { setAuthToken } from './lib/axios.ts';
-import { Toaster } from './components/ui/sonner.tsx';
-createRoot(document.getElementById('root')!).render(
+} from "./hooks/use-auth.ts";
+import api, { setAuthToken } from "./lib/axios.ts";
+import { Toaster } from "./components/ui/sonner.tsx";
+import { jwtDecode } from "jwt-decode";
+import { toast } from "sonner";
+
+createRoot(document.getElementById("root")!).render(
   <StrictMode>
     <AuthProvider>
       <BrowserRouter>
@@ -19,53 +22,145 @@ createRoot(document.getElementById('root')!).render(
       </BrowserRouter>
       <Toaster />
     </AuthProvider>
-  </StrictMode>
+  </StrictMode>,
 );
 
 export function AuthProvider({ children }: PropsWithChildren) {
   const [user, setUser] = React.useState<User>();
   const [payload, setPayload] = React.useState<Payload>();
+  const [loading, setLoading] = React.useState<boolean>(false);
 
   React.useEffect(() => {
-    const token = localStorage.getItem('token');
-    if (token) {
-    }
-  }, [user]);
+    const checkAuth = async () => {
+      const token = localStorage.getItem("token");
+      if (!token) return;
+
+      try {
+        const payload = jwtDecode<Payload>(token);
+        const currentTime = Date.now() / 1000;
+
+        if (payload.exp && payload.exp < currentTime) {
+          await refresh();
+        } else {
+          setPayload(payload);
+          setAuthToken(token);
+          fetchMe();
+        }
+      } catch (error) {
+        console.error("Auth initialization failed:", error);
+        signOut();
+      }
+    };
+
+    checkAuth();
+  }, []);
 
   const signUp = async (
     username: string,
+    email: string,
     password: string,
-    role: string = 'buyer'
+    role: string = "buyer",
   ) => {
-    const res = await api.post('/api/v1/auth/register', {
-      username,
-      password,
-      role,
-    });
-    const { user, token } = res.data.data;
-    setUser({ username: user.username, role: user.role });
-    setAuthToken(token);
+    try {
+      setLoading(true);
+      await api.post("/auth/register", {
+        username,
+        email,
+        password,
+        role,
+      });
+    } catch (error) {
+      console.error("Failed to sign up:", error);
+      throw error;
+    } finally {
+      setLoading(false);
+    }
   };
 
   const signIn = async (username: string, password: string) => {
-    const res = await api.post('/api/v1/auth/login', { username, password });
-    const { user, token } = res.data.data;
-    setUser({ username: user.username, role: user.role });
-    setAuthToken(token);
+    try {
+      setLoading(true);
+      const res = await api.post("/auth/login", { username, password });
+      const { user, token } = res.data.data;
+      setUser({ username: user.username, role: user.role });
+      setAuthToken(token);
+    } catch (error) {
+      console.error("Failed to sign in:", error);
+      throw error;
+    } finally {
+      setLoading(false);
+    }
   };
 
-  const signOut = () => {
-    setAuthToken(null);
-    setUser(undefined);
-    setPayload(undefined);
+  const fetchMe = async () => {
+    try {
+      setLoading(true);
+      const res = await api.get("/users/me");
+      const { user } = res.data;
+      setUser(user);
+    } catch (error) {
+      console.error("Failed to fetch user:", error);
+      signOut();
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const signOut = async () => {
+    try {
+      await api.post("/auth/logout");
+      setAuthToken(null);
+      setUser(undefined);
+      setPayload(undefined);
+      localStorage.removeItem("token");
+      toast.success("Đăng xuất thành công!");
+    } catch (error) {
+      console.error(error);
+      toast.error("Đăng xuất thất bại!");
+      setAuthToken(null);
+      setUser(undefined);
+      setPayload(undefined);
+      localStorage.removeItem("token");
+    }
+  };
+
+  const refresh = async () => {
+    try {
+      setLoading(true);
+      // Call refresh endpoint with credentials (cookies)
+      const res = await api.post(
+        "/auth/refresh",
+        {},
+        {
+          withCredentials: true,
+        },
+      );
+      // Backend returns new access token in res.data.accessToken based on userController.js
+      const { accessToken } = res.data;
+
+      setAuthToken(accessToken);
+
+      const payload = jwtDecode<Payload>(accessToken);
+      setPayload(payload);
+
+      toast.success("Làm mới token thành công!");
+    } catch (error) {
+      console.error("Refresh token failed:", error);
+      signOut();
+    } finally {
+      setLoading(false);
+    }
   };
 
   const value: AuthContextProps = {
     user,
     payload,
+    loading,
     signUp,
     signIn,
     signOut,
+    refresh,
+    fetchMe,
   };
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
