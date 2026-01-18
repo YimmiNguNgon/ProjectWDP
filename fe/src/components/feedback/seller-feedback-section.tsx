@@ -89,7 +89,7 @@ export function SellerFeedbackSection({
         setErrorMsg(null);
 
         const res = await api.get<SellerReviewsResponse>(
-          `/api/v1/reviews/seller/${sellerId}`,
+          `/reviews/seller/${sellerId}`,
           { params: { page: 1, limit: 50 } }
         );
         setAllData(res.data);

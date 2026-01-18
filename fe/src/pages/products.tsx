@@ -69,7 +69,7 @@ export default function ProductsPage() {
   useEffect(() => {
     const fetchCategories = async () => {
       try {
-        const res = await api.get("/api/v1/categories");
+        const res = await api.get("/categories");
         setCategories(res.data.data || []);
       } catch (error) {
         console.error("Failed to fetch categories:", error);
@@ -88,7 +88,7 @@ export default function ProductsPage() {
 
         params.append("minPrice", debouncedPriceRange[0].toString());
         params.append("maxPrice", debouncedPriceRange[1].toString());
-        const res = await api.get(`/api/v1/products?${params.toString()}`);
+        const res = await api.get(`/products?${params.toString()}`);
         setProducts(res.data.data);
         setTotalPages(Math.ceil((res.data.total || 0) / itemsPerPage));
       } catch (error) {
@@ -264,11 +264,10 @@ export default function ProductsPage() {
                           {[...Array(5)].map((_, i) => (
                             <Star
                               key={i}
-                              className={`h-3.5 w-3.5 ${
-                                i < Math.round(product.averageRating)
+                              className={`h-3.5 w-3.5 ${i < Math.round(product.averageRating)
                                   ? "fill-yellow-400 text-yellow-400"
                                   : "text-muted-foreground"
-                              }`}
+                                }`}
                             />
                           ))}
                         </div>

@@ -13,18 +13,18 @@ export interface FlagReviewData {
 
 // Admin: Delete review (soft delete)
 export const adminDeleteReview = async (reviewId: string) => {
-    const res = await api.delete(`/api/v1/reviews/${reviewId}/admin`);
+    const res = await api.delete(`/reviews/${reviewId}/admin`);
     return res.data;
 };
 
 // User: Flag review for admin review
 export const flagReview = async (reviewId: string, data: FlagReviewData) => {
-    const res = await api.post(`/api/v1/reviews/${reviewId}/flag`, data);
+    const res = await api.post(`/reviews/${reviewId}/flag`, data);
     return res.data;
 };
 
 // Admin: Get all reviews with filters
 export const getAdminReviews = async (filters?: AdminReviewsFilters) => {
-    const res = await api.get("/api/v1/reviews/admin/all", { params: filters });
+    const res = await api.get("/reviews/admin/all", { params: filters });
     return res.data;
 };

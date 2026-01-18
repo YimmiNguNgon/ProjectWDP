@@ -31,7 +31,7 @@ export default function SellerReplyDialog({ review, open, onOpenChange, onSucces
 
         try {
             setLoading(true);
-            const res = await api.post(`/api/v1/reviews/${review._id}/seller-response`, {
+            const res = await api.post(`/reviews/${review._id}/seller-response`, {
                 response: response.trim()
             });
 
@@ -57,7 +57,7 @@ export default function SellerReplyDialog({ review, open, onOpenChange, onSucces
 
         try {
             setLoading(true);
-            await api.delete(`/api/v1/reviews/${review._id}/seller-response`);
+            await api.delete(`/reviews/${review._id}/seller-response`);
             toast.success('Response deleted successfully');
             onSuccess();
             onOpenChange(false);

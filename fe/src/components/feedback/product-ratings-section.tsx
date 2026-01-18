@@ -67,7 +67,7 @@ export function ProductRatingsSection({
         setLoading(true);
 
         const res = await api.get<ReviewsApiResponse>(
-          `/api/v1/reviews/product/${productId}`,
+          `/reviews/product/${productId}`,
           { params: { page: 1, limit: 100 } }
         );
 

@@ -40,7 +40,7 @@ export default function ProductDetailPage() {
   const [quantity, setQuantity] = useState(1);
 
   useEffect(() => {
-    api.get(`/api/v1/products/${productId}`).then((res) => {
+    api.get(`/products/${productId}`).then((res) => {
       setProduct(res.data.data);
     });
   }, [productId]);
@@ -61,7 +61,7 @@ export default function ProductDetailPage() {
 
     try {
       // Create order with the product and quantity
-      await api.post('/api/v1/orders', {
+      await api.post('/orders', {
         items: [
           {
             productId: product._id,

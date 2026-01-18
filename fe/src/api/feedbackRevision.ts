@@ -16,7 +16,7 @@ export const createRevisionRequest = async (data: {
     resolutionType?: string;
     resolutionProof?: string;
 }) => {
-    return await api.post('/api/v1/feedback-revision/request', data);
+    return await api.post('/feedback-revision/request', data);
 };
 
 /**
@@ -27,14 +27,14 @@ export const getSellerRequests = async (params?: {
     limit?: number;
     skip?: number;
 }) => {
-    return await api.get('/api/v1/feedback-revision/seller/requests', { params });
+    return await api.get('/feedback-revision/seller/requests', { params });
 };
 
 /**
  * Cancel request
  */
 export const cancelRevisionRequest = async (requestId: string) => {
-    return await api.delete(`/api/v1/feedback-revision/request/${requestId}`);
+    return await api.delete(`/feedback-revision/request/${requestId}`);
 };
 
 // ==================== BUYER ====================
@@ -47,7 +47,7 @@ export const getBuyerRequests = async (params?: {
     limit?: number;
     skip?: number;
 }) => {
-    return await api.get('/api/v1/feedback-revision/buyer/requests', { params });
+    return await api.get('/feedback-revision/buyer/requests', { params });
 };
 
 /**
@@ -57,7 +57,7 @@ export const respondToRequest = async (requestId: string, data: {
     responseType: 'accepted' | 'declined';
     message?: string;
 }) => {
-    return await api.post(`/api/v1/feedback-revision/request/${requestId}/respond`, data);
+    return await api.post(`/feedback-revision/request/${requestId}/respond`, data);
 };
 
 /**
@@ -67,7 +67,7 @@ export const applyRevision = async (requestId: string, data: {
     rating: number;
     comment: string;
 }) => {
-    return await api.post(`/api/v1/feedback-revision/request/${requestId}/apply`, data);
+    return await api.post(`/feedback-revision/request/${requestId}/apply`, data);
 };
 
 // ==================== ADMIN ====================
@@ -79,7 +79,7 @@ export const getAdminRequests = async (params?: {
     limit?: number;
     skip?: number;
 }) => {
-    return await api.get('/api/v1/feedback-revision/admin/requests', { params });
+    return await api.get('/feedback-revision/admin/requests', { params });
 };
 
 /**
@@ -89,7 +89,7 @@ export const getFlaggedRequests = async (params?: {
     limit?: number;
     skip?: number;
 }) => {
-    return await api.get('/api/v1/feedback-revision/admin/flagged', { params });
+    return await api.get('/feedback-revision/admin/flagged', { params });
 };
 
 /**
@@ -99,7 +99,7 @@ export const adminReviewRequest = async (requestId: string, data: {
     action: 'approved' | 'rejected' | 'cancelled_feedback' | 'warned_seller';
     notes?: string;
 }) => {
-    return await api.post(`/api/v1/feedback-revision/admin/${requestId}/review`, data);
+    return await api.post(`/feedback-revision/admin/${requestId}/review`, data);
 };
 
 // ==================== HELPER ====================
@@ -108,5 +108,5 @@ export const adminReviewRequest = async (requestId: string, data: {
  * Validate message for violations
  */
 export const validateMessage = async (message: string) => {
-    return await api.post('/api/v1/feedback-revision/validate-message', { message });
+    return await api.post('/feedback-revision/validate-message', { message });
 };

@@ -197,7 +197,8 @@ export function Messages({
 
     try {
       const token = localStorage.getItem('token');
-      const response = await fetch('http://localhost:8888/api/v1/uploads/chat-files', {
+      const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:8080';
+      const response = await fetch(`${apiUrl}/api/v1/uploads/chat-files`, {
         method: 'POST',
         headers: {
           Authorization: `Bearer ${token}`,
@@ -241,7 +242,7 @@ export function Messages({
         conversationId: conversation._id,
         sender: payload.userId,
         text: text || '',
-        attachments: imageUrl ? [{ url: `http://localhost:8888${imageUrl}`, type: 'image' }] : [],
+        attachments: imageUrl ? [{ url: `${import.meta.env.VITE_API_URL || 'http://localhost:8080'}${imageUrl}`, type: 'image' }] : [],
         productRef,
       };
 
