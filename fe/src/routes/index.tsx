@@ -20,6 +20,8 @@ import AdminLayout from "@/layouts/admin";
 import PurchaseHistoryPage from "@/pages/purchases/purchase-history-page";
 import LeaveFeedbackPage from "@/pages/purchases/leave-feedback-page";
 
+import ProtectedRoute from "@/components/ProtectedRoute";
+
 // Placeholder components for admin pages
 const AdminComplaints = () => (
   <div className="p-8">
@@ -46,8 +48,13 @@ export const AppRouter = () => {
           element: <HomePage />,
         },
         {
-          path: "profile",
-          element: <UserProfilePage />,
+          element: <ProtectedRoute />,
+          children: [
+            {
+              path: "profile",
+              element: <UserProfilePage />,
+            },
+          ],
         },
         {
           path: "products",
