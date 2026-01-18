@@ -6,6 +6,10 @@ const morgan = require("morgan");
 const dotenv = require("dotenv");
 const cookieParser = require("cookie-parser");
 const bcrypt = require("bcryptjs");
+const passport = require("passport");
+
+// Load environment variables FIRST
+dotenv.config();
 
 // Import Files
 const connectDB = require("./config/db");
@@ -16,9 +20,11 @@ const userRoutes = require("./routes/userRoutes");
 const categoryRoutes = require("./routes/categoryRoutes");
 const reviewRoutes = require("./routes/reviewRoutes");
 const adminRoutes = require("./routes/adminRoutes");
+const orderRoutes = require("./routes/orders");
 const User = require("./models/User");
 
-dotenv.config();
+// Passport config (sau khi dotenv.config())
+require("./config/passport");
 
 const app = express();
 
@@ -42,10 +48,12 @@ app.use(
 app.use(
   helmet({
     crossOriginResourcePolicy: { policy: "cross-origin" },
+    contentSecurityPolicy: false, // Tắt CSP để tránh conflict với OAuth
   }),
 );
 app.use(express.json({ limit: "10mb" }));
 app.use(cookieParser());
+app.use(passport.initialize());
 app.use(morgan("dev"));
 
 // Import routes
@@ -55,6 +63,7 @@ app.use("/api/categories", categoryRoutes);
 app.use("/api/users", userRoutes);
 app.use("/api/reviews", reviewRoutes);
 app.use("/api/admin", adminRoutes);
+app.use("/api/orders", orderRoutes);
 
 // health check
 app.get("/health", (req, res) => res.json({ ok: true }));

@@ -7,8 +7,7 @@ import axios, {
 const API_BASE_URL = (() => {
   const url = import.meta.env.VITE_API_URL;
   if (!url) throw new Error("VITE_API_URL is not set");
-  // Ensure URL ends with /api
-  return url.endsWith('/api') ? url : `${url}/api`;
+  return url;
 })();
 
 const defaultConfig: AxiosRequestConfig = {
@@ -64,8 +63,8 @@ api.interceptors.response.use(
     if (
       error.response?.status === 401 &&
       !originalRequest._retry &&
-      !originalRequest.url?.includes("/auth/login") &&
-      !originalRequest.url?.includes("/auth/refresh")
+      !originalRequest.url?.includes("/api/auth/login") &&
+      !originalRequest.url?.includes("/api/auth/refresh")
     ) {
       if (isRefreshing) {
         return new Promise((resolve, reject) => {
@@ -81,7 +80,7 @@ api.interceptors.response.use(
       isRefreshing = true;
 
       try {
-        const res = await api.post("/auth/refresh");
+        const res = await api.post("/api/auth/refresh");
         const { accessToken } = res.data;
 
         setAuthToken(accessToken);

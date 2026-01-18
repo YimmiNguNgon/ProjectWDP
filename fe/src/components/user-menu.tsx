@@ -11,6 +11,13 @@ import { LogOut } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { Avatar, AvatarFallback, AvatarImage } from "./ui/avatar";
 
+// Helper function để lấy display name từ username
+const getDisplayName = (username: string): string => {
+  // Loại bỏ phần số và gạch dưới ở cuối (ví dụ: NHACUTE7B_176874043955I -> NHACUTE7B)
+  const name = username.split('_')[0].replace(/\d+$/g, '');
+  return name || username;
+};
+
 export default function UserMenu() {
   const { user, signOut } = useAuth();
   const navigate = useNavigate();
@@ -26,11 +33,13 @@ export default function UserMenu() {
     }
   };
 
+  const displayName = getDisplayName(user.username);
+
   return (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
         <Button variant={"link"} className="p-0 h-fit cursor-pointer uppercase">
-          {user.username}
+          {displayName}
         </Button>
       </DropdownMenuTrigger>
       <DropdownMenuContent
@@ -42,13 +51,13 @@ export default function UserMenu() {
           onClick={() => navigate("/profile")}
         >
           <Avatar className="h-10 w-10">
-            <AvatarImage src={user.avatarUrl} alt={user.username} />
+            <AvatarImage src={user.avatarUrl} alt={displayName} />
             <AvatarFallback className="bg-[#AAED56] text-[#324E0F] font-bold text-lg">
-              {user.username.charAt(0).toUpperCase()}
+              {displayName.charAt(0).toUpperCase()}
             </AvatarFallback>
           </Avatar>
           <DropdownMenuLabel className="capitalize font-bold text-xl">
-            {user.username}
+            {displayName}
           </DropdownMenuLabel>
         </div>
         <DropdownMenuSeparator />

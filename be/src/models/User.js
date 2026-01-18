@@ -24,6 +24,10 @@ const userSchema = new mongoose.Schema(
     emailVerificationToken: { type: String },
     emailVerificationExpires: { type: Date },
 
+    // Password reset
+    passwordResetToken: { type: String },
+    passwordResetExpires: { type: Date },
+
     // User status and ban tracking
     status: {
       type: String,
@@ -47,12 +51,13 @@ const userSchema = new mongoose.Schema(
     warningCount: { type: Number, default: 0 },
     lastWarningAt: { type: Date },
 
-    // để sau làm login google
-    // provider: {
-    //   type: String,
-    //   enum: ["local", "google", "github"],
-    //   default: "local",
-    // },
+    // OAuth provider
+    provider: {
+      type: String,
+      enum: ["local", "google"],
+      default: "local",
+    },
+    googleId: { type: String, sparse: true, unique: true },
   },
   { timestamps: true },
 );

@@ -258,3 +258,172 @@ exports.refreshToken = async (req, res, next) => {
     next(error);
   }
 };
+
+exports.googleCallback = async (req, res, next) => {
+  try {
+    const user = req.user;
+
+    if (!user) {
+      return res.redirect(
+        `${process.env.CLIENT_URL}/login?error=authentication_failed`
+      );
+    }
+
+    // Tạo access token
+    const accessToken = jwt.sign(
+      { userId: user._id },
+      process.env.ACCESS_TOKEN_SECRET,
+      { expiresIn: ACCESS_TOKEN_TTL }
+    );
+
+    // Tạo refresh token
+    const refreshToken = crypto.randomBytes(64).toString("hex");
+
+    // Lưu refresh token vào database
+    await Session.create({
+      userId: user._id,
+      refreshToken,
+      expiresAt: new Date(Date.now() + REFRESH_TOKEN_TTL),
+    });
+
+    // Set refresh token cookie
+    res.cookie("refreshToken", refreshToken, {
+      httpOnly: true,
+      secure: true,
+      sameSite: "none",
+      maxAge: REFRESH_TOKEN_TTL,
+    });
+
+    // Redirect về frontend với access token
+    const redirectUrl = `${process.env.CLIENT_URL}/auth/google/success?token=${accessToken}&user=${encodeURIComponent(
+      JSON.stringify({
+        username: user.username,
+        email: user.email,
+        role: user.role,
+        avatarUrl: user.avatarUrl,
+      })
+    )}`;
+
+    return res.redirect(redirectUrl);
+  } catch (error) {
+    console.error("Google callback error:", error);
+    return res.redirect(
+      `${process.env.CLIENT_URL}/login?error=callback_failed`
+    );
+  }
+};
+
+exports.forgotPassword = async (req, res, next) => {
+  try {
+    const { email } = req.body;
+
+    if (!email) {
+      return res.status(400).json({ message: "Email is required" });
+    }
+
+    const user = await User.findOne({ email });
+
+    if (!user) {
+      // Không tiết lộ thông tin user có tồn tại hay không
+      return res.status(200).json({
+        message: "If the email exists, a password reset link has been sent"
+      });
+    }
+
+    // Tạo reset token
+    const resetToken = crypto.randomBytes(32).toString("hex");
+    const hashedToken = crypto
+      .createHash("sha256")
+      .update(resetToken)
+      .digest("hex");
+
+    // Lưu token vào database
+    user.passwordResetToken = hashedToken;
+    user.passwordResetExpires = Date.now() + 60 * 60 * 1000; // 1 giờ
+    await user.save();
+
+    // Gửi email
+    try {
+      const resetUrl = `${process.env.CLIENT_URL}/auth/reset-password?token=${resetToken}`;
+
+      await sendEmail({
+        to: email,
+        subject: "Reset your password",
+        template: "resetPassword.ejs",
+        data: {
+          username: user.username,
+          resetUrl,
+          expiresIn: 1, // 1 hour
+        },
+      });
+
+      return res.status(200).json({
+        message: "Password reset link sent to your email"
+      });
+    } catch (emailError) {
+      console.error("Email sending failed:", emailError);
+      // Xóa token nếu gửi email thất bại
+      user.passwordResetToken = undefined;
+      user.passwordResetExpires = undefined;
+      await user.save();
+
+      return res.status(500).json({
+        message: "Failed to send reset email. Please try again later."
+      });
+    }
+  } catch (error) {
+    next(error);
+  }
+};
+
+exports.resetPassword = async (req, res, next) => {
+  try {
+    const { token, newPassword } = req.body;
+
+    if (!token || !newPassword) {
+      return res.status(400).json({
+        message: "Token and new password are required"
+      });
+    }
+
+    if (newPassword.length < 6) {
+      return res.status(400).json({
+        message: "Password must be at least 6 characters"
+      });
+    }
+
+    // Hash token để so sánh
+    const hashedToken = crypto
+      .createHash("sha256")
+      .update(token)
+      .digest("hex");
+
+    // Tìm user với token hợp lệ và chưa hết hạn
+    const user = await User.findOne({
+      passwordResetToken: hashedToken,
+      passwordResetExpires: { $gt: Date.now() },
+    });
+
+    if (!user) {
+      return res.status(400).json({
+        message: "Invalid or expired reset token"
+      });
+    }
+
+    // Hash password mới
+    const salt = await bcrypt.genSalt(10);
+    const hashPassword = await bcrypt.hash(newPassword, salt);
+
+    // Cập nhật password và xóa reset token
+    user.passwordHash = hashPassword;
+    user.passwordResetToken = undefined;
+    user.passwordResetExpires = undefined;
+    await user.save();
+
+    return res.status(200).json({
+      message: "Password reset successfully"
+    });
+  } catch (error) {
+    next(error);
+  }
+};

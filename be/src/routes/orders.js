@@ -1,10 +1,10 @@
 const express = require("express");
 const router = express.Router();
-const auth = require("../middleware/auth");
-const ctrl = require("../controllers/orderController");
+const { protectedRoute } = require("../middleware/authMiddleware");
+const ctrl = require("../controller/orderController");
 
-router.post("/", auth, ctrl.createOrder); // create order (buyer)
-router.get("/:id", auth, ctrl.getOrder);
-router.get("/", auth, ctrl.listOrdersForUser); // ?userId or auth user
+router.post("/", protectedRoute, ctrl.createOrder); // create order (buyer)
+router.get("/:id", protectedRoute, ctrl.getOrder);
+router.get("/", protectedRoute, ctrl.listOrdersForUser); // ?userId or auth user
 
 module.exports = router;

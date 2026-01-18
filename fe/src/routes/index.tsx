@@ -6,6 +6,9 @@ import SignUpPage from "@/pages/sign-up";
 import ProductsPage from "@/pages/products";
 import ProductDetailPage from "@/pages/product-detail";
 import VerifyEmailPage from "@/pages/verify-email";
+import GoogleAuthSuccessPage from "@/pages/google-auth-success";
+import ForgotPasswordPage from "@/pages/forgot-password";
+import ResetPasswordPage from "@/pages/reset-password";
 import UserManagement from "@/pages/admin/user-management";
 import AdminDashboard from "@/pages/admin/dashboard";
 import ProductManagement from "@/pages/admin/product-management";
@@ -48,8 +51,13 @@ export const AppRouter = () => {
           element: <HomePage />,
         },
         {
-          path: "profile",
-          element: <UserProfilePage />,
+          element: <ProtectedRoute />,
+          children: [
+            {
+              path: "profile",
+              element: <UserProfilePage />,
+            },
+          ],
         },
         {
           path: "products",
@@ -58,6 +66,14 @@ export const AppRouter = () => {
         {
           path: "products/:productId",
           element: <ProductDetailPage />,
+        },
+        {
+          path: "my-ebay/activity/purchases",
+          element: <PurchaseHistoryPage />,
+        },
+        {
+          path: "purchases/:orderId/feedback/:productId",
+          element: <LeaveFeedbackPage />,
         },
       ],
     },
@@ -132,6 +148,18 @@ export const AppRouter = () => {
         {
           path: "sign-up",
           element: <SignUpPage />,
+        },
+        {
+          path: "google/success",
+          element: <GoogleAuthSuccessPage />,
+        },
+        {
+          path: "forgot-password",
+          element: <ForgotPasswordPage />,
+        },
+        {
+          path: "reset-password",
+          element: <ResetPasswordPage />,
         },
       ],
     },

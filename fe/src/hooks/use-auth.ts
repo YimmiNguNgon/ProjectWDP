@@ -28,6 +28,9 @@ export interface AuthContextProps {
   signOut: () => void;
   refresh: () => Promise<void>;
   fetchMe: () => Promise<void>;
+  accessToken: string | null;
+  setUser: (user: User) => void;
+  setToken: (token: string) => void;
 }
 
 export const AuthContext = React.createContext<AuthContextProps | undefined>(
