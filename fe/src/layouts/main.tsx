@@ -104,6 +104,8 @@ export function MainLayout() {
               <MyEbayMenu />
               {/* Admin Menu - only show for admin users */}
               {user?.role === "admin" && <AdminMenu />}
+              {/* Seller Menu - only show for seller users */}
+              {user?.role === "seller" && <SellerMenu />}
               <button
                 onClick={() => toast.info("Notifications coming soon!")}
                 className="hover:opacity-70"
@@ -378,6 +380,17 @@ function AdminMenu() {
       className="font-medium text-sm text-red-600 hover:text-red-700"
     >
       Admin Panel
+    </Link>
+  );
+}
+
+function SellerMenu() {
+  return (
+    <Link
+      to="/seller"
+      className="font-medium text-sm text-red-600 hover:text-red-700"
+    >
+      Seller Panel
     </Link>
   );
 }
