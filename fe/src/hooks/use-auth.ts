@@ -2,6 +2,7 @@ import React from "react";
 
 export interface User {
   username: string;
+  email?: string | undefined;
   avatarUrl?: string;
   role: string;
 }
