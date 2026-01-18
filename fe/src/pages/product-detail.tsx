@@ -23,13 +23,16 @@ export interface ProductDetail {
   _id: string;
   sellerId: string;
   title: string;
-  imageUrl: string;
+  images: string[];
   description: string;
   price: number;
-  stock: number;
+  quantity: number;
+  condition: string;
+  status: string;
   averageRating: number;
   ratingCount: number;
   createdAt: Date;
+  updatedAt: Date;
   __v: number;
 }
 
@@ -50,7 +53,7 @@ export default function ProductDetailPage() {
     : "Seller";
 
   const handleQuantityChange = (delta: number) => {
-    setQuantity((prev) => Math.max(1, Math.min(product?.stock || 999, prev + delta)));
+    setQuantity((prev) => Math.max(1, Math.min(product?.quantity || 999, prev + delta)));
   };
 
   const handleBuyNow = async () => {
@@ -83,7 +86,7 @@ export default function ProductDetailPage() {
     <>
       <div className="w-full flex gap-4">
         <img
-          src={product?.imageUrl}
+          src={product?.images?.[0] || '/placeholder.png'}
           alt={product?.title}
           className="aspect-square h-128 w-3/4 object-cover"
         />
@@ -141,7 +144,7 @@ export default function ProductDetailPage() {
                 type="number"
                 required
                 min={1}
-                max={product?.stock}
+                max={product?.quantity}
                 value={quantity}
                 onChange={(e) => setQuantity(Math.max(1, parseInt(e.target.value) || 1))}
                 className="h-12 px-6 w-20 text-center"
@@ -150,7 +153,7 @@ export default function ProductDetailPage() {
                 variant={"outline"}
                 size={"icon"}
                 onClick={() => handleQuantityChange(1)}
-                disabled={quantity >= (product?.stock || 999)}
+                disabled={quantity >= (product?.quantity || 999)}
               >
                 <Plus />
               </Button>

@@ -4,7 +4,7 @@ const User = require("../models/User");
 
 /**
  * @desc Lấy tất cả người dùng với phân trang và lọc
- * @route GET /api/v1/admin/users?page=<page>&limit=<limit>&search=<search>&role=<role>&status=<status>
+ * @route GET /api/admin/users?page=<page>&limit=<limit>&search=<search>&role=<role>&status=<status>
  * @access Admin only
  */
 exports.getAllUsers = async (req, res, next) => {
@@ -82,7 +82,7 @@ exports.getAllUsers = async (req, res, next) => {
 
 /**
  * @desc Lấy chi tiết một người dùng
- * @route GET /api/v1/admin/users/:id
+ * @route GET /api/admin/users/:id
  * @access Admin only
  */
 exports.getUserDetail = async (req, res, next) => {
@@ -144,7 +144,7 @@ exports.getUserDetail = async (req, res, next) => {
 
 /**
  * @desc Cập nhật thông tin người dùng
- * @route PUT /api/v1/admin/users/:id
+ * @route PUT /api/admin/users/:id
  * @access Admin only
  */
 exports.updateUser = async (req, res, next) => {
@@ -195,7 +195,7 @@ exports.updateUser = async (req, res, next) => {
 
 /**
  * @desc Xóa người dùng
- * @route DELETE /api/v1/admin/users/:id
+ * @route DELETE /api/admin/users/:id
  * @access Admin only
  */
 exports.deleteUser = async (req, res, next) => {
@@ -234,7 +234,7 @@ exports.deleteUser = async (req, res, next) => {
 
 /**
  * @desc Ban người dùng
- * @route POST /api/v1/admin/users/:id/ban
+ * @route POST /api/admin/users/:id/ban
  * @access Admin only
  */
 exports.banUser = async (req, res, next) => {
@@ -295,7 +295,7 @@ exports.banUser = async (req, res, next) => {
 
 /**
  * @desc Unban người dùng
- * @route POST /api/v1/admin/users/:id/unban
+ * @route POST /api/admin/users/:id/unban
  * @access Admin only
  */
 exports.unbanUser = async (req, res, next) => {

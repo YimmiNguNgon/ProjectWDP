@@ -5,6 +5,7 @@ const helmet = require("helmet");
 const morgan = require("morgan");
 const dotenv = require("dotenv");
 const cookieParser = require("cookie-parser");
+const bcrypt = require("bcryptjs");
 
 // Import Files
 const connectDB = require("./config/db");
@@ -15,6 +16,7 @@ const userRoutes = require("./routes/userRoutes");
 const categoryRoutes = require("./routes/categoryRoutes");
 const reviewRoutes = require("./routes/reviewRoutes");
 const adminRoutes = require("./routes/adminRoutes");
+const User = require("./models/User");
 
 dotenv.config();
 
@@ -47,12 +49,12 @@ app.use(cookieParser());
 app.use(morgan("dev"));
 
 // Import routes
-app.use("/api/v1/auth", authRoutes);
-app.use("/api/v1/products", productRoutes);
-app.use("/api/v1/categories", categoryRoutes);
-app.use("/api/v1/users", userRoutes);
-app.use("/api/v1/reviews", reviewRoutes);
-app.use("/api/v1/admin", adminRoutes);
+app.use("/api/auth", authRoutes);
+app.use("/api/products", productRoutes);
+app.use("/api/categories", categoryRoutes);
+app.use("/api/users", userRoutes);
+app.use("/api/reviews", reviewRoutes);
+app.use("/api/admin", adminRoutes);
 
 // health check
 app.get("/health", (req, res) => res.json({ ok: true }));
@@ -66,8 +68,37 @@ app.get("/", (req, res) => {
   res.send("Backend Node.js is running!");
 });
 
+// Tạo tài khoản admin mặc định
+async function createDefaultAdmin() {
+  try {
+    const existingAdmin = await User.findOne({ username: "admin" });
+
+    if (!existingAdmin) {
+      const salt = await bcrypt.genSalt(10);
+      const passwordHash = await bcrypt.hash("admin", salt);
+
+      const adminUser = new User({
+        username: "admin",
+        email: "admin@admin.com",
+        passwordHash: passwordHash,
+        role: "admin",
+        isEmailVerified: true,
+        status: "active"
+      });
+
+      await adminUser.save();
+      console.log("✅ Tài khoản admin mặc định đã được tạo (username: admin, password: admin)");
+    } else {
+      console.log("ℹ️ Tài khoản admin đã tồn tại");
+    }
+  } catch (error) {
+    console.error("❌ Lỗi khi tạo tài khoản admin mặc định:", error);
+  }
+}
+
 async function start() {
   await connectDB(process.env.MONGO_URI);
+  await createDefaultAdmin();
   app.listen(PORT, () => {
     console.log(`Server is running on port ${PORT}`);
   });

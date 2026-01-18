@@ -28,7 +28,7 @@ import { zodResolver } from "@hookform/resolvers/zod";
 const signUpSchema = z.object({
   username: z.string().min(3, "Username must be at least 3 characters"),
   email: z.string().email("Invalid email address"),
-  password: z.string().min(6, "Password must be at least 6 characters"),
+  password: z.string(),
 });
 
 type SignUpValues = z.infer<typeof signUpSchema>;
@@ -97,7 +97,7 @@ export function SignupForm({ ...props }: React.ComponentProps<typeof Card>) {
         <Separator />
         <CardFooter className="flex justify-center">
           <Button
-          className='cursor-pointer'
+            className='cursor-pointer'
             variant="outline"
             onClick={() => navigate('/auth/sign-in')}
           >
@@ -155,9 +155,9 @@ export function SignupForm({ ...props }: React.ComponentProps<typeof Card>) {
               )}
             </Field>
           </FieldGroup>
-          <Separator className="my-4"/>
+          <Separator className="my-4" />
           <FieldGroup>
-             <Field>
+            <Field>
               <Button className='cursor-pointer w-full' type="submit">Create Account</Button>
               <Button className='cursor-pointer w-full' variant='outline' type='button'>
                 Sign up with Google

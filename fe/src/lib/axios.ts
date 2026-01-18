@@ -6,7 +6,7 @@ import axios, {
 
 const API_BASE_URL = (() => {
   const url = import.meta.env.VITE_API_URL || 'http://localhost:8080';
-  return `${url}/api/v1`;
+  return `${url}/api`;
 })();
 
 const defaultConfig: AxiosRequestConfig = {

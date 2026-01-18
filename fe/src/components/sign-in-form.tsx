@@ -25,7 +25,7 @@ import { zodResolver } from "@hookform/resolvers/zod";
 
 const signInSchema = z.object({
   username: z.string().min(3, "Username must be at least 3 characters"),
-  password: z.string().min(6, "Password must be at least 6 characters"),
+  password: z.string(),
 });
 
 type SignInValues = z.infer<typeof signInSchema>;
@@ -34,7 +34,7 @@ export function SignInForm({
   className,
   ...props
 }: React.ComponentProps<'div'>) {
-    const navigate = useNavigate();
+  const navigate = useNavigate();
   const { signIn } = useAuth();
 
   const {
@@ -58,15 +58,15 @@ export function SignInForm({
         closeButton: true,
       });
     } catch (error: any) {
-      if(error.response?.status === 401){
+      if (error.response?.status === 401) {
         toast.error(error.response?.data?.message || 'Invalid username or password', {
           position: 'top-center',
           closeButton: true,
         });
       } else if (error.response?.status === 403) {
         toast.warning('Please verify your email first', {
-           position: 'top-center',
-           closeButton: true,
+          position: 'top-center',
+          closeButton: true,
         });
       } else {
         toast.error('Invalid username or password', {

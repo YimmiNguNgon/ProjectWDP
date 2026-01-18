@@ -40,14 +40,17 @@ export interface Product {
   _id: string;
   sellerId: string;
   title: string;
-  imageUrl: string;
+  images: string[];
   description: string;
   price: number;
-  stock: number;
+  quantity: number;
   averageRating: number;
   ratingCount: number;
-  categories?: Category[];
+  categoryId?: Category;
+  condition: string;
+  status: string;
   createdAt: Date;
+  updatedAt: Date;
   __v: number;
 }
 
@@ -239,7 +242,7 @@ export default function ProductsPage() {
                     <CardContent className="relative overflow-hidden bg-muted p-0">
                       <Link to={`/products/${product._id}`}>
                         <img
-                          src={product.imageUrl}
+                          src={product.images?.[0] || '/placeholder.png'}
                           alt={product.title}
                           className="aspect-square w-full bg-muted flex items-center justify-center"
                         />
@@ -265,8 +268,8 @@ export default function ProductsPage() {
                             <Star
                               key={i}
                               className={`h-3.5 w-3.5 ${i < Math.round(product.averageRating)
-                                  ? "fill-yellow-400 text-yellow-400"
-                                  : "text-muted-foreground"
+                                ? "fill-yellow-400 text-yellow-400"
+                                : "text-muted-foreground"
                                 }`}
                             />
                           ))}

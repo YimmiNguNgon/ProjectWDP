@@ -53,7 +53,7 @@ exports.listProducts = async (req, res, next) => {
       }).select("_id");
 
       if (categoryDocs.length > 0) {
-        filter.categories = {
+        filter.categoryId = {
           $in: categoryDocs.map((c) => c._id),
         };
       }
@@ -75,7 +75,7 @@ exports.listProducts = async (req, res, next) => {
       .sort({ createdAt: -1 })
       .skip(skip)
       .limit(limit)
-      .populate("categories", "name slug")
+      .populate("categoryId", "name slug")
       .lean();
     return res.json({ page, limit, total, data: products });
   } catch (err) {

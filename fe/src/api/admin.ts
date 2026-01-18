@@ -1,6 +1,32 @@
 // src/api/admin.ts
 import api from '../lib/axios';
 
+export interface DashboardStats {
+    users: {
+        total: number;
+        buyers: number;
+        sellers: number;
+        admins: number;
+        active: number;
+        banned: number;
+        newLast7Days: number;
+    };
+    products: {
+        total: number;
+        newLast7Days: number;
+    };
+    orders: {
+        total: number;
+        byStatus: Record<string, number>;
+        newLast7Days: number;
+    };
+}
+
+export interface DashboardStatsResponse {
+    success: boolean;
+    data: DashboardStats;
+}
+
 export interface User {
     _id: string;
     username: string;
@@ -50,6 +76,12 @@ export interface UserDetailResponse {
         };
     };
 }
+
+// Get dashboard stats
+export const getDashboardStats = async (): Promise<DashboardStatsResponse> => {
+    const response = await api.get('/admin/dashboard/stats');
+    return response.data;
+};
 
 // Get all users
 export const getAllUsers = async (params: GetUsersParams = {}): Promise<GetUsersResponse> => {

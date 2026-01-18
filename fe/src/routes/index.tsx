@@ -7,9 +7,12 @@ import ProductsPage from "@/pages/products";
 import ProductDetailPage from "@/pages/product-detail";
 import VerifyEmailPage from "@/pages/verify-email";
 import UserManagement from "@/pages/admin/user-management";
+import AdminDashboard from "@/pages/admin/dashboard";
+import ProductManagement from "@/pages/admin/product-management";
 
 import { MainLayout } from "@/layouts/main";
 import AuthLayout from "@/layouts/auth";
+import AdminLayout from "@/layouts/admin";
 
 // Placeholder components for admin pages
 const AdminComplaints = () => (
@@ -44,17 +47,31 @@ export const AppRouter = () => {
           path: "products/:productId",
           element: <ProductDetailPage />,
         },
+      ],
+    },
+    {
+      path: "/admin",
+      element: <AdminLayout />,
+      children: [
         {
-          path: "admin/complaints",
+          index: true,
+          element: <AdminDashboard />,
+        },
+        {
+          path: "users",
+          element: <UserManagement />,
+        },
+        {
+          path: "products",
+          element: <ProductManagement />,
+        },
+        {
+          path: "complaints",
           element: <AdminComplaints />,
         },
         {
-          path: "admin/reviews",
+          path: "reviews",
           element: <AdminReviews />,
-        },
-        {
-          path: "admin/users",
-          element: <UserManagement />,
         },
       ],
     },

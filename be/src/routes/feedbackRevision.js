@@ -7,7 +7,7 @@ const feedbackRevisionService = require('../services/feedbackRevisionService');
 
 /**
  * Create revision request
- * POST /api/v1/feedback-revision/request
+ * POST /api/feedback-revision/request
  */
 router.post('/request', auth, async (req, res) => {
     try {
@@ -48,7 +48,7 @@ router.post('/request', auth, async (req, res) => {
 
 /**
  * Get seller's requests
- * GET /api/v1/feedback-revision/seller/requests
+ * GET /api/feedback-revision/seller/requests
  */
 router.get('/seller/requests', auth, async (req, res) => {
     try {
@@ -73,7 +73,7 @@ router.get('/seller/requests', auth, async (req, res) => {
 
 /**
  * Cancel request
- * DELETE /api/v1/feedback-revision/request/:id
+ * DELETE /api/feedback-revision/request/:id
  */
 router.delete('/request/:id', auth, async (req, res) => {
     try {
@@ -98,7 +98,7 @@ router.delete('/request/:id', auth, async (req, res) => {
 
 /**
  * Get buyer's requests
- * GET /api/v1/feedback-revision/buyer/requests
+ * GET /api/feedback-revision/buyer/requests
  */
 router.get('/buyer/requests', auth, async (req, res) => {
     try {
@@ -123,7 +123,7 @@ router.get('/buyer/requests', auth, async (req, res) => {
 
 /**
  * Respond to request (accept/decline)
- * POST /api/v1/feedback-revision/request/:id/respond
+ * POST /api/feedback-revision/request/:id/respond
  */
 router.post('/request/:id/respond', auth, async (req, res) => {
     try {
@@ -156,7 +156,7 @@ router.post('/request/:id/respond', auth, async (req, res) => {
 
 /**
  * Apply revision (edit feedback)
- * POST /api/v1/feedback-revision/request/:id/apply
+ * POST /api/feedback-revision/request/:id/apply
  */
 router.post('/request/:id/apply', auth, async (req, res) => {
     try {
@@ -191,7 +191,7 @@ router.post('/request/:id/apply', auth, async (req, res) => {
 
 /**
  * Get all requests (admin)
- * GET /api/v1/feedback-revision/admin/requests
+ * GET /api/feedback-revision/admin/requests
  */
 router.get('/admin/requests', auth, async (req, res) => {
     try {
@@ -221,7 +221,7 @@ router.get('/admin/requests', auth, async (req, res) => {
 
 /**
  * Get flagged requests (admin)
- * GET /api/v1/feedback-revision/admin/flagged
+ * GET /api/feedback-revision/admin/flagged
  */
 router.get('/admin/flagged', auth, async (req, res) => {
     try {
@@ -245,7 +245,7 @@ router.get('/admin/flagged', auth, async (req, res) => {
 
 /**
  * Review request (admin)
- * POST /api/v1/feedback-revision/admin/:id/review
+ * POST /api/feedback-revision/admin/:id/review
  */
 router.post('/admin/:id/review', auth, async (req, res) => {
     try {
@@ -278,7 +278,7 @@ router.post('/admin/:id/review', auth, async (req, res) => {
 
 /**
  * Validate message for violations (helper endpoint)
- * POST /api/v1/feedback-revision/validate-message
+ * POST /api/feedback-revision/validate-message
  */
 router.post('/validate-message', auth, async (req, res) => {
     try {
