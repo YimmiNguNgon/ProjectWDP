@@ -6,6 +6,7 @@ import SignUpPage from "@/pages/sign-up";
 import ProductsPage from "@/pages/products";
 import ProductDetailPage from "@/pages/product-detail";
 import VerifyEmailPage from "@/pages/verify-email";
+import ProfilePage from "@/pages/profile";
 
 import { MainLayout } from "@/layouts/main";
 import AuthLayout from "@/layouts/auth";
@@ -27,6 +28,10 @@ export const AppRouter = () => {
         {
           path: "products/:productId",
           element: <ProductDetailPage />,
+        },
+        {
+          path: "profile",
+          element: <ProfilePage />,
         },
       ],
     },

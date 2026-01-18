@@ -226,3 +226,265 @@ exports.authMe = async (req, res) => {
     return res.status(500).json({ message: "Internal Server Error" });
   }
 };
+
+// ----------------- GET USER PROFILE -----------------
+exports.getUserProfile = async (req, res, next) => {
+  try {
+    const userId = req.user._id;
+
+    const user = await User.findById(userId).select("-passwordHash").lean();
+
+    if (!user) {
+      return res.status(404).json({ message: "User not found" });
+    }
+
+    return res.json({
+      data: user,
+    });
+  } catch (err) {
+    return next(err);
+  }
+};
+
+// ----------------- UPDATE USER PROFILE -----------------
+exports.updateUserProfile = async (req, res, next) => {
+  try {
+    const userId = req.user._id;
+    const { username, phone, avatar, bio } = req.body;
+
+    const user = await User.findById(userId);
+
+    if (!user) {
+      return res.status(404).json({ message: "User not found" });
+    }
+
+    // Check if username is being changed and if it's already taken
+    if (username && username !== user.username) {
+      const existingUser = await User.findOne({ username });
+      if (existingUser) {
+        return res.status(400).json({ message: "Username already taken" });
+      }
+      user.username = username;
+    }
+
+    // Update other fields
+    if (phone !== undefined) user.phone = phone;
+    if (avatar !== undefined) user.avatar = avatar;
+    if (bio !== undefined) user.bio = bio;
+
+    await user.save();
+
+    const updatedUser = await User.findById(userId).select("-passwordHash").lean();
+
+    return res.json({
+      message: "Profile updated successfully",
+      data: updatedUser,
+    });
+  } catch (err) {
+    return next(err);
+  }
+};
+
+// ----------------- ADD USER ADDRESS -----------------
+exports.addUserAddress = async (req, res, next) => {
+  try {
+    const userId = req.user._id;
+    const { fullName, phone, addressLine1, addressLine2, city, state, country, isDefault } = req.body;
+
+    // Validate required fields
+    if (!fullName || !phone || !addressLine1 || !city || !state) {
+      return res.status(400).json({ message: "Missing required address fields" });
+    }
+
+    const user = await User.findById(userId);
+
+    if (!user) {
+      return res.status(404).json({ message: "User not found" });
+    }
+
+    // If this is set as default, unset all other default addresses
+    if (isDefault) {
+      user.addresses.forEach((addr) => {
+        addr.isDefault = false;
+      });
+    }
+
+    // If this is the first address, make it default
+    const newAddress = {
+      fullName,
+      phone,
+      addressLine1,
+      addressLine2: addressLine2 || "",
+      city,
+      state,
+      country: country || "Vietnam",
+      isDefault: user.addresses.length === 0 ? true : isDefault || false,
+    };
+
+    user.addresses.push(newAddress);
+    await user.save();
+
+    return res.json({
+      message: "Address added successfully",
+      data: user.addresses[user.addresses.length - 1],
+    });
+  } catch (err) {
+    return next(err);
+  }
+};
+
+// ----------------- UPDATE USER ADDRESS -----------------
+exports.updateUserAddress = async (req, res, next) => {
+  try {
+    const userId = req.user._id;
+    const { addressId } = req.params;
+    const { fullName, phone, addressLine1, addressLine2, city, state, country, isDefault } = req.body;
+
+    const user = await User.findById(userId);
+
+    if (!user) {
+      return res.status(404).json({ message: "User not found" });
+    }
+
+    const address = user.addresses.id(addressId);
+
+    if (!address) {
+      return res.status(404).json({ message: "Address not found" });
+    }
+
+    // Update fields
+    if (fullName) address.fullName = fullName;
+    if (phone) address.phone = phone;
+    if (addressLine1) address.addressLine1 = addressLine1;
+    if (addressLine2 !== undefined) address.addressLine2 = addressLine2;
+    if (city) address.city = city;
+    if (state) address.state = state;
+    if (country) address.country = country;
+    if (req.body.district) address.district = req.body.district;
+    if (req.body.ward) address.ward = req.body.ward;
+
+    // If setting as default, unset all other defaults
+    if (isDefault) {
+      user.addresses.forEach((addr) => {
+        addr.isDefault = false;
+      });
+      address.isDefault = true;
+    }
+
+    await user.save();
+
+    return res.json({
+      message: "Address updated successfully",
+      data: address,
+    });
+  } catch (err) {
+    return next(err);
+  }
+};
+
+// ----------------- DELETE USER ADDRESS -----------------
+exports.deleteUserAddress = async (req, res, next) => {
+  try {
+    const userId = req.user._id;
+    const { addressId } = req.params;
+
+    const user = await User.findById(userId);
+
+    if (!user) {
+      return res.status(404).json({ message: "User not found" });
+    }
+
+    const address = user.addresses.id(addressId);
+
+    if (!address) {
+      return res.status(404).json({ message: "Address not found" });
+    }
+
+    const wasDefault = address.isDefault;
+    address.remove();
+
+    // If deleted address was default and there are other addresses, make the first one default
+    if (wasDefault && user.addresses.length > 0) {
+      user.addresses[0].isDefault = true;
+    }
+
+    await user.save();
+
+    return res.json({
+      message: "Address deleted successfully",
+    });
+  } catch (err) {
+    return next(err);
+  }
+};
+
+// ----------------- SET DEFAULT ADDRESS -----------------
+exports.setDefaultAddress = async (req, res, next) => {
+  try {
+    const userId = req.user._id;
+    const { addressId } = req.params;
+
+    const user = await User.findById(userId);
+
+    if (!user) {
+      return res.status(404).json({ message: "User not found" });
+    }
+
+    const address = user.addresses.id(addressId);
+
+    if (!address) {
+      return res.status(404).json({ message: "Address not found" });
+    }
+
+    // Unset all other defaults
+    user.addresses.forEach((addr) => {
+      addr.isDefault = false;
+    });
+
+    address.isDefault = true;
+    await user.save();
+
+    return res.json({
+      message: "Default address set successfully",
+      data: address,
+    });
+  } catch (err) {
+    return next(err);
+  }
+};
+
+// ----------------- UPGRADE TO PREMIUM -----------------
+exports.upgradeToPremium = async (req, res, next) => {
+  try {
+    const userId = req.user._id;
+
+    const user = await User.findById(userId);
+
+    if (!user) {
+      return res.status(404).json({ message: "User not found" });
+    }
+
+    if (user.accountType === "premium" && user.premiumExpiresAt && user.premiumExpiresAt > new Date()) {
+      return res.status(400).json({
+        message: "You already have an active premium subscription",
+        expiresAt: user.premiumExpiresAt,
+      });
+    }
+
+    // Upgrade to premium for 1 year
+    user.accountType = "premium";
+    user.premiumActivatedAt = new Date();
+    user.premiumExpiresAt = new Date(Date.now() + 365 * 24 * 60 * 60 * 1000); // 1 year from now
+
+    await user.save();
+
+    const updatedUser = await User.findById(userId).select("-passwordHash").lean();
+
+    return res.json({
+      message: "Successfully upgraded to premium!",
+      data: updatedUser,
+    });
+  } catch (err) {
+    return next(err);
+  }
+};

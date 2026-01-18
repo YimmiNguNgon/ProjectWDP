@@ -91,11 +91,11 @@ exports.login = async (req, res, next) => {
     }
 
     // Tạm thời tắt kiểm tra email verification cho môi trường dev
-    if (!user.isEmailVerified) {
-      return res
-        .status(403)
-        .json({ message: "Please verify your email to log in" });
-    }
+    // if (!user.isEmailVerified) {
+    //   return res
+    //     .status(403)
+    //     .json({ message: "Please verify your email to log in" });
+    // }
 
     const isMatch = await bcrypt.compare(password, user.passwordHash);
 

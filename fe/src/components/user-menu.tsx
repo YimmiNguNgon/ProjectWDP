@@ -7,8 +7,8 @@ import {
 } from "./ui/dropdown-menu";
 import { useAuth } from "@/hooks/use-auth";
 import { Button } from "./ui/button";
-import { LogOut } from "lucide-react";
-import { useNavigate } from "react-router-dom";
+import { LogOut, User } from "lucide-react";
+import { useNavigate, Link } from "react-router-dom";
 
 export default function UserMenu() {
   const { user, signOut } = useAuth();
@@ -43,6 +43,12 @@ export default function UserMenu() {
           </DropdownMenuLabel>
         </div>
         <DropdownMenuSeparator />
+        <Link to="/profile">
+          <Button className="w-full cursor-pointer" variant={"outline"} size={"lg"}>
+            <User />
+            <span>My Profile</span>
+          </Button>
+        </Link>
         <Button className="cursor-pointer" variant={"destructive"} size={"lg"} onClick={handleLogout}>
           <LogOut />
           <span>Sign Out</span>

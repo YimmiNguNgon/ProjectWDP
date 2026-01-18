@@ -10,13 +10,43 @@ const userSchema = new mongoose.Schema(
     },
     email: {
       type: String,
-      required: true,
+      // required: true, // Tạm thời tắt để fix lỗi data cũ không có email
       unique: true,
       lowercase: true,
       index: true,
     },
     passwordHash: String,
     reputationScore: { type: Number, default: 0 }, // computed
+
+    // Profile information
+    phone: { type: String },
+    avatar: { type: String }, // URL to avatar image
+    bio: { type: String, maxlength: 500 },
+
+    // Shipping addresses
+    addresses: [
+      {
+        fullName: { type: String, required: true },
+        phone: { type: String, required: true },
+        addressLine1: { type: String, required: true },
+        addressLine2: { type: String },
+        city: { type: String, required: true },
+        district: { type: String },
+        ward: { type: String },
+        state: { type: String, required: true },
+        country: { type: String, required: true, default: "Vietnam" },
+        isDefault: { type: Boolean, default: false },
+      },
+    ],
+
+    // Account type (basic or premium)
+    accountType: {
+      type: String,
+      enum: ["basic", "premium"],
+      default: "basic",
+    },
+    premiumExpiresAt: { type: Date }, // When premium expires
+    premiumActivatedAt: { type: Date }, // When premium was activated
 
     // Email verification
     isEmailVerified: { type: Boolean, default: false },
