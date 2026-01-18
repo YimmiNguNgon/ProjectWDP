@@ -28,6 +28,7 @@ const LEFT_NAV_ITEMS = [
   { name: "Brand Outlet", to: "/products" },
   { name: "Gift Cards", to: "/products" },
   { name: "Help & Contact", to: "#" },
+
 ] as const;
 
 const RIGHT_NAV_ITEMS = [
