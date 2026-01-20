@@ -82,7 +82,7 @@ exports.searchSellers = async (req, res, next) => {
     const skip = (page - 1) * limit;
 
     const filter = {
-      role: { $in: ["seller", "admin"] },
+      role: { $in: ["seller"] },
       status: "active",
     };
 
@@ -141,7 +141,7 @@ exports.globalSearch = async (req, res, next) => {
 
     // Search sellers
     const sellerFilter = {
-      role: { $in: ["seller", "admin"] },
+      role: { $in: ["seller"] },
       status: "active",
     };
     if (q) {

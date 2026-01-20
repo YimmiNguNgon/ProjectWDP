@@ -191,7 +191,7 @@ export const SearchResults: React.FC<SearchResultsProps> = ({
               Sellers ({sellers.length})
             </p>
           </div>
-          <div className="divide-y">
+          <div className="divide-y mt-2 space-y-2">
             {sellers.map((seller) => (
               <SellerCard
                 key={seller._id}
