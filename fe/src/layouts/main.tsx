@@ -1,15 +1,11 @@
 import { Button } from "@/components/ui/button";
 import { Container } from "@/components/ui/container";
-import {
-  InputGroup,
-  InputGroupAddon,
-  InputGroupInput,
-} from "@/components/ui/input-group";
 import UserMenu from "@/components/user-menu";
+import { SearchContainer } from "@/components/search-container";
 import { useAuth } from "@/hooks/use-auth";
 import { useMessage, type Message } from "@/hooks/use-message";
 import { SocketContext } from "@/hooks/use-socket";
-import { Bell, Search, ShoppingCart, X } from "lucide-react";
+import { Bell, ShoppingCart } from "lucide-react";
 import type { PropsWithChildren } from "react";
 import React from "react";
 import { Link, Outlet, useNavigate } from "react-router-dom";
@@ -28,7 +24,6 @@ const LEFT_NAV_ITEMS = [
   { name: "Brand Outlet", to: "/products" },
   { name: "Gift Cards", to: "/products" },
   { name: "Help & Contact", to: "#" },
-
 ] as const;
 
 const RIGHT_NAV_ITEMS = [
@@ -85,7 +80,7 @@ export function MainLayout() {
                   >
                     {item.name}
                   </Link>
-                )
+                ),
               )}
             </div>
             <div className="flex gap-4 items-center">
@@ -128,17 +123,7 @@ export function MainLayout() {
                 className="h-12 w-auto"
               />
             </Link>
-            <InputGroup className="h-10">
-              <InputGroupAddon>
-                <Search />
-              </InputGroupAddon>
-              <InputGroupInput type="text" placeholder="Search for anything" />
-              <InputGroupAddon align={"inline-end"}>
-                <Button variant={"ghost"} size={"icon-sm"}>
-                  <X />
-                </Button>
-              </InputGroupAddon>
-            </InputGroup>
+            <SearchContainer className="h-10" />
             <Button size={"lg"} onClick={() => navigate("/products")}>
               Search
             </Button>
@@ -361,15 +346,6 @@ function MyEbayMenu() {
     </DropdownMenu>
   );
 }
-
-const ADMIN_MENU_ITEMS = [
-  { label: "📊 Dashboard", to: "/admin" },
-  { label: "👥 User Management", to: "/admin/users" },
-  { label: "📦 Product Management", to: "/admin/products" },
-  { label: "🛡️ Admin Complaints", to: "/admin/complaints" },
-  { label: "⭐ Review Moderation", to: "/admin/reviews" },
-  { label: "👥 User Management", to: "/admin/users" },
-];
 
 function AdminMenu() {
   return (

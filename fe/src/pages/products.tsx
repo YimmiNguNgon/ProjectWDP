@@ -60,6 +60,9 @@ export default function ProductsPage() {
   const [products, setProducts] = React.useState<Product[]>([]);
   const [categories, setCategories] = React.useState<Category[]>([]);
 
+  // Get search query from URL params (read-only)
+  const searchQuery = searchParams.get("search") || "";
+
   // Initialize state from URL params
   const [selectedCategories, setSelectedCategories] = React.useState<string[]>(
     searchParams.get("categories")
@@ -81,6 +84,9 @@ export default function ProductsPage() {
   // Update URL when filters change
   useEffect(() => {
     const params = new URLSearchParams();
+    if (searchQuery) {
+      params.set("search", searchQuery);
+    }
     if (selectedCategories.length > 0) {
       params.set("categories", selectedCategories.join(","));
     }
@@ -90,7 +96,13 @@ export default function ProductsPage() {
       params.set("page", currentPage.toString());
     }
     setSearchParams(params);
-  }, [selectedCategories, priceRange, currentPage, setSearchParams]);
+  }, [
+    selectedCategories,
+    priceRange,
+    currentPage,
+    setSearchParams,
+    searchQuery,
+  ]);
 
   useEffect(() => {
     const fetchCategories = async () => {
@@ -110,19 +122,33 @@ export default function ProductsPage() {
         const params = new URLSearchParams();
         params.append("page", currentPage.toString());
         params.append("limit", itemsPerPage.toString());
-        params.append("categories", selectedCategories.join(","));
 
-        params.append("minPrice", debouncedPriceRange[0].toString());
-        params.append("maxPrice", debouncedPriceRange[1].toString());
-        const res = await api.get(`/api/products?${params.toString()}`);
-        setProducts(res.data.data);
-        setTotalPages(Math.ceil((res.data.total || 0) / itemsPerPage));
+        // If search query exists, use the search endpoint
+        if (searchQuery.trim()) {
+          const { searchProducts } = await import("@/api/search");
+          const result = await searchProducts(searchQuery, {
+            page: currentPage,
+            limit: itemsPerPage,
+            minPrice: debouncedPriceRange[0],
+            maxPrice: debouncedPriceRange[1],
+          });
+          setProducts(result.data as unknown as Product[]);
+          setTotalPages(Math.ceil((result.total || 0) / itemsPerPage));
+        } else {
+          // Use regular products endpoint for category/price filtering
+          params.append("categories", selectedCategories.join(","));
+          params.append("minPrice", debouncedPriceRange[0].toString());
+          params.append("maxPrice", debouncedPriceRange[1].toString());
+          const res = await api.get(`/api/products?${params.toString()}`);
+          setProducts(res.data.data);
+          setTotalPages(Math.ceil((res.data.total || 0) / itemsPerPage));
+        }
       } catch (error) {
         console.error("Failed to fetch products:", error);
       }
     };
     fetchProducts();
-  }, [selectedCategories, currentPage, debouncedPriceRange]);
+  }, [searchQuery, selectedCategories, currentPage, debouncedPriceRange]);
 
   const handleCategoryChange = (categorySlug: string, checked: boolean) => {
     setCurrentPage(1);
@@ -236,7 +262,9 @@ export default function ProductsPage() {
         <div className="flex flex-col gap-6 p-6">
           {/* Header */}
           <div className="flex items-center justify-between">
-            <h1 className="text-3xl font-bold text-foreground">Products</h1>
+            <h1 className="text-3xl font-bold text-foreground">
+              {searchQuery ? `Search Results for "${searchQuery}"` : "Products"}
+            </h1>
           </div>
 
           {/* Empty State */}
@@ -265,7 +293,7 @@ export default function ProductsPage() {
                     <CardContent className="relative overflow-hidden bg-muted p-0">
                       <Link to={`/products/${product._id}`}>
                         <img
-                          src={product.images?.[0] || '/placeholder.png'}
+                          src={product.images?.[0] || "/placeholder.png"}
                           alt={product.title}
                           className="aspect-square w-full bg-muted flex items-center justify-center"
                         />
@@ -290,10 +318,11 @@ export default function ProductsPage() {
                           {[...Array(5)].map((_, i) => (
                             <Star
                               key={i}
-                              className={`h-3.5 w-3.5 ${i < Math.round(product.averageRating)
-                                ? "fill-yellow-400 text-yellow-400"
-                                : "text-muted-foreground"
-                                }`}
+                              className={`h-3.5 w-3.5 ${
+                                i < Math.round(product.averageRating)
+                                  ? "fill-yellow-400 text-yellow-400"
+                                  : "text-muted-foreground"
+                              }`}
                             />
                           ))}
                         </div>
