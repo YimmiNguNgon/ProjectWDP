@@ -21,6 +21,7 @@ const categoryRoutes = require("./routes/categoryRoutes");
 const reviewRoutes = require("./routes/reviewRoutes");
 const adminRoutes = require("./routes/adminRoutes");
 const orderRoutes = require("./routes/orders");
+const searchRoutes = require("./routes/search");
 const User = require("./models/User");
 
 // Passport config (sau khi dotenv.config())
@@ -64,6 +65,7 @@ app.use("/api/users", userRoutes);
 app.use("/api/reviews", reviewRoutes);
 app.use("/api/admin", adminRoutes);
 app.use("/api/orders", orderRoutes);
+app.use("/api/search", searchRoutes);
 
 // health check
 app.get("/health", (req, res) => res.json({ ok: true }));
@@ -92,11 +94,13 @@ async function createDefaultAdmin() {
         passwordHash: passwordHash,
         role: "admin",
         isEmailVerified: true,
-        status: "active"
+        status: "active",
       });
 
       await adminUser.save();
-      console.log("✅ Tài khoản admin mặc định đã được tạo (username: admin, password: admin)");
+      console.log(
+        "✅ Tài khoản admin mặc định đã được tạo (username: admin, password: admin)",
+      );
     } else {
       console.log("ℹ️ Tài khoản admin đã tồn tại");
     }
