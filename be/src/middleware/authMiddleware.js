@@ -15,7 +15,7 @@ exports.protectedRoute = async (req, res, next) => {
     // verify token
     jwt.verify(token, process.env.ACCESS_TOKEN_SECRET, async (err, decoded) => {
       if (err) {
-        return res.status(403).json({ message: "Unauthorized User" });
+        return res.status(401).json({ message: "Unauthorized User" });
       }
 
       //find user
