@@ -22,7 +22,7 @@ const VerifyEmailPage = () => {
 
       try {
         // Backend expects POST and uses req.query.token
-        await api.post(`/auth/verify-email?token=${token}`);
+        await api.post(`/api/auth/verify-email?token=${token}`);
         setStatus("success");
         toast.success("Email verified successfully!");
       } catch (error) {

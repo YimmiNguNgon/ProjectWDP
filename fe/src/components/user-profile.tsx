@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import {
   Card,
@@ -66,7 +66,7 @@ export function UserProfile({ user, orders = [] }: UserProfileProps) {
   const [editEmail, setEditEmail] = useState(false);
   const [newEmail, setNewEmail] = useState(user.email);
   const [changePassOpen, setChangePassOpen] = useState(false);
-  const [oldPassword, setOldPassword] = useState("");
+  const [currentPassword, setCurrentPassword] = useState("");
   const [newPassword, setNewPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
   const [loading, setLoading] = useState(false);
@@ -76,6 +76,12 @@ export function UserProfile({ user, orders = [] }: UserProfileProps) {
     user.avatarUrl,
   );
   const [avatarFile, setAvatarFile] = useState<File | null>(null);
+
+  useEffect(() => {
+    setNewEmail(user.email);
+    setNewUsername(user.username);
+    setAvatarPreview(user.avatarUrl);
+  }, [user]);
 
   const handleUpdateEmail = async () => {
     if (!newEmail || newEmail === user.email) {
@@ -110,18 +116,19 @@ export function UserProfile({ user, orders = [] }: UserProfileProps) {
 
     try {
       setLoading(true);
-      await changeUserPassword(oldPassword, newPassword);
+      await changeUserPassword(currentPassword, newPassword);
       await fetchMe();
       setChangePassOpen(false);
-      setOldPassword("");
+      setCurrentPassword("");
       setNewPassword("");
       setConfirmPassword("");
       toast.success("Password has been changed successfully");
-    } catch (error) {
-      console.error("Error changing password:", error);
-      toast.error(
-        "Failed to change password. Please check your current password.",
-      );
+    } catch (error: any) {
+      if (error.response && error.response.status === 400) {
+        toast.error(error.response.data.message);
+      } else if (error.response && error.response.status === 404) {
+        toast.error("User not found");
+      }
     } finally {
       setLoading(false);
     }
@@ -329,7 +336,7 @@ export function UserProfile({ user, orders = [] }: UserProfileProps) {
                     <Button
                       onClick={handleUpdateEmail}
                       disabled={loading}
-                      className="flex-1"
+                      className="flex-1 cursor-pointer"
                     >
                       {loading ? "Saving..." : "Saved Changes"}
                     </Button>
@@ -339,7 +346,7 @@ export function UserProfile({ user, orders = [] }: UserProfileProps) {
                         setEditEmail(false);
                         setNewEmail(user.email);
                       }}
-                      className="flex-1"
+                      className="flex-1 cursor-pointer"
                     >
                       Cancel
                     </Button>
@@ -376,8 +383,8 @@ export function UserProfile({ user, orders = [] }: UserProfileProps) {
                       <Input
                         id="old-pass"
                         type="password"
-                        value={oldPassword}
-                        onChange={(e) => setOldPassword(e.target.value)}
+                        value={currentPassword}
+                        onChange={(e) => setCurrentPassword(e.target.value)}
                         placeholder="Enter current password"
                       />
                     </div>
@@ -406,8 +413,11 @@ export function UserProfile({ user, orders = [] }: UserProfileProps) {
                   </div>
 
                   <div className="flex gap-2 justify-end">
-                    <AlertDialogCancel>Cancel</AlertDialogCancel>
+                    <AlertDialogCancel className="cursor-pointer">
+                      Cancel
+                    </AlertDialogCancel>
                     <AlertDialogAction
+                      className="cursor-pointer"
                       onClick={handleChangePassword}
                       disabled={loading}
                     >

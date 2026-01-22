@@ -3,7 +3,7 @@ const Product = require("../models/Product");
 
 exports.createProduct = async (req, res, next) => {
   try {
-    const { title, description, price, stock, imageUrl } = req.body;
+    const { title, description, price, stock, imageUrl, categoryId } = req.body;
     const sellerId = req.user ? req.user._id : req.body.sellerId; // allow sellerId in body for tests if no auth
     if (!sellerId)
       return res.status(400).json({ message: "sellerId required" });
@@ -17,6 +17,7 @@ exports.createProduct = async (req, res, next) => {
       price,
       imageUrl: imageUrl || "",
       stock: stock || 0,
+      categoryId,
     });
     await p.save();
     return res.status(201).json({ data: p });
@@ -56,6 +57,9 @@ exports.listProducts = async (req, res, next) => {
         filter.categoryId = {
           $in: categoryDocs.map((c) => c._id),
         };
+      } else {
+        // If categories specified but found none, match nothing
+        filter.categoryId = { $in: [] };
       }
     }
 
