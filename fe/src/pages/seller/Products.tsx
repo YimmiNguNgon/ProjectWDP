@@ -1,8 +1,8 @@
-import { useState } from 'react';
-import { Link } from 'react-router-dom';
+import { useState, useEffect } from 'react';
+import { Link, useSearchParams } from 'react-router-dom';
+import { useDebounce } from "@/hooks/use-debounce";
 import { 
   Search, 
-  Filter, 
   Plus, 
   Edit, 
   Trash2, 
@@ -11,7 +11,18 @@ import {
   Package,
   CheckCircle,
   XCircle,
-  ArrowUpDown
+  X,
+  Calendar,
+  User,
+  Tag,
+  BarChart3,
+  Star,
+  ShoppingBag,
+  Clock,
+  Package2,
+  DollarSign,
+  Hash,
+  BarChart
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -24,44 +35,63 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { Badge } from '@/components/ui/badge';
 import { toast } from 'sonner';
+import api from "@/lib/axios";
 
 interface Product {
-  id: string;
-  name: string;
+  _id: string;
+  title: string;
   price: number;
-  stock: number;
-  category: string;
-  status: 'active' | 'inactive' | 'out_of_stock';
-  views: number;
-  sales: number;
-  rating: number;
+  description: string;
   image: string;
+  categoryId: string | null;
+  sellerId: string;
+  isAuction: boolean;
+  auctionEndTime: string | null;
+  createdAt: string;
+  updatedAt: string;
+  stock?: number;
+  category?: string;
+  status?: 'active' | 'inactive' | 'out_of_stock';
+  views?: number;
+  sales?: number;
+  rating?: number;
 }
 
 export default function SellerProducts() {
+  const [searchParams, setSearchParams] = useSearchParams();
+  const [products, setProducts] = useState<Product[]>([]);
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedCategory, setSelectedCategory] = useState('all');
   const [selectedStatus, setSelectedStatus] = useState('all');
+  const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
+  const [isDetailModalOpen, setIsDetailModalOpen] = useState(false);
 
-  // Mock products data
-  const products: Product[] = [
-    { id: '1', name: 'Áo thun cotton', price: 24.99, stock: 45, category: 'Thời trang', status: 'active', views: 1245, sales: 89, rating: 4.8, image: 'https://via.placeholder.com/80' },
-    { id: '2', name: 'Tai nghe Bluetooth', price: 59.99, stock: 23, category: 'Điện tử', status: 'active', views: 856, sales: 42, rating: 4.5, image: 'https://via.placeholder.com/80' },
-    { id: '3', name: 'Sách lập trình', price: 34.99, stock: 0, category: 'Sách', status: 'out_of_stock', views: 342, sales: 56, rating: 4.9, image: 'https://via.placeholder.com/80' },
-    { id: '4', name: 'Bình nước thể thao', price: 19.99, stock: 12, category: 'Thể thao', status: 'active', views: 567, sales: 34, rating: 4.3, image: 'https://via.placeholder.com/80' },
-    { id: '5', name: 'Đèn ngủ LED', price: 29.99, stock: 8, category: 'Nhà cửa', status: 'active', views: 789, sales: 67, rating: 4.7, image: 'https://via.placeholder.com/80' },
-    { id: '6', name: 'Balo laptop', price: 44.99, stock: 5, category: 'Phụ kiện', status: 'inactive', views: 234, sales: 12, rating: 4.2, image: 'https://via.placeholder.com/80' },
-  ];
+  const [selectedCategories, setSelectedCategories] = useState<string[]>(
+    searchParams.get("categories")
+      ? searchParams.get("categories")!.split(",")
+      : [],
+  );
+  
+  const [priceRange, setPriceRange] = useState<[number, number]>([
+    parseInt(searchParams.get("minPrice") || "0"),
+    parseInt(searchParams.get("maxPrice") || "10000"),
+  ]);
+
+  const debouncedPriceRange = useDebounce(priceRange, 300);
+  const [currentPage, setCurrentPage] = useState(
+    parseInt(searchParams.get("page") || "1"),
+  );
+  const [totalPages, setTotalPages] = useState(1);
+  const itemsPerPage = 10;
 
   const categories = ['Tất cả', 'Thời trang', 'Điện tử', 'Sách', 'Thể thao', 'Nhà cửa', 'Phụ kiện'];
-  const statuses = ['Tất cả', 'Đang bán', 'Hết hàng', 'Ngừng bán'];
+  const statuses = ['Tất cả', 'Đang bán', 'Ngừng bán'];
 
   const filteredProducts = products.filter(product => {
-    const matchesSearch = product.name.toLowerCase().includes(searchTerm.toLowerCase());
+    const matchesSearch = product.title.toLowerCase().includes(searchTerm.toLowerCase());
     const matchesCategory = selectedCategory === 'all' || product.category === selectedCategory;
     const matchesStatus = selectedStatus === 'all' || 
       (selectedStatus === 'Đang bán' && product.status === 'active') ||
-      (selectedStatus === 'Hết hàng' && product.status === 'out_of_stock') ||
       (selectedStatus === 'Ngừng bán' && product.status === 'inactive');
     
     return matchesSearch && matchesCategory && matchesStatus;
@@ -78,6 +108,11 @@ export default function SellerProducts() {
     }
   };
 
+  const handleViewDetail = (product: Product) => {
+    setSelectedProduct(product);
+    setIsDetailModalOpen(true);
+  };
+
   const handleDelete = (productId: string) => {
     if (window.confirm('Bạn có chắc chắn muốn xóa sản phẩm này?')) {
       toast.success('Đã xóa sản phẩm');
@@ -90,6 +125,45 @@ export default function SellerProducts() {
     toast.success(`Đã ${newStatus === 'active' ? 'kích hoạt' : 'tạm ngừng'} sản phẩm`);
     // Add API call here
   };
+
+  const formatDate = (dateString: string) => {
+    return new Date(dateString).toLocaleDateString('vi-VN', {
+      day: '2-digit',
+      month: '2-digit',
+      year: 'numeric'
+    });
+  };
+
+  useEffect(() => {
+    const fetchProducts = async () => {
+      try {
+        const params = new URLSearchParams();
+        params.append("page", currentPage.toString());
+        params.append("limit", itemsPerPage.toString());
+        params.append("minPrice", debouncedPriceRange[0].toString());
+        params.append("maxPrice", debouncedPriceRange[1].toString());
+        
+        const res = await api.get(`/products?${params.toString()}`);
+        
+        // Transform API data to match Product interface
+        const transformedProducts = res.data.data.map((product: any) => ({
+          ...product,
+          stock: product.stock || Math.floor(Math.random() * 100),
+          category: product.category || categories[Math.floor(Math.random() * (categories.length - 1)) + 1],
+          status: (['active', 'inactive'] as const)[Math.floor(Math.random() * 2)],
+          views: product.views || Math.floor(Math.random() * 1000),
+          sales: product.sales || Math.floor(Math.random() * 100),
+          rating: product.rating || (Math.random() * 2 + 3).toFixed(1)
+        }));
+        
+        setProducts(transformedProducts);
+        setTotalPages(Math.ceil((res.data.total || 0) / itemsPerPage));
+      } catch (error) {
+        console.error("Failed to fetch products:", error);
+      }
+    };
+    fetchProducts();
+  }, [selectedCategories, currentPage, debouncedPriceRange]);
 
   return (
     <div className="p-6">
@@ -156,13 +230,13 @@ export default function SellerProducts() {
       {/* Products Grid */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
         {filteredProducts.map((product) => (
-          <Card key={product.id} className="overflow-hidden">
+          <Card key={product._id} className="overflow-hidden hover:shadow-lg transition-shadow duration-300">
             <CardContent className="p-0">
               {/* Product Image */}
               <div className="relative h-48 bg-gray-100">
                 <img
                   src={product.image}
-                  alt={product.name}
+                  alt={product.title}
                   className="w-full h-full object-cover"
                 />
                 <div className="absolute top-3 right-3">
@@ -173,7 +247,7 @@ export default function SellerProducts() {
               {/* Product Info */}
               <div className="p-4">
                 <div className="flex justify-between items-start mb-2">
-                  <h3 className="font-semibold text-gray-900 truncate">{product.name}</h3>
+                  <h3 className="font-semibold text-gray-900 truncate">{product.title}</h3>
                   <DropdownMenu>
                     <DropdownMenuTrigger asChild>
                       <Button variant="ghost" size="sm">
@@ -181,15 +255,17 @@ export default function SellerProducts() {
                       </Button>
                     </DropdownMenuTrigger>
                     <DropdownMenuContent align="end">
-                      <DropdownMenuItem>
+                      <DropdownMenuItem onClick={() => handleViewDetail(product)}>
                         <Eye className="h-4 w-4 mr-2" />
                         Xem chi tiết
                       </DropdownMenuItem>
-                      <DropdownMenuItem>
-                        <Edit className="h-4 w-4 mr-2" />
-                        Chỉnh sửa
-                      </DropdownMenuItem>
-                      <DropdownMenuItem onClick={() => handleToggleStatus(product.id, product.status)}>
+                      <Link to={`/seller/products/edit/${product._id}`}>
+                        <DropdownMenuItem>
+                          <Edit className="h-4 w-4 mr-2" />
+                          Chỉnh sửa
+                        </DropdownMenuItem>
+                      </Link>
+                      <DropdownMenuItem onClick={() => handleToggleStatus(product._id, product.status!)}>
                         {product.status === 'active' ? (
                           <>
                             <XCircle className="h-4 w-4 mr-2" />
@@ -204,7 +280,7 @@ export default function SellerProducts() {
                       </DropdownMenuItem>
                       <DropdownMenuItem 
                         className="text-red-600"
-                        onClick={() => handleDelete(product.id)}
+                        onClick={() => handleDelete(product._id)}
                       >
                         <Trash2 className="h-4 w-4 mr-2" />
                         Xóa
@@ -218,7 +294,7 @@ export default function SellerProducts() {
                 {/* Stats */}
                 <div className="grid grid-cols-3 gap-2 mb-4 text-center text-sm">
                   <div className="border-r">
-                    <div className="font-semibold">${product.price}</div>
+                    <div className="font-semibold">${product.price.toLocaleString()}</div>
                     <div className="text-gray-500 text-xs">Giá</div>
                   </div>
                   <div className="border-r">
@@ -238,10 +314,6 @@ export default function SellerProducts() {
                     <span>{product.rating}</span>
                     <span className="text-gray-500 ml-1">({product.views} lượt xem)</span>
                   </div>
-                  <Button variant="outline" size="sm">
-                    <Edit className="h-3 w-3 mr-1" />
-                    Sửa
-                  </Button>
                 </div>
               </div>
             </CardContent>
@@ -261,6 +333,201 @@ export default function SellerProducts() {
               Thêm sản phẩm đầu tiên
             </Button>
           </Link>
+        </div>
+      )}
+
+      {/* Product Detail Modal */}
+      {isDetailModalOpen && selectedProduct && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50 p-4">
+          <div className="bg-white rounded-lg shadow-xl max-w-4xl w-full max-h-[90vh] overflow-y-auto">
+            {/* Modal Header */}
+            <div className="sticky top-0 bg-white border-b px-6 py-4 flex justify-between items-center">
+              <div>
+                <h2 className="text-xl font-bold text-gray-900">Chi tiết sản phẩm</h2>
+                <p className="text-sm text-gray-500">ID: {selectedProduct._id}</p>
+              </div>
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => setIsDetailModalOpen(false)}
+                className="h-8 w-8 p-0"
+              >
+                <X className="h-4 w-4" />
+              </Button>
+            </div>
+
+            {/* Modal Content */}
+            <div className="p-6">
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                {/* Left Column - Product Image & Basic Info */}
+                <div>
+                  {/* Product Image */}
+                  <div className="bg-gray-100 rounded-lg overflow-hidden mb-4">
+                    <img
+                      src={selectedProduct.image}
+                      alt={selectedProduct.title}
+                      className="w-full h-64 object-cover"
+                    />
+                  </div>
+
+                  {/* Basic Info Cards */}
+                  <div className="grid grid-cols-2 gap-4 mb-6">
+                    <Card>
+                      <CardContent className="p-4">
+                        <div className="flex items-center">
+                          <DollarSign className="h-5 w-5 text-green-600 mr-2" />
+                          <div>
+                            <p className="text-sm text-gray-500">Giá bán</p>
+                            <p className="text-lg font-semibold">${selectedProduct.price.toLocaleString()}</p>
+                          </div>
+                        </div>
+                      </CardContent>
+                    </Card>
+
+                    <Card>
+                      <CardContent className="p-4">
+                        <div className="flex items-center">
+                          <Package2 className="h-5 w-5 text-blue-600 mr-2" />
+                          <div>
+                            <p className="text-sm text-gray-500">Tồn kho</p>
+                            <p className="text-lg font-semibold">{selectedProduct.stock} sản phẩm</p>
+                          </div>
+                        </div>
+                      </CardContent>
+                    </Card>
+                  </div>
+
+                  {/* Product Status */}
+                  <Card className="mb-6">
+                    <CardContent className="p-4">
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center">
+                          <div className="mr-3">
+                            {selectedProduct.status === 'active' ? (
+                              <CheckCircle className="h-5 w-5 text-green-600" />
+                            ) : selectedProduct.status === 'inactive' ? (
+                              <XCircle className="h-5 w-5 text-gray-600" />
+                            ) : (
+                              <XCircle className="h-5 w-5 text-red-600" />
+                            )}
+                          </div>
+                          <div>
+                            <p className="text-sm text-gray-500">Trạng thái</p>
+                            <p className="font-medium">
+                              {selectedProduct.status === 'active' 
+                                ? 'Đang bán' 
+                                : selectedProduct.status === 'inactive' 
+                                ? 'Ngừng bán' 
+                                : 'Hết hàng'}
+                            </p>
+                          </div>
+                        </div>
+                      </div>
+                    </CardContent>
+                  </Card>
+                </div>
+
+                {/* Right Column - Detailed Info */}
+                <div>
+                  {/* Product Title & Category */}
+                  <div className="mb-6">
+                    <h3 className="text-lg font-bold text-gray-900 mb-2">{selectedProduct.title}</h3>
+                    <div className="flex items-center">
+                      <Tag className="h-4 w-4 text-gray-400 mr-2" />
+                      <Badge variant="outline">{selectedProduct.category}</Badge>
+                    </div>
+                  </div>
+
+                  {/* Description */}
+                  <Card className="mb-6">
+                    <CardContent className="p-4">
+                      <h4 className="font-semibold text-gray-900 mb-2 flex items-center">
+                        <Package className="h-4 w-4 mr-2" />
+                        Mô tả sản phẩm
+                      </h4>
+                      <p className="text-gray-600 text-sm">{selectedProduct.description}</p>
+                    </CardContent>
+                  </Card>
+
+                  {/* Performance Stats */}
+                  <Card className="mb-6">
+                    <CardContent className="p-4">
+                      <h4 className="font-semibold text-gray-900 mb-4 flex items-center">
+                        <BarChart3 className="h-4 w-4 mr-2" />
+                        Hiệu suất bán hàng
+                      </h4>
+                      <div className="grid grid-cols-3 gap-4">
+                        <div className="text-center">
+                          <p className="text-2xl font-bold text-blue-600">{selectedProduct.sales}</p>
+                          <p className="text-xs text-gray-500">Đã bán</p>
+                        </div>
+                        <div className="text-center">
+                          <p className="text-2xl font-bold text-purple-600">{selectedProduct.views}</p>
+                          <p className="text-xs text-gray-500">Lượt xem</p>
+                        </div>
+                        <div className="text-center">
+                          <div className="flex items-center justify-center">
+                            <Star className="h-4 w-4 text-yellow-500 mr-1" />
+                            <span className="text-2xl font-bold">{selectedProduct.rating}</span>
+                          </div>
+                          <p className="text-xs text-gray-500">Đánh giá</p>
+                        </div>
+                      </div>
+                    </CardContent>
+                  </Card>
+
+                  {/* Additional Information */}
+                  <Card>
+                    <CardContent className="p-4">
+                      <h4 className="font-semibold text-gray-900 mb-4 flex items-center">
+                        <Hash className="h-4 w-4 mr-2" />
+                        Thông tin bổ sung
+                      </h4>
+                      <div className="space-y-3">
+                        <div className="flex justify-between">
+                          <div className="flex items-center">
+                            <Calendar className="h-4 w-4 text-gray-400 mr-2" />
+                            <span className="text-sm text-gray-600">Ngày tạo:</span>
+                          </div>
+                          <span className="text-sm font-medium">{formatDate(selectedProduct.createdAt)}</span>
+                        </div>
+                        <div className="flex justify-between">
+                          <div className="flex items-center">
+                            <Calendar className="h-4 w-4 text-gray-400 mr-2" />
+                            <span className="text-sm text-gray-600">Cập nhật:</span>
+                          </div>
+                          <span className="text-sm font-medium">{formatDate(selectedProduct.updatedAt)}</span>
+                        </div>
+                        <div className="flex justify-between">
+                          <div className="flex items-center">
+                            <User className="h-4 w-4 text-gray-400 mr-2" />
+                            <span className="text-sm text-gray-600">Mã người bán:</span>
+                          </div>
+                          <span className="text-sm font-medium truncate ml-2">{selectedProduct.sellerId}</span>
+                        </div>
+                      </div>
+                    </CardContent>
+                  </Card>
+                </div>
+              </div>
+            </div>
+
+            {/* Modal Footer */}
+            <div className="sticky bottom-0 bg-white border-t px-6 py-4 flex justify-end space-x-3">
+              <Button
+                variant="outline"
+                onClick={() => setIsDetailModalOpen(false)}
+              >
+                Đóng
+              </Button>
+              <Link to={`/seller/products/edit/${selectedProduct._id}`}>
+                <Button className="bg-blue-600 hover:bg-blue-700">
+                  <Edit className="h-4 w-4 mr-2" />
+                  Chỉnh sửa
+                </Button>
+              </Link>
+            </div>
+          </div>
         </div>
       )}
     </div>

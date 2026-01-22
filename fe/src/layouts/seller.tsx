@@ -18,11 +18,11 @@ const navigation = [
       href: '/seller', 
       icon: LayoutDashboard,
     },
-    { 
-      name: 'Thêm sản phẩm mới', 
-      href: '/seller/products/new', 
-      icon: PlusCircle,
-    },
+    // { 
+    //   name: 'Thêm sản phẩm mới', 
+    //   href: '/seller/products/new', 
+    //   icon: PlusCircle,
+    // },
     { 
       name: 'Quản lý sản phẩm', 
       href: '/seller/products', 
@@ -99,26 +99,7 @@ export default function SellerLayout() {
                         })}
                     </nav>
 
-                    {/* Stats Summary */}
-                    <div className="px-3 mt-6 pt-6 border-t border-gray-200">
-                        <div className="p-3 bg-gray-50 rounded-lg">
-                            <h3 className="text-sm font-semibold text-gray-700 mb-2">Thống kê nhanh</h3>
-                            <div className="space-y-2">
-                                <div className="flex justify-between items-center text-sm">
-                                    <span className="text-gray-600">Đơn hàng hôm nay</span>
-                                    <span className="font-semibold">3</span>
-                                </div>
-                                <div className="flex justify-between items-center text-sm">
-                                    <span className="text-gray-600">Sản phẩm đang bán</span>
-                                    <span className="font-semibold">12</span>
-                                </div>
-                                <div className="flex justify-between items-center text-sm">
-                                    <span className="text-gray-600">Doanh thu tháng</span>
-                                    <span className="font-semibold text-green-600">1,245.50đ</span>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
+                    
 
                     {/* Home Button */}
                     <div className="px-3 mt-6 pt-6 border-t border-gray-200">
@@ -129,9 +110,6 @@ export default function SellerLayout() {
                             <Home className="h-5 w-5 text-gray-400" />
                             <div className="flex flex-col">
                                 <span>Về trang chủ</span>
-                                <span className="text-xs text-gray-500 font-normal">
-                                    Quay lại mua sắm
-                                </span>
                             </div>
                         </Link>
                     </div>

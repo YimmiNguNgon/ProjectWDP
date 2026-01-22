@@ -87,11 +87,6 @@ export default function SellerOrders() {
     // Add API call here
   };
 
-  const handleExportOrders = () => {
-    toast.success('Đã xuất danh sách đơn hàng');
-    // Add export logic here
-  };
-
   const totalRevenue = orders
     .filter(order => order.status !== 'cancelled')
     .reduce((sum, order) => sum + order.total, 0);
@@ -104,12 +99,7 @@ export default function SellerOrders() {
           <h1 className="text-2xl font-bold text-gray-900">Quản lý đơn hàng</h1>
           <p className="text-gray-600">{filteredOrders.length} đơn hàng - Tổng doanh thu: ${totalRevenue.toFixed(2)}</p>
         </div>
-        <div className="flex gap-2">
-          <Button variant="outline" onClick={handleExportOrders}>
-            <Download className="h-4 w-4 mr-2" />
-            Xuất CSV
-          </Button>
-        </div>
+        
       </div>
 
       {/* Stats */}

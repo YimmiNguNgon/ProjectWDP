@@ -211,23 +211,9 @@ export default function AddProduct() {
               {/* Shipping & Settings */}
               <Card>
                 <CardHeader>
-                  <CardTitle className="text-lg">Vận chuyển & Cài đặt</CardTitle>
+                  <CardTitle className="text-lg">Cài đặt</CardTitle>
                 </CardHeader>
                 <CardContent className="space-y-4">
-                  <div className="space-y-2">
-                    <Label>Phương thức vận chuyển</Label>
-                    <div className="space-y-2">
-                      <label className="flex items-center space-x-2">
-                        <input type="checkbox" className="rounded" defaultChecked />
-                        <span className="text-sm">Giao hàng tiêu chuẩn</span>
-                      </label>
-                      <label className="flex items-center space-x-2">
-                        <input type="checkbox" className="rounded" />
-                        <span className="text-sm">Giao hàng nhanh</span>
-                      </label>
-                    </div>
-                  </div>
-
                   <div className="space-y-2">
                     <Label>Trạng thái sản phẩm</Label>
                     <div className="space-y-2">

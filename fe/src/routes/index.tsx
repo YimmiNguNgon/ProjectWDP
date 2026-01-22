@@ -15,12 +15,13 @@ import AuthLayout from "@/layouts/auth";
 import UserProfilePage from "@/pages/profile";
 import AdminLayout from "@/layouts/admin";
 import SellerLayout from "@/layouts/seller";
-import SellerOverview from "@/pages/seller/overview";
+import SellerOverview from "@/pages/seller/Overview";
 import SellerOrders from "@/pages/seller/Orders";
 import SellerRevenue from "@/pages/seller/Revenue";
-import SellerReviews from "@/pages/seller/reviews";
-import SellerProducts from "@/pages/seller/products";
+import SellerReviews from "@/pages/seller/Reviews";
+import SellerProducts from "@/pages/seller/Products";
 import SellerAddProduct from "@/pages/seller/AddProduct";
+import SellerEditProduct from "@/pages/seller/EditProduct";
 
 // Placeholder components for admin pages
 const AdminComplaints = () => (
@@ -106,6 +107,10 @@ export const AppRouter = () => {
         {
           path: "products/new",
           element: <SellerAddProduct />,
+        },
+        {
+          path: "products/edit/:id",
+          element: <SellerEditProduct />,
         },
         {
           path: "revenue",

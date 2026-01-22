@@ -61,11 +61,6 @@ export default function SellerRevenue() {
 
   const revenueGrowth = calculateGrowth(stats.todayRevenue, stats.yesterdayRevenue);
 
-  const handleExportReport = () => {
-    toast.success('Đã xuất báo cáo doanh thu');
-    // Add export logic here
-  };
-
   return (
     <div className="p-6 space-y-6">
       {/* Header */}
@@ -88,22 +83,6 @@ export default function SellerRevenue() {
               <SelectItem value="all">Tất cả</SelectItem>
             </SelectContent>
           </Select>
-
-          <Select value={currency} onValueChange={setCurrency}>
-            <SelectTrigger className="w-[100px]">
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="USD">USD ($)</SelectItem>
-              <SelectItem value="VND">VND (₫)</SelectItem>
-              <SelectItem value="EUR">EUR (€)</SelectItem>
-            </SelectContent>
-          </Select>
-
-          <Button variant="outline" onClick={handleExportReport}>
-            <Download className="h-4 w-4 mr-2" />
-            Xuất báo cáo
-          </Button>
         </div>
       </div>
 

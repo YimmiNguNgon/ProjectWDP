@@ -50,12 +50,6 @@ export default function SellerOverview() {
           <h1 className="text-2xl font-bold text-gray-900">Tổng quan</h1>
           <p className="text-gray-600">Xem nhanh tình hình kinh doanh của bạn</p>
         </div>
-        <div className="flex gap-2">
-          <Button variant="outline">Xuất báo cáo</Button>
-          <Button className="bg-green-600 hover:bg-green-700">
-            Thêm sản phẩm mới
-          </Button>
-        </div>
       </div>
 
       {/* Stats Grid */}
