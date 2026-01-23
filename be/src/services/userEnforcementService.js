@@ -203,8 +203,22 @@ class UserEnforcementService {
      */
     async canSendMessage(userId) {
         try {
+            // Validate userId
+            if (!userId) {
+                console.log('canSendMessage: userId is null or undefined');
+                return { allowed: false, reason: 'User ID is required' };
+            }
+
+            if (!require('mongoose').isValidObjectId(userId)) {
+                console.log('canSendMessage: invalid userId format:', userId);
+                return { allowed: false, reason: 'Invalid user ID format' };
+            }
+
             const user = await User.findById(userId);
-            if (!user) return { allowed: false, reason: 'User not found' };
+            if (!user) {
+                console.log('canSendMessage: user not found:', userId);
+                return { allowed: false, reason: 'User not found' };
+            }
 
             // Check if banned
             if (user.status === 'banned') {
@@ -250,7 +264,8 @@ class UserEnforcementService {
             return { allowed: true };
         } catch (err) {
             console.error('canSendMessage error:', err);
-            return { allowed: false, reason: 'Error checking permissions' };
+            console.error('userId attempted:', userId);
+            return { allowed: false, reason: `Permission check failed: ${err.message}` };
         }
     }
 

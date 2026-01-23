@@ -237,7 +237,7 @@ export default function LeaveFeedbackPage() {
   };
 
   const handleGoBackToOrders = () => {
-    navigate("/purchases");
+    navigate("/my-ebay/activity/purchases");
   };
 
   const productTitle = item?.productId?.title || item?.title || "Product";

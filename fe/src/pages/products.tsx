@@ -73,6 +73,9 @@ export default function ProductsPage() {
     parseInt(searchParams.get("minPrice") || "0"),
     parseInt(searchParams.get("maxPrice") || "10000"),
   ]);
+  const [selectedRating, setSelectedRating] = React.useState<number>(
+    parseInt(searchParams.get("rating") || "0"),
+  );
   const [currentPage, setCurrentPage] = React.useState(
     parseInt(searchParams.get("page") || "1"),
   );
@@ -92,6 +95,9 @@ export default function ProductsPage() {
     }
     params.set("minPrice", priceRange[0].toString());
     params.set("maxPrice", priceRange[1].toString());
+    if (selectedRating > 0) {
+      params.set("rating", selectedRating.toString());
+    }
     if (currentPage > 1) {
       params.set("page", currentPage.toString());
     }
@@ -99,6 +105,7 @@ export default function ProductsPage() {
   }, [
     selectedCategories,
     priceRange,
+    selectedRating,
     currentPage,
     setSearchParams,
     searchQuery,
@@ -132,13 +139,21 @@ export default function ProductsPage() {
             minPrice: debouncedPriceRange[0],
             maxPrice: debouncedPriceRange[1],
           });
-          setProducts(result.data as unknown as Product[]);
+          let filteredData = result.data as unknown as Product[];
+          // Client-side rating filter for search results
+          if (selectedRating > 0) {
+            filteredData = filteredData.filter(p => p.averageRating >= selectedRating);
+          }
+          setProducts(filteredData);
           setTotalPages(Math.ceil((result.total || 0) / itemsPerPage));
         } else {
           // Use regular products endpoint for category/price filtering
           params.append("categories", selectedCategories.join(","));
           params.append("minPrice", debouncedPriceRange[0].toString());
           params.append("maxPrice", debouncedPriceRange[1].toString());
+          if (selectedRating > 0) {
+            params.append("minRating", selectedRating.toString());
+          }
           const res = await api.get(`/api/products?${params.toString()}`);
           setProducts(res.data.data);
           setTotalPages(Math.ceil((res.data.total || 0) / itemsPerPage));
@@ -148,7 +163,7 @@ export default function ProductsPage() {
       }
     };
     fetchProducts();
-  }, [searchQuery, selectedCategories, currentPage, debouncedPriceRange]);
+  }, [searchQuery, selectedCategories, currentPage, debouncedPriceRange, selectedRating]);
 
   const handleCategoryChange = (categorySlug: string, checked: boolean) => {
     setCurrentPage(1);
@@ -234,15 +249,20 @@ export default function ProductsPage() {
                 <span>Rating</span>
               </button>
               <div className="mt-3 space-y-2">
-                {ratings.map((rating) => (
+                {ratings.reverse().map((rating) => (
                   <button
                     key={rating}
-                    className={`flex w-full items-center gap-2 rounded py-1 text-sm transition-colors`}
+                    onClick={() => {
+                      setCurrentPage(1);
+                      setSelectedRating(selectedRating === rating ? 0 : rating);
+                    }}
+                    className={`flex w-full items-center gap-2 rounded py-1 px-2 text-sm transition-colors hover:bg-muted ${selectedRating === rating ? 'bg-muted font-semibold' : ''
+                      }`}
                   >
                     {[...Array(rating)].map((_, i) => (
                       <Star
                         key={i}
-                        className="h-3 w-3 fill-yellow-400 text-yellow-400"
+                        className="h-3.5 w-3.5 fill-yellow-400 text-yellow-400"
                       />
                     ))}
                     <span className="text-xs text-foreground/60">& up</span>
@@ -318,11 +338,10 @@ export default function ProductsPage() {
                           {[...Array(5)].map((_, i) => (
                             <Star
                               key={i}
-                              className={`h-3.5 w-3.5 ${
-                                i < Math.round(product.averageRating)
+                              className={`h-3.5 w-3.5 ${i < Math.round(product.averageRating)
                                   ? "fill-yellow-400 text-yellow-400"
                                   : "text-muted-foreground"
-                              }`}
+                                }`}
                             />
                           ))}
                         </div>

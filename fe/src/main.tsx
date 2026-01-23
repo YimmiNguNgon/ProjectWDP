@@ -87,7 +87,7 @@ export function AuthProvider({ children }: PropsWithChildren) {
       setAuthToken(token);
       localStorage.setItem("token", token);
       setAccessToken(token);
-      
+
       // Fetch full user profile immediately
       await fetchMe();
     } catch (error) {
@@ -104,9 +104,20 @@ export function AuthProvider({ children }: PropsWithChildren) {
       const res = await api.get("/api/users/me");
       const { user } = res.data;
       setUser(user);
+      setPayload({
+        userId: user._id,
+        username: user.username,
+        role: user.role
+      });
     } catch (error) {
       console.error("Failed to fetch user:", error);
-      signOut();
+      // Only sign out if it's an auth/token error, not other errors
+      if (error.response?.status === 401) {
+        // Could be expired token, let's try to continue without force logout
+        console.warn("Unauthorized - token may be invalid");
+      }
+      // Don't automatically sign out - let the user stay logged in with the token
+      // signOut(); // REMOVED - this was causing the logout loop
     } finally {
       setLoading(false);
     }

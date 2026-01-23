@@ -13,6 +13,15 @@ import {
 } from "@/components/ui/item";
 import { Label } from "@/components/ui/label";
 import { Separator } from "@/components/ui/separator";
+import {
+  Dialog,
+  DialogContent,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog";
+import { Messages } from "@/components/chat/messages";
+import { MessageContext, type Conversation, type Message } from "@/hooks/use-message";
+import { useAuth } from "@/hooks/use-auth";
 import api from "@/lib/axios";
 import { ChevronRight, Minus, Plus } from "lucide-react";
 import { useEffect, useState } from "react";
@@ -42,6 +51,17 @@ export default function ProductDetailPage() {
   const [product, setProduct] = useState<ProductDetail>();
   const [quantity, setQuantity] = useState(1);
 
+  // Chat dialog states
+  const [open, setOpen] = useState(false);
+  const { payload } = useAuth();
+
+  // Message context states
+  const [participants, setParticipantsState] = useState<string[]>([]);
+  const [conversation, setConversation] = useState<Conversation | undefined>();
+  const [messages, setMessages] = useState<Message[] | undefined>();
+  const [productRef, setProductRef] = useState<string | undefined>();
+  const [productContext, setProductContext] = useState<ProductDetail | undefined>();
+
   useEffect(() => {
     api.get(`/api/products/${productId}`).then((res) => {
       setProduct(res.data.data);
@@ -54,6 +74,18 @@ export default function ProductDetailPage() {
 
   const handleQuantityChange = (delta: number) => {
     setQuantity((prev) => Math.max(1, Math.min(product?.quantity || 999, prev + delta)));
+  };
+
+  const handleJoinChat = () => {
+    const sender = payload?.userId;
+    const receiver = product?.sellerId;
+    if (!sender || !receiver) {
+      toast.error('Vui lòng đăng nhập để chat với seller');
+      return;
+    }
+    setParticipantsState([sender, receiver]);
+    setProductRef(productId);
+    setProductContext(product);
   };
 
   const handleBuyNow = async () => {
@@ -109,12 +141,40 @@ export default function ProductDetailPage() {
               </Link>
               <ItemDescription className="inline-flex flex-nowrap gap-2 items-center">
                 <span>Shop Desciption</span>
-                {/* <ContactSeller /> */}
-                <Button variant={"link"} className="p-0 h-fit" asChild>
-                  <Link to={`/contact-seller/${product?._id}`}>
-                    Contact Seller
-                  </Link>
-                </Button>
+                {/* Chat Dialog */}
+                <Dialog open={open} onOpenChange={setOpen}>
+                  <DialogTrigger asChild>
+                    <Button
+                      variant="link"
+                      className="p-0 h-fit"
+                      onClick={handleJoinChat}
+                    >
+                      Contact Seller
+                    </Button>
+                  </DialogTrigger>
+                  <DialogContent
+                    className="h-fit overflow-auto flex flex-col p-0 gap-0 left-[unset] right-0 top-[unset] bottom-0 translate-0 m-4"
+                    aria-describedby=""
+                    showCloseButton={false}
+                  >
+                    <DialogTitle hidden>Chat box</DialogTitle>
+                    <MessageContext.Provider
+                      value={{
+                        participants,
+                        setParticipants: setParticipantsState,
+                        conversation,
+                        setConversation,
+                        messages,
+                        setMessages,
+                        productRef,
+                        setProductRef,
+                        product: productContext,
+                      }}
+                    >
+                      <Messages onCloseDialog={() => setOpen(false)} />
+                    </MessageContext.Provider>
+                  </DialogContent>
+                </Dialog>
               </ItemDescription>
             </ItemContent>
             <ItemActions>

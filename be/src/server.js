@@ -67,6 +67,12 @@ app.use("/api/admin", adminRoutes);
 app.use("/api/orders", orderRoutes);
 app.use("/api/search", searchRoutes);
 
+// Chat routes
+const chatRoutes = require("./routes/chats");
+const chatHistoryRoutes = require("./routes/chatHistory");
+app.use("/api/chats", chatRoutes);
+app.use("/api/v1/chat-history", chatHistoryRoutes);
+
 // health check
 app.get("/health", (req, res) => res.json({ ok: true }));
 
@@ -112,8 +118,27 @@ async function createDefaultAdmin() {
 async function start() {
   await connectDB(process.env.MONGO_URI);
   await createDefaultAdmin();
-  app.listen(PORT, () => {
-    console.log(`Server is running on port ${PORT}`);
+
+  // Create HTTP server from Express app
+  const http = require('http');
+  const server = http.createServer(app);
+
+  // Setup Socket.IO
+  const { Server } = require('socket.io');
+  const io = new Server(server, {
+    cors: {
+      origin: '*', // Allow all origins in dev
+      methods: ['GET', 'POST']
+    }
+  });
+
+  // Initialize Socket.IO handlers
+  const initSocket = require('./socket');
+  initSocket(io);
+
+  server.listen(PORT, () => {
+    console.log(`✅ Server is running on port ${PORT}`);
+    console.log(`✅ Socket.IO is ready for real-time messaging`);
   });
 }
 start().catch((err) => {

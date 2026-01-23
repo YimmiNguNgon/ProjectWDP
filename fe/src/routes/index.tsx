@@ -19,6 +19,7 @@ import UserProfilePage from "@/pages/profile";
 import AdminLayout from "@/layouts/admin";
 import PurchaseHistoryPage from "@/pages/purchases/purchase-history-page";
 import LeaveFeedbackPage from "@/pages/purchases/leave-feedback-page";
+import MessagesPage from "@/pages/messages-page";
 
 import ProtectedRoute from "@/components/ProtectedRoute";
 
@@ -53,6 +54,10 @@ export const AppRouter = () => {
             {
               path: "profile",
               element: <UserProfilePage />,
+            },
+            {
+              path: "messages",
+              element: <MessagesPage />,
             },
           ],
         },

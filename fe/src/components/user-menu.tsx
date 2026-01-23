@@ -4,10 +4,11 @@ import {
   DropdownMenuLabel,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
+  DropdownMenuItem,
 } from "./ui/dropdown-menu";
 import { useAuth } from "@/hooks/use-auth";
 import { Button } from "./ui/button";
-import { LogOut } from "lucide-react";
+import { LogOut, MessageCircle, User, ShoppingBag } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { Avatar, AvatarFallback, AvatarImage } from "./ui/avatar";
 
@@ -61,6 +62,25 @@ export default function UserMenu() {
           </DropdownMenuLabel>
         </div>
         <DropdownMenuSeparator />
+
+        {/* Menu Items */}
+        <DropdownMenuItem onClick={() => navigate("/profile")} className="cursor-pointer">
+          <User className="mr-2 h-4 w-4" />
+          <span>Profile</span>
+        </DropdownMenuItem>
+
+        <DropdownMenuItem onClick={() => navigate("/my-ebay/activity/purchases")} className="cursor-pointer">
+          <ShoppingBag className="mr-2 h-4 w-4" />
+          <span>Purchases</span>
+        </DropdownMenuItem>
+
+        <DropdownMenuItem onClick={() => navigate("/messages")} className="cursor-pointer">
+          <MessageCircle className="mr-2 h-4 w-4" />
+          <span>Messages</span>
+        </DropdownMenuItem>
+
+        <DropdownMenuSeparator />
+
         <Button
           className="cursor-pointer"
           variant={"destructive"}

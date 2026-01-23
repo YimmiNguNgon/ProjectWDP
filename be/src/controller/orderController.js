@@ -92,7 +92,7 @@ exports.createOrder = async (req, res, next) => {
     const populated = await Order.findById(order._id)
       .populate("buyer", "username")
       .populate("seller", "username")
-      .populate("items.productId", "title price") // <- note productId
+      .populate("items.productId", "title price image images") // Added image fields
       .lean();
 
     return res.status(201).json({ data: populated });
@@ -114,7 +114,7 @@ exports.getOrder = async (req, res, next) => {
     const o = await Order.findById(id)
       .populate("buyer", "username")
       .populate("seller", "username")
-      .populate("items.productId", "title price")
+      .populate("items.productId", "title price image images")
       .lean(); // trả về plain object
 
     if (!o) return res.status(404).json({ message: "Order not found" });
@@ -182,7 +182,7 @@ exports.listOrdersForUser = async (req, res, next) => {
       .limit(200)
       .populate("buyer", "username")
       .populate("seller", "username")
-      .populate("items.productId", "title price")
+      .populate("items.productId", "title price image images")
       .lean();
 
     console.log('Orders found:', rows.length);

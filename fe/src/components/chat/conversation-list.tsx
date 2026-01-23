@@ -29,7 +29,7 @@ export default function ConversationList() {
   const [filtered, setFiltered] = React.useState<Conversation[]>([]);
 
   React.useEffect(() => {
-    api.get('/chats/conversations').then((res) => {
+    api.get('/api/chats/conversations').then((res) => {
       setConversations(res.data.data);
       setFiltered(res.data.data);
     });
