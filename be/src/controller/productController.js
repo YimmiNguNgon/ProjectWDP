@@ -44,7 +44,15 @@ exports.listProducts = async (req, res, next) => {
 
     const { categories, minPrice, maxPrice, search } = req.query;
 
-    const filter = {};
+    const filter = {
+      $or: [
+        { listingStatus: "active" }, // Show active listings
+        { listingStatus: { $exists: false } }, // Show products without listingStatus field (legacy)
+      ],
+      $and: [
+        { $or: [{ deletedAt: null }, { deletedAt: { $exists: false } }] }, // Exclude soft-deleted
+      ],
+    };
 
     // Search filter - search in title and description
     if (search) {

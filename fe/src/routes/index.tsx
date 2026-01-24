@@ -20,6 +20,8 @@ import AdminLayout from "@/layouts/admin";
 import PurchaseHistoryPage from "@/pages/purchases/purchase-history-page";
 import LeaveFeedbackPage from "@/pages/purchases/leave-feedback-page";
 import MessagesPage from "@/pages/messages-page";
+import MyListingsPage from "@/pages/seller/my-listings";
+import InventoryPage from "@/pages/seller/inventory";
 
 import ProtectedRoute from "@/components/ProtectedRoute";
 
@@ -76,6 +78,14 @@ export const AppRouter = () => {
         {
           path: "purchases/:orderId/feedback/:productId",
           element: <LeaveFeedbackPage />,
+        },
+        {
+          path: "seller/my-listings",
+          element: <MyListingsPage />,
+        },
+        {
+          path: "seller/inventory",
+          element: <InventoryPage />,
         },
       ],
     },

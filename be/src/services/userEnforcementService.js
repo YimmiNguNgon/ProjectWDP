@@ -80,7 +80,10 @@ class UserEnforcementService {
             // Update user violation stats
             user.violationCount = violationCount;
             user.lastViolationAt = new Date();
-            await user.save();
+            // Only save if user has required fields
+            if (user.email) {
+                await user.save();
+            }
 
             console.log(`Violation recorded for user ${userId}: ${violationType} -> ${action.type}`);
 
@@ -130,7 +133,10 @@ class UserEnforcementService {
     async warnUser(user, reason) {
         user.warningCount = (user.warningCount || 0) + 1;
         user.lastWarningAt = new Date();
-        await user.save();
+        // Only save if user has required fields
+        if (user.email) {
+            await user.save();
+        }
 
         return {
             type: 'warning',
@@ -149,7 +155,10 @@ class UserEnforcementService {
         user.messagingRestrictedUntil = until;
         user.messagingRestrictedReason = reason;
         user.status = 'restricted';
-        await user.save();
+        // Only save if user has required fields
+        if (user.email) {
+            await user.save();
+        }
 
         return {
             type: 'restriction',
@@ -169,7 +178,10 @@ class UserEnforcementService {
         user.status = 'suspended';
         user.suspendedUntil = until;
         user.banReason = reason; // Reuse field for suspension reason
-        await user.save();
+        // Only save if user has required fields
+        if (user.email) {
+            await user.save();
+        }
 
         return {
             type: 'suspension',
@@ -187,7 +199,10 @@ class UserEnforcementService {
         user.status = 'banned';
         user.bannedAt = new Date();
         user.banReason = reason;
-        await user.save();
+        // Only save if user has required fields
+        if (user.email) {
+            await user.save();
+        }
 
         return {
             type: 'ban',
@@ -240,7 +255,10 @@ class UserEnforcementService {
                     // Suspension expired, reactivate
                     user.status = 'active';
                     user.suspendedUntil = null;
-                    await user.save();
+                    // Only save if user has required fields
+                    if (user.email) {
+                        await user.save();
+                    }
                 }
             }
 
@@ -257,7 +275,10 @@ class UserEnforcementService {
                     user.messagingRestricted = false;
                     user.messagingRestrictedUntil = null;
                     user.status = 'active';
-                    await user.save();
+                    // Only save if user has required fields
+                    if (user.email) {
+                        await user.save();
+                    }
                 }
             }
 
