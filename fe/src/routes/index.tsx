@@ -22,6 +22,9 @@ import LeaveFeedbackPage from "@/pages/purchases/leave-feedback-page";
 import MessagesPage from "@/pages/messages-page";
 import MyListingsPage from "@/pages/seller/my-listings";
 import InventoryPage from "@/pages/seller/inventory";
+import SellerSoldPage from "@/pages/seller/seller-sold-page";
+import PromotionRequestsPage from "@/pages/seller/promotion-requests";
+import AdminPromotionRequestsPage from "@/pages/admin/promotion-requests";
 
 import ProtectedRoute from "@/components/ProtectedRoute";
 
@@ -87,6 +90,14 @@ export const AppRouter = () => {
           path: "seller/inventory",
           element: <InventoryPage />,
         },
+        {
+          path: "seller/sold",
+          element: <SellerSoldPage />,
+        },
+        {
+          path: "seller/promotion-requests",
+          element: <PromotionRequestsPage />,
+        },
       ],
     },
     {
@@ -112,6 +123,10 @@ export const AppRouter = () => {
         {
           path: "reviews",
           element: <AdminReviews />,
+        },
+        {
+          path: "promotion-requests",
+          element: <AdminPromotionRequestsPage />,
         },
       ],
     },

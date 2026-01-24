@@ -49,12 +49,38 @@ const productSchema = new mongoose.Schema({
   ratingCount: { type: Number, default: 0 },
   isAuction: { type: Boolean, default: false },
   auctionEndTime: { type: Date, default: null },
+
+  // Promotion system (Brand Outlet / Daily Deals)
+  promotionType: {
+    type: String,
+    enum: ['normal', 'outlet', 'daily_deal'],
+    default: 'normal',
+    index: true
+  },
+  promotionRequest: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'PromotionRequest'
+  },
+  originalPrice: { type: Number }, // Frozen price before promotion
+  discountPercent: { type: Number }, // For display
+  dealStartDate: { type: Date },
+  dealEndDate: { type: Date },
+  dealQuantityLimit: { type: Number },
+  dealQuantitySold: { type: Number, default: 0 },
+
   createdAt: { type: Date, default: Date.now },
   updatedAt: { type: Date, default: Date.now },
 }, {
   timestamps: false // We manage createdAt/updatedAt manually
 });
 
-productSchema.index({ sellerId: 1, listingStatus: 1, categoryId: 1, price: 1, createdAt: -1 });
+productSchema.index({
+  sellerId: 1,
+  listingStatus: 1,
+  promotionType: 1,
+  categoryId: 1,
+  price: 1,
+  createdAt: -1,
+});
 
 module.exports = mongoose.model("Product", productSchema);

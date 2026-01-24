@@ -76,11 +76,17 @@ export function UserProfile({ user, orders = [] }: UserProfileProps) {
     user.avatarUrl,
   );
   const [avatarFile, setAvatarFile] = useState<File | null>(null);
+  const [avatarKey, setAvatarKey] = useState(Date.now()); // For forcing re-render
 
   useEffect(() => {
     setNewEmail(user.email);
     setNewUsername(user.username);
-    setAvatarPreview(user.avatarUrl);
+    // Add timestamp to force cache refresh
+    const avatarUrl = user.avatarUrl
+      ? `${user.avatarUrl}?t=${Date.now()}`
+      : undefined;
+    setAvatarPreview(avatarUrl);
+    setAvatarKey(Date.now());
   }, [user]);
 
   const handleUpdateEmail = async () => {
@@ -201,8 +207,8 @@ export function UserProfile({ user, orders = [] }: UserProfileProps) {
         <CardContent className="p-6">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-6">
-              <Avatar className="w-36 h-36">
-                <AvatarImage src={user.avatarUrl} alt={user.username} />
+              <Avatar className="w-36 h-36" key={avatarKey}>
+                <AvatarImage src={avatarPreview} alt={user.username} />
                 <AvatarFallback className="bg-[#AAED56] text-[#324E0F] font-bold text-2xl">
                   {user.username
                     .split(" ")

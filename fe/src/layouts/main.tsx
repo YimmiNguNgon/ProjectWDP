@@ -314,7 +314,12 @@ const MY_EBAY_ITEMS = [
   { label: "Purchase History", to: "activity/purchases" },
   { label: "Feedback Requests", to: "/buyer/feedback-requests" },
   { label: "Buy Again", to: "#" },
-  { label: "Selling", to: "#" },
+  { label: "--- Selling ---", to: "", disabled: true }, // Section divider
+  { label: "My Listings", to: "/seller/my-listings" },
+  { label: "Inventory", to: "/seller/inventory" },
+  { label: "Sold Items", to: "/seller/sold" },
+  { label: "Promotion Requests", to: "/seller/promotion-requests" },
+  { label: "--- Account ---", to: "", disabled: true }, // Section divider
   { label: "Saved Feed", to: "#" },
   { label: "Saved Searches", to: "#" },
   { label: "Saved Sellers", to: "#" },
@@ -332,16 +337,27 @@ function MyEbayMenu() {
       <DropdownMenuTrigger className="font-medium cursor-pointer text-sm outline-none">
         My eBay
       </DropdownMenuTrigger>
-      <DropdownMenuContent className="w-48 h-fit" align="end">
-        {MY_EBAY_ITEMS.map((item) => (
-          <DropdownMenuItem key={item.label} asChild className="cursor-pointer">
-            <Link
-              to={item.to.startsWith("/") ? item.to : `/my-ebay/${item.to}`}
-            >
-              {item.label}
-            </Link>
-          </DropdownMenuItem>
-        ))}
+      <DropdownMenuContent className="w-48 max-h-96 overflow-y-auto" align="end">
+        {MY_EBAY_ITEMS.map((item, index) => {
+          // Section divider
+          if (item.disabled) {
+            return (
+              <div key={index} className="px-2 py-1.5 text-xs font-semibold text-gray-500">
+                {item.label.replace(/---/g, '').trim()}
+              </div>
+            );
+          }
+
+          return (
+            <DropdownMenuItem key={item.label} asChild className="cursor-pointer">
+              <Link
+                to={item.to.startsWith("/") ? item.to : `/my-ebay/${item.to}`}
+              >
+                {item.label}
+              </Link>
+            </DropdownMenuItem>
+          );
+        })}
       </DropdownMenuContent>
     </DropdownMenu>
   );

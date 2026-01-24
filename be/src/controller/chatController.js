@@ -177,6 +177,78 @@ exports.markRead = async (req, res, next) => {
   }
 };
 
+/**
+ * Archive conversation for current user
+ */
+exports.archiveConversation = async (req, res, next) => {
+  try {
+    const id = req.params.id;
+    if (!id || !mongoose.isValidObjectId(id))
+      return res.status(400).json({ message: 'Invalid conversation id' });
+
+    const conv = await Conversation.findById(id);
+    if (!conv) return res.status(404).json({ message: 'Conversation not found' });
+
+    const userId = req.user._id.toString();
+    if (!conv.participants.some(p => p.toString() === userId)) {
+      return res.status(403).json({ message: 'You are not a participant in this conversation' });
+    }
+
+    // Archive for this user
+    if (!conv.meta) conv.meta = {};
+    if (!conv.meta.archived) conv.meta.archived = [];
+    if (!conv.meta.archived.includes(userId)) {
+      conv.meta.archived.push(userId);
+    }
+    // Remove from inbox if present
+    if (conv.meta.inbox) {
+      conv.meta.inbox = conv.meta.inbox.filter(u => u !== userId);
+    }
+    conv.markModified('meta');
+    await conv.save();
+
+    return res.json({ message: 'Conversation archived successfully' });
+  } catch (err) {
+    next(err);
+  }
+};
+
+/**
+ * Move conversation to inbox for current user
+ */
+exports.moveToInbox = async (req, res, next) => {
+  try {
+    const id = req.params.id;
+    if (!id || !mongoose.isValidObjectId(id))
+      return res.status(400).json({ message: 'Invalid conversation id' });
+
+    const conv = await Conversation.findById(id);
+    if (!conv) return res.status(404).json({ message: 'Conversation not found' });
+
+    const userId = req.user._id.toString();
+    if (!conv.participants.some(p => p.toString() === userId)) {
+      return res.status(403).json({ message: 'You are not a participant in this conversation' });
+    }
+
+    // Move to inbox for this user
+    if (!conv.meta) conv.meta = {};
+    if (!conv.meta.inbox) conv.meta.inbox = [];
+    if (!conv.meta.inbox.includes(userId)) {
+      conv.meta.inbox.push(userId);
+    }
+    // Remove from archived if present
+    if (conv.meta.archived) {
+      conv.meta.archived = conv.meta.archived.filter(u => u !== userId);
+    }
+    conv.markModified('meta');
+    await conv.save();
+
+    return res.json({ message: 'Conversation moved to inbox successfully' });
+  } catch (err) {
+    next(err);
+  }
+};
+
 // ------------------ Flag Conversation ------------------
 exports.flagConversation = async (req, res, next) => {
   try {

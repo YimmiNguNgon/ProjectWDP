@@ -11,14 +11,14 @@ const MONGO_URI = process.env.MONGO_URI || 'mongodb://localhost:27017/ebay';
  */
 async function scanAndFlagExistingConversations() {
     try {
-        console.log('🔍 Scanning existing conversations for violations...\n');
+        console.log(' Scanning existing conversations for violations...\n');
 
         await mongoose.connect(MONGO_URI);
-        console.log('✅ Connected to MongoDB\n');
+        console.log(' Connected to MongoDB\n');
 
         // Get all conversations
         const conversations = await Conversation.find({}).lean();
-        console.log(`📊 Found ${conversations.length} conversations to scan\n`);
+        console.log(` Found ${conversations.length} conversations to scan\n`);
 
         let flaggedCount = 0;
         let violationsFound = 0;
@@ -40,7 +40,7 @@ async function scanAndFlagExistingConversations() {
                     violations.push(...moderationResult.violations);
                     violationsFound++;
 
-                    console.log(`⚠️  Violation found in conversation ${conv._id}`);
+                    console.log(`  Violation found in conversation ${conv._id}`);
                     console.log(`   Message: "${msg.text.substring(0, 50)}..."`);
                     console.log(`   Violations: ${moderationResult.violations.join(', ')}\n`);
                 }
@@ -57,7 +57,7 @@ async function scanAndFlagExistingConversations() {
                 });
 
                 flaggedCount++;
-                console.log(`✅ Flagged conversation ${conv._id}\n`);
+                console.log(` Flagged conversation ${conv._id}\n`);
             }
         }
 
@@ -67,7 +67,7 @@ async function scanAndFlagExistingConversations() {
         console.log(`   Total violations found: ${violationsFound}`);
 
     } catch (err) {
-        console.error('❌ Error:', err.message);
+        console.error(' Error:', err.message);
         console.error(err);
     } finally {
         await mongoose.disconnect();

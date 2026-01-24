@@ -83,6 +83,30 @@ export default function EditProductDialog({
                         />
                     </div>
 
+                    {/* Product Image */}
+                    <div>
+                        <Label>Product Image</Label>
+                        <div className="mt-2">
+                            {product.image && (
+                                <div className="relative inline-block">
+                                    <img
+                                        src={product.image}
+                                        alt={product.title}
+                                        className="w-32 h-32 object-cover rounded-lg border"
+                                    />
+                                    <p className="text-xs text-gray-500 mt-1">
+                                        Current image (upload feature coming soon)
+                                    </p>
+                                </div>
+                            )}
+                            {!product.image && (
+                                <div className="w-32 h-32 bg-gray-100 rounded-lg border flex items-center justify-center">
+                                    <p className="text-xs text-gray-400">No image</p>
+                                </div>
+                            )}
+                        </div>
+                    </div>
+
                     <div>
                         <Label htmlFor="description">Description</Label>
                         <Textarea

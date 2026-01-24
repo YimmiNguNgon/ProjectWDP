@@ -65,12 +65,20 @@ export function AuthProvider({ children }: PropsWithChildren) {
   ) => {
     try {
       setLoading(true);
-      await api.post("/api/auth/register", {
+      const response = await api.post("/api/auth/register", {
         username,
         email,
         password,
         role,
       });
+
+      const { user, token } = response.data.data;
+      setUser(user);
+      setPayload(user);
+      setAuthToken(token);
+      localStorage.setItem("token", token);
+      setAccessToken(token);
+
     } catch (error) {
       console.error("Failed to sign up:", error);
       throw error;

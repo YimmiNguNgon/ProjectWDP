@@ -51,6 +51,8 @@ import {
 } from '@/api/seller-products';
 import { toast } from 'sonner';
 import EditProductDialog from '@/components/seller/edit-product-dialog';
+import RequestOutletDialog from '@/components/seller/request-outlet-dialog';
+import RequestDailyDealDialog from '@/components/seller/request-deal-dialog';
 
 export default function MyListingsPage() {
   const [products, setProducts] = useState<Product[]>([]);
@@ -58,6 +60,8 @@ export default function MyListingsPage() {
   const [statusFilter, setStatusFilter] = useState('all');
   const [searchQuery, setSearchQuery] = useState('');
   const [editingProduct, setEditingProduct] = useState<Product | null>(null);
+  const [outletRequestProduct, setOutletRequestProduct] = useState<Product | null>(null);
+  const [dealRequestProduct, setDealRequestProduct] = useState<Product | null>(null);
 
 
   const fetchProducts = async () => {
@@ -293,6 +297,16 @@ export default function MyListingsPage() {
                               </DropdownMenuItem>
                             )}
                             <DropdownMenuItem
+                              onClick={() => setOutletRequestProduct(product)}
+                            >
+                              Request Brand Outlet
+                            </DropdownMenuItem>
+                            <DropdownMenuItem
+                              onClick={() => setDealRequestProduct(product)}
+                            >
+                              Request Daily Deal
+                            </DropdownMenuItem>
+                            <DropdownMenuItem
                               onClick={() => handleDelete(product._id)}
                               className="text-red-600"
                             >
@@ -319,6 +333,32 @@ export default function MyListingsPage() {
           onSuccess={() => {
             setEditingProduct(null);
             fetchProducts();
+          }}
+        />
+      )}
+
+      {/* Request Outlet Dialog */}
+      {outletRequestProduct && (
+        <RequestOutletDialog
+          product={outletRequestProduct}
+          open={!!outletRequestProduct}
+          onClose={() => setOutletRequestProduct(null)}
+          onSuccess={() => {
+            setOutletRequestProduct(null);
+            toast.success('Outlet request submitted! Check Promotion Requests page');
+          }}
+        />
+      )}
+
+      {/* Request Daily Deal Dialog */}
+      {dealRequestProduct && (
+        <RequestDailyDealDialog
+          product={dealRequestProduct}
+          open={!!dealRequestProduct}
+          onClose={() => setDealRequestProduct(null)}
+          onSuccess={() => {
+            setDealRequestProduct(null);
+            toast.success('Daily Deal request submitted! Check Promotion Requests page');
           }}
         />
       )}

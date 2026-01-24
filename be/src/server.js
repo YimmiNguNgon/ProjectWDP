@@ -73,6 +73,10 @@ const chatHistoryRoutes = require("./routes/chatHistory");
 app.use("/api/chats", chatRoutes);
 app.use("/api/v1/chat-history", chatHistoryRoutes);
 
+// Promotion routes
+const promotionRoutes = require("./routes/promotions");
+app.use("/api/promotions", promotionRoutes);
+
 // health check
 app.get("/health", (req, res) => res.json({ ok: true }));
 
@@ -118,6 +122,10 @@ async function createDefaultAdmin() {
 async function start() {
   await connectDB(process.env.MONGO_URI);
   await createDefaultAdmin();
+
+  // Initialize deal expiration cron job
+  const { initDealExpirationJob } = require('./jobs/dealExpirationJob');
+  initDealExpirationJob();
 
   // Create HTTP server from Express app
   const http = require('http');

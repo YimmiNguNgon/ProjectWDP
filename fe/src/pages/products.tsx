@@ -27,6 +27,12 @@ import { cn } from "@/lib/utils";
 import { Heart, ShoppingCart, Star, Package } from "lucide-react";
 import React, { useEffect } from "react";
 import { Link, useSearchParams } from "react-router-dom";
+import {
+  PromotionBadges,
+  PromotionPricing,
+  DealCountdown,
+  DealQuantity,
+} from "@/components/promotion/promotion-display";
 
 interface Category {
   _id: string;
@@ -50,6 +56,14 @@ export interface Product {
   categoryId?: Category;
   condition: string;
   status: string;
+  // Promotion fields
+  promotionType?: 'normal' | 'outlet' | 'daily_deal';
+  originalPrice?: number;
+  discountPercent?: number;
+  dealStartDate?: string;
+  dealEndDate?: string;
+  dealQuantityLimit?: number;
+  dealQuantitySold?: number;
   createdAt: Date;
   updatedAt: Date;
   __v: number;
@@ -311,6 +325,9 @@ export default function ProductsPage() {
                   >
                     {/* Product Image */}
                     <CardContent className="relative overflow-hidden bg-muted p-0">
+                      {/* Promotion Badges */}
+                      <PromotionBadges product={product} />
+
                       <Link to={`/products/${product._id}`}>
                         <img
                           src={product.images?.[0] || "/placeholder.png"}
@@ -339,8 +356,8 @@ export default function ProductsPage() {
                             <Star
                               key={i}
                               className={`h-3.5 w-3.5 ${i < Math.round(product.averageRating)
-                                  ? "fill-yellow-400 text-yellow-400"
-                                  : "text-muted-foreground"
+                                ? "fill-yellow-400 text-yellow-400"
+                                : "text-muted-foreground"
                                 }`}
                             />
                           ))}
@@ -351,21 +368,33 @@ export default function ProductsPage() {
                       </div>
 
                       {/* Price & Button */}
-                      <div className="flex items-center justify-between gap-2">
-                        <p className="text-lg font-bold text-foreground">
-                          ${product.price}
-                        </p>
-                        <div className="flex gap-4">
-                          <Button
-                            size={"icon-sm"}
-                            variant={"secondary"}
-                            className="hover:bg-destructive hover:text-white"
-                          >
-                            <Heart />
-                          </Button>
-                          <Button size="icon-sm" variant={"default"}>
-                            <ShoppingCart className="h-4 w-4" />
-                          </Button>
+                      <div className="flex flex-col gap-2">
+                        {/* Deal Info */}
+                        {product.promotionType === 'daily_deal' && (
+                          <div className="flex items-center justify-between text-xs">
+                            <DealCountdown endDate={product.dealEndDate} />
+                            <DealQuantity
+                              quantityLimit={product.dealQuantityLimit}
+                              quantitySold={product.dealQuantitySold}
+                            />
+                          </div>
+                        )}
+
+                        {/* Price and Actions */}
+                        <div className="flex items-end justify-between gap-2">
+                          <PromotionPricing product={product} />
+                          <div className="flex gap-4">
+                            <Button
+                              size={"icon-sm"}
+                              variant={"secondary"}
+                              className="hover:bg-destructive hover:text-white"
+                            >
+                              <Heart />
+                            </Button>
+                            <Button size="icon-sm" variant={"default"}>
+                              <ShoppingCart className="h-4 w-4" />
+                            </Button>
+                          </div>
                         </div>
                       </div>
                     </div>

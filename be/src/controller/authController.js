@@ -7,15 +7,23 @@ const JWT_SECRET = process.env.JWT_SECRET || 'supersecretjwtkey_change_me';
 
 exports.register = async (req, res, next) => {
   try {
-    const { username, password, role } = req.body;
-    if (!username || !password)
-      return res.status(400).json({ message: 'username & password required' });
-    const exists = await User.findOne({ username });
-    if (exists) return res.status(400).json({ message: 'username taken' });
+    const { username, email, password, role } = req.body;
+    if (!username || !password || !email)
+      return res.status(400).json({ message: 'username, email & password required' });
+
+    // Check if username exists
+    const existingUsername = await User.findOne({ username });
+    if (existingUsername) return res.status(400).json({ message: 'username taken' });
+
+    // Check if email exists
+    const existingEmail = await User.findOne({ email });
+    if (existingEmail) return res.status(400).json({ message: 'email already in use' });
+
     const salt = await bcrypt.genSalt(10);
     const hash = await bcrypt.hash(password, salt);
     const user = await User.create({
       username,
+      email,
       passwordHash: hash,
       role: role || 'buyer',
     });
