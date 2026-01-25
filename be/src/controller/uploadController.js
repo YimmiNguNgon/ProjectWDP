@@ -62,7 +62,55 @@ const uploadAvatar = async (req, res) => {
   }
 };
 
+/**
+ * Upload product images to Cloudinary
+ * @route POST /api/upload/product-images
+ * @access Private (Admin/Seller)
+ */
+const uploadProductImages = async (req, res) => {
+  try {
+    if (!req.files || req.files.length === 0) {
+      return res.status(400).json({ message: 'No files uploaded' });
+    }
+
+    // Upload all images to Cloudinary
+    const uploadPromises = req.files.map((file) => {
+      return new Promise((resolve, reject) => {
+        const uploadStream = cloudinary.uploader.upload_stream(
+          {
+            folder: 'products',
+            transformation: [
+              { width: 1000, height: 1000, crop: 'limit' },
+              { quality: 'auto' },
+            ],
+          },
+          (error, result) => {
+            if (error) reject(error);
+            else resolve(result);
+          }
+        );
+        uploadStream.end(file.buffer);
+      });
+    });
+
+    const results = await Promise.all(uploadPromises);
+    const urls = results.map((result) => result.secure_url);
+
+    res.status(200).json({
+      message: 'Product images uploaded successfully',
+      urls: urls,
+    });
+  } catch (error) {
+    console.error('Cloudinary upload error:', error);
+    res.status(500).json({
+      message: 'Failed to upload product images',
+      error: error.message,
+    });
+  }
+};
+
 module.exports = {
   upload,
   uploadAvatar,
+  uploadProductImages,
 };
