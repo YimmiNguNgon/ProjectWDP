@@ -77,6 +77,10 @@ app.use("/api/v1/chat-history", chatHistoryRoutes);
 const promotionRoutes = require("./routes/promotions");
 app.use("/api/promotions", promotionRoutes);
 
+// Upload routes
+const uploadRoutes = require("./routes/uploadRoutes");
+app.use("/api/upload", uploadRoutes);
+
 // health check
 app.get("/health", (req, res) => res.json({ ok: true }));
 
