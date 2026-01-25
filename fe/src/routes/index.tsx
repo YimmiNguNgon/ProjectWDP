@@ -12,6 +12,8 @@ import ResetPasswordPage from "@/pages/reset-password";
 import UserManagement from "@/pages/admin/user-management";
 import AdminDashboard from "@/pages/admin/dashboard";
 import ProductManagement from "@/pages/admin/product-management";
+import FeedbackManagement from "@/pages/admin/feedback-management";
+import PermissionsPage from "@/pages/admin/permissions-page";
 
 import { MainLayout } from "@/layouts/main";
 import AuthLayout from "@/layouts/auth";
@@ -25,8 +27,10 @@ import InventoryPage from "@/pages/seller/inventory";
 import SellerSoldPage from "@/pages/seller/seller-sold-page";
 import PromotionRequestsPage from "@/pages/seller/promotion-requests";
 import AdminPromotionRequestsPage from "@/pages/admin/promotion-requests";
+import UnauthorizedPage from "@/pages/unauthorized";
 
 import ProtectedRoute from "@/components/ProtectedRoute";
+import { RoleGuard } from "@/components/RoleGuard";
 
 // Placeholder components for admin pages
 const AdminComplaints = () => (
@@ -102,7 +106,11 @@ export const AppRouter = () => {
     },
     {
       path: "/admin",
-      element: <AdminLayout />,
+      element: (
+        <RoleGuard requireRole="admin">
+          <AdminLayout />
+        </RoleGuard>
+      ),
       children: [
         {
           index: true,
@@ -117,6 +125,10 @@ export const AppRouter = () => {
           element: <ProductManagement />,
         },
         {
+          path: "feedback",
+          element: <FeedbackManagement />,
+        },
+        {
           path: "complaints",
           element: <AdminComplaints />,
         },
@@ -128,7 +140,15 @@ export const AppRouter = () => {
           path: "promotion-requests",
           element: <AdminPromotionRequestsPage />,
         },
+        {
+          path: "permissions",
+          element: <PermissionsPage />,
+        },
       ],
+    },
+    {
+      path: "/unauthorized",
+      element: <UnauthorizedPage />,
     },
     {
       path: "/verify-email",
