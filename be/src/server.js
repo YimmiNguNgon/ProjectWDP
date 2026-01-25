@@ -81,6 +81,10 @@ app.use("/api/promotions", promotionRoutes);
 const uploadRoutes = require("./routes/uploadRoutes");
 app.use("/api/upload", uploadRoutes);
 
+// Feedback Revision routes
+const feedbackRevisionRoutes = require("./routes/feedbackRevision");
+app.use("/api/feedback-revision", feedbackRevisionRoutes);
+
 // health check
 app.get("/health", (req, res) => res.json({ ok: true }));
 
