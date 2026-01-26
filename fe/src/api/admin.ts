@@ -79,19 +79,19 @@ export interface UserDetailResponse {
 
 // Get dashboard stats
 export const getDashboardStats = async (): Promise<DashboardStatsResponse> => {
-    const response = await api.get('/admin/dashboard/stats');
+    const response = await api.get('/api/admin/dashboard/stats');
     return response.data;
 };
 
 // Get all users
 export const getAllUsers = async (params: GetUsersParams = {}): Promise<GetUsersResponse> => {
-    const response = await api.get('/admin/users', { params });
+    const response = await api.get('/api/admin/users', { params });
     return response.data;
 };
 
 // Get user detail
 export const getUserDetail = async (userId: string): Promise<UserDetailResponse> => {
-    const response = await api.get(`/admin/users/${userId}`);
+    const response = await api.get(`/api/admin/users/${userId}`);
     return response.data;
 };
 
@@ -100,24 +100,24 @@ export const updateUser = async (
     userId: string,
     data: { username?: string; email?: string; role?: string }
 ) => {
-    const response = await api.put(`/admin/users/${userId}`, data);
+    const response = await api.put(`/api/admin/users/${userId}`, data);
     return response.data;
 };
 
 // Delete user
 export const deleteUser = async (userId: string) => {
-    const response = await api.delete(`/admin/users/${userId}`);
+    const response = await api.delete(`/api/admin/users/${userId}`);
     return response.data;
 };
 
 // Ban user
 export const banUser = async (userId: string, reason: string) => {
-    const response = await api.post(`/admin/users/${userId}/ban`, { reason });
+    const response = await api.post(`/api/admin/users/${userId}/ban`, { reason });
     return response.data;
 };
 
 // Unban user
 export const unbanUser = async (userId: string) => {
-    const response = await api.post(`/admin/users/${userId}/unban`, {});
+    const response = await api.post(`/api/admin/users/${userId}/unban`, {});
     return response.data;
 };

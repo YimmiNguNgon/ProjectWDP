@@ -21,6 +21,7 @@ const categoryRoutes = require("./routes/categoryRoutes");
 const reviewRoutes = require("./routes/reviewRoutes");
 const adminRoutes = require("./routes/adminRoutes");
 const orderRoutes = require("./routes/orders");
+const searchRoutes = require("./routes/search");
 const User = require("./models/User");
 
 // Passport config (sau khi dotenv.config())
@@ -64,6 +65,25 @@ app.use("/api/users", userRoutes);
 app.use("/api/reviews", reviewRoutes);
 app.use("/api/admin", adminRoutes);
 app.use("/api/orders", orderRoutes);
+app.use("/api/search", searchRoutes);
+
+// Chat routes
+const chatRoutes = require("./routes/chats");
+const chatHistoryRoutes = require("./routes/chatHistory");
+app.use("/api/chats", chatRoutes);
+app.use("/api/v1/chat-history", chatHistoryRoutes);
+
+// Promotion routes
+const promotionRoutes = require("./routes/promotions");
+app.use("/api/promotions", promotionRoutes);
+
+// Upload routes
+const uploadRoutes = require("./routes/uploadRoutes");
+app.use("/api/upload", uploadRoutes);
+
+// Feedback Revision routes
+const feedbackRevisionRoutes = require("./routes/feedbackRevision");
+app.use("/api/feedback-revision", feedbackRevisionRoutes);
 
 // health check
 app.get("/health", (req, res) => res.json({ ok: true }));
@@ -92,11 +112,13 @@ async function createDefaultAdmin() {
         passwordHash: passwordHash,
         role: "admin",
         isEmailVerified: true,
-        status: "active"
+        status: "active",
       });
 
       await adminUser.save();
-      console.log("✅ Tài khoản admin mặc định đã được tạo (username: admin, password: admin)");
+      console.log(
+        "✅ Tài khoản admin mặc định đã được tạo (username: admin, password: admin)",
+      );
     } else {
       console.log("ℹ️ Tài khoản admin đã tồn tại");
     }
@@ -108,8 +130,31 @@ async function createDefaultAdmin() {
 async function start() {
   await connectDB(process.env.MONGO_URI);
   await createDefaultAdmin();
-  app.listen(PORT, () => {
-    console.log(`Server is running on port ${PORT}`);
+
+  // Initialize deal expiration cron job
+  const { initDealExpirationJob } = require('./jobs/dealExpirationJob');
+  initDealExpirationJob();
+
+  // Create HTTP server from Express app
+  const http = require('http');
+  const server = http.createServer(app);
+
+  // Setup Socket.IO
+  const { Server } = require('socket.io');
+  const io = new Server(server, {
+    cors: {
+      origin: '*', // Allow all origins in dev
+      methods: ['GET', 'POST']
+    }
+  });
+
+  // Initialize Socket.IO handlers
+  const initSocket = require('./socket');
+  initSocket(io);
+
+  server.listen(PORT, () => {
+    console.log(`✅ Server is running on port ${PORT}`);
+    console.log(`✅ Socket.IO is ready for real-time messaging`);
   });
 }
 start().catch((err) => {

@@ -179,7 +179,20 @@ exports.deleteProduct = async (req, res, next) => {
 exports.updateProduct = async (req, res, next) => {
     try {
         const { id } = req.params;
-        const { title, description, price, stock, quantity } = req.body;
+        const {
+            title,
+            description,
+            price,
+            stock,
+            quantity,
+            categoryId,
+            sellerId,
+            condition,
+            status,
+            images
+        } = req.body;
+
+        console.log('Update product request:', { id, quantity, stock });
 
         if (!mongoose.isValidObjectId(id)) {
             return res.status(400).json({ message: "Invalid product id" });
@@ -194,8 +207,39 @@ exports.updateProduct = async (req, res, next) => {
         if (title) product.title = title;
         if (description) product.description = description;
         if (price !== undefined) product.price = price;
-        if (stock !== undefined) product.quantity = stock; // Map stock to quantity
-        if (quantity !== undefined) product.quantity = quantity;
+        if (categoryId) product.categoryId = categoryId;
+        if (sellerId) product.sellerId = sellerId;
+        if (condition) product.condition = condition;
+        if (status) product.status = status;
+        if (images !== undefined) {
+            product.images = images;
+            product.image = images && images.length > 0 ? images[0] : "";
+        }
+
+        // Update quantity in both product and inventory
+        const newQuantity = quantity !== undefined ? quantity : (stock !== undefined ? stock : null);
+        console.log('New quantity:', newQuantity);
+
+        if (newQuantity !== null) {
+            product.quantity = newQuantity;
+
+            // Update inventory collection
+            const Inventory = mongoose.connection.db.collection("inventories");
+            const productObjectId = new mongoose.Types.ObjectId(id);
+
+            const updateResult = await Inventory.updateOne(
+                { productId: productObjectId },
+                {
+                    $set: {
+                        quantity: newQuantity,
+                        updatedAt: new Date()
+                    }
+                },
+                { upsert: true }
+            );
+
+            console.log('Inventory update result:', updateResult);
+        }
 
         await product.save();
 
@@ -205,6 +249,89 @@ exports.updateProduct = async (req, res, next) => {
             data: product,
         });
     } catch (err) {
+        console.error('Error updating product:', err);
+        return next(err);
+    }
+};
+
+/**
+ * @desc Tạo sản phẩm mới
+ * @route POST /api/admin/products
+ * @access Admin only
+ */
+exports.createProduct = async (req, res, next) => {
+    try {
+        const {
+            title,
+            description,
+            price,
+            quantity,
+            categoryId,
+            sellerId,
+            condition,
+            status,
+            images,
+            isAuction,
+            auctionEndTime
+        } = req.body;
+
+        // Validate required fields
+        if (!title || !description || !price || !categoryId || !sellerId) {
+            return res.status(400).json({
+                message: "Missing required fields: title, description, price, categoryId, sellerId"
+            });
+        }
+
+        // Validate categoryId
+        if (!mongoose.isValidObjectId(categoryId)) {
+            return res.status(400).json({ message: "Invalid category id" });
+        }
+
+        // Validate sellerId
+        if (!mongoose.isValidObjectId(sellerId)) {
+            return res.status(400).json({ message: "Invalid seller id" });
+        }
+
+        // Create new product
+        const newProduct = new Product({
+            title,
+            description,
+            price,
+            quantity: quantity || 0,
+            categoryId,
+            sellerId,
+            condition: condition || "new",
+            status: status || "available",
+            images: images || [],
+            image: images && images.length > 0 ? images[0] : "",
+            isAuction: isAuction || false,
+            auctionEndTime: auctionEndTime || null,
+            averageRating: 0,
+            ratingCount: 0
+        });
+
+        await newProduct.save();
+
+        // Create inventory record
+        const Inventory = mongoose.connection.db.collection("inventories");
+        await Inventory.insertOne({
+            productId: newProduct._id,
+            quantity: quantity || 0,
+            createdAt: new Date(),
+            updatedAt: new Date()
+        });
+
+        // Populate seller and category info
+        await newProduct.populate("sellerId", "username email");
+        await newProduct.populate("categoryId", "name description");
+
+        return res.status(201).json({
+            success: true,
+            message: "Product created successfully",
+            data: newProduct,
+        });
+    } catch (err) {
+        console.error("Error in createProduct:", err);
         return next(err);
     }
 };

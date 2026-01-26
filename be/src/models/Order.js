@@ -36,9 +36,51 @@ const orderSchema = new mongoose.Schema({
   totalAmount: { type: Number, required: true },
   status: {
     type: String,
-    enum: ["created", "paid", "shipped", "delivered", "cancelled"],
+    enum: [
+      "created",
+      "paid",
+      "processing",
+      "shipped",
+      "delivered",
+      "cancelled",
+      "failed",
+      "returned",
+    ],
     default: "created",
+    index: true,
   },
+
+  // Shipping information
+  shippingAddress: {
+    street: String,
+    city: String,
+    state: String,
+    zipCode: String,
+    country: String,
+  },
+  trackingNumber: { type: String, default: "" },
+  shippingLabel: { type: String, default: "" }, // URL to PDF label
+  estimatedDelivery: { type: Date },
+
+  // Status history
+  statusHistory: [{
+    status: {
+      type: String,
+      enum: [
+        "created",
+        "paid",
+        "processing",
+        "shipped",
+        "delivered",
+        "cancelled",
+        "failed",
+        "returned",
+      ],
+    },
+    timestamp: { type: Date, default: Date.now },
+    note: { type: String, default: "" },
+  }],
+
   createdAt: { type: Date, default: Date.now },
   updatedAt: { type: Date, default: Date.now },
 });

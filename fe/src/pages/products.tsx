@@ -27,6 +27,12 @@ import { cn } from "@/lib/utils";
 import { Heart, ShoppingCart, Star, Package } from "lucide-react";
 import React, { useEffect } from "react";
 import { Link, useSearchParams } from "react-router-dom";
+import {
+  PromotionBadges,
+  PromotionPricing,
+  DealCountdown,
+  DealQuantity,
+} from "@/components/promotion/promotion-display";
 
 interface Category {
   _id: string;
@@ -50,6 +56,14 @@ export interface Product {
   categoryId?: Category;
   condition: string;
   status: string;
+  // Promotion fields
+  promotionType?: 'normal' | 'outlet' | 'daily_deal';
+  originalPrice?: number;
+  discountPercent?: number;
+  dealStartDate?: string;
+  dealEndDate?: string;
+  dealQuantityLimit?: number;
+  dealQuantitySold?: number;
   createdAt: Date;
   updatedAt: Date;
   __v: number;
@@ -59,6 +73,9 @@ export default function ProductsPage() {
   const [searchParams, setSearchParams] = useSearchParams();
   const [products, setProducts] = React.useState<Product[]>([]);
   const [categories, setCategories] = React.useState<Category[]>([]);
+
+  // Get search query from URL params (read-only)
+  const searchQuery = searchParams.get("search") || "";
 
   // Initialize state from URL params
   const [selectedCategories, setSelectedCategories] = React.useState<string[]>(
@@ -70,6 +87,9 @@ export default function ProductsPage() {
     parseInt(searchParams.get("minPrice") || "0"),
     parseInt(searchParams.get("maxPrice") || "10000"),
   ]);
+  const [selectedRating, setSelectedRating] = React.useState<number>(
+    parseInt(searchParams.get("rating") || "0"),
+  );
   const [currentPage, setCurrentPage] = React.useState(
     parseInt(searchParams.get("page") || "1"),
   );
@@ -81,16 +101,29 @@ export default function ProductsPage() {
   // Update URL when filters change
   useEffect(() => {
     const params = new URLSearchParams();
+    if (searchQuery) {
+      params.set("search", searchQuery);
+    }
     if (selectedCategories.length > 0) {
       params.set("categories", selectedCategories.join(","));
     }
     params.set("minPrice", priceRange[0].toString());
     params.set("maxPrice", priceRange[1].toString());
+    if (selectedRating > 0) {
+      params.set("rating", selectedRating.toString());
+    }
     if (currentPage > 1) {
       params.set("page", currentPage.toString());
     }
     setSearchParams(params);
-  }, [selectedCategories, priceRange, currentPage, setSearchParams]);
+  }, [
+    selectedCategories,
+    priceRange,
+    selectedRating,
+    currentPage,
+    setSearchParams,
+    searchQuery,
+  ]);
 
   useEffect(() => {
     const fetchCategories = async () => {
@@ -110,19 +143,41 @@ export default function ProductsPage() {
         const params = new URLSearchParams();
         params.append("page", currentPage.toString());
         params.append("limit", itemsPerPage.toString());
-        params.append("categories", selectedCategories.join(","));
 
-        params.append("minPrice", debouncedPriceRange[0].toString());
-        params.append("maxPrice", debouncedPriceRange[1].toString());
-        const res = await api.get(`/api/products?${params.toString()}`);
-        setProducts(res.data.data);
-        setTotalPages(Math.ceil((res.data.total || 0) / itemsPerPage));
+        // If search query exists, use the search endpoint
+        if (searchQuery.trim()) {
+          const { searchProducts } = await import("@/api/search");
+          const result = await searchProducts(searchQuery, {
+            page: currentPage,
+            limit: itemsPerPage,
+            minPrice: debouncedPriceRange[0],
+            maxPrice: debouncedPriceRange[1],
+          });
+          let filteredData = result.data as unknown as Product[];
+          // Client-side rating filter for search results
+          if (selectedRating > 0) {
+            filteredData = filteredData.filter(p => p.averageRating >= selectedRating);
+          }
+          setProducts(filteredData);
+          setTotalPages(Math.ceil((result.total || 0) / itemsPerPage));
+        } else {
+          // Use regular products endpoint for category/price filtering
+          params.append("categories", selectedCategories.join(","));
+          params.append("minPrice", debouncedPriceRange[0].toString());
+          params.append("maxPrice", debouncedPriceRange[1].toString());
+          if (selectedRating > 0) {
+            params.append("minRating", selectedRating.toString());
+          }
+          const res = await api.get(`/api/products?${params.toString()}`);
+          setProducts(res.data.data);
+          setTotalPages(Math.ceil((res.data.total || 0) / itemsPerPage));
+        }
       } catch (error) {
         console.error("Failed to fetch products:", error);
       }
     };
     fetchProducts();
-  }, [selectedCategories, currentPage, debouncedPriceRange]);
+  }, [searchQuery, selectedCategories, currentPage, debouncedPriceRange, selectedRating]);
 
   const handleCategoryChange = (categorySlug: string, checked: boolean) => {
     setCurrentPage(1);
@@ -208,15 +263,20 @@ export default function ProductsPage() {
                 <span>Rating</span>
               </button>
               <div className="mt-3 space-y-2">
-                {ratings.map((rating) => (
+                {ratings.reverse().map((rating) => (
                   <button
                     key={rating}
-                    className={`flex w-full items-center gap-2 rounded py-1 text-sm transition-colors`}
+                    onClick={() => {
+                      setCurrentPage(1);
+                      setSelectedRating(selectedRating === rating ? 0 : rating);
+                    }}
+                    className={`flex w-full items-center gap-2 rounded py-1 px-2 text-sm transition-colors hover:bg-muted ${selectedRating === rating ? 'bg-muted font-semibold' : ''
+                      }`}
                   >
                     {[...Array(rating)].map((_, i) => (
                       <Star
                         key={i}
-                        className="h-3 w-3 fill-yellow-400 text-yellow-400"
+                        className="h-3.5 w-3.5 fill-yellow-400 text-yellow-400"
                       />
                     ))}
                     <span className="text-xs text-foreground/60">& up</span>
@@ -236,7 +296,9 @@ export default function ProductsPage() {
         <div className="flex flex-col gap-6 p-6">
           {/* Header */}
           <div className="flex items-center justify-between">
-            <h1 className="text-3xl font-bold text-foreground">Products</h1>
+            <h1 className="text-3xl font-bold text-foreground">
+              {searchQuery ? `Search Results for "${searchQuery}"` : "Products"}
+            </h1>
           </div>
 
           {/* Empty State */}
@@ -263,9 +325,12 @@ export default function ProductsPage() {
                   >
                     {/* Product Image */}
                     <CardContent className="relative overflow-hidden bg-muted p-0">
+                      {/* Promotion Badges */}
+                      <PromotionBadges product={product} />
+
                       <Link to={`/products/${product._id}`}>
                         <img
-                          src={product.images?.[0] || '/placeholder.png'}
+                          src={product.images?.[0] || "/placeholder.png"}
                           alt={product.title}
                           className="aspect-square w-full bg-muted flex items-center justify-center"
                         />
@@ -303,21 +368,33 @@ export default function ProductsPage() {
                       </div>
 
                       {/* Price & Button */}
-                      <div className="flex items-center justify-between gap-2">
-                        <p className="text-lg font-bold text-foreground">
-                          ${product.price}
-                        </p>
-                        <div className="flex gap-4">
-                          <Button
-                            size={"icon-sm"}
-                            variant={"secondary"}
-                            className="hover:bg-destructive hover:text-white"
-                          >
-                            <Heart />
-                          </Button>
-                          <Button size="icon-sm" variant={"default"}>
-                            <ShoppingCart className="h-4 w-4" />
-                          </Button>
+                      <div className="flex flex-col gap-2">
+                        {/* Deal Info */}
+                        {product.promotionType === 'daily_deal' && (
+                          <div className="flex items-center justify-between text-xs">
+                            <DealCountdown endDate={product.dealEndDate} />
+                            <DealQuantity
+                              quantityLimit={product.dealQuantityLimit}
+                              quantitySold={product.dealQuantitySold}
+                            />
+                          </div>
+                        )}
+
+                        {/* Price and Actions */}
+                        <div className="flex items-end justify-between gap-2">
+                          <PromotionPricing product={product} />
+                          <div className="flex gap-4">
+                            <Button
+                              size={"icon-sm"}
+                              variant={"secondary"}
+                              className="hover:bg-destructive hover:text-white"
+                            >
+                              <Heart />
+                            </Button>
+                            <Button size="icon-sm" variant={"default"}>
+                              <ShoppingCart className="h-4 w-4" />
+                            </Button>
+                          </div>
                         </div>
                       </div>
                     </div>

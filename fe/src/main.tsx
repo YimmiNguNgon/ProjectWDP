@@ -50,7 +50,9 @@ export function AuthProvider({ children }: PropsWithChildren) {
         }
       } catch (error) {
         console.error("Auth initialization failed:", error);
-        signOut();
+        // Silent sign out to avoid showing user-facing logout toast during
+        // automatic auth initialization failures.
+        signOut(false);
       }
     };
 
@@ -65,12 +67,19 @@ export function AuthProvider({ children }: PropsWithChildren) {
   ) => {
     try {
       setLoading(true);
-      await api.post("/api/auth/register", {
+      const response = await api.post("/api/auth/register", {
         username,
         email,
         password,
         role,
       });
+
+      const { user, token } = response.data;
+      setUser(user);
+      setPayload(user);
+      setAuthToken(token);
+      localStorage.setItem("token", token);
+      setAccessToken(token);
     } catch (error) {
       console.error("Failed to sign up:", error);
       throw error;
@@ -87,7 +96,7 @@ export function AuthProvider({ children }: PropsWithChildren) {
       setAuthToken(token);
       localStorage.setItem("token", token);
       setAccessToken(token);
-      
+
       // Fetch full user profile immediately
       await fetchMe();
     } catch (error) {
@@ -104,9 +113,20 @@ export function AuthProvider({ children }: PropsWithChildren) {
       const res = await api.get("/api/users/me");
       const { user } = res.data.data;
       setUser(user);
-    } catch (error) {
+      setPayload({
+        userId: user._id,
+        username: user.username,
+        role: user.role,
+      });
+    } catch (error: any) {
       console.error("Failed to fetch user:", error);
-      signOut();
+      // Only sign out if it's an auth/token error, not other errors
+      if (error.response?.status === 401) {
+        // Could be expired token, let's try to continue without force logout
+        console.warn("Unauthorized - token may be invalid");
+      }
+      // Don't automatically sign out - let the user stay logged in with the token
+      // signOut(); // REMOVED - this was causing the logout loop
     } finally {
       setLoading(false);
     }
@@ -121,10 +141,10 @@ export function AuthProvider({ children }: PropsWithChildren) {
       setPayload(undefined);
       setAccessToken(null);
       localStorage.removeItem("token");
-      toast.success("Log out successfully!");
+      if (showToast) toast.success("Log out successfully!");
     } catch (error) {
       console.error(error);
-      toast.error("Failed to log out!");
+      if (showToast) toast.error("Failed to log out!");
       setAuthToken(null);
       setUser(undefined);
       setPayload(undefined);
@@ -155,7 +175,8 @@ export function AuthProvider({ children }: PropsWithChildren) {
       toast.success("Làm mới token thành công!");
     } catch (error) {
       console.error("Refresh token failed:", error);
-      signOut();
+      // Silent sign out when refresh fails as it is an automatic flow.
+      signOut(false);
     } finally {
       setLoading(false);
     }

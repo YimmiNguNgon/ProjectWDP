@@ -29,7 +29,7 @@ export default function ConversationList() {
   const [filtered, setFiltered] = React.useState<Conversation[]>([]);
 
   React.useEffect(() => {
-    api.get('/chats/conversations').then((res) => {
+    api.get('/api/chats/conversations').then((res) => {
       setConversations(res.data.data);
       setFiltered(res.data.data);
     });
@@ -57,20 +57,84 @@ export default function ConversationList() {
     else setSelected((prev) => prev.filter((id) => id !== conversationId));
   };
 
-  const handleDeleteConversation = () => {
-    // TODO: handleDeleteConversation
+  const handleDeleteConversation = async () => {
+    if (selected.length === 0) return;
+
+    try {
+      // Delete each selected conversation
+      await Promise.all(
+        selected.map((conversationId) =>
+          api.delete(`/api/chats/conversations/${conversationId}`)
+        )
+      );
+
+      // Update local state by removing deleted conversations
+      setConversations((prev) =>
+        prev.filter((c) => !selected.includes(c._id))
+      );
+      setSelected([]);
+    } catch (error) {
+      console.error('Failed to delete conversations:', error);
+      alert('Không thể xóa cuộc trò chuyện. Vui lòng thử lại.');
+    }
   };
 
-  const handleMarkAsReadConversation = () => {
-    // TODO: handleMarkAsReadConversation
+  const handleMarkAsReadConversation = async () => {
+    if (selected.length === 0) return;
+
+    try {
+      // Mark each selected conversation as read
+      await Promise.all(
+        selected.map((conversationId) =>
+          api.post(`/api/chats/conversations/${conversationId}/read`)
+        )
+      );
+
+      setSelected([]);
+    } catch (error) {
+      console.error('Failed to mark conversations as read:', error);
+      alert('Không thể đánh dấu đã đọc. Vui lòng thử lại.');
+    }
   };
 
-  const handleAddToInboxConversation = () => {
-    // TODO: handleAddToInboxConversation
+  const handleAddToInboxConversation = async () => {
+    if (selected.length === 0) return;
+
+    try {
+      // Move each selected conversation to inbox
+      await Promise.all(
+        selected.map((conversationId) =>
+          api.post(`/api/chats/conversations/${conversationId}/inbox`)
+        )
+      );
+
+      setSelected([]);
+    } catch (error) {
+      console.error('Failed to move conversations to inbox:', error);
+      alert('Không thể thêm vào inbox. Vui lòng thử lại.');
+    }
   };
 
-  const handleArchiveConversation = () => {
-    // TODO: handleArchiveConversation
+  const handleArchiveConversation = async () => {
+    if (selected.length === 0) return;
+
+    try {
+      // Archive each selected conversation
+      await Promise.all(
+        selected.map((conversationId) =>
+          api.post(`/api/chats/conversations/${conversationId}/archive`)
+        )
+      );
+
+      // Remove archived conversations from the list
+      setConversations((prev) =>
+        prev.filter((c) => !selected.includes(c._id))
+      );
+      setSelected([]);
+    } catch (error) {
+      console.error('Failed to archive conversations:', error);
+      alert('Không thể lưu trữ cuộc trò chuyện. Vui lòng thử lại.');
+    }
   };
 
   return (

@@ -42,9 +42,25 @@ exports.listProducts = async (req, res, next) => {
     const limit = Math.min(parseInt(req.query.limit) || 20, 100);
     const skip = (page - 1) * limit;
 
-    const { categories, minPrice, maxPrice } = req.query;
+    const { categories, minPrice, maxPrice, search } = req.query;
 
-    const filter = {};
+    const filter = {
+      $or: [
+        { listingStatus: "active" }, // Show active listings
+        { listingStatus: { $exists: false } }, // Show products without listingStatus field (legacy)
+      ],
+      $and: [
+        { $or: [{ deletedAt: null }, { deletedAt: { $exists: false } }] }, // Exclude soft-deleted
+      ],
+    };
+
+    // Search filter - search in title and description
+    if (search) {
+      filter.$or = [
+        { title: { $regex: search, $options: "i" } },
+        { description: { $regex: search, $options: "i" } },
+      ];
+    }
 
     if (categories) {
       const categorySlugs = categories.split(",");
@@ -76,10 +92,11 @@ exports.listProducts = async (req, res, next) => {
 
     const total = await Product.countDocuments(filter);
     const products = await Product.find(filter)
-      .sort({ createdAt: -1 })
+      .sort({ averageRating: -1, createdAt: -1 })
       .skip(skip)
       .limit(limit)
       .populate("categoryId", "name slug")
+      .populate("sellerId", "username avatarUrl")
       .lean();
     return res.json({ page, limit, total, data: products });
   } catch (err) {

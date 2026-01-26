@@ -1,14 +1,13 @@
 // src/layouts/admin.tsx
 import { Link, Outlet, useLocation } from 'react-router-dom';
-import { LayoutDashboard, Users, ShoppingBag, MessageSquare, Star, Home } from 'lucide-react';
+import { LayoutDashboard, Users, ShoppingBag, MessageCircle, Home } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
 const navigation = [
     { name: 'Dashboard', href: '/admin', icon: LayoutDashboard },
     { name: 'Quản lý người dùng', href: '/admin/users', icon: Users },
     { name: 'Quản lý sản phẩm', href: '/admin/products', icon: ShoppingBag },
-    { name: 'Khiếu nại', href: '/admin/complaints', icon: MessageSquare },
-    { name: 'Đánh giá', href: '/admin/reviews', icon: Star },
+    { name: 'Feedback Revision', href: '/admin/feedback', icon: MessageCircle },
 ];
 
 export default function AdminLayout() {

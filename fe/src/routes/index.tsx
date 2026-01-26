@@ -29,6 +29,13 @@ import SellerAddProduct from "@/pages/seller/AddProduct";
 // import SellerEditProduct from "@/pages/seller/EditProduct";
 import PurchaseHistoryPage from "@/pages/purchases/purchase-history-page";
 import LeaveFeedbackPage from "@/pages/purchases/leave-feedback-page";
+import MessagesPage from "@/pages/messages-page";
+import MyListingsPage from "@/pages/seller/my-listings";
+import InventoryPage from "@/pages/seller/inventory";
+import SellerSoldPage from "@/pages/seller/seller-sold-page";
+import PromotionRequestsPage from "@/pages/seller/promotion-requests";
+import AdminPromotionRequestsPage from "@/pages/admin/promotion-requests";
+import UnauthorizedPage from "@/pages/unauthorized";
 
 // Placeholder components for admin pages
 const AdminComplaints = () => (
@@ -62,6 +69,10 @@ export const AppRouter = () => {
               path: "profile",
               element: <UserProfilePage />,
             },
+            {
+              path: "messages",
+              element: <MessagesPage />,
+            },
           ],
         },
         {
@@ -80,11 +91,31 @@ export const AppRouter = () => {
           path: "purchases/:orderId/feedback/:productId",
           element: <LeaveFeedbackPage />,
         },
+        {
+          path: "seller/my-listings",
+          element: <MyListingsPage />,
+        },
+        {
+          path: "seller/inventory",
+          element: <InventoryPage />,
+        },
+        {
+          path: "seller/sold",
+          element: <SellerSoldPage />,
+        },
+        {
+          path: "seller/promotion-requests",
+          element: <PromotionRequestsPage />,
+        },
       ],
     },
     {
       path: "/admin",
-      element: <AdminLayout />,
+      element: (
+        <RoleGuard requireRole="admin">
+          <AdminLayout />
+        </RoleGuard>
+      ),
       children: [
         {
           index: true,
@@ -99,12 +130,24 @@ export const AppRouter = () => {
           element: <ProductManagement />,
         },
         {
+          path: "feedback",
+          element: <FeedbackManagement />,
+        },
+        {
           path: "complaints",
           element: <AdminComplaints />,
         },
         {
           path: "reviews",
           element: <AdminReviews />,
+        },
+        {
+          path: "promotion-requests",
+          element: <AdminPromotionRequestsPage />,
+        },
+        {
+          path: "permissions",
+          element: <PermissionsPage />,
         },
       ],
     },
