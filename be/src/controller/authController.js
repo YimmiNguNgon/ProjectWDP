@@ -1,122 +1,234 @@
 // src/controllers/authController.js
-const User = require('../models/User');
-const bcrypt = require('bcryptjs');
-const jwt = require('jsonwebtoken');
+const bcrypt = require("bcryptjs");
+const jwt = require("jsonwebtoken");
+const crypto = require("crypto");
+const nodemailer = require("nodemailer");
 
-const JWT_SECRET = process.env.JWT_SECRET || 'supersecretjwtkey_change_me';
+const User = require("../models/User.js");
+const Session = require("../models/Session.js");
+const sendEmail = require("../utils/sendEmail.js");
+
+const ACCESS_TOKEN_TTL = "15m";
+const REFRESH_TOKEN_TTL = 14 * 24 * 60 * 60 * 1000;
 
 exports.register = async (req, res, next) => {
   try {
     const { username, email, password, role } = req.body;
-    if (!username || !password || !email)
-      return res.status(400).json({ message: 'username, email & password required' });
 
-    // Check if username exists
-    const existingUsername = await User.findOne({ username });
-    if (existingUsername) return res.status(400).json({ message: 'username taken' });
+    if (!email || !password) {
+      return res
+        .status(400)
+        .json({ message: "Email and password are required" });
+    }
 
-    // Check if email exists
-    const existingEmail = await User.findOne({ email });
-    if (existingEmail) return res.status(400).json({ message: 'email already in use' });
+    const existingUser = await User.findOne({ email });
+
+    if (existingUser) {
+      return res.status(400).json({ message: "Email already in use" });
+    }
 
     const salt = await bcrypt.genSalt(10);
-    const hash = await bcrypt.hash(password, salt);
-    const user = await User.create({
+    const hashPassword = await bcrypt.hash(password, salt);
+
+    // tạo token xác thực email
+    const verificationToken = crypto.randomBytes(32).toString("hex");
+    const hashedToken = crypto
+      .createHash("sha256")
+      .update(verificationToken)
+      .digest("hex");
+
+    const newUser = new User({
       username,
       email,
-      passwordHash: hash,
-      role: role || 'buyer',
+      passwordHash: hashPassword,
+      role: role || "buyer",
+      isEmailVerified: false,
+      emailVerificationToken: hashedToken,
+      emailVerificationExpires: Date.now() + 24 * 60 * 60 * 1000, // 24h
     });
-    const payload = {
-      userId: user._id,
-      username: user.username,
-      role: user.role,
-    };
-    const token = jwt.sign(payload, JWT_SECRET, {
-      expiresIn: '7d',
-    });
-    res.status(201).json({
-      data: {
-        user: payload,
-        token,
-      },
-    });
-  } catch (err) {
-    next(err);
+
+    await newUser.save();
+
+    // Gửi email xác thực (optional - sẽ bỏ qua nếu không có email config)
+    try {
+      const verifyUrl = `${process.env.CLIENT_URL}/verify-email?token=${verificationToken}`;
+
+      await sendEmail({
+        to: email,
+        subject: "Xác thực tài khoản của bạn",
+        template: "verifyEmail.ejs",
+        data: {
+          username,
+          verifyUrl,
+          expiresIn: 24,
+        },
+      });
+    } catch (emailError) {
+      console.log("Email sending failed (skipped in dev):", emailError.message);
+    }
+
+    return res.sendStatus(204);
+  } catch (error) {
+    next(error);
   }
 };
 
 exports.login = async (req, res, next) => {
   try {
+    console.log("Login request body:", req.body); // Debug log
     const { username, password } = req.body;
-    if (!username || !password)
-      return res.status(400).json({ message: 'username & password required' });
+
+    if (!username || !password) {
+      console.log(
+        "Missing fields - username:",
+        username,
+        "password:",
+        password ? "exists" : "missing",
+      );
+      return res
+        .status(400)
+        .json({ message: "Username and password are required" });
+    }
+
     const user = await User.findOne({ username });
-    if (!user) return res.status(401).json({ message: 'invalid credentials' });
-    const ok = await bcrypt.compare(password, user.passwordHash || '');
-    if (!ok) return res.status(401).json({ message: 'invalid credentials' });
-    const payload = {
+
+    if (!user) {
+      return res.status(401).json({ message: "Invalid username or password" });
+    }
+
+    if (!user.isEmailVerified) {
+      return res
+        .status(403)
+        .json({ message: "Please verify your email to log in" });
+    }
+
+    const isMatch = await bcrypt.compare(password, user.passwordHash);
+
+    if (!isMatch) {
+      return res.status(401).json({ message: "Invalid email or password" });
+    }
+
+    // tạo access token
+    const accessToken = jwt.sign(
+      { userId: user._id },
+      process.env.ACCESS_TOKEN_SECRET,
+      { expiresIn: ACCESS_TOKEN_TTL },
+    );
+
+    // tạo refresh token
+    const refreshToken = crypto.randomBytes(64).toString("hex");
+
+    // save refresh token vào db
+    await Session.create({
       userId: user._id,
-      username: user.username,
-      role: user.role,
-    };
-    const token = jwt.sign(payload, JWT_SECRET, {
-      expiresIn: '7d',
+      refreshToken,
+      expiresAt: new Date(Date.now() + REFRESH_TOKEN_TTL),
     });
-    res.json({
+
+    // trả về refresh token dưới dạng httpOnly cookie
+    res.cookie("refreshToken", refreshToken, {
+      httpOnly: true,
+      secure: true,
+      sameSite: "none",
+      maxAge: REFRESH_TOKEN_TTL,
+    });
+
+    // return access token and user data
+    return res.status(200).json({
+      message: `User ${user.username} logged in`,
       data: {
-        user: payload,
-        token,
+        user: {
+          username: user.username,
+          email: user.email,
+          role: user.role,
+        },
+        token: accessToken,
       },
     });
-  } catch (err) {
-    next(err);
+  } catch (error) {
+    next(error);
   }
 };
 
-// Logout (simple version - just a success response since JWT is stateless)
 exports.logOut = async (req, res, next) => {
   try {
-    // In a stateless JWT system, logout is handled client-side by removing the token
-    // Optionally, you could blacklist the token here if you have a token blacklist system
-    res.json({ message: 'Logged out successfully' });
-  } catch (err) {
-    next(err);
+    const token = req.cookies?.refreshToken;
+
+    if (token) {
+      // xóa refresh token khỏi db
+      await Session.deleteOne({ refreshToken: token });
+
+      // xóa cookie refresh token ở client
+      res.clearCookie("refreshToken");
+    }
+
+    return res.sendStatus(204);
+  } catch (error) {
+    next(error);
   }
 };
 
 // Refresh token
 exports.refreshToken = async (req, res, next) => {
   try {
-    // Simple refresh - issue a new token with extended expiry
-    const token = req.headers.authorization?.split(' ')[1];
-    if (!token) return res.status(401).json({ message: 'No token provided' });
+    const token = req.cookies?.refreshToken;
 
-    const decoded = jwt.verify(token, JWT_SECRET);
-    const newToken = jwt.sign(
-      {
-        userId: decoded.userId,
-        username: decoded.username,
-        role: decoded.role,
-      },
-      JWT_SECRET,
-      { expiresIn: '7d' }
+    if (!token) {
+      console.error("Refresh token not found in cookies");
+      return res.status(401).json({ message: "Token not found" });
+    }
+
+    const session = await Session.findOne({ refreshToken: token });
+
+    if (!session) {
+      console.error("Session not found for token:", token);
+      return res.status(403).json({ message: "Invalid token or expired" });
+    }
+
+    if (session.expiresAt < new Date()) {
+      console.error("Token is expired");
+      return res.status(403).json({ message: "Token is expired" });
+    }
+
+    const accessToken = jwt.sign(
+      { userId: session.userId },
+      process.env.ACCESS_TOKEN_SECRET,
+      { expiresIn: ACCESS_TOKEN_TTL },
     );
 
-    res.json({ accessToken: newToken });
-  } catch (err) {
-    next(err);
+    return res.status(200).json({ accessToken });
+  } catch (error) {
+    console.error("Refresh token error:", error);
+    next(error);
   }
 };
 
-// Email verification (placeholder)
 exports.verifyEmail = async (req, res, next) => {
   try {
-    const { token } = req.body;
-    // TODO: Implement email verification logic
-    res.json({ message: 'Email verification not yet implemented' });
-  } catch (err) {
-    next(err);
+    const { token } = req.query;
+
+    const hashedToken = crypto.createHash("sha256").update(token).digest("hex");
+
+    const user = await User.findOne({
+      emailVerificationToken: hashedToken,
+      emailVerificationExpires: { $gt: Date.now() },
+    });
+
+    if (!user) {
+      return res
+        .status(400)
+        .json({ message: "Invalid or expired verification token" });
+    }
+
+    user.isEmailVerified = true;
+    user.emailVerificationToken = undefined;
+    user.emailVerificationExpires = undefined;
+
+    await user.save();
+
+    return res.status(200).json({ message: "Email verified successfully" });
+  } catch (error) {
+    next(error);
   }
 };
 
@@ -125,7 +237,7 @@ exports.forgotPassword = async (req, res, next) => {
   try {
     const { email } = req.body;
     // TODO: Implement forgot password logic (send reset email)
-    res.json({ message: 'Password reset email sent (not implemented yet)' });
+    res.json({ message: "Password reset email sent (not implemented yet)" });
   } catch (err) {
     next(err);
   }
@@ -136,7 +248,7 @@ exports.resetPassword = async (req, res, next) => {
   try {
     const { token, newPassword } = req.body;
     // TODO: Implement password reset logic
-    res.json({ message: 'Password reset not yet implemented' });
+    res.json({ message: "Password reset not yet implemented" });
   } catch (err) {
     next(err);
   }
@@ -147,7 +259,8 @@ exports.googleCallback = async (req, res, next) => {
   try {
     // Passport already authenticated the user and attached it to req.user
     const user = req.user;
-    if (!user) return res.status(401).json({ message: 'Authentication failed' });
+    if (!user)
+      return res.status(401).json({ message: "Authentication failed" });
 
     const payload = {
       userId: user._id,
@@ -155,10 +268,10 @@ exports.googleCallback = async (req, res, next) => {
       role: user.role,
     };
 
-    const token = jwt.sign(payload, JWT_SECRET, { expiresIn: '7d' });
+    const token = jwt.sign(payload, JWT_SECRET, { expiresIn: "7d" });
 
     // Redirect to frontend with token
-    const clientUrl = process.env.CLIENT_URL || 'http://localhost:5173';
+    const clientUrl = process.env.CLIENT_URL || "http://localhost:5173";
     res.redirect(`${clientUrl}/auth/google/success?token=${token}`);
   } catch (err) {
     next(err);
