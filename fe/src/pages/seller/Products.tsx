@@ -143,7 +143,7 @@ export default function SellerProducts() {
         params.append("minPrice", debouncedPriceRange[0].toString());
         params.append("maxPrice", debouncedPriceRange[1].toString());
         
-        const res = await api.get(`/products?${params.toString()}`);
+        const res = await api.get(`/api/products?${params.toString()}`);
         
         // Transform API data to match Product interface
         const transformedProducts = res.data.data.map((product: any) => ({

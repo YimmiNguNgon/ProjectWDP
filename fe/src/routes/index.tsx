@@ -12,6 +12,8 @@ import ResetPasswordPage from "@/pages/reset-password";
 import UserManagement from "@/pages/admin/user-management";
 import AdminDashboard from "@/pages/admin/dashboard";
 import ProductManagement from "@/pages/admin/product-management";
+import ProtectedRoute from "@/components/ProtectedRoute";
+
 
 import { MainLayout } from "@/layouts/main";
 import AuthLayout from "@/layouts/auth";
@@ -24,7 +26,9 @@ import SellerRevenue from "@/pages/seller/Revenue";
 import SellerReviews from "@/pages/seller/Reviews";
 import SellerProducts from "@/pages/seller/Products";
 import SellerAddProduct from "@/pages/seller/AddProduct";
-import SellerEditProduct from "@/pages/seller/EditProduct";
+// import SellerEditProduct from "@/pages/seller/EditProduct";
+import PurchaseHistoryPage from "@/pages/purchases/purchase-history-page";
+import LeaveFeedbackPage from "@/pages/purchases/leave-feedback-page";
 
 // Placeholder components for admin pages
 const AdminComplaints = () => (
@@ -124,10 +128,10 @@ export const AppRouter = () => {
           path: "products/new",
           element: <SellerAddProduct />,
         },
-        {
-          path: "products/edit/:id",
-          element: <SellerEditProduct />,
-        },
+        // {
+        //   path: "products/edit/:id",
+        //   element: <SellerEditProduct />,
+        // },
         {
           path: "revenue",
           element: <SellerRevenue />,

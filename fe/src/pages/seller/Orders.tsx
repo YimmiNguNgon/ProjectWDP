@@ -1,4 +1,5 @@
-import { useState } from 'react';
+// Orders.tsx - Chỉ cần thay đổi phần khai báo và useEffect
+import { useState, useEffect } from 'react';
 import { 
   Search, 
   Filter, 
@@ -22,9 +23,10 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { toast } from 'sonner';
+import { orderService } from '@/services/orderService'; // Import service
 
 interface Order {
-  id: string;
+  _id: string;
   customer: string;
   email: string;
   total: number;
@@ -37,16 +39,42 @@ interface Order {
 export default function SellerOrders() {
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedStatus, setSelectedStatus] = useState('all');
+  const [orders, setOrders] = useState<Order[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [stats, setStats] = useState<any>(null);
 
-  // Mock orders data
-  const orders: Order[] = [
-    { id: '#ORD001', customer: 'Nguyễn Văn A', email: 'nguyena@email.com', total: 245.50, status: 'pending', items: 2, date: '15/12/2023', paymentMethod: 'Credit Card' },
-    { id: '#ORD002', customer: 'Trần Thị B', email: 'tranb@email.com', total: 189.99, status: 'processing', items: 1, date: '14/12/2023', paymentMethod: 'PayPal' },
-    { id: '#ORD003', customer: 'Lê Văn C', email: 'lec@email.com', total: 320.00, status: 'shipped', items: 3, date: '14/12/2023', paymentMethod: 'Bank Transfer' },
-    { id: '#ORD004', customer: 'Phạm Thị D', email: 'phamd@email.com', total: 156.75, status: 'delivered', items: 2, date: '13/12/2023', paymentMethod: 'Credit Card' },
-    { id: '#ORD005', customer: 'Hoàng Văn E', email: 'hoange@email.com', total: 89.99, status: 'cancelled', items: 1, date: '12/12/2023', paymentMethod: 'PayPal' },
-    { id: '#ORD006', customer: 'Đỗ Thị F', email: 'dof@email.com', total: 420.50, status: 'processing', items: 4, date: '11/12/2023', paymentMethod: 'Credit Card' },
-  ];
+  // Fetch orders khi component mount hoặc filter thay đổi
+  useEffect(() => {
+    fetchOrders();
+    fetchStats();
+  }, [selectedStatus]);
+
+  const fetchOrders = async () => {
+    setLoading(true);
+    try {
+      const params: any = {};
+      if (selectedStatus !== 'all') {
+        params.status = selectedStatus;
+      }
+      
+      const result = await orderService.getOrders(params);
+      setOrders(result.orders);
+    } catch (error) {
+      console.error('Error fetching orders:', error);
+      toast.error('Không thể tải danh sách đơn hàng');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const fetchStats = async () => {
+    try {
+      const statsData = await orderService.getOrderStats();
+      setStats(statsData);
+    } catch (error) {
+      console.error('Error fetching stats:', error);
+    }
+  };
 
   const statuses = [
     { value: 'all', label: 'Tất cả', icon: Package },
@@ -59,18 +87,16 @@ export default function SellerOrders() {
 
   const filteredOrders = orders.filter(order => {
     const matchesSearch = 
-      order.id.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      order._id.toLowerCase().includes(searchTerm.toLowerCase()) ||
       order.customer.toLowerCase().includes(searchTerm.toLowerCase()) ||
       order.email.toLowerCase().includes(searchTerm.toLowerCase());
-    const matchesStatus = selectedStatus === 'all' || order.status === selectedStatus;
-    
-    return matchesSearch && matchesStatus;
+    return matchesSearch;
   });
 
   const getStatusBadge = (status: Order['status']) => {
     switch (status) {
       case 'pending':
-        return <Badge variant="outline" className="border-yellow-300 text-yellow-800 bg-yellow-50">Chờ xác nhận</Badge>;
+return <Badge variant="outline" className="border-yellow-300 text-yellow-800 bg-yellow-50">Chờ xác nhận</Badge>;
       case 'processing':
         return <Badge variant="outline" className="border-blue-300 text-blue-800 bg-blue-50">Đang xử lý</Badge>;
       case 'shipped':
@@ -82,14 +108,39 @@ export default function SellerOrders() {
     }
   };
 
-  const handleUpdateStatus = (orderId: string, newStatus: Order['status']) => {
-    toast.success(`Đã cập nhật trạng thái đơn hàng ${orderId}`);
-    // Add API call here
+  const handleUpdateStatus = async (orderId: string, newStatus: Order['status']) => {
+    try {
+      const success = await orderService.updateOrderStatus(orderId, newStatus);
+      if (success) {
+        toast.success(`Đã cập nhật trạng thái đơn hàng ${orderId}`);
+        // Refresh orders
+        fetchOrders();
+        fetchStats();
+      } else {
+        toast.error('Cập nhật thất bại');
+      }
+    } catch (error) {
+      toast.error('Có lỗi xảy ra khi cập nhật');
+    }
   };
 
   const totalRevenue = orders
     .filter(order => order.status !== 'cancelled')
     .reduce((sum, order) => sum + order.total, 0);
+
+  // Loading state
+  if (loading) {
+    return (
+      <div className="p-6">
+        <div className="flex items-center justify-center h-64">
+          <div className="text-center">
+            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-gray-900 mx-auto"></div>
+            <p className="mt-4 text-gray-600">Đang tải đơn hàng...</p>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="p-6">
@@ -97,9 +148,15 @@ export default function SellerOrders() {
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
         <div>
           <h1 className="text-2xl font-bold text-gray-900">Quản lý đơn hàng</h1>
-          <p className="text-gray-600">{filteredOrders.length} đơn hàng - Tổng doanh thu: ${totalRevenue.toFixed(2)}</p>
+          <p className="text-gray-600">
+            {filteredOrders.length} đơn hàng - Tổng doanh thu: ${totalRevenue.toFixed(2)}
+            {stats && ` | Tổng đơn hàng: ${stats.totalOrders || 0}`}
+          </p>
         </div>
-        
+        <Button>
+          <Download className="h-4 w-4 mr-2" />
+          Xuất Excel
+        </Button>
       </div>
 
       {/* Stats */}
@@ -115,7 +172,7 @@ export default function SellerOrders() {
                     <Icon className="h-5 w-5 text-gray-600" />
                   </div>
                   <div>
-                    <div className="text-2xl font-bold">{count}</div>
+<div className="text-2xl font-bold">{count}</div>
                     <div className="text-sm text-gray-600">{status.label}</div>
                   </div>
                 </div>
@@ -124,6 +181,10 @@ export default function SellerOrders() {
           );
         })}
       </div>
+
+      {/* Rest of your component remains EXACTLY THE SAME */}
+      {/* Filters, Orders Table, etc. */}
+      {/* ... (giữ nguyên tất cả code từ đây trở xuống) ... */}
 
       {/* Filters */}
       <Card className="mb-6">
@@ -182,9 +243,9 @@ export default function SellerOrders() {
               </thead>
               <tbody>
                 {filteredOrders.map((order) => (
-                  <tr key={order.id} className="border-b hover:bg-gray-50">
+                  <tr key={order._id} className="border-b hover:bg-gray-50">
                     <td className="p-4">
-                      <div className="font-medium">{order.id}</div>
+                      <div className="font-medium">{order._id}</div>
                       <div className="text-sm text-gray-500">{order.paymentMethod}</div>
                     </td>
                     <td className="p-4">
@@ -210,13 +271,13 @@ export default function SellerOrders() {
                           </DropdownMenuTrigger>
                           <DropdownMenuContent align="end">
                             {order.status === 'pending' && (
-                              <DropdownMenuItem onClick={() => handleUpdateStatus(order.id, 'processing')}>
+                              <DropdownMenuItem onClick={() => handleUpdateStatus(order._id, 'processing')}>
                                 <CheckCircle className="h-4 w-4 mr-2" />
                                 Xác nhận đơn
                               </DropdownMenuItem>
                             )}
                             {order.status === 'processing' && (
-                              <DropdownMenuItem onClick={() => handleUpdateStatus(order.id, 'shipped')}>
+                              <DropdownMenuItem onClick={() => handleUpdateStatus(order._id, 'shipped')}>
                                 <Truck className="h-4 w-4 mr-2" />
                                 Đánh dấu đã giao
                               </DropdownMenuItem>
@@ -224,7 +285,7 @@ export default function SellerOrders() {
                             {(order.status === 'pending' || order.status === 'processing') && (
                               <DropdownMenuItem 
                                 className="text-red-600"
-                                onClick={() => handleUpdateStatus(order.id, 'cancelled')}
+                                onClick={() => handleUpdateStatus(order._id, 'cancelled')}
                               >
                                 <XCircle className="h-4 w-4 mr-2" />
                                 Hủy đơn hàng

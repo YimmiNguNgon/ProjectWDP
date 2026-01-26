@@ -102,7 +102,7 @@ export function AuthProvider({ children }: PropsWithChildren) {
     try {
       setLoading(true);
       const res = await api.get("/api/users/me");
-      const { user } = res.data;
+      const { user } = res.data.data;
       setUser(user);
     } catch (error) {
       console.error("Failed to fetch user:", error);
@@ -111,6 +111,7 @@ export function AuthProvider({ children }: PropsWithChildren) {
       setLoading(false);
     }
   };
+
 
   const signOut = async () => {
     try {

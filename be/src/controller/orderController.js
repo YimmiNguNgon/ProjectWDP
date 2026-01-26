@@ -1,199 +1,249 @@
-// src/controllers/orderController.js
-const mongoose = require("mongoose");
 const Order = require("../models/Order");
-const Product = require("../models/Product");
 
-/**
- * Create order
- * Body: { buyerId? (optional, admin), items: [{ productId | product, quantity }] }
- * - Assumes items are from same seller. If mixed sellers, caller should create separate orders.
- */
-exports.createOrder = async (req, res, next) => {
+// Helper function để format date
+const formatDate = (date) => {
+  if (!date) return '';
+  const d = new Date(date);
+  const day = String(d.getDate()).padStart(2, '0');
+  const month = String(d.getMonth() + 1).padStart(2, '0');
+  const year = d.getFullYear();
+  return `${day}/${month}/${year}`;
+};
+
+// Lấy tất cả orders với format mới
+getAllOrders = async (req, res) => {
   try {
-    const { buyerId, items } = req.body;
-    const buyer =
-      buyerId && req.user && req.user.role === "admin"
-        ? buyerId
-        : req.user && req.user._id;
+    const orders = await Order.find({})
+      .populate('buyer', 'name email') // Giả sử User model có trường name và email
+      .populate('seller', 'name')
+      .populate('items.productId', 'title')
+      .sort({ createdAt: -1 });
 
-    if (!buyer || !Array.isArray(items) || items.length === 0) {
-      return res.status(400).json({ message: "buyer and items required" });
-    }
+    const formattedOrders = orders.map(order => {
+      // Tính tổng số items
+      const totalItems = order.items.reduce((sum, item) => sum + item.quantity, 0);
+      
+      // Lấy payment method (cần thêm vào model nếu chưa có)
+      // Tạm thời dùng mặc định hoặc từ data khác
+      const paymentMethod = order.paymentMethod || 'Credit Card'; // Giả sử có trường này
 
-    // normalize product ids from payload
-    const productIds = items
-      .map((it) => it.productId || it.product)
-      .filter(Boolean);
+      return {
+        _id: order._id, // Hoặc có thể tạo orderId format như #ORD001
+        // Nếu muốn format _id thành #ORD001:
+        // _id: `#ORD${String(order._id).slice(-6).toUpperCase()}`,
+        customer: order.buyer?.name || 'Khách hàng',
+        email: order.buyer?.email || '',
+        total: order.totalAmount,
+        status: order.status,
+        items: totalItems, // Số lượng items (tổng quantity)
+        date: formatDate(order.createdAt),
+        paymentMethod: paymentMethod
+      };
+    });
 
-    if (productIds.length === 0) {
-      return res.status(400).json({ message: "items must include productId" });
-    }
+    res.status(200).json({
+      success: true,
+      data: formattedOrders,
+      total: formattedOrders.length
+    });
+  } catch (error) {
+    res.status(500).json({
+      success: false,
+      message: "Lỗi khi lấy danh sách đơn hàng",
+      error: error.message
+    });
+  }
+};
 
-    // validate product existence
-    const products = await Product.find({ _id: { $in: productIds } }).lean();
-    const productMap = {};
-    products.forEach((p) => (productMap[p._id.toString()] = p));
+// Lấy order theo ID với format mới
+getOrderById = async (req, res) => {
+  try {
+    const order = await Order.findById(req.params.id)
+      .populate('buyer', 'name email phone address')
+      .populate('seller', 'name email phone')
+      .populate('items.productId', 'title images');
 
-    const orderItems = [];
-    let total = 0;
-    let sellerId = null;
-
-    for (const it of items) {
-      const pid = it.productId || it.product;
-      const p = productMap[pid];
-      if (!p)
-        return res.status(400).json({ message: `Product ${pid} not found` });
-
-      if (!sellerId) sellerId = p.sellerId || p.seller || null;
-      // If sellerId already set but different, reject (simpler) — avoid cross-seller order
-      if (
-        sellerId &&
-        (p.sellerId || p.seller) &&
-        (p.sellerId || p.seller).toString() !== sellerId.toString()
-      ) {
-        return res.status(400).json({
-          message:
-            "Items belong to multiple sellers; create separate orders per seller",
-        });
-      }
-
-      const qty = Number(it.quantity || 1);
-
-      // <-- KEY FIX: use `productId` to match Order model schema
-      orderItems.push({
-        productId: p._id, // schema requires productId
-        title: p.title,
-        price: p.price,
-        quantity: qty,
-      });
-
-      total += (p.price || 0) * qty;
-    }
-
-    // eBay Rule: Seller cannot buy their own products
-    if (sellerId && buyer.toString() === sellerId.toString()) {
-      return res.status(403).json({
-        message: 'You cannot purchase your own products',
-        error: 'SELF_PURCHASE_NOT_ALLOWED'
+    if (!order) {
+      return res.status(404).json({
+        success: false,
+        message: "Không tìm thấy đơn hàng"
       });
     }
 
-    const orderDoc = {
-      buyer,
-      seller: sellerId,
-      items: orderItems,
-      totalAmount: total,
-      status: "created",
+    // Tính tổng số items
+    const totalItems = order.items.reduce((sum, item) => sum + item.quantity, 0);
+    
+    // Lấy payment method
+    const paymentMethod = order.paymentMethod || 'Credit Card';
+
+    const formattedOrder = {
+      _id: order._id,
+      orderId: `#ORD${String(order._id).slice(-6).toUpperCase()}`, // Tạo orderId đẹp
+      customer: order.buyer?.name || 'Khách hàng',
+      email: order.buyer?.email || '',
+      phone: order.buyer?.phone || '',
+      address: order.buyer?.address || '',
+      seller: order.seller?.name || '',
+      total: order.totalAmount,
+      status: order.status,
+      items: totalItems,
+      date: formatDate(order.createdAt),
+      paymentMethod: paymentMethod,
+      orderDetails: order.items.map(item => ({
+        productId: item.productId?._id,
+        productName: item.productId?.title || item.title || 'Sản phẩm',
+        unitPrice: item.unitPrice,
+        quantity: item.quantity,
+        subtotal: item.unitPrice * item.quantity
+      })),
+      createdAt: order.createdAt,
+      updatedAt: order.updatedAt
     };
 
-    const order = await Order.create(orderDoc);
-
-    // Populate using the schema's field name: items.productId
-    const populated = await Order.findById(order._id)
-      .populate("buyer", "username")
-      .populate("seller", "username")
-      .populate("items.productId", "title price") // <- note productId
-      .lean();
-
-    return res.status(201).json({ data: populated });
-  } catch (err) {
-    next(err);
+    res.status(200).json({
+      success: true,
+      data: formattedOrder
+    });
+  } catch (error) {
+    res.status(500).json({
+      success: false,
+      message: "Lỗi khi lấy thông tin đơn hàng",
+      error: error.message
+    });
   }
 };
 
-/**
- * Get order by id (req.params.id)
- */
-exports.getOrder = async (req, res, next) => {
+// Lấy orders với filter và pagination
+getOrders = async (req, res) => {
   try {
-    const id = req.params.id;
-    if (!id || !mongoose.isValidObjectId(id))
-      return res.status(400).json({ message: "Invalid id" });
+    const { 
+      status, 
+      customer, 
+      startDate, 
+      endDate, 
+      page = 1, 
+      limit = 10 
+    } = req.query;
 
-    // populate đúng path: "items.productId"
-    const o = await Order.findById(id)
-      .populate("buyer", "username")
-      .populate("seller", "username")
-      .populate("items.productId", "title price")
-      .lean(); // trả về plain object
+    // Build filter query
+    let filter = {};
+    
+    if (status && status !== 'all') {
+      filter.status = status;
+    }
+    
+    if (customer) {
+      // Tìm theo tên customer thông qua populate
+      // Cần query phức tạp hơn nếu muốn filter theo tên
+      // Tạm thời bỏ qua filter này hoặc implement sau
+    }
+    
+    if (startDate || endDate) {
+      filter.createdAt = {};
+      if (startDate) {
+        const start = new Date(startDate);
+        start.setHours(0, 0, 0, 0);
+        filter.createdAt.$gte = start;
+      }
+      if (endDate) {
+        const end = new Date(endDate);
+        end.setHours(23, 59, 59, 999);
+        filter.createdAt.$lte = end;
+      }
+    }
 
-    if (!o) return res.status(404).json({ message: "Order not found" });
+    // Tính phân trang
+    const skip = (parseInt(page) - 1) * parseInt(limit);
+    
+    // Query với populate và filter
+    const [orders, total] = await Promise.all([
+      Order.find(filter)
+        .populate('buyer', 'name email')
+        .populate('seller', 'name')
+        .sort({ createdAt: -1 })
+        .skip(skip)
+        .limit(parseInt(limit)),
+      Order.countDocuments(filter)
+    ]);
 
-    // auth: buyer, seller, admin can view
-    const me = req.user;
-    // an toàn với cả ObjectId/object/string: convert toString() or compare with equals if ObjectId
-    const meId = me._id ? me._id.toString() : String(me);
+    // Format orders
+    const formattedOrders = orders.map(order => {
+      const totalItems = order.items.reduce((sum, item) => sum + item.quantity, 0);
+      const paymentMethod = order.paymentMethod || 'Credit Card';
 
-    const buyerId =
-      o.buyer && o.buyer._id ? o.buyer._id.toString() : String(o.buyer);
-    const sellerId =
-      o.seller && o.seller._id ? o.seller._id.toString() : String(o.seller);
+      return {
+        _id: order._id,
+        orderId: `#ORD${String(order._id).slice(-6).toUpperCase()}`,
+        customer: order.buyer?.name || 'Khách hàng',
+        email: order.buyer?.email || '',
+        total: order.totalAmount,
+        status: order.status,
+        items: totalItems,
+        date: formatDate(order.createdAt),
+        paymentMethod: paymentMethod,
+        createdAt: order.createdAt
+      };
+    });
 
-    const isBuyer = buyerId === meId;
-    const isSeller = sellerId === meId;
-
-    if (!isBuyer && !isSeller && me.role !== "admin")
-      return res.status(403).json({ message: "Forbidden" });
-
-    return res.json({ data: o });
-  } catch (err) {
-    // Nếu bạn đang dùng Mongoose v7+ và nghi ngờ lỗi do strictPopulate,
-    // thông tin lỗi sẽ nằm trong err.message — không recommended disable.
-    next(err);
+    res.status(200).json({
+      success: true,
+      data: formattedOrders,
+      pagination: {
+        page: parseInt(page),
+        limit: parseInt(limit),
+        total,
+        pages: Math.ceil(total / parseInt(limit))
+      }
+    });
+  } catch (error) {
+    res.status(500).json({
+      success: false,
+      message: "Lỗi khi lấy danh sách đơn hàng",
+      error: error.message
+    });
   }
 };
-/**
- * List orders for user (buyer or seller). If admin, can pass ?userId=
- */
-exports.listOrdersForUser = async (req, res, next) => {
+
+// Thống kê orders
+getOrderStats = async (req, res) => {
   try {
-    const queryUser = req.query.userId;
-    const me = req.user;
+    const stats = await Order.aggregate([
+      {
+        $group: {
+          _id: null,
+          totalOrders: { $sum: 1 },
+          totalRevenue: { $sum: "$totalAmount" },
+          pendingOrders: {
+            $sum: { $cond: [{ $eq: ["$status", "pending"] }, 1, 0] }
+          },
+          completedOrders: {
+            $sum: { $cond: [{ $eq: ["$status", "delivered"] }, 1, 0] }
+          }
+        }
+      }
+    ]);
 
-    let userId;
-    if (me.role === "admin" && queryUser) {
-      userId = queryUser;
-    } else {
-      userId = me._id;
-    }
-
-    if (!userId) return res.status(400).json({ message: "userId required" });
-
-    const role = req.query.role; // 'buyer' or 'seller'
-    let filter = { $or: [{ buyer: userId }, { seller: userId }] };
-
-    console.log('=== ORDER FILTER DEBUG ===');
-    console.log('User ID:', userId);
-    console.log('Role:', role);
-
-    if (role === 'buyer') {
-      filter = { buyer: userId };
-      console.log('Filtering as BUYER');
-    } else if (role === 'seller') {
-      filter = { seller: userId };
-      console.log('Filtering as SELLER');
-    }
-
-    console.log('Filter:', JSON.stringify(filter));
-
-
-    const rows = await Order.find(filter)
-      .sort({ createdAt: -1 })
-      .limit(200)
-      .populate("buyer", "username")
-      .populate("seller", "username")
-      .populate("items.productId", "title price")
-      .lean();
-
-    console.log('Orders found:', rows.length);
-    if (rows.length > 0) {
-      console.log('First order - Buyer:', rows[0].buyer?.username, 'Seller:', rows[0].seller?.username);
-    }
-    console.log('=== END DEBUG ===\n');
-
-
-    return res.json({ data: rows });
-  } catch (err) {
-    next(err);
+    res.status(200).json({
+      success: true,
+      data: stats[0] || {
+        totalOrders: 0,
+        totalRevenue: 0,
+        pendingOrders: 0,
+        completedOrders: 0
+      }
+    });
+  } catch (error) {
+    res.status(500).json({
+      success: false,
+      message: "Lỗi khi lấy thống kê",
+      error: error.message
+    });
   }
+};
+
+module.exports = {
+  getAllOrders,
+  getOrderById,
+  getOrders,
+  getOrderStats,
 };
