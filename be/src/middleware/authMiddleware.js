@@ -13,10 +13,9 @@ exports.protectedRoute = async (req, res, next) => {
     }
 
     // verify token
-    const JWT_SECRET = process.env.JWT_SECRET || 'supersecretjwtkey_change_me';
-    jwt.verify(token, JWT_SECRET, async (err, decoded) => {
+    jwt.verify(token, process.env.ACCESS_TOKEN_SECRET, async (err, decoded) => {
       if (err) {
-        return res.status(401).json({ message: "Unauthorized User" });
+        return res.status(403).json({ message: "Unauthorized User" });
       }
 
       //find user
@@ -32,5 +31,5 @@ exports.protectedRoute = async (req, res, next) => {
 
       next();
     });
-  } catch (error) { }
+  } catch (error) {}
 };
