@@ -12,13 +12,21 @@ import ResetPasswordPage from "@/pages/reset-password";
 import UserManagement from "@/pages/admin/user-management";
 import AdminDashboard from "@/pages/admin/dashboard";
 import ProductManagement from "@/pages/admin/product-management";
-import FeedbackManagement from "@/pages/admin/feedback-management";
-import PermissionsPage from "@/pages/admin/permissions-page";
+import ProtectedRoute from "@/components/ProtectedRoute";
+
 
 import { MainLayout } from "@/layouts/main";
 import AuthLayout from "@/layouts/auth";
 import UserProfilePage from "@/pages/profile";
 import AdminLayout from "@/layouts/admin";
+import SellerLayout from "@/layouts/seller";
+import SellerOverview from "@/pages/seller/Overview";
+import SellerOrders from "@/pages/seller/Orders";
+import SellerRevenue from "@/pages/seller/Revenue";
+import SellerReviews from "@/pages/seller/Reviews";
+import SellerProducts from "@/pages/seller/Products";
+import SellerAddProduct from "@/pages/seller/AddProduct";
+// import SellerEditProduct from "@/pages/seller/EditProduct";
 import PurchaseHistoryPage from "@/pages/purchases/purchase-history-page";
 import LeaveFeedbackPage from "@/pages/purchases/leave-feedback-page";
 import MessagesPage from "@/pages/messages-page";
@@ -28,9 +36,6 @@ import SellerSoldPage from "@/pages/seller/seller-sold-page";
 import PromotionRequestsPage from "@/pages/seller/promotion-requests";
 import AdminPromotionRequestsPage from "@/pages/admin/promotion-requests";
 import UnauthorizedPage from "@/pages/unauthorized";
-
-import ProtectedRoute from "@/components/ProtectedRoute";
-import { RoleGuard } from "@/components/RoleGuard";
 
 // Placeholder components for admin pages
 const AdminComplaints = () => (
@@ -147,8 +152,38 @@ export const AppRouter = () => {
       ],
     },
     {
-      path: "/unauthorized",
-      element: <UnauthorizedPage />,
+      path: "/seller",
+      element: <SellerLayout />,
+      children: [
+        {
+          index: true,
+          element: <SellerOverview />,
+        },
+        {
+          path: "orders",
+          element: <SellerOrders />,
+        },
+        {
+          path: "products",
+          element: <SellerProducts />,
+        },
+        {
+          path: "products/new",
+          element: <SellerAddProduct />,
+        },
+        // {
+        //   path: "products/edit/:id",
+        //   element: <SellerEditProduct />,
+        // },
+        {
+          path: "revenue",
+          element: <SellerRevenue />,
+        },
+        {
+          path: "reviews",
+          element: <SellerReviews />,
+        },
+      ],
     },
     {
       path: "/verify-email",

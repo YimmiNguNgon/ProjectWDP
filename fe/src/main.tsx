@@ -111,7 +111,7 @@ export function AuthProvider({ children }: PropsWithChildren) {
     try {
       setLoading(true);
       const res = await api.get("/api/users/me");
-      const { user } = res.data;
+      const { user } = res.data.data;
       setUser(user);
       setPayload({
         userId: user._id,
@@ -132,7 +132,8 @@ export function AuthProvider({ children }: PropsWithChildren) {
     }
   };
 
-  const signOut = async (showToast: boolean = true) => {
+
+  const signOut = async () => {
     try {
       await api.post("/api/auth/logout");
       setAuthToken(null);
