@@ -1,4 +1,3 @@
-// Orders.tsx - Chỉ cần thay đổi phần khai báo và useEffect
 import { useState, useEffect } from 'react';
 import { 
   Search, 
@@ -10,7 +9,13 @@ import {
   Package,
   Download,
   Eye,
-  MoreVertical
+  MoreVertical,
+  X,
+  User,
+  CreditCard,
+  Calendar,
+  MapPin,
+  Printer
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -23,17 +28,209 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { toast } from 'sonner';
-import { orderService } from '@/services/orderService'; // Import service
+import { orderService } from '@/services/orderService';
 
 interface Order {
   _id: string;
-  customer: string;
+  username: string;
   email: string;
   total: number;
   status: 'pending' | 'processing' | 'shipped' | 'delivered' | 'cancelled';
   items: number;
   date: string;
   paymentMethod: string;
+  phone?: string;
+  address?: string;
+  orderDetails?: Array<{
+    productId: string;
+    productName: string;
+    unitPrice: number;
+    quantity: number;
+    subtotal: number;
+  }>;
+  createdAt?: string;
+  updatedAt?: string;
+}
+
+// Component Popup Chi tiết đơn hàng
+function OrderDetailsPopup({ order, onClose }: { order: Order | null, onClose: () => void }) {
+  if (!order) return null;
+
+  const getStatusBadge = (status: Order['status']) => {
+    switch (status) {
+      case 'pending':
+        return <Badge variant="outline" className="border-yellow-300 text-yellow-800 bg-yellow-50">Chờ xác nhận</Badge>;
+      case 'processing':
+        return <Badge variant="outline" className="border-blue-300 text-blue-800 bg-blue-50">Đang xử lý</Badge>;
+      case 'shipped':
+        return <Badge variant="outline" className="border-purple-300 text-purple-800 bg-purple-50">Đang giao</Badge>;
+      case 'delivered':
+        return <Badge variant="outline" className="border-green-300 text-green-800 bg-green-50">Đã giao</Badge>;
+      case 'cancelled':
+        return <Badge variant="outline" className="border-red-300 text-red-800 bg-red-50">Đã hủy</Badge>;
+      default:
+        return <Badge variant="outline">Không xác định</Badge>;
+    }
+  };
+
+  const formatDate = (dateString: string | undefined) => {
+    if (!dateString) return '';
+    const date = new Date(dateString);
+    return date.toLocaleDateString('vi-VN', {
+      day: '2-digit',
+      month: '2-digit',
+      year: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit'
+    });
+  };
+
+  return (
+    <div className="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4">
+      <div className="bg-white rounded-lg shadow-xl max-w-4xl w-full max-h-[90vh] overflow-hidden animate-in fade-in zoom-in duration-300">
+        {/* Header */}
+        <div className="flex items-center justify-between p-6 border-b">
+          <div>
+            <h2 className="text-2xl font-bold text-gray-900">Chi tiết đơn hàng</h2>
+            <p className="text-gray-600">ID: {order._id}</p>
+          </div>
+          <Button
+            variant="ghost"
+            size="icon"
+            onClick={onClose}
+            className="h-8 w-8"
+          >
+            <X className="h-4 w-4" />
+          </Button>
+        </div>
+
+        <div className="overflow-y-auto max-h-[calc(90vh-200px)] p-6">
+          {/* Thông tin chung */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
+            <div className="space-y-4">
+              <div className="flex items-center gap-3">
+                <div className="p-2 rounded-lg bg-blue-50">
+                  <User className="h-5 w-5 text-blue-600" />
+                </div>
+                <div>
+                  <h3 className="font-medium text-gray-900">Thông tin khách hàng</h3>
+                  <p className="text-gray-900 font-semibold">{order.username}</p>
+                  <p className="text-gray-600">{order.email}</p>
+                  {order.phone && <p className="text-gray-600">📞 {order.phone}</p>}
+                  {order.address && (
+                    <div className="flex items-start gap-1 mt-1">
+                      <MapPin className="h-4 w-4 text-gray-400 mt-0.5" />
+                      <p className="text-gray-600 text-sm">{order.address}</p>
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              <div className="flex items-center gap-3">
+                <div className="p-2 rounded-lg bg-green-50">
+                  <CreditCard className="h-5 w-5 text-green-600" />
+                </div>
+                <div>
+                  <h3 className="font-medium text-gray-900">Phương thức thanh toán</h3>
+                  <p className="text-gray-900">{order.paymentMethod}</p>
+                </div>
+              </div>
+            </div>
+
+            <div className="space-y-4">
+              <div className="flex items-center gap-3">
+                <div className="p-2 rounded-lg bg-purple-50">
+                  <Calendar className="h-5 w-5 text-purple-600" />
+                </div>
+                <div>
+                  <h3 className="font-medium text-gray-900">Thời gian đặt hàng</h3>
+                  <p className="text-gray-900">{formatDate(order.createdAt || order.date)}</p>
+                </div>
+              </div>
+
+              <div>
+                <h3 className="font-medium text-gray-900 mb-2">Trạng thái đơn hàng</h3>
+                <div className="flex items-center gap-2">
+                  {getStatusBadge(order.status)}
+                  {order.updatedAt && order.updatedAt !== order.createdAt && (
+                    <span className="text-sm text-gray-500">
+                      Cập nhật: {formatDate(order.updatedAt)}
+                    </span>
+                  )}
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* Sản phẩm */}
+          <div className="mb-8">
+            <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center gap-2">
+              <Package className="h-5 w-5" />
+              Sản phẩm đã đặt ({order.orderDetails?.length || order.items || 0})
+            </h3>
+            
+            <div className="border rounded-lg overflow-hidden">
+              <table className="w-full">
+                <thead className="bg-gray-50">
+                  <tr>
+                    <th className="text-left p-3 font-medium text-gray-700">Sản phẩm</th>
+                    <th className="text-left p-3 font-medium text-gray-700">Đơn giá</th>
+                    <th className="text-left p-3 font-medium text-gray-700">Số lượng</th>
+                    <th className="text-left p-3 font-medium text-gray-700">Thành tiền</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {order.orderDetails?.map((item, index) => (
+                    <tr key={index} className="border-t hover:bg-gray-50">
+                      <td className="p-3">
+                        <div className="font-medium">{item.productName}</div>
+                        <div className="text-sm text-gray-500">ID: {item.productId}</div>
+                      </td>
+                      <td className="p-3">${item.unitPrice?.toFixed(2) || '0.00'}</td>
+                      <td className="p-3">{item.quantity}</td>
+                      <td className="p-3 font-medium">
+                        ${((item.unitPrice || 0) * (item.quantity || 1)).toFixed(2)}
+                      </td>
+                    </tr>
+                  ))}
+                  
+                  {/* Nếu không có orderDetails, hiển thị item tổng */}
+                  {(!order.orderDetails || order.orderDetails.length === 0) && (
+                    <tr className="border-t">
+                      <td className="p-3">Sản phẩm đã đặt</td>
+                      <td className="p-3">${order.total?.toFixed(2) || '0.00'}</td>
+                      <td className="p-3">{order.items}</td>
+                      <td className="p-3 font-medium">${order.total?.toFixed(2) || '0.00'}</td>
+                    </tr>
+                  )}
+                </tbody>
+              </table>
+            </div>
+          </div>
+
+          {/* Tổng kết */}
+          <div className="border-t pt-6">
+            <div className="flex justify-end">
+              <div className="w-64 space-y-2">
+                <div className="flex justify-between text-lg font-bold border-t pt-2">
+                  <span>Tổng cộng:</span>
+                  <span className="text-blue-600">${order.total?.toFixed(2) || '0.00'}</span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* Footer */}
+        <div className="border-t p-6 flex justify-end gap-3">
+          <Button variant="outline" onClick={onClose}>
+            Đóng
+          </Button>
+          
+        </div>
+      </div>
+    </div>
+  );
 }
 
 export default function SellerOrders() {
@@ -42,6 +239,11 @@ export default function SellerOrders() {
   const [orders, setOrders] = useState<Order[]>([]);
   const [loading, setLoading] = useState(true);
   const [stats, setStats] = useState<any>(null);
+  
+  // State cho popup
+  const [selectedOrder, setSelectedOrder] = useState<Order | null>(null);
+  const [showOrderDetails, setShowOrderDetails] = useState(false);
+  const [loadingDetails, setLoadingDetails] = useState(false);
 
   // Fetch orders khi component mount hoặc filter thay đổi
   useEffect(() => {
@@ -76,6 +278,36 @@ export default function SellerOrders() {
     }
   };
 
+  const handleViewOrderDetails = async (orderId: string) => {
+  console.log('Opening order details for ID:', orderId);
+  setLoadingDetails(true);
+  try {
+    // Lấy chi tiết order từ API
+    const orderDetails = await orderService.getOrderById(orderId);
+    console.log('Order details received:', orderDetails);
+    
+    if (orderDetails) {
+      console.log('Order has details:', {
+        hasOrderDetails: !!orderDetails.orderDetails,
+        orderDetailsCount: orderDetails.orderDetails?.length,
+        hasPhone: !!orderDetails.phone,
+        hasAddress: !!orderDetails.address
+      });
+      
+      setSelectedOrder(orderDetails);
+      setShowOrderDetails(true);
+    } else {
+      console.warn('No order details returned');
+      toast.error('Không thể tải chi tiết đơn hàng');
+    }
+  } catch (error) {
+    console.error('Error fetching order details:', error);
+    toast.error('Có lỗi xảy ra khi tải chi tiết đơn hàng');
+  } finally {
+    setLoadingDetails(false);
+  }
+};
+
   const statuses = [
     { value: 'all', label: 'Tất cả', icon: Package },
     { value: 'pending', label: 'Chờ xác nhận', icon: Clock },
@@ -88,7 +320,7 @@ export default function SellerOrders() {
   const filteredOrders = orders.filter(order => {
     const matchesSearch = 
       order._id.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      order.customer.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      order.username.toLowerCase().includes(searchTerm.toLowerCase()) ||
       order.email.toLowerCase().includes(searchTerm.toLowerCase());
     return matchesSearch;
   });
@@ -96,7 +328,7 @@ export default function SellerOrders() {
   const getStatusBadge = (status: Order['status']) => {
     switch (status) {
       case 'pending':
-return <Badge variant="outline" className="border-yellow-300 text-yellow-800 bg-yellow-50">Chờ xác nhận</Badge>;
+        return <Badge variant="outline" className="border-yellow-300 text-yellow-800 bg-yellow-50">Chờ xác nhận</Badge>;
       case 'processing':
         return <Badge variant="outline" className="border-blue-300 text-blue-800 bg-blue-50">Đang xử lý</Badge>;
       case 'shipped':
@@ -105,6 +337,8 @@ return <Badge variant="outline" className="border-yellow-300 text-yellow-800 bg-
         return <Badge variant="outline" className="border-green-300 text-green-800 bg-green-50">Đã giao</Badge>;
       case 'cancelled':
         return <Badge variant="outline" className="border-red-300 text-red-800 bg-red-50">Đã hủy</Badge>;
+      default:
+        return <Badge variant="outline">Không xác định</Badge>;
     }
   };
 
@@ -116,6 +350,12 @@ return <Badge variant="outline" className="border-yellow-300 text-yellow-800 bg-
         // Refresh orders
         fetchOrders();
         fetchStats();
+        
+        // Cập nhật order đang xem nếu có
+        if (selectedOrder && selectedOrder._id === orderId) {
+          const updatedOrder = await orderService.getOrderById(orderId);
+          setSelectedOrder(updatedOrder);
+        }
       } else {
         toast.error('Cập nhật thất bại');
       }
@@ -143,7 +383,18 @@ return <Badge variant="outline" className="border-yellow-300 text-yellow-800 bg-
   }
 
   return (
-    <div className="p-6">
+    <div className="p-6 relative">
+      {/* Popup chi tiết đơn hàng */}
+      {showOrderDetails && (
+        <OrderDetailsPopup
+          order={selectedOrder}
+          onClose={() => {
+            setShowOrderDetails(false);
+            setSelectedOrder(null);
+          }}
+        />
+      )}
+
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
         <div>
@@ -153,10 +404,6 @@ return <Badge variant="outline" className="border-yellow-300 text-yellow-800 bg-
             {stats && ` | Tổng đơn hàng: ${stats.totalOrders || 0}`}
           </p>
         </div>
-        <Button>
-          <Download className="h-4 w-4 mr-2" />
-          Xuất Excel
-        </Button>
       </div>
 
       {/* Stats */}
@@ -172,7 +419,7 @@ return <Badge variant="outline" className="border-yellow-300 text-yellow-800 bg-
                     <Icon className="h-5 w-5 text-gray-600" />
                   </div>
                   <div>
-<div className="text-2xl font-bold">{count}</div>
+                    <div className="text-2xl font-bold">{count}</div>
                     <div className="text-sm text-gray-600">{status.label}</div>
                   </div>
                 </div>
@@ -181,10 +428,6 @@ return <Badge variant="outline" className="border-yellow-300 text-yellow-800 bg-
           );
         })}
       </div>
-
-      {/* Rest of your component remains EXACTLY THE SAME */}
-      {/* Filters, Orders Table, etc. */}
-      {/* ... (giữ nguyên tất cả code từ đây trở xuống) ... */}
 
       {/* Filters */}
       <Card className="mb-6">
@@ -237,7 +480,6 @@ return <Badge variant="outline" className="border-yellow-300 text-yellow-800 bg-
                   <th className="text-left p-4 font-medium text-gray-600">Số lượng</th>
                   <th className="text-left p-4 font-medium text-gray-600">Tổng tiền</th>
                   <th className="text-left p-4 font-medium text-gray-600">Trạng thái</th>
-                  <th className="text-left p-4 font-medium text-gray-600">Ngày đặt</th>
                   <th className="text-left p-4 font-medium text-gray-600">Thao tác</th>
                 </tr>
               </thead>
@@ -249,7 +491,7 @@ return <Badge variant="outline" className="border-yellow-300 text-yellow-800 bg-
                       <div className="text-sm text-gray-500">{order.paymentMethod}</div>
                     </td>
                     <td className="p-4">
-                      <div className="font-medium">{order.customer}</div>
+                      <div className="font-medium">{order.username}</div>
                       <div className="text-sm text-gray-500">{order.email}</div>
                     </td>
                     <td className="p-4">{order.items} sản phẩm</td>
@@ -257,11 +499,20 @@ return <Badge variant="outline" className="border-yellow-300 text-yellow-800 bg-
                     <td className="p-4">
                       {getStatusBadge(order.status)}
                     </td>
-                    <td className="p-4 text-gray-600">{order.date}</td>
                     <td className="p-4">
                       <div className="flex items-center gap-2">
-                        <Button variant="ghost" size="sm">
-                          <Eye className="h-4 w-4" />
+                        {/* Nút xem chi tiết */}
+                        <Button 
+                          variant="ghost" 
+                          size="sm"
+                          onClick={() => handleViewOrderDetails(order._id)}
+                          disabled={loadingDetails}
+                        >
+                          {loadingDetails && selectedOrder?._id === order._id ? (
+                            <div className="h-4 w-4 border-2 border-gray-300 border-t-gray-600 rounded-full animate-spin" />
+                          ) : (
+                            <Eye className="h-4 w-4" />
+                          )}
                         </Button>
                         <DropdownMenu>
                           <DropdownMenuTrigger asChild>
@@ -291,9 +542,7 @@ return <Badge variant="outline" className="border-yellow-300 text-yellow-800 bg-
                                 Hủy đơn hàng
                               </DropdownMenuItem>
                             )}
-                            <DropdownMenuItem>
-                              In hóa đơn
-                            </DropdownMenuItem>
+                            
                           </DropdownMenuContent>
                         </DropdownMenu>
                       </div>
