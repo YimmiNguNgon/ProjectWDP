@@ -314,3 +314,175 @@ exports.changePassword = async (req, res, next) => {
     next(error);
   }
 };
+
+// ----------------- SAVE SELLER -----------------
+exports.saveSeller = async (req, res, next) => {
+  try {
+    const userId = req.user._id;
+    const { sellerId } = req.params;
+
+    if (!mongoose.isValidObjectId(sellerId)) {
+      return res.status(400).json({ message: "Invalid seller id" });
+    }
+
+    // Check if seller exists
+    const seller = await User.findById(sellerId);
+    if (!seller) {
+      return res.status(404).json({ message: "Seller not found" });
+    }
+
+    // Cannot save yourself
+    if (sellerId === userId.toString()) {
+      return res.status(400).json({ message: "Cannot save yourself as a seller" });
+    }
+
+    const user = await User.findById(userId);
+    if (!user) {
+      return res.status(404).json({ message: "User not found" });
+    }
+
+    // Check if already saved
+    if (user.savedSellers.includes(sellerId)) {
+      return res.status(400).json({ message: "Seller already saved" });
+    }
+
+    user.savedSellers.push(sellerId);
+    await user.save();
+
+    return res.status(200).json({
+      message: "Seller saved successfully",
+      data: { sellerId }
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+// ----------------- UNSAVE SELLER -----------------
+exports.unsaveSeller = async (req, res, next) => {
+  try {
+    const userId = req.user._id;
+    const { sellerId } = req.params;
+
+    if (!mongoose.isValidObjectId(sellerId)) {
+      return res.status(400).json({ message: "Invalid seller id" });
+    }
+
+    const user = await User.findById(userId);
+    if (!user) {
+      return res.status(404).json({ message: "User not found" });
+    }
+
+    // Remove seller from savedSellers array
+    user.savedSellers = user.savedSellers.filter(
+      id => id.toString() !== sellerId
+    );
+    await user.save();
+
+    return res.status(200).json({
+      message: "Seller unsaved successfully",
+      data: { sellerId }
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+// ----------------- GET SAVED SELLERS -----------------
+exports.getSavedSellers = async (req, res, next) => {
+  try {
+    const userId = req.user._id;
+
+    const user = await User.findById(userId)
+      .populate('savedSellers', 'username email avatarUrl reputationScore')
+      .lean();
+
+    if (!user) {
+      return res.status(404).json({ message: "User not found" });
+    }
+
+    return res.status(200).json({
+      data: user.savedSellers || []
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+// ----------------- HIDE ORDER -----------------
+exports.hideOrder = async (req, res, next) => {
+  try {
+    const userId = req.user._id;
+    const { orderId } = req.params;
+
+    if (!mongoose.isValidObjectId(orderId)) {
+      return res.status(400).json({ message: "Invalid order id" });
+    }
+
+    // Verify order exists and belongs to user
+    const Order = require("../models/Order");
+    const order = await Order.findById(orderId);
+
+    if (!order) {
+      return res.status(404).json({ message: "Order not found" });
+    }
+
+    // Check if user is buyer or seller of this order
+    const isBuyer = order.buyer.toString() === userId.toString();
+    const isSeller = order.seller.toString() === userId.toString();
+
+    if (!isBuyer && !isSeller) {
+      return res.status(403).json({ message: "You don't have access to this order" });
+    }
+
+    const user = await User.findById(userId);
+    if (!user) {
+      return res.status(404).json({ message: "User not found" });
+    }
+
+    // Check if already hidden
+    if (user.hiddenOrders.includes(orderId)) {
+      return res.status(400).json({ message: "Order already hidden" });
+    }
+
+    user.hiddenOrders.push(orderId);
+    await user.save();
+
+    return res.status(200).json({
+      message: "Order hidden successfully",
+      data: { orderId }
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+// ----------------- UNHIDE ORDER -----------------
+exports.unhideOrder = async (req, res, next) => {
+  try {
+    const userId = req.user._id;
+    const { orderId } = req.params;
+
+    if (!mongoose.isValidObjectId(orderId)) {
+      return res.status(400).json({ message: "Invalid order id" });
+    }
+
+    const user = await User.findById(userId);
+    if (!user) {
+      return res.status(404).json({ message: "User not found" });
+    }
+
+    // Remove order from hiddenOrders array
+    user.hiddenOrders = user.hiddenOrders.filter(
+      id => id.toString() !== orderId
+    );
+    await user.save();
+
+    return res.status(200).json({
+      message: "Order unhidden successfully",
+      data: { orderId }
+    });
+  } catch (error) {
+    next(error);
+  }
+};

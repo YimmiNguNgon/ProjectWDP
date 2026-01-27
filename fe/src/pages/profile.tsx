@@ -1,45 +1,40 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { UserProfile } from "@/components/user-profile";
 import { useAuth } from "@/hooks/use-auth";
+import api from "@/lib/axios";
 
 export default function UserProfilePage() {
   const { user } = useAuth();
+  const [orders, setOrders] = useState([]);
+  const [loading, setLoading] = useState(true);
 
-  // Mock orders data
-  const [orders] = useState([
-    {
-      id: "1",
-      orderNumber: "ORD-2024-001",
-      date: "15/01/2024",
-      total: 1500000,
-      status: "delivered" as const,
-      items: 3,
-    },
-    {
-      id: "2",
-      orderNumber: "ORD-2024-002",
-      date: "12/01/2024",
-      total: 890000,
-      status: "shipped" as const,
-      items: 2,
-    },
-    {
-      id: "3",
-      orderNumber: "ORD-2024-003",
-      date: "10/01/2024",
-      total: 2450000,
-      status: "processing" as const,
-      items: 5,
-    },
-    {
-      id: "4",
-      orderNumber: "ORD-2023-099",
-      date: "05/12/2023",
-      total: 550000,
-      status: "delivered" as const,
-      items: 1,
-    },
-  ]);
+  useEffect(() => {
+    const fetchOrders = async () => {
+      try {
+        setLoading(true);
+        const response = await api.get('/api/orders');
+        // Transform backend orders to match UserProfile component format
+        const formattedOrders = response.data.data?.map((order: any) => ({
+          id: order._id,
+          orderNumber: order.orderNumber || `ORD-${order._id.slice(-6)}`,
+          date: new Date(order.createdAt).toLocaleDateString('en-GB'),
+          total: order.totalAmount,
+          status: order.status,
+          items: order.items?.length || 0,
+        })) || [];
+        setOrders(formattedOrders);
+      } catch (error) {
+        console.error('Failed to fetch orders:', error);
+        setOrders([]); // Empty orders on error
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    if (user) {
+      fetchOrders();
+    }
+  }, [user]);
 
   return (
     <div className="container mx-auto py-8 px-4">
@@ -50,7 +45,13 @@ export default function UserProfilePage() {
         </p>
       </div>
 
-      {user && <UserProfile user={user} orders={orders} />}
+      {loading ? (
+        <div className="text-center py-12">
+          <p className="text-gray-600">Loading your profile...</p>
+        </div>
+      ) : (
+        user && <UserProfile user={user} orders={orders} />
+      )}
     </div>
   );
 }

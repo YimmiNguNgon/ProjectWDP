@@ -31,6 +31,7 @@ router.post("/users/:id/unban", adminUserController.unbanUser);
 
 // Product management routes
 router.get("/products", adminProductController.getAllProducts);
+router.post("/products", adminProductController.createProduct);
 router.get("/products/:id", adminProductController.getProductDetail);
 router.put("/products/:id", adminProductController.updateProduct);
 router.delete("/products/:id", adminProductController.deleteProduct);

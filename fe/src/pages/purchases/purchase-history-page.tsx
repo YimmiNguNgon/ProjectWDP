@@ -11,9 +11,24 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import {
+  Dialog,
+  DialogContent,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import { Messages } from "@/components/chat/messages";
+import { MessageContext, type Conversation, type Message } from "@/hooks/use-message";
+import { useAuth } from "@/hooks/use-auth";
 import { toast } from "sonner";
-// icon giống cột ORDER TOTAL của eBay
 import { DollarSign, Truck, Package, ThumbsUp } from "lucide-react";
+import { OrderDetailsDialog } from "@/components/orders/order-details-dialog";
+import {
+  getOrderDetails,
+  saveSeller as saveSellerApi,
+  unsaveSeller as unsaveSellerApi,
+  getSavedSellers,
+  hideOrder as hideOrderApi
+} from "@/api/orders";
 
 type OrderItem = {
   productId: {
@@ -54,6 +69,21 @@ export default function PurchaseHistoryPage() {
   const [orders, setOrders] = useState<Order[]>([]);
   const [search, setSearch] = useState("");
   const [loading, setLoading] = useState(true);
+  const [selectedOrder, setSelectedOrder] = useState<Order | null>(null);
+  const [showOrderDetails, setShowOrderDetails] = useState(false);
+  const [savedSellers, setSavedSellers] = useState<Set<string>>(new Set());
+  const [processingActions, setProcessingActions] = useState<Set<string>>(new Set());
+
+  // Chat dialog states
+  const [chatOpen, setChatOpen] = useState(false);
+  const { payload } = useAuth();
+
+  // Message context states
+  const [participants, setParticipantsState] = useState<string[]>([]);
+  const [conversation, setConversation] = useState<Conversation | undefined>();
+  const [messages, setMessages] = useState<Message[] | undefined>();
+  const [productRef, setProductRef] = useState<string | undefined>();
+  const [productContext, setProductContext] = useState<any>();
 
   const navigate = useNavigate();
 
@@ -74,6 +104,118 @@ export default function PurchaseHistoryPage() {
 
     fetchOrders();
   }, []);
+
+  // Fetch saved sellers
+  useEffect(() => {
+    const fetchSavedSellers = async () => {
+      try {
+        const res = await getSavedSellers();
+        const sellerIds = new Set(res.data.map(seller => seller._id));
+        setSavedSellers(sellerIds);
+      } catch (err) {
+        console.error("Failed to load saved sellers", err);
+      }
+    };
+
+    fetchSavedSellers();
+  }, []);
+
+  // Handler: View order details
+  const handleViewOrderDetails = async (orderId: string) => {
+    try {
+      const res = await getOrderDetails(orderId);
+      setSelectedOrder(res.data);
+      setShowOrderDetails(true);
+    } catch (err) {
+      console.error("Failed to load order details", err);
+      toast.error("Failed to load order details");
+    }
+  };
+
+  // Handler: Save/Unsave seller
+  const handleToggleSaveSeller = async (sellerId: string, sellerName: string) => {
+    const actionKey = `save-${sellerId}`;
+    if (processingActions.has(actionKey)) return;
+
+    try {
+      setProcessingActions(prev => new Set(prev).add(actionKey));
+
+      if (savedSellers.has(sellerId)) {
+        await unsaveSellerApi(sellerId);
+        setSavedSellers(prev => {
+          const newSet = new Set(prev);
+          newSet.delete(sellerId);
+          return newSet;
+        });
+        toast.success(`Unsaved seller: ${sellerName}`);
+      } else {
+        await saveSellerApi(sellerId);
+        setSavedSellers(prev => new Set(prev).add(sellerId));
+        toast.success(`Saved seller: ${sellerName}`);
+      }
+    } catch (err: any) {
+      console.error("Failed to save/unsave seller", err);
+      toast.error(err.response?.data?.message || "Failed to update saved seller");
+    } finally {
+      setProcessingActions(prev => {
+        const newSet = new Set(prev);
+        newSet.delete(actionKey);
+        return newSet;
+      });
+    }
+  };
+
+  // Handler: Hide order
+  const handleHideOrder = async (orderId: string) => {
+    const actionKey = `hide-${orderId}`;
+    if (processingActions.has(actionKey)) return;
+
+    try {
+      setProcessingActions(prev => new Set(prev).add(actionKey));
+      await hideOrderApi(orderId);
+
+      // Remove order from UI
+      setOrders(prev => prev.filter(order => order._id !== orderId));
+
+      toast.success("Order hidden from list", {
+        action: {
+          label: "Undo",
+          onClick: () => {
+            // Refresh to restore
+            window.location.reload();
+          },
+        },
+      });
+    } catch (err: any) {
+      console.error("Failed to hide order", err);
+      toast.error(err.response?.data?.message || "Failed to hide order");
+    } finally {
+      setProcessingActions(prev => {
+        const newSet = new Set(prev);
+        newSet.delete(actionKey);
+        return newSet;
+      });
+    }
+  };
+
+  // Handler: Open chat with seller
+  const handleContactSeller = (sellerId: string, productId: string) => {
+    const sender = payload?.userId;
+    if (!sender) {
+      toast.error('Vui lòng đăng nhập để chat với seller');
+      return;
+    }
+
+    // Find product from orders
+    const product = orders
+      .flatMap(o => o.items)
+      .find(item => item.productId?._id === productId);
+
+    setParticipantsState([sender, sellerId]);
+    setProductRef(productId);
+    setProductContext(product?.productId);
+    setChatOpen(true);
+  };
 
   const rows: PurchaseRow[] = useMemo(() => {
     const list: PurchaseRow[] = [];
@@ -151,6 +293,12 @@ export default function PurchaseHistoryPage() {
           </button>
           <button className="w-full rounded bg-muted px-2 py-1 text-left font-semibold">
             Purchases
+          </button>
+          <button
+            className="w-full rounded px-2 py-1 text-left hover:bg-muted"
+            onClick={() => navigate('/messages')}
+          >
+            Messages
           </button>
           <button
             className="w-full rounded px-2 py-1 text-left hover:bg-muted"
@@ -260,7 +408,17 @@ export default function PurchaseHistoryPage() {
                   <div className="mt-2 flex flex-wrap items-start justify-between gap-4">
                     {/* LEFT: ảnh sản phẩm */}
                     <div className="flex gap-3">
-                      <div className="flex h-24 w-24 items-center justify-center rounded border bg-muted" />
+                      <div className="flex h-24 w-24 items-center justify-center rounded border bg-muted overflow-hidden">
+                        {row.productId && orders.find(o => o._id === row.orderId)?.items.find(item => item.productId?._id === row.productId)?.productId?.imageUrl ? (
+                          <img
+                            src={orders.find(o => o._id === row.orderId)?.items.find(item => item.productId?._id === row.productId)?.productId?.imageUrl}
+                            alt={row.productTitle}
+                            className="h-full w-full object-cover"
+                          />
+                        ) : (
+                          <span className="text-xs text-muted-foreground text-center px-2">No image</span>
+                        )}
+                      </div>
                     </div>
 
                     {/* MIDDLE: title + Delivered on ...  (cùng hàng với ảnh) */}
@@ -340,19 +498,31 @@ export default function PurchaseHistoryPage() {
                           align="end"
                           className="w-52 text-xs"
                         >
-                          <DropdownMenuItem onClick={() => toast.info('Order details feature coming soon!')}>
+                          <DropdownMenuItem onClick={() => handleViewOrderDetails(row.orderId)}>
                             View order details
                           </DropdownMenuItem>
-                          <DropdownMenuItem onClick={() => navigate(`/contact-seller/${row.productId}`)}>Contact seller</DropdownMenuItem>
+                          <DropdownMenuItem onClick={() => handleContactSeller(row.sellerId, row.productId)}>Contact seller</DropdownMenuItem>
                           <DropdownMenuItem onClick={() => navigate(`/purchases/${row.orderId}/complaint/${row.productId}?reason=not_received`)}>
                             I didn&apos;t receive it
                           </DropdownMenuItem>
                           <DropdownMenuItem onClick={() => navigate(`/products?seller=${row.sellerId}`)}>
                             View seller&apos;s other items
                           </DropdownMenuItem>
-                          <DropdownMenuItem onClick={() => toast.info('Sell this item feature coming soon!')}>Sell this item</DropdownMenuItem>
-                          <DropdownMenuItem onClick={() => toast.success(`Saved seller: ${row.sellerName}`)}>Save this seller</DropdownMenuItem>
-                          <DropdownMenuItem onClick={() => toast.success('Order hidden from list')}>Hide order</DropdownMenuItem>
+                          <DropdownMenuItem onClick={() => navigate('/sell/create', { state: { prefillData: { title: row.productTitle } } })}>
+                            Sell this item
+                          </DropdownMenuItem>
+                          <DropdownMenuItem
+                            onClick={() => handleToggleSaveSeller(row.sellerId, row.sellerName)}
+                            disabled={processingActions.has(`save-${row.sellerId}`)}
+                          >
+                            {savedSellers.has(row.sellerId) ? 'Unsave this seller' : 'Save this seller'}
+                          </DropdownMenuItem>
+                          <DropdownMenuItem
+                            onClick={() => handleHideOrder(row.orderId)}
+                            disabled={processingActions.has(`hide-${row.orderId}`)}
+                          >
+                            Hide order
+                          </DropdownMenuItem>
                         </DropdownMenuContent>
                       </DropdownMenu>
 
@@ -370,6 +540,39 @@ export default function PurchaseHistoryPage() {
           </div>
         )}
       </main>
+
+      {/* Order Details Dialog */}
+      <OrderDetailsDialog
+        open={showOrderDetails}
+        onOpenChange={setShowOrderDetails}
+        order={selectedOrder}
+      />
+
+      {/* Chat Dialog */}
+      <Dialog open={chatOpen} onOpenChange={setChatOpen}>
+        <DialogContent
+          className="h-fit overflow-auto flex flex-col p-0 gap-0 left-[unset] right-0 top-[unset] bottom-0 translate-0 m-4"
+          aria-describedby=""
+          showCloseButton={false}
+        >
+          <DialogTitle hidden>Chat box</DialogTitle>
+          <MessageContext.Provider
+            value={{
+              participants,
+              setParticipants: setParticipantsState,
+              conversation,
+              setConversation,
+              messages,
+              setMessages,
+              productRef,
+              setProductRef,
+              product: productContext,
+            }}
+          >
+            <Messages onCloseDialog={() => setChatOpen(false)} />
+          </MessageContext.Provider>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

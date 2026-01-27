@@ -80,7 +80,10 @@ class UserEnforcementService {
             // Update user violation stats
             user.violationCount = violationCount;
             user.lastViolationAt = new Date();
-            await user.save();
+            // Only save if user has required fields
+            if (user.email) {
+                await user.save();
+            }
 
             console.log(`Violation recorded for user ${userId}: ${violationType} -> ${action.type}`);
 
@@ -130,7 +133,10 @@ class UserEnforcementService {
     async warnUser(user, reason) {
         user.warningCount = (user.warningCount || 0) + 1;
         user.lastWarningAt = new Date();
-        await user.save();
+        // Only save if user has required fields
+        if (user.email) {
+            await user.save();
+        }
 
         return {
             type: 'warning',
@@ -149,7 +155,10 @@ class UserEnforcementService {
         user.messagingRestrictedUntil = until;
         user.messagingRestrictedReason = reason;
         user.status = 'restricted';
-        await user.save();
+        // Only save if user has required fields
+        if (user.email) {
+            await user.save();
+        }
 
         return {
             type: 'restriction',
@@ -169,7 +178,10 @@ class UserEnforcementService {
         user.status = 'suspended';
         user.suspendedUntil = until;
         user.banReason = reason; // Reuse field for suspension reason
-        await user.save();
+        // Only save if user has required fields
+        if (user.email) {
+            await user.save();
+        }
 
         return {
             type: 'suspension',
@@ -187,7 +199,10 @@ class UserEnforcementService {
         user.status = 'banned';
         user.bannedAt = new Date();
         user.banReason = reason;
-        await user.save();
+        // Only save if user has required fields
+        if (user.email) {
+            await user.save();
+        }
 
         return {
             type: 'ban',
@@ -203,8 +218,22 @@ class UserEnforcementService {
      */
     async canSendMessage(userId) {
         try {
+            // Validate userId
+            if (!userId) {
+                console.log('canSendMessage: userId is null or undefined');
+                return { allowed: false, reason: 'User ID is required' };
+            }
+
+            if (!require('mongoose').isValidObjectId(userId)) {
+                console.log('canSendMessage: invalid userId format:', userId);
+                return { allowed: false, reason: 'Invalid user ID format' };
+            }
+
             const user = await User.findById(userId);
-            if (!user) return { allowed: false, reason: 'User not found' };
+            if (!user) {
+                console.log('canSendMessage: user not found:', userId);
+                return { allowed: false, reason: 'User not found' };
+            }
 
             // Check if banned
             if (user.status === 'banned') {
@@ -226,7 +255,10 @@ class UserEnforcementService {
                     // Suspension expired, reactivate
                     user.status = 'active';
                     user.suspendedUntil = null;
-                    await user.save();
+                    // Only save if user has required fields
+                    if (user.email) {
+                        await user.save();
+                    }
                 }
             }
 
@@ -243,14 +275,18 @@ class UserEnforcementService {
                     user.messagingRestricted = false;
                     user.messagingRestrictedUntil = null;
                     user.status = 'active';
-                    await user.save();
+                    // Only save if user has required fields
+                    if (user.email) {
+                        await user.save();
+                    }
                 }
             }
 
             return { allowed: true };
         } catch (err) {
             console.error('canSendMessage error:', err);
-            return { allowed: false, reason: 'Error checking permissions' };
+            console.error('userId attempted:', userId);
+            return { allowed: false, reason: `Permission check failed: ${err.message}` };
         }
     }
 

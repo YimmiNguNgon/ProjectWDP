@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState, type ComponentProps } from 'react';
+import React, { useEffect, useRef, useState, type ComponentProps } from 'react';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -13,6 +13,7 @@ import {
   EmptyTitle,
 } from '@/components/ui/empty';
 import { useAuth } from '@/hooks/use-auth';
+import api from '@/lib/axios';
 import socket from '@/lib/socket';
 import {
   Item,
@@ -39,6 +40,7 @@ export function Messages({
     productRef,
     setProductRef,
     product,
+    participants,
   } = useMessage();
   const { payload } = useAuth();
 
@@ -49,6 +51,7 @@ export function Messages({
   const [imagePreview, setImagePreview] = useState<string | null>(null);
   const [uploading, setUploading] = useState(false);
   const [viewerImage, setViewerImage] = useState<string | null>(null);
+  const [loading, setLoading] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const viewportRef = useRef<HTMLDivElement>(null);
   const typingTimeout = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -65,6 +68,40 @@ export function Messages({
       }, 100);
     }
   }, [messages]);
+
+  // Fetch or create conversation when participants change
+  useEffect(() => {
+    if (!participants || participants.length < 2) return;
+    if (conversation) return; // Already have conversation
+    if (loading) return; // Already fetching
+
+    const fetchOrCreateConversation = async () => {
+      try {
+        setLoading(true);
+
+        // Create or get existing conversation
+        const response = await api.post('/api/chats/conversations', {
+          participants: participants
+        });
+
+        setConversation(response.data.data);
+
+        // Fetch messages for this conversation
+        const messagesRes = await api.get(
+          `/api/chats/conversations/${response.data.data._id}/messages`
+        );
+        setMessages(messagesRes.data.data);
+      } catch (error) {
+        console.error('Failed to create/fetch conversation:', error);
+        setModerationError('Không thể tạo cuộc trò chuyện. Vui lòng thử lại.');
+        setTimeout(() => setModerationError(null), 3000);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchOrCreateConversation();
+  }, [participants, conversation, loading, setConversation, setMessages]);
 
   // Lắng nghe socket events
   useEffect(() => {
@@ -291,7 +328,34 @@ export function Messages({
     }, 1000);
   };
 
-  if (!conversation) return <EmptyMessage />;
+  // Show loading while fetching conversation
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center h-full p-8">
+        <div className="flex flex-col items-center gap-4">
+          <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+          <p className="text-sm text-muted-foreground">Đang tải cuộc trò chuyện...</p>
+        </div>
+      </div>
+    );
+  }
+
+  // Only show empty message if no participants and no conversation
+  if (!conversation && (!participants || participants.length < 2)) {
+    return <EmptyMessage />;
+  }
+
+  // If we have participants but no conversation yet, show loading
+  if (!conversation) {
+    return (
+      <div className="flex items-center justify-center h-full p-8">
+        <div className="flex flex-col items-center gap-4">
+          <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+          <p className="text-sm text-muted-foreground">Đang khởi tạo cuộc trò chuyện...</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div
@@ -340,13 +404,13 @@ export function Messages({
                 console.log('Message:', message);
                 console.log('Attachments:', message.attachments);
                 return (
-                  <>
+                  <React.Fragment key={message.id}>
                     {message.productRef && (
                       <Item variant={'muted'} className='border border-border'>
                         <ItemMedia variant={'image'} className='my-auto'>
                           <Link to={`/products/${message.productRef?._id}`}>
                             <img
-                              src={message.productRef?.imageUrl}
+                              src={message.productRef?.images?.[0]}
                               alt={message.productRef?.title}
                             />
                           </Link>
@@ -367,7 +431,6 @@ export function Messages({
                       </Item>
                     )}
                     <div
-                      key={message.id}
                       className={`flex ${isMe ? 'justify-end' : 'justify-start'
                         } `}
                     >
@@ -415,7 +478,7 @@ export function Messages({
                         </p>
                       </div>
                     </div>
-                  </>
+                  </React.Fragment>
                 );
               })
           )}
@@ -469,7 +532,7 @@ export function Messages({
           <ItemMedia variant={'image'} className='my-auto'>
             <Link to={`/products/${product?._id}`}>
               <img
-                src={product?.imageUrl}
+                src={product?.images?.[0]}
                 alt={product?.title}
                 className='aspect-square'
               />
