@@ -84,7 +84,7 @@ export default function SellerProducts() {
   const [totalPages, setTotalPages] = useState(1);
   const itemsPerPage = 10;
 
-  const categories = ['Tất cả', 'Thời trang', 'Điện tử', 'Sách', 'Thể thao', 'Nhà cửa', 'Phụ kiện'];
+  const categories = ['Tất cả', 'Thời trang', 'Electronics', 'Sách', 'Thể thao', 'Nhà cửa', 'Accessories'];
   const statuses = ['Tất cả', 'Đang bán', 'Ngừng bán'];
 
   const filteredProducts = products.filter(product => {
