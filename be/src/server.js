@@ -22,6 +22,7 @@ const reviewRoutes = require("./routes/reviewRoutes");
 const adminRoutes = require("./routes/adminRoutes");
 const orderRoutes = require("./routes/orders");
 const searchRoutes = require("./routes/search");
+const addressRoutes = require("./routes/addressRoute");
 const User = require("./models/User");
 
 // Passport config (sau khi dotenv.config())
@@ -66,6 +67,7 @@ app.use("/api/reviews", reviewRoutes);
 app.use("/api/admin", adminRoutes);
 app.use("/api/orders", orderRoutes);
 app.use("/api/search", searchRoutes);
+app.use("/api/addresses", addressRoutes);
 
 // Chat routes
 const chatRoutes = require("./routes/chats");
@@ -132,24 +134,24 @@ async function start() {
   await createDefaultAdmin();
 
   // Initialize deal expiration cron job
-  const { initDealExpirationJob } = require('./jobs/dealExpirationJob');
+  const { initDealExpirationJob } = require("./jobs/dealExpirationJob");
   initDealExpirationJob();
 
   // Create HTTP server from Express app
-  const http = require('http');
+  const http = require("http");
   const server = http.createServer(app);
 
   // Setup Socket.IO
-  const { Server } = require('socket.io');
+  const { Server } = require("socket.io");
   const io = new Server(server, {
     cors: {
-      origin: '*', // Allow all origins in dev
-      methods: ['GET', 'POST']
-    }
+      origin: "*", // Allow all origins in dev
+      methods: ["GET", "POST"],
+    },
   });
 
   // Initialize Socket.IO handlers
-  const initSocket = require('./socket');
+  const initSocket = require("./socket");
   initSocket(io);
 
   server.listen(PORT, () => {

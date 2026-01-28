@@ -60,14 +60,18 @@ const userSchema = new mongoose.Schema(
     googleId: { type: String, sparse: true, unique: true },
 
     // User preferences for purchases
-    savedSellers: [{
-      type: mongoose.Schema.Types.ObjectId,
-      ref: "User",
-    }],
-    hiddenOrders: [{
-      type: mongoose.Schema.Types.ObjectId,
-      ref: "Order",
-    }],
+    savedSellers: [
+      {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: "User",
+      },
+    ],
+    hiddenOrders: [
+      {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: "Order",
+      },
+    ],
   },
   { timestamps: true },
 );

@@ -11,9 +11,9 @@ const ProtectedRoute = () => {
       await refresh();
     }
 
-    // if (accessToken && !user) {
-    //   await fetchMe();
-    // }
+    if (accessToken && !user) {
+      await fetchMe();
+    }
 
     setStarting(false);
   };

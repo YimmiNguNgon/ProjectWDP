@@ -52,7 +52,7 @@ export function AuthProvider({ children }: PropsWithChildren) {
         console.error("Auth initialization failed:", error);
         // Silent sign out to avoid showing user-facing logout toast during
         // automatic auth initialization failures.
-        signOut(false);
+        signOut();
       }
     };
 
@@ -111,7 +111,7 @@ export function AuthProvider({ children }: PropsWithChildren) {
     try {
       setLoading(true);
       const res = await api.get("/api/users/me");
-      const { user } = res.data.data;
+      const { user } = res.data;
       setUser(user);
       setPayload({
         userId: user._id,
@@ -132,7 +132,6 @@ export function AuthProvider({ children }: PropsWithChildren) {
     }
   };
 
-
   const signOut = async () => {
     try {
       await api.post("/api/auth/logout");
@@ -141,10 +140,8 @@ export function AuthProvider({ children }: PropsWithChildren) {
       setPayload(undefined);
       setAccessToken(null);
       localStorage.removeItem("token");
-      if (showToast) toast.success("Log out successfully!");
     } catch (error) {
       console.error(error);
-      if (showToast) toast.error("Failed to log out!");
       setAuthToken(null);
       setUser(undefined);
       setPayload(undefined);
@@ -176,7 +173,7 @@ export function AuthProvider({ children }: PropsWithChildren) {
     } catch (error) {
       console.error("Refresh token failed:", error);
       // Silent sign out when refresh fails as it is an automatic flow.
-      signOut(false);
+      signOut();
     } finally {
       setLoading(false);
     }
