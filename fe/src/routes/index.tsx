@@ -13,7 +13,7 @@ import UserManagement from "@/pages/admin/user-management";
 import AdminDashboard from "@/pages/admin/dashboard";
 import ProductManagement from "@/pages/admin/product-management";
 import ProtectedRoute from "@/components/ProtectedRoute";
-
+import { RoleGuard } from "@/components/RoleGuard";
 
 import { MainLayout } from "@/layouts/main";
 import AuthLayout from "@/layouts/auth";
@@ -35,6 +35,8 @@ import InventoryPage from "@/pages/seller/inventory";
 import SellerSoldPage from "@/pages/seller/seller-sold-page";
 import PromotionRequestsPage from "@/pages/seller/promotion-requests";
 import AdminPromotionRequestsPage from "@/pages/admin/promotion-requests";
+import FeedbackManagement from "@/pages/admin/feedback-management";
+import PermissionsPage from "@/pages/admin/permissions-page";
 import UnauthorizedPage from "@/pages/unauthorized";
 
 // Placeholder components for admin pages

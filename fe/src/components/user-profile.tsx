@@ -25,9 +25,19 @@ import {
   updateUserProfile,
   updateUserEmail,
   changeUserPassword,
+  type Address,
+  getAddresses,
+  createAddress,
+  updateAddress,
+  setDefaultAddress,
+  deleteAddress,
 } from "@/api/user";
 import { useAuth } from "@/hooks/use-auth";
 import { toast } from "sonner";
+import AddressItems from "./address-items";
+import { MapIcon } from "lucide-react";
+import AddressForm from "./address-form";
+import { ConfirmDialog } from "./confirm-dialog";
 
 export interface UserProfileProps {
   user: {
@@ -61,8 +71,10 @@ const statusLabels: Record<string, string> = {
   cancelled: "Cancelled",
 };
 
-export function UserProfile({ user, orders = [] }: UserProfileProps) {
+export function UserProfile({ user }: UserProfileProps) {
   const { fetchMe } = useAuth();
+  const [addresses, setAddresses] = useState<Address[]>([]);
+  const [selectedAddress, setSelectedAddress] = useState<Address | null>(null);
   const [editEmail, setEditEmail] = useState(false);
   const [newEmail, setNewEmail] = useState(user.email);
   const [changePassOpen, setChangePassOpen] = useState(false);
@@ -77,6 +89,14 @@ export function UserProfile({ user, orders = [] }: UserProfileProps) {
   );
   const [avatarFile, setAvatarFile] = useState<File | null>(null);
   const [avatarKey, setAvatarKey] = useState(Date.now()); // For forcing re-render
+  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [confirmDialogOpen, setConfirmDialogOpen] = useState(false);
+  const [confirmDialogAction, setConfirmDialogAction] = useState<
+    "setDefault" | "delete" | null
+  >(null);
+  const [pendingAddressId, setPendingAddressId] = useState<string | null>(null);
+  const [isSettingDefault, setIsSettingDefault] = useState(false);
+  const [isDeletingAddress, setIsDeletingAddress] = useState(false);
 
   useEffect(() => {
     setNewEmail(user.email);
@@ -88,6 +108,23 @@ export function UserProfile({ user, orders = [] }: UserProfileProps) {
     setAvatarPreview(avatarUrl);
     setAvatarKey(Date.now());
   }, [user]);
+
+  const fetchAddresses = async () => {
+    try {
+      setLoading(true);
+      const res = await getAddresses();
+      // nếu API return { message, data }
+      setAddresses(res.data);
+    } catch (error) {
+      console.error("Failed to fetch addresses", error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchAddresses();
+  }, []);
 
   const handleUpdateEmail = async () => {
     if (!newEmail || newEmail === user.email) {
@@ -200,6 +237,47 @@ export function UserProfile({ user, orders = [] }: UserProfileProps) {
     setAvatarFile(null);
   };
 
+  const handleEditAddress = (address: Address) => {
+    setSelectedAddress(address);
+    setIsModalOpen(true);
+  };
+
+  const handleConfirmDialog = async () => {
+    if (confirmDialogAction === "setDefault") {
+      if (!pendingAddressId) return;
+      try {
+        setIsSettingDefault(true);
+        await setDefaultAddress(pendingAddressId);
+        await fetchAddresses();
+        toast.success("Set Default Address Successfully");
+        setConfirmDialogOpen(false);
+        setPendingAddressId(null);
+        setConfirmDialogAction(null);
+      } catch (error: any) {
+        console.log(error);
+        toast.error("Failed to set default address");
+      } finally {
+        setIsSettingDefault(false);
+      }
+    } else if (confirmDialogAction === "delete") {
+      if (!pendingAddressId) return;
+      try {
+        setIsDeletingAddress(true);
+        await deleteAddress(pendingAddressId);
+        await fetchAddresses();
+        toast.success("Delete Address Successfully");
+        setConfirmDialogOpen(false);
+        setPendingAddressId(null);
+        setConfirmDialogAction(null);
+      } catch (error: any) {
+        console.log(error);
+        toast.error("Failed to delete address");
+      } finally {
+        setIsDeletingAddress(false);
+      }
+    }
+  };
+
   return (
     <div className="w-full">
       {/* Section 1: Avatar & User Info */}
@@ -291,7 +369,7 @@ export function UserProfile({ user, orders = [] }: UserProfileProps) {
                     Cancel
                   </AlertDialogCancel>
                   <AlertDialogAction
-                    className="cursor-pointer"
+                    className="cursor-pointer bg-[#AAED56] text-[#324E0F] hover:bg-[#8feb1d]"
                     onClick={handleUpdateProfile}
                     disabled={loading}
                   >
@@ -342,7 +420,7 @@ export function UserProfile({ user, orders = [] }: UserProfileProps) {
                     <Button
                       onClick={handleUpdateEmail}
                       disabled={loading}
-                      className="flex-1 cursor-pointer"
+                      className="flex-1 cursor-pointer bg-[#AAED56] text-[#324E0F] hover:bg-[#8feb1d]"
                     >
                       {loading ? "Saving..." : "Saved Changes"}
                     </Button>
@@ -423,7 +501,7 @@ export function UserProfile({ user, orders = [] }: UserProfileProps) {
                       Cancel
                     </AlertDialogCancel>
                     <AlertDialogAction
-                      className="cursor-pointer"
+                      className="cursor-pointer bg-[#AAED56] text-[#324E0F] hover:bg-[#8feb1d]"
                       onClick={handleChangePassword}
                       disabled={loading}
                     >
@@ -436,57 +514,109 @@ export function UserProfile({ user, orders = [] }: UserProfileProps) {
           </Card>
         </div>
 
-        {/* Section 3: Order History (Right) */}
+        {/* Section 3: User Address */}
         <div className="lg:col-span-2">
           <Card>
             <CardHeader>
-              <CardTitle>My Orders</CardTitle>
+              <div className="flex items-center justify-between">
+                <CardTitle className="text-lg">Address</CardTitle>
+                {Array.isArray(addresses) && addresses.length >= 1 && (
+                  <Button
+                    className="cursor-pointer bg-[#AAED56] text-[#324E0F] hover:bg-[#8feb1d]"
+                    onClick={() => setIsModalOpen(true)}
+                  >
+                    Add Address
+                  </Button>
+                )}
+              </div>
               <CardDescription>
-                {orders.length > 0
-                  ? `You have ${orders.length} orders`
-                  : "You don't have any orders yet"}
+                Your saved addresses will appear here.
               </CardDescription>
             </CardHeader>
-            <CardContent>
-              {orders.length === 0 ? (
-                <div className="text-center py-8">
-                  <p className="text-gray-500">Not found Order</p>
-                </div>
-              ) : (
-                <div className="space-y-3">
-                  {orders.map((order) => (
-                    <div
-                      key={order.id}
-                      className="border rounded-lg p-4 hover:bg-gray-50 transition"
-                    >
-                      <div className="flex items-start justify-between mb-2">
-                        <div>
-                          <p className="font-semibold text-gray-900">
-                            Order #{order.orderNumber}
-                          </p>
-                          <p className="text-sm text-gray-600">{order.date}</p>
-                        </div>
-                        <Badge className={statusColors[order.status]}>
-                          {statusLabels[order.status]}
-                        </Badge>
-                      </div>
-
-                      <div className="flex items-center justify-between">
-                        <p className="text-sm text-gray-600">
-                          {order.items} products
-                        </p>
-                        <p className="font-semibold text-lg text-gray-900">
-                          {order.total.toLocaleString("vi-VN")} VNĐ
-                        </p>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              )}
+            {!loading && addresses.length === 0 && (
+              <CardContent className="flex flex-col items-center mt-4 justify-center gap-2">
+                <MapIcon className="w-10 h-10 text-muted-foreground" />
+                <p className="text-md text-muted-foreground">
+                  You have no address yet
+                </p>
+                <Button
+                  className="cursor-pointer bg-[#AAED56] text-[#324E0F] hover:bg-[#8feb1d]"
+                  onClick={() => setIsModalOpen(true)}
+                >
+                  Create Address
+                </Button>
+              </CardContent>
+            )}
+            <CardContent className="space-y-4">
+              {addresses.map((address) => (
+                <AddressItems
+                  key={address._id}
+                  address={address}
+                  onEdit={handleEditAddress}
+                  onSetDefault={() => {
+                    setPendingAddressId(address._id);
+                    setConfirmDialogAction("setDefault");
+                    setConfirmDialogOpen(true);
+                  }}
+                  onDelete={() => {
+                    setPendingAddressId(address._id);
+                    setConfirmDialogAction("delete");
+                    setConfirmDialogOpen(true);
+                  }}
+                />
+              ))}
             </CardContent>
           </Card>
         </div>
       </div>
+      <AddressForm
+        open={isModalOpen}
+        onClose={() => {
+          setIsModalOpen(false);
+          setSelectedAddress(null);
+        }}
+        initialData={selectedAddress}
+        onSubmit={async (payload) => {
+          if (selectedAddress) {
+            await updateAddress(selectedAddress._id, payload);
+          } else {
+            await createAddress(payload);
+          }
+          fetchAddresses();
+          setIsModalOpen(false);
+        }}
+      />
+      <ConfirmDialog
+        open={confirmDialogOpen}
+        onOpenChange={(open) => {
+          setConfirmDialogOpen(open);
+          if (!open) {
+            setConfirmDialogAction(null);
+            setPendingAddressId(null);
+          }
+        }}
+        title={
+          confirmDialogAction === "setDefault"
+            ? "Set Default Address?"
+            : "Delete Address?"
+        }
+        description={
+          confirmDialogAction === "setDefault"
+            ? "Are you sure you want to set this as your default address?"
+            : "Are you sure you want to delete this address?"
+        }
+        confirmText={
+          confirmDialogAction === "setDefault" ? "Set as Default" : "Delete"
+        }
+        cancelText="Cancel"
+        loading={
+          confirmDialogAction === "setDefault"
+            ? isSettingDefault
+            : isDeletingAddress
+        }
+        isDangerous={confirmDialogAction === "delete"}
+        onConfirm={handleConfirmDialog}
+      />
     </div>
   );
 }
