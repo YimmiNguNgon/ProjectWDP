@@ -84,6 +84,12 @@ exports.setDefaultAddress = async (req, res, next) => {
 
     if (!address) return res.status(404).json({ message: "Not found Address" });
 
+    if (address.isDefault) {
+      return res.status(400).json({
+        message: "This address is already the default address",
+      });
+    }
+
     await Address.updateMany({ user: userId }, { isDefault: false });
 
     address.isDefault = true;
