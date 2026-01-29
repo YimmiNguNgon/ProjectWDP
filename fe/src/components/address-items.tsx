@@ -21,7 +21,7 @@ const AddressItems = ({
   onDelete,
   onSetDefault,
 }: AddressItemsProps) => {
-  const fullAddress = `${address.street ? address.street + "," : ""} ${address.ward ? address.ward + "," : ""} ${address.district ? address.district + "," : ""} ${address.city ? address.city + "," : ""} ${address.country ? address.city : ""}`;
+  const fullAddress = `${address.street ? address.street + "," : ""} ${address.ward ? address.ward + "," : ""} ${address.district ? address.district + "," : ""} ${address.city ? address.city + "," : ""} ${address.country ? address.country : ""}`;
   const detailAddress = `${address.detail ? address.detail : ""}`;
   const isDefault = address.isDefault;
   return (
