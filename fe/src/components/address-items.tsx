@@ -65,7 +65,7 @@ const AddressItems = ({
                 Edit
               </DropdownMenuItem>
             )}
-            {onSetDefault && (
+            {!address.isDefault && onSetDefault && (
               <DropdownMenuItem
                 className="cursor-pointer"
                 onClick={() => {
