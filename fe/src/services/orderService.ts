@@ -11,7 +11,8 @@ interface ApiOrder {
   email: string;
   total: number;
   status: 'created' | 'paid' | 'shipped' | 'delivered' | 'cancelled';
-  items: number;
+  items: any; // Can be array or number depending on backend version
+  itemCount?: number;
   date: string;
   paymentMethod: string;
   createdAt?: string;
@@ -113,7 +114,7 @@ const transformOrder = (apiOrder: ApiOrder): Order => {
     email: apiOrder.email || '',
     total: apiOrder.total || 0,
     status: mapStatus(apiOrder.status || 'pending'),
-    items: apiOrder.items || 0,
+    items: apiOrder.itemCount || (Array.isArray(apiOrder.items) ? apiOrder.items.length : apiOrder.items) || 0,
     date: formatDate(apiOrder.date || apiOrder.createdAt || ''),
     paymentMethod: apiOrder.paymentMethod || 'Credit Card',
     phone: apiOrder.phone || '',
