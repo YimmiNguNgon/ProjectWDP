@@ -267,78 +267,8 @@ export default function PurchaseHistoryPage() {
     id.length > 10 ? id.slice(0, 2) + "-" + id.slice(-8) : id;
 
   return (
-    <div className="flex gap-8 px-8 py-6">
-      {/* LEFT: sidebar My eBay */}
-      <aside className="w-56 text-sm">
-        <h2 className="mb-4 text-lg font-semibold">My EFPT</h2>
-
-        <div className="mb-4 flex gap-4 text-xs">
-          <button className="border-b-2 border-black pb-1 font-medium">
-            Activity
-          </button>
-          {/* <button className="pb-1 text-muted-foreground">Messages</button>
-          <button className="pb-1 text-muted-foreground">Account</button> */}
-        </div>
-
-        <nav className="space-y-1">
-          <div className="font-medium text-muted-foreground">Activity</div>
-          <button
-            className="w-full rounded px-2 py-1 text-left hover:bg-muted"
-            onClick={() => toast.info("Summary feature coming soon!")}
-          >
-            Summary
-          </button>
-          <button
-            className="w-full rounded px-2 py-1 text-left hover:bg-muted"
-            onClick={() => toast.info("Recently viewed feature coming soon!")}
-          >
-            Recently viewed
-          </button>
-          <button
-            className="w-full rounded px-2 py-1 text-left hover:bg-muted"
-            onClick={() => toast.info("Bids & offers feature coming soon!")}
-          >
-            Bids &amp; offers
-          </button>
-          <button className="w-full rounded bg-muted px-2 py-1 text-left font-semibold">
-            Purchases
-          </button>
-          <button
-            className="w-full rounded px-2 py-1 text-left hover:bg-muted"
-            onClick={() => navigate("/messages")}
-          >
-            Messages
-          </button>
-          <button
-            className="w-full rounded px-2 py-1 text-left hover:bg-muted"
-            onClick={() => navigate("/complaints")}
-          >
-            Returns &amp; complaints
-          </button>
-          <button
-            className="w-full rounded px-2 py-1 text-left hover:bg-muted"
-            onClick={() => toast.info("Watchlist feature coming soon!")}
-          >
-            Watchlist
-          </button>
-          <button
-            className="w-full rounded px-2 py-1 text-left hover:bg-muted"
-            onClick={() => toast.info("Saved searches feature coming soon!")}
-          >
-            Saved searches
-          </button>
-          <button
-            className="w-full rounded px-2 py-1 text-left hover:bg-muted"
-            onClick={() => toast.info("Saved sellers feature coming soon!")}
-          >
-            Saved sellers
-          </button>
-        </nav>
-      </aside>
-
-      {/* RIGHT: purchases list */}
-      <main className="flex-1">
-        <div className="mb-4 flex items-center justify-between">
+    <>
+      <div className="mb-4 flex items-center justify-between">
           <h1 className="text-2xl font-semibold">Orders</h1>
           <div className="flex items-center gap-2">
             <Input
@@ -609,8 +539,6 @@ export default function PurchaseHistoryPage() {
             ))}
           </div>
         )}
-      </main>
-
       {/* Order Details Dialog */}
       <OrderDetailsDialog
         open={showOrderDetails}
@@ -643,6 +571,6 @@ export default function PurchaseHistoryPage() {
           </MessageContext.Provider>
         </DialogContent>
       </Dialog>
-    </div>
+    </>
   );
 }
