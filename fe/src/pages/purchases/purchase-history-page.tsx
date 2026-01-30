@@ -11,13 +11,13 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import {
-  Dialog,
-  DialogContent,
-  DialogTitle,
-} from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
 import { Messages } from "@/components/chat/messages";
-import { MessageContext, type Conversation, type Message } from "@/hooks/use-message";
+import {
+  MessageContext,
+  type Conversation,
+  type Message,
+} from "@/hooks/use-message";
 import { useAuth } from "@/hooks/use-auth";
 import { toast } from "sonner";
 import { DollarSign, Truck, Package, ThumbsUp } from "lucide-react";
@@ -27,7 +27,7 @@ import {
   saveSeller as saveSellerApi,
   unsaveSeller as unsaveSellerApi,
   getSavedSellers,
-  hideOrder as hideOrderApi
+  hideOrder as hideOrderApi,
 } from "@/api/orders";
 
 type OrderItem = {
@@ -72,7 +72,11 @@ export default function PurchaseHistoryPage() {
   const [selectedOrder, setSelectedOrder] = useState<Order | null>(null);
   const [showOrderDetails, setShowOrderDetails] = useState(false);
   const [savedSellers, setSavedSellers] = useState<Set<string>>(new Set());
-  const [processingActions, setProcessingActions] = useState<Set<string>>(new Set());
+  const [processingActions, setProcessingActions] = useState<Set<string>>(
+    new Set(),
+  );
+
+  console.log(orders);
 
   // Chat dialog states
   const [chatOpen, setChatOpen] = useState(false);
@@ -110,7 +114,7 @@ export default function PurchaseHistoryPage() {
     const fetchSavedSellers = async () => {
       try {
         const res = await getSavedSellers();
-        const sellerIds = new Set(res.data.map(seller => seller._id));
+        const sellerIds = new Set(res.data.map((seller) => seller._id));
         setSavedSellers(sellerIds);
       } catch (err) {
         console.error("Failed to load saved sellers", err);
@@ -133,16 +137,19 @@ export default function PurchaseHistoryPage() {
   };
 
   // Handler: Save/Unsave seller
-  const handleToggleSaveSeller = async (sellerId: string, sellerName: string) => {
+  const handleToggleSaveSeller = async (
+    sellerId: string,
+    sellerName: string,
+  ) => {
     const actionKey = `save-${sellerId}`;
     if (processingActions.has(actionKey)) return;
 
     try {
-      setProcessingActions(prev => new Set(prev).add(actionKey));
+      setProcessingActions((prev) => new Set(prev).add(actionKey));
 
       if (savedSellers.has(sellerId)) {
         await unsaveSellerApi(sellerId);
-        setSavedSellers(prev => {
+        setSavedSellers((prev) => {
           const newSet = new Set(prev);
           newSet.delete(sellerId);
           return newSet;
@@ -150,14 +157,16 @@ export default function PurchaseHistoryPage() {
         toast.success(`Unsaved seller: ${sellerName}`);
       } else {
         await saveSellerApi(sellerId);
-        setSavedSellers(prev => new Set(prev).add(sellerId));
+        setSavedSellers((prev) => new Set(prev).add(sellerId));
         toast.success(`Saved seller: ${sellerName}`);
       }
     } catch (err: any) {
       console.error("Failed to save/unsave seller", err);
-      toast.error(err.response?.data?.message || "Failed to update saved seller");
+      toast.error(
+        err.response?.data?.message || "Failed to update saved seller",
+      );
     } finally {
-      setProcessingActions(prev => {
+      setProcessingActions((prev) => {
         const newSet = new Set(prev);
         newSet.delete(actionKey);
         return newSet;
@@ -171,11 +180,11 @@ export default function PurchaseHistoryPage() {
     if (processingActions.has(actionKey)) return;
 
     try {
-      setProcessingActions(prev => new Set(prev).add(actionKey));
+      setProcessingActions((prev) => new Set(prev).add(actionKey));
       await hideOrderApi(orderId);
 
       // Remove order from UI
-      setOrders(prev => prev.filter(order => order._id !== orderId));
+      setOrders((prev) => prev.filter((order) => order._id !== orderId));
 
       toast.success("Order hidden from list", {
         action: {
@@ -190,7 +199,7 @@ export default function PurchaseHistoryPage() {
       console.error("Failed to hide order", err);
       toast.error(err.response?.data?.message || "Failed to hide order");
     } finally {
-      setProcessingActions(prev => {
+      setProcessingActions((prev) => {
         const newSet = new Set(prev);
         newSet.delete(actionKey);
         return newSet;
@@ -202,14 +211,14 @@ export default function PurchaseHistoryPage() {
   const handleContactSeller = (sellerId: string, productId: string) => {
     const sender = payload?.userId;
     if (!sender) {
-      toast.error('Vui lòng đăng nhập để chat với seller');
+      toast.error("Vui lòng đăng nhập để chat với seller");
       return;
     }
 
     // Find product from orders
     const product = orders
-      .flatMap(o => o.items)
-      .find(item => item.productId?._id === productId);
+      .flatMap((o) => o.items)
+      .find((item) => item.productId?._id === productId);
 
     setParticipantsState([sender, sellerId]);
     setProductRef(productId);
@@ -225,8 +234,8 @@ export default function PurchaseHistoryPage() {
           orderId: order._id,
           orderDate: order.createdAt,
           totalAmount: order.totalAmount,
-          sellerId: order.seller._id,
-          sellerName: order.seller.username,
+          sellerId: order.seller?._id,
+          sellerName: order.seller?.username,
           productId: item.productId?._id || "",
           productTitle: item.productId?.title || item.title,
           productPrice: item.price,
@@ -238,12 +247,12 @@ export default function PurchaseHistoryPage() {
 
     return list.sort(
       (a, b) =>
-        new Date(b.orderDate).getTime() - new Date(a.orderDate).getTime()
+        new Date(b.orderDate).getTime() - new Date(a.orderDate).getTime(),
     );
   }, [orders]);
 
   const filteredRows = rows.filter((row) =>
-    row.productTitle.toLowerCase().includes(search.toLowerCase())
+    row.productTitle.toLowerCase().includes(search.toLowerCase()),
   );
 
   const formatDate = (iso: string) =>
@@ -275,19 +284,19 @@ export default function PurchaseHistoryPage() {
           <div className="font-medium text-muted-foreground">Activity</div>
           <button
             className="w-full rounded px-2 py-1 text-left hover:bg-muted"
-            onClick={() => toast.info('Summary feature coming soon!')}
+            onClick={() => toast.info("Summary feature coming soon!")}
           >
             Summary
           </button>
           <button
             className="w-full rounded px-2 py-1 text-left hover:bg-muted"
-            onClick={() => toast.info('Recently viewed feature coming soon!')}
+            onClick={() => toast.info("Recently viewed feature coming soon!")}
           >
             Recently viewed
           </button>
           <button
             className="w-full rounded px-2 py-1 text-left hover:bg-muted"
-            onClick={() => toast.info('Bids & offers feature coming soon!')}
+            onClick={() => toast.info("Bids & offers feature coming soon!")}
           >
             Bids &amp; offers
           </button>
@@ -296,31 +305,31 @@ export default function PurchaseHistoryPage() {
           </button>
           <button
             className="w-full rounded px-2 py-1 text-left hover:bg-muted"
-            onClick={() => navigate('/messages')}
+            onClick={() => navigate("/messages")}
           >
             Messages
           </button>
           <button
             className="w-full rounded px-2 py-1 text-left hover:bg-muted"
-            onClick={() => navigate('/complaints')}
+            onClick={() => navigate("/complaints")}
           >
             Returns &amp; complaints
           </button>
           <button
             className="w-full rounded px-2 py-1 text-left hover:bg-muted"
-            onClick={() => toast.info('Watchlist feature coming soon!')}
+            onClick={() => toast.info("Watchlist feature coming soon!")}
           >
             Watchlist
           </button>
           <button
             className="w-full rounded px-2 py-1 text-left hover:bg-muted"
-            onClick={() => toast.info('Saved searches feature coming soon!')}
+            onClick={() => toast.info("Saved searches feature coming soon!")}
           >
             Saved searches
           </button>
           <button
             className="w-full rounded px-2 py-1 text-left hover:bg-muted"
-            onClick={() => toast.info('Saved sellers feature coming soon!')}
+            onClick={() => toast.info("Saved sellers feature coming soon!")}
           >
             Saved sellers
           </button>
@@ -387,7 +396,7 @@ export default function PurchaseHistoryPage() {
 
                     {/* ORDER TOTAL + ICON giống hình */}
                     <div className="flex flex-col gap-1 font-semibold">
-                      <span>US ${row.totalAmount.toFixed(2)}</span>
+                      <span>US ${row.totalAmount?.toFixed(2)}</span>
                       <div className="flex items-center gap-1 text-muted-foreground">
                         <DollarSign className="h-3 w-3" />
                         <Package className="h-3 w-3" />
@@ -409,14 +418,28 @@ export default function PurchaseHistoryPage() {
                     {/* LEFT: ảnh sản phẩm */}
                     <div className="flex gap-3">
                       <div className="flex h-24 w-24 items-center justify-center rounded border bg-muted overflow-hidden">
-                        {row.productId && orders.find(o => o._id === row.orderId)?.items.find(item => item.productId?._id === row.productId)?.productId?.imageUrl ? (
+                        {row.productId &&
+                        orders
+                          .find((o) => o._id === row.orderId)
+                          ?.items.find(
+                            (item) => item.productId?._id === row.productId,
+                          )?.productId?.imageUrl ? (
                           <img
-                            src={orders.find(o => o._id === row.orderId)?.items.find(item => item.productId?._id === row.productId)?.productId?.imageUrl}
+                            src={
+                              orders
+                                .find((o) => o._id === row.orderId)
+                                ?.items.find(
+                                  (item) =>
+                                    item.productId?._id === row.productId,
+                                )?.productId?.imageUrl
+                            }
                             alt={row.productTitle}
                             className="h-full w-full object-cover"
                           />
                         ) : (
-                          <span className="text-xs text-muted-foreground text-center px-2">No image</span>
+                          <span className="text-xs text-muted-foreground text-center px-2">
+                            No image
+                          </span>
                         )}
                       </div>
                     </div>
@@ -454,7 +477,11 @@ export default function PurchaseHistoryPage() {
                         size="sm"
                         className="w-40 rounded-none bg-blue-600 text-white hover:bg-blue-700"
                         type="button"
-                        onClick={() => navigate(`/purchases/${row.orderId}/return/${row.productId}`)}
+                        onClick={() =>
+                          navigate(
+                            `/purchases/${row.orderId}/return/${row.productId}`,
+                          )
+                        }
                       >
                         Return this item
                       </Button>
@@ -464,7 +491,11 @@ export default function PurchaseHistoryPage() {
                         variant="outline"
                         className="w-40 rounded-none border-blue-600 text-blue-600 hover:bg-blue-50"
                         type="button"
-                        onClick={() => navigate(`/products?search=${encodeURIComponent(row.productTitle)}`)}
+                        onClick={() =>
+                          navigate(
+                            `/products?search=${encodeURIComponent(row.productTitle)}`,
+                          )
+                        }
                       >
                         View similar items
                       </Button>
@@ -476,7 +507,7 @@ export default function PurchaseHistoryPage() {
                         type="button"
                         onClick={() =>
                           navigate(
-                            `/purchases/${row.orderId}/feedback/${row.productId}`
+                            `/purchases/${row.orderId}/feedback/${row.productId}`,
                           )
                         }
                       >
@@ -498,28 +529,65 @@ export default function PurchaseHistoryPage() {
                           align="end"
                           className="w-52 text-xs"
                         >
-                          <DropdownMenuItem onClick={() => handleViewOrderDetails(row.orderId)}>
+                          <DropdownMenuItem
+                            onClick={() => handleViewOrderDetails(row.orderId)}
+                          >
                             View order details
                           </DropdownMenuItem>
-                          <DropdownMenuItem onClick={() => handleContactSeller(row.sellerId, row.productId)}>Contact seller</DropdownMenuItem>
-                          <DropdownMenuItem onClick={() => navigate(`/purchases/${row.orderId}/complaint/${row.productId}?reason=not_received`)}>
+                          <DropdownMenuItem
+                            onClick={() =>
+                              handleContactSeller(row.sellerId, row.productId)
+                            }
+                          >
+                            Contact seller
+                          </DropdownMenuItem>
+                          <DropdownMenuItem
+                            onClick={() =>
+                              navigate(
+                                `/purchases/${row.orderId}/complaint/${row.productId}?reason=not_received`,
+                              )
+                            }
+                          >
                             I didn&apos;t receive it
                           </DropdownMenuItem>
-                          <DropdownMenuItem onClick={() => navigate(`/products?seller=${row.sellerId}`)}>
+                          <DropdownMenuItem
+                            onClick={() =>
+                              navigate(`/products?seller=${row.sellerId}`)
+                            }
+                          >
                             View seller&apos;s other items
                           </DropdownMenuItem>
-                          <DropdownMenuItem onClick={() => navigate('/sell/create', { state: { prefillData: { title: row.productTitle } } })}>
+                          <DropdownMenuItem
+                            onClick={() =>
+                              navigate("/sell/create", {
+                                state: {
+                                  prefillData: { title: row.productTitle },
+                                },
+                              })
+                            }
+                          >
                             Sell this item
                           </DropdownMenuItem>
                           <DropdownMenuItem
-                            onClick={() => handleToggleSaveSeller(row.sellerId, row.sellerName)}
-                            disabled={processingActions.has(`save-${row.sellerId}`)}
+                            onClick={() =>
+                              handleToggleSaveSeller(
+                                row.sellerId,
+                                row.sellerName,
+                              )
+                            }
+                            disabled={processingActions.has(
+                              `save-${row.sellerId}`,
+                            )}
                           >
-                            {savedSellers.has(row.sellerId) ? 'Unsave this seller' : 'Save this seller'}
+                            {savedSellers.has(row.sellerId)
+                              ? "Unsave this seller"
+                              : "Save this seller"}
                           </DropdownMenuItem>
                           <DropdownMenuItem
                             onClick={() => handleHideOrder(row.orderId)}
-                            disabled={processingActions.has(`hide-${row.orderId}`)}
+                            disabled={processingActions.has(
+                              `hide-${row.orderId}`,
+                            )}
                           >
                             Hide order
                           </DropdownMenuItem>
@@ -528,7 +596,9 @@ export default function PurchaseHistoryPage() {
 
                       <button
                         className="mt-1 text-xs text-blue-600 underline"
-                        onClick={() => toast.info('Add note feature coming soon!')}
+                        onClick={() =>
+                          toast.info("Add note feature coming soon!")
+                        }
                       >
                         Add note
                       </button>
