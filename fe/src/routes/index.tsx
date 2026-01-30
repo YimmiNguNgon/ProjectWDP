@@ -29,7 +29,9 @@ import SellerProducts from "@/pages/seller/Products";
 import SellerAddProduct from "@/pages/seller/AddProduct";
 // import SellerEditProduct from "@/pages/seller/EditProduct";
 import PurchaseHistoryPage from "@/pages/purchases/purchase-history-page";
+import WatchlistPage from "@/pages/purchases/watchlist-page";
 import LeaveFeedbackPage from "@/pages/purchases/leave-feedback-page";
+import FeatureUnderConstructionPage from "@/pages/feature-under-construction";
 import MessagesPage from "@/pages/messages-page";
 import MyListingsPage from "@/pages/seller/my-listings";
 import InventoryPage from "@/pages/seller/inventory";
@@ -93,6 +95,10 @@ export const AppRouter = () => {
             {
               path: "activity/purchases",
               element: <PurchaseHistoryPage />,
+            },
+            {
+              path: "activity/watchlist",
+              element: <WatchlistPage />,
             },
             {
               path: "messages",
@@ -202,6 +208,10 @@ export const AppRouter = () => {
       path: "/verify-email",
       element: <VerifyEmailPage />,
     },
+    {
+          path: "coming-soon",
+          element: <FeatureUnderConstructionPage />,
+        },
     {
       path: "/auth",
       element: <AuthLayout />,

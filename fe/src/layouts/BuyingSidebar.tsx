@@ -1,57 +1,65 @@
-import { useNavigate } from "react-router-dom";
-import { toast } from "sonner";
+import { Link, useLocation } from "react-router-dom";
+import { cn } from "@/lib/utils";
 
 export default function BuyingSidebar() {
-  const navigate = useNavigate();
+  const location = useLocation();
+
+  const isActive = (path: string) => location.pathname === path;
+
+  // Helper to standard link classes
+  const linkClass = (path: string) =>
+    cn(
+      "block w-full text-lg rounded px-3 py-2 text-left transition-colors",
+      isActive(path)
+        ? "bg-muted font-bold text-foreground"
+        : "hover:bg-muted text-muted-foreground hover:text-foreground font-medium",
+    );
 
   return (
-    <aside className="w-56 text-sm flex-shrink-0">
+    <aside className="w-64 shrink-0 text-base">
       <nav className="space-y-1">
-        <button
-          className="w-full cursor-pointer text-lg rounded px-2 py-1 text-left hover:bg-muted"
-          onClick={() => toast.info("Summary feature coming soon!")}
-        >
+        <Link to="/coming-soon" className={linkClass("/coming-soon/summary")}>
           Summary
-        </button>
-        <button
-          className="w-full cursor-pointer text-lg rounded px-2 py-1 text-left hover:bg-muted"
-          onClick={() => toast.info("Recently viewed feature coming soon!")}
+        </Link>
+        <Link
+          to="/coming-soon"
+          className={linkClass("/coming-soon/recently-viewed")}
         >
           Recently viewed
-        </button>
-        <button
-          className="w-full cursor-pointer text-lg rounded px-2 py-1 text-left hover:bg-muted"
-          onClick={() => toast.info("Bids & offers feature coming soon!")}
+        </Link>
+        <Link
+          to="/coming-soon"
+          className={linkClass("/coming-soon/bids-offers")}
         >
           Bids &amp; offers
-        </button>
-        <button className="w-full cursor-pointer text-lg rounded bg-muted px-2 py-1 text-left font-semibold">
-          Purchases
-        </button>
-        <button
-          className="w-full cursor-pointer text-lg rounded px-2 py-1 text-left hover:bg-muted"
-          onClick={() => navigate("/complaints")}
-        >
+        </Link>
+        <Link to="/coming-soon" className={linkClass("/complaints")}>
           Returns &amp; complaints
-        </button>
-        <button
-          className="w-full cursor-pointer text-lg rounded px-2 py-1 text-left hover:bg-muted"
-          onClick={() => toast.info("Watchlist feature coming soon!")}
+        </Link>
+        <Link
+          to="/my-ebay/activity/purchases"
+          className={linkClass("/my-ebay/activity/purchases")}
+        >
+          Purchases
+        </Link>
+        <Link
+          to="/my-ebay/activity/watchlist"
+          className={linkClass("/my-ebay/activity/watchlist")}
         >
           Watchlist
-        </button>
-        <button
-          className="w-full cursor-pointer text-lg rounded px-2 py-1 text-left hover:bg-muted"
-          onClick={() => toast.info("Saved searches feature coming soon!")}
+        </Link>
+        <Link
+          to="/coming-soon"
+          className={linkClass("/coming-soon/saved-searches")}
         >
           Saved searches
-        </button>
-        <button
-          className="w-full cursor-pointer text-lg rounded px-2 py-1 text-left hover:bg-muted"
-          onClick={() => toast.info("Saved sellers feature coming soon!")}
+        </Link>
+        <Link
+          to="/coming-soon"
+          className={linkClass("/coming-soon/saved-sellers")}
         >
           Saved sellers
-        </button>
+        </Link>
       </nav>
     </aside>
   );
