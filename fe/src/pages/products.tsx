@@ -33,6 +33,8 @@ import {
   DealCountdown,
   DealQuantity,
 } from "@/components/promotion/promotion-display";
+import { toggleWatchlist, getUserWatchlist } from "@/api/watchlist";
+import { toast } from "sonner";
 
 interface Category {
   _id: string;
@@ -57,7 +59,8 @@ export interface Product {
   condition: string;
   status: string;
   // Promotion fields
-  promotionType?: 'normal' | 'outlet' | 'daily_deal';
+  promotionType?: "normal" | "outlet" | "daily_deal";
+  watchCount?: number;
   originalPrice?: number;
   discountPercent?: number;
   dealStartDate?: string;
@@ -73,6 +76,9 @@ export default function ProductsPage() {
   const [searchParams, setSearchParams] = useSearchParams();
   const [products, setProducts] = React.useState<Product[]>([]);
   const [categories, setCategories] = React.useState<Category[]>([]);
+  const [watchedProductIds, setWatchedProductIds] = React.useState<Set<string>>(
+    new Set(),
+  );
 
   // Get search query from URL params (read-only)
   const searchQuery = searchParams.get("search") || "";
@@ -137,6 +143,21 @@ export default function ProductsPage() {
     fetchCategories();
   }, []);
 
+  // Fetch user's watchlist to set initial watched state
+  useEffect(() => {
+    const fetchWatchlist = async () => {
+      try {
+        const res = await getUserWatchlist();
+        // Since WatchlistItem has product object, we map to get ids
+        const ids = new Set(res.data.data.map((item: any) => item.product._id));
+        setWatchedProductIds(ids);
+      } catch (error) {
+        console.error("Failed to fetch watchlist", error);
+      }
+    };
+    fetchWatchlist();
+  }, []);
+
   useEffect(() => {
     const fetchProducts = async () => {
       try {
@@ -156,7 +177,9 @@ export default function ProductsPage() {
           let filteredData = result.data as unknown as Product[];
           // Client-side rating filter for search results
           if (selectedRating > 0) {
-            filteredData = filteredData.filter(p => p.averageRating >= selectedRating);
+            filteredData = filteredData.filter(
+              (p) => p.averageRating >= selectedRating,
+            );
           }
           setProducts(filteredData);
           setTotalPages(Math.ceil((result.total || 0) / itemsPerPage));
@@ -177,7 +200,13 @@ export default function ProductsPage() {
       }
     };
     fetchProducts();
-  }, [searchQuery, selectedCategories, currentPage, debouncedPriceRange, selectedRating]);
+  }, [
+    searchQuery,
+    selectedCategories,
+    currentPage,
+    debouncedPriceRange,
+    selectedRating,
+  ]);
 
   const handleCategoryChange = (categorySlug: string, checked: boolean) => {
     setCurrentPage(1);
@@ -193,6 +222,48 @@ export default function ProductsPage() {
   const handlePriceChange = (value: number[]) => {
     setCurrentPage(1);
     setPriceRange([value[0], value[1]]);
+  };
+
+  const handleToggleWatchlist = async (
+    productId: string,
+    e: React.MouseEvent,
+  ) => {
+    e.preventDefault();
+    e.stopPropagation();
+    try {
+      const res = await toggleWatchlist(productId);
+      const isWatched = res.data.watched;
+
+      setProducts((prev) =>
+        prev.map((p) => {
+          if (p._id === productId) {
+            return {
+              ...p,
+              watchCount: (p.watchCount || 0) + (isWatched ? 1 : -1),
+            };
+          }
+          return p;
+        }),
+      );
+
+      // Update local watched state
+      setWatchedProductIds((prev) => {
+        const next = new Set(prev);
+        if (isWatched) {
+          next.add(productId);
+        } else {
+          next.delete(productId);
+        }
+        return next;
+      });
+
+      toast.success(
+        isWatched ? "Added to watchlist" : "Removed from watchlist",
+      );
+    } catch (error) {
+      console.error("Failed to toggle watchlist", error);
+      toast.error("Failed to update watchlist");
+    }
   };
 
   return (
@@ -270,8 +341,9 @@ export default function ProductsPage() {
                       setCurrentPage(1);
                       setSelectedRating(selectedRating === rating ? 0 : rating);
                     }}
-                    className={`flex w-full items-center gap-2 rounded py-1 px-2 text-sm transition-colors hover:bg-muted ${selectedRating === rating ? 'bg-muted font-semibold' : ''
-                      }`}
+                    className={`flex w-full items-center gap-2 rounded py-1 px-2 text-sm transition-colors hover:bg-muted ${
+                      selectedRating === rating ? "bg-muted font-semibold" : ""
+                    }`}
                   >
                     {[...Array(rating)].map((_, i) => (
                       <Star
@@ -355,10 +427,11 @@ export default function ProductsPage() {
                           {[...Array(5)].map((_, i) => (
                             <Star
                               key={i}
-                              className={`h-3.5 w-3.5 ${i < Math.round(product.averageRating)
-                                ? "fill-yellow-400 text-yellow-400"
-                                : "text-muted-foreground"
-                                }`}
+                              className={`h-3.5 w-3.5 ${
+                                i < Math.round(product.averageRating)
+                                  ? "fill-yellow-400 text-yellow-400"
+                                  : "text-muted-foreground"
+                              }`}
                             />
                           ))}
                         </div>
@@ -370,7 +443,7 @@ export default function ProductsPage() {
                       {/* Price & Button */}
                       <div className="flex flex-col gap-2">
                         {/* Deal Info */}
-                        {product.promotionType === 'daily_deal' && (
+                        {product.promotionType === "daily_deal" && (
                           <div className="flex items-center justify-between text-xs">
                             <DealCountdown endDate={product.dealEndDate} />
                             <DealQuantity
@@ -387,9 +460,19 @@ export default function ProductsPage() {
                             <Button
                               size={"icon-sm"}
                               variant={"secondary"}
-                              className="hover:bg-destructive hover:text-white"
+                              className="hover:bg-destructive cursor-pointer hover:text-white gap-1 px-2 w-auto"
+                              onClick={(e) =>
+                                handleToggleWatchlist(product._id, e)
+                              }
                             >
-                              <Heart />
+                              <Heart
+                                className={cn(
+                                  "h-4 w-4",
+                                  watchedProductIds.has(product._id)
+                                    ? "fill-red-500 text-red-500"
+                                    : "",
+                                )}
+                              />
                             </Button>
                             <Button size="icon-sm" variant={"default"}>
                               <ShoppingCart className="h-4 w-4" />

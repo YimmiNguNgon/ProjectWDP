@@ -27,6 +27,11 @@ export default function MyEbayLayout() {
     if (newTab !== value) {
       setValue(newTab);
     }
+
+    // Redirect if we are exactly at /my-ebay
+    if (pathname === '/my-ebay' || pathname === '/my-ebay/') {
+      navigate('/my-ebay/activity/purchases', { replace: true });
+    }
   }, [pathname]);
 
   const handleTabChange = (newValue: string) => {

@@ -17,6 +17,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { toast } from "sonner";
+import { WatchlistPreview } from "@/components/watchlist/watchlist-preview";
 
 const LEFT_NAV_ITEMS = [
   { name: "Browse Products", to: "/products" },
@@ -26,11 +27,11 @@ const LEFT_NAV_ITEMS = [
   { name: "Help & Contact", to: "#" },
 ] as const;
 
+
 const RIGHT_NAV_ITEMS = [
   { name: "Ship to", to: "#" },
   { name: "Sell", to: "#" },
-  { name: "Watchlist", to: "#" },
-];
+]
 
 export function Protected() {
   const { user } = useAuth();
@@ -95,6 +96,8 @@ export function MainLayout() {
                   {item.name}
                 </button>
               ))}
+              {/* Watchlist Dropdown */}
+              <WatchlistPreview />
               {/* My eBay dropdown */}
               <MyEbayMenu />
               {/* Admin Menu - only show for admin users */}
@@ -312,7 +315,7 @@ const MY_EBAY_ITEMS = [
   { label: "Summary", to: "#" },
   { label: "Recently Viewed", to: "#" },
   { label: "Bids/Offers", to: "#" },
-  { label: "Watchlist", to: "#" },
+  { label: "Watchlist", to: "activity/watchlist" },
   { label: "Purchase History", to: "activity/purchases" },
   { label: "Feedback Requests", to: "/buyer/feedback-requests" },
   { label: "Buy Again", to: "#" },
