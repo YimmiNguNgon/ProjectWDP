@@ -20,6 +20,7 @@ import AuthLayout from "@/layouts/auth";
 import UserProfilePage from "@/pages/profile";
 import AdminLayout from "@/layouts/admin";
 import SellerLayout from "@/layouts/seller";
+import MyEbayLayout from "@/layouts/my-ebay";
 import SellerOverview from "@/pages/seller/Overview";
 import SellerOrders from "@/pages/seller/Orders";
 import SellerRevenue from "@/pages/seller/Revenue";
@@ -71,10 +72,10 @@ export const AppRouter = () => {
               path: "profile",
               element: <UserProfilePage />,
             },
-            {
-              path: "messages",
-              element: <MessagesPage />,
-            },
+            // {
+            //   path: "messages",
+            //   element: <MessagesPage />,
+            // },
           ],
         },
         {
@@ -86,8 +87,18 @@ export const AppRouter = () => {
           element: <ProductDetailPage />,
         },
         {
-          path: "my-ebay/activity/purchases",
-          element: <PurchaseHistoryPage />,
+          path: "my-ebay",
+          element: <MyEbayLayout />,
+          children: [
+            {
+              path: "activity/purchases",
+              element: <PurchaseHistoryPage />,
+            },
+            {
+              path: "messages",
+              element: <MessagesPage />,
+            },
+          ],
         },
         {
           path: "purchases/:orderId/feedback/:productId",
