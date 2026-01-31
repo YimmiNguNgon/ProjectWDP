@@ -24,6 +24,7 @@ import LoadingAuth from "./loading-auth";
 import { z } from "zod";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
+import api from "@/lib/axios";
 
 const signUpSchema = z.object({
   username: z.string().min(3, "Username must be at least 3 characters"),
@@ -36,12 +37,14 @@ type Step = "form" | "pending";
 
 export function SignupForm({ ...props }: React.ComponentProps<typeof Card>) {
   const [step, setStep] = React.useState<Step>("form");
+  const [resendLoading, setResendLoading] = React.useState(false);
   const navigate = useNavigate();
   const { signUp, loading } = useAuth();
 
   const {
     register,
     handleSubmit,
+    getValues,
     formState: { errors },
   } = useForm<SignUpValues>({
     resolver: zodResolver(signUpSchema),
@@ -51,6 +54,35 @@ export function SignupForm({ ...props }: React.ComponentProps<typeof Card>) {
       password: "",
     },
   });
+
+  const [countdown, setCountdown] = React.useState(0);
+
+  React.useEffect(() => {
+    let timer: ReturnType<typeof setTimeout>;
+    if (countdown > 0) {
+      timer = setTimeout(() => setCountdown(countdown - 1), 1000);
+    }
+    return () => clearTimeout(timer);
+  }, [countdown]);
+
+  const handleResendEmail = async () => {
+    try {
+      setResendLoading(true);
+      const email = getValues("email");
+      const username = getValues("username");
+      if (!email) return;
+
+      await api.post("/api/auth/resend-email", { username, email });
+
+      toast.success("Verification email sent successfully!");
+      setCountdown(60); // Disable for 60 seconds
+    } catch (error: any) {
+      console.error("Failed to resend email:", error);
+      toast.error(error.response?.data?.message || "Failed to resend email");
+    } finally {
+      setResendLoading(false);
+    }
+  };
 
   const onSubmit = async (data: SignUpValues) => {
     try {
@@ -94,6 +126,23 @@ export function SignupForm({ ...props }: React.ComponentProps<typeof Card>) {
           <p className="text-sm text-muted-foreground">
             If you don’t see the email, check your Spam folder.
           </p>
+
+          <div className="pt-2">
+            <p className="text-sm text-muted-foreground mb-2">
+              Didn't receive the email?
+            </p>
+            <Button
+              className="p-3 cursor-pointer h-auto font-normal"
+              onClick={handleResendEmail}
+              disabled={resendLoading ? true : countdown > 0}
+            >
+              {resendLoading
+                ? "Sending"
+                : countdown > 0
+                  ? `Resend email in ${countdown}s`
+                  : "Click to resend"}
+            </Button>
+          </div>
         </CardContent>
         <Separator />
         <CardFooter className="flex justify-center">
