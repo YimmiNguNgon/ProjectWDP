@@ -10,6 +10,7 @@ const sendEmail = require("../utils/sendEmail.js");
 
 const ACCESS_TOKEN_TTL = "24h";
 const REFRESH_TOKEN_TTL = 14 * 24 * 60 * 60 * 1000;
+const RESEND_COOLDOWN = 60 * 1000;
 
 exports.register = async (req, res, next) => {
   try {
@@ -44,12 +45,11 @@ exports.register = async (req, res, next) => {
       role: role || "buyer",
       isEmailVerified: false,
       emailVerificationToken: hashedToken,
-      emailVerificationExpires: Date.now() + 24 * 60 * 60 * 1000, // 24h
+      emailVerificationExpires: Date.now() + 5 * 60 * 1000,
     });
 
     await newUser.save();
 
-    // Gửi email xác thực (optional - sẽ bỏ qua nếu không có email config)
     try {
       const verifyUrl = `${process.env.CLIENT_URL}/verify-email?token=${verificationToken}`;
 
@@ -60,7 +60,7 @@ exports.register = async (req, res, next) => {
         data: {
           username,
           verifyUrl,
-          expiresIn: 24,
+          expiresIn: 5,
         },
       });
     } catch (emailError) {
@@ -275,5 +275,58 @@ exports.googleCallback = async (req, res, next) => {
     res.redirect(`${clientUrl}/auth/google/success?token=${token}`);
   } catch (err) {
     next(err);
+  }
+};
+
+exports.resendVerificationEmail = async (req, res, next) => {
+  try {
+    const { username, email } = req.body;
+
+    const user = await User.findOne({ email });
+
+    if (!user) {
+      return res.status(404).json({
+        message: "If the email exists, a verification email will be sent",
+      });
+    }
+
+    if (user.isEmailVerified) {
+      return res.status(400).json({ message: "Email already verified" });
+    }
+
+    if (
+      user.lastVerificationEmailSentAt &&
+      Date.now() - user.lastVerificationEmailSentAt.getTime() < RESEND_COOLDOWN
+    ) {
+      return res.status(429).json({
+        message: "Please wait before resending verification email",
+      });
+    }
+
+    const token = crypto.randomBytes(64).toString("hex");
+    const hashedToken = crypto.createHash("sha256").update(token).digest("hex");
+
+    user.emailVerificationToken = hashedToken;
+    user.emailVerificationExpires = Date.now() + 5 * 60 * 1000;
+    user.lastVerificationEmailSentAt = new Date();
+
+    await user.save();
+
+    const verifyUrl = `${process.env.CLIENT_URL}/verify-email?token=${token}`;
+
+    await sendEmail({
+      to: email,
+      subject: "Xác thực tài khoản của bạn",
+      template: "verifyEmail.ejs",
+      data: {
+        username,
+        verifyUrl,
+        expiresIn: 5,
+      },
+    });
+
+    return res.status(200).json({ message: "Verification email resent" });
+  } catch (error) {
+    next(error);
   }
 };
