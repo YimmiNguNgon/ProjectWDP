@@ -155,6 +155,10 @@ export const AppRouter = () => {
       element: <VerifyEmailPage />,
     },
     {
+      path: "/reset-password",
+      element: <ResetPasswordPage />,
+    },
+    {
       path: "/auth",
       element: <AuthLayout />,
       children: [

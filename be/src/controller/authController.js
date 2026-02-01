@@ -2,6 +2,8 @@
 const User = require('../models/User');
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
+const crypto = require('crypto');
+const sendEmail = require('../utils/sendEmail');
 
 const JWT_SECRET = process.env.JWT_SECRET || 'supersecretjwtkey_change_me';
 
@@ -120,23 +122,99 @@ exports.verifyEmail = async (req, res, next) => {
   }
 };
 
-// Forgot password (placeholder)
+// Forgot password
 exports.forgotPassword = async (req, res, next) => {
   try {
     const { email } = req.body;
-    // TODO: Implement forgot password logic (send reset email)
-    res.json({ message: 'Password reset email sent (not implemented yet)' });
+    if (!email) {
+      return res.status(400).json({ message: 'Email is required' });
+    }
+
+    // Tìm user theo email
+    const user = await User.findOne({ email: email.toLowerCase() });
+    if (!user) {
+      // Không tiết lộ user có tồn tại hay không (security best practice)
+      return res.json({ message: 'If that email exists, a reset link has been sent' });
+    }
+
+    // Tạo reset token
+    const resetToken = crypto.randomBytes(32).toString('hex');
+    const hashedToken = crypto.createHash('sha256').update(resetToken).digest('hex');
+
+    // Lưu token vào DB (expired sau 1 giờ)
+    user.passwordResetToken = hashedToken;
+    user.passwordResetExpires = Date.now() + 3600000; // 1 hour
+    await user.save();
+
+    // Tạo reset URL
+    const clientUrl = process.env.CLIENT_URL || 'http://localhost:5173';
+    const resetUrl = `${clientUrl}/auth/reset-password?token=${resetToken}`;
+
+    // Gửi email
+    try {
+      await sendEmail({
+        to: user.email,
+        subject: 'Password Reset Request',
+        template: 'resetPassword.ejs',
+        data: {
+          username: user.username,
+          resetUrl,
+          expiresIn: 1, // 1 hour
+        },
+      });
+
+      res.json({ message: 'If that email exists, a reset link has been sent' });
+    } catch (emailError) {
+      // Nếu gửi email thất bại, xóa token
+      user.passwordResetToken = undefined;
+      user.passwordResetExpires = undefined;
+      await user.save();
+
+      console.error('Email sending failed:', emailError);
+      return res.status(500).json({ message: 'Error sending email. Please try again later.' });
+    }
   } catch (err) {
     next(err);
   }
 };
 
-// Reset password (placeholder)
+// Reset password
 exports.resetPassword = async (req, res, next) => {
   try {
     const { token, newPassword } = req.body;
-    // TODO: Implement password reset logic
-    res.json({ message: 'Password reset not yet implemented' });
+
+    if (!token || !newPassword) {
+      return res.status(400).json({ message: 'Token and new password are required' });
+    }
+
+    if (newPassword.length < 6) {
+      return res.status(400).json({ message: 'Password must be at least 6 characters' });
+    }
+
+    // Hash token để so sánh với DB
+    const hashedToken = crypto.createHash('sha256').update(token).digest('hex');
+
+    // Tìm user với token hợp lệ và chưa hết hạn
+    const user = await User.findOne({
+      passwordResetToken: hashedToken,
+      passwordResetExpires: { $gt: Date.now() },
+    });
+
+    if (!user) {
+      return res.status(400).json({ message: 'Invalid or expired reset token' });
+    }
+
+    // Hash password mới
+    const salt = await bcrypt.genSalt(10);
+    const hash = await bcrypt.hash(newPassword, salt);
+
+    // Update password và xóa reset token
+    user.passwordHash = hash;
+    user.passwordResetToken = undefined;
+    user.passwordResetExpires = undefined;
+    await user.save();
+
+    res.json({ message: 'Password has been reset successfully' });
   } catch (err) {
     next(err);
   }
