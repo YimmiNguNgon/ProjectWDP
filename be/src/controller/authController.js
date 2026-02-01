@@ -64,7 +64,7 @@ exports.register = async (req, res, next) => {
                 },
             });
         } catch (emailError) {
-            console.log("Email sending failed (skipped in dev):", emailError.message);
+            console.error("⚠️ Email sending failed (user still created):", emailError.message);
         }
 
         return res.sendStatus(204);
@@ -232,23 +232,130 @@ exports.verifyEmail = async (req, res, next) => {
     }
 };
 
-// Forgot password (placeholder)
+// Forgot password
 exports.forgotPassword = async (req, res, next) => {
     try {
+        console.log("🔐 Forgot password request received");
         const { email } = req.body;
-        // TODO: Implement forgot password logic (send reset email)
-        res.json({ message: "Password reset email sent (not implemented yet)" });
+        console.log("  - Email:", email);
+
+        if (!email) {
+            console.log("❌ Email is missing");
+            return res.status(400).json({ message: "Email is required" });
+        }
+
+        const user = await User.findOne({ email });
+
+        // Không tiết lộ thông tin user có tồn tại hay không (security best practice)
+        if (!user) {
+            console.log("⚠️ User not found for email:", email);
+            return res.status(200).json({
+                message: "If the email exists, a password reset link will be sent"
+            });
+        }
+
+        console.log("✓ User found:", user.username);
+
+        // Tạo reset token
+        const resetToken = crypto.randomBytes(32).toString("hex");
+        const hashedToken = crypto
+            .createHash("sha256")
+            .update(resetToken)
+            .digest("hex");
+
+        console.log("✓ Reset token generated");
+
+        // Lưu token vào user
+        user.passwordResetToken = hashedToken;
+        user.passwordResetExpires = Date.now() + 30 * 60 * 1000; // 30 phút
+        await user.save();
+
+        console.log("✓ Token saved to database");
+
+        // Gửi email
+        try {
+            const resetUrl = `${process.env.CLIENT_URL}/auth/reset-password?token=${resetToken}`;
+            console.log("✓ Reset URL:", resetUrl);
+
+            await sendEmail({
+                to: email,
+                subject: "Reset mật khẩu của bạn",
+                template: "resetPassword.ejs",
+                data: {
+                    username: user.username,
+                    resetUrl,
+                    expiresIn: 30,
+                },
+            });
+
+            console.log("✅ Password reset email sent successfully");
+            return res.status(200).json({
+                message: "Password reset email sent successfully"
+            });
+        } catch (emailError) {
+            // Nếu gửi email thất bại, xóa token
+            console.error("❌ Email sending failed:", emailError);
+            user.passwordResetToken = undefined;
+            user.passwordResetExpires = undefined;
+            await user.save();
+
+            return res.status(500).json({
+                message: "Failed to send reset email. Please try again later."
+            });
+        }
     } catch (err) {
+        console.error("❌ Forgot password error:", err);
         next(err);
     }
 };
 
-// Reset password (placeholder)
+// Reset password
 exports.resetPassword = async (req, res, next) => {
     try {
         const { token, newPassword } = req.body;
-        // TODO: Implement password reset logic
-        res.json({ message: "Password reset not yet implemented" });
+
+        if (!token || !newPassword) {
+            return res.status(400).json({
+                message: "Token and new password are required"
+            });
+        }
+
+        if (newPassword.length < 6) {
+            return res.status(400).json({
+                message: "Password must be at least 6 characters"
+            });
+        }
+
+        // Hash token để tìm user
+        const hashedToken = crypto
+            .createHash("sha256")
+            .update(token)
+            .digest("hex");
+
+        const user = await User.findOne({
+            passwordResetToken: hashedToken,
+            passwordResetExpires: { $gt: Date.now() },
+        });
+
+        if (!user) {
+            return res.status(400).json({
+                message: "Invalid or expired reset token"
+            });
+        }
+
+        // Hash password mới
+        const salt = await bcrypt.genSalt(10);
+        const hashPassword = await bcrypt.hash(newPassword, salt);
+
+        // Cập nhật password và xóa reset token
+        user.passwordHash = hashPassword;
+        user.passwordResetToken = undefined;
+        user.passwordResetExpires = undefined;
+        await user.save();
+
+        return res.status(200).json({
+            message: "Password reset successfully"
+        });
     } catch (err) {
         next(err);
     }
