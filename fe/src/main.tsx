@@ -50,6 +50,8 @@ export function AuthProvider({ children }: PropsWithChildren) {
         }
       } catch (error) {
         console.error("Auth initialization failed:", error);
+        // Silent sign out to avoid showing user-facing logout toast during
+        // automatic auth initialization failures.
         signOut();
       }
     };
@@ -72,13 +74,12 @@ export function AuthProvider({ children }: PropsWithChildren) {
         role,
       });
 
-      const { user, token } = response.data.data;
+      const { user, token } = response.data;
       setUser(user);
       setPayload(user);
       setAuthToken(token);
       localStorage.setItem("token", token);
       setAccessToken(token);
-
     } catch (error) {
       console.error("Failed to sign up:", error);
       throw error;
@@ -115,9 +116,9 @@ export function AuthProvider({ children }: PropsWithChildren) {
       setPayload({
         userId: user._id,
         username: user.username,
-        role: user.role
+        role: user.role,
       });
-    } catch (error) {
+    } catch (error: any) {
       console.error("Failed to fetch user:", error);
       // Only sign out if it's an auth/token error, not other errors
       if (error.response?.status === 401) {
@@ -139,10 +140,8 @@ export function AuthProvider({ children }: PropsWithChildren) {
       setPayload(undefined);
       setAccessToken(null);
       localStorage.removeItem("token");
-      toast.success("Log out successfully!");
     } catch (error) {
       console.error(error);
-      toast.error("Failed to log out!");
       setAuthToken(null);
       setUser(undefined);
       setPayload(undefined);
@@ -173,6 +172,7 @@ export function AuthProvider({ children }: PropsWithChildren) {
       toast.success("Làm mới token thành công!");
     } catch (error) {
       console.error("Refresh token failed:", error);
+      // Silent sign out when refresh fails as it is an automatic flow.
       signOut();
     } finally {
       setLoading(false);

@@ -10,24 +10,18 @@ import {
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { Badge } from "@/components/ui/badge";
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogTitle,
-  AlertDialogTrigger,
-} from "@/components/ui/alert-dialog";
-import {
-  uploadImageToCloudinary,
-  updateUserProfile,
-  updateUserEmail,
-  changeUserPassword,
-} from "@/api/user";
 import { useAuth } from "@/hooks/use-auth";
+import { changeUserPassword, createAddress, deleteAddress, getAddresses, setDefaultAddress, updateAddress, updateUserEmail, updateUserProfile, uploadImageToCloudinary, type Address } from "@/api/user";
+import { useForm } from "react-hook-form";
+import { changePasswordSchema, emailSchema, type ChangePasswordFormValues, type EmailFormValues } from "@/schema/user.schema";
+import { zodResolver } from "@hookform/resolvers/zod";
 import { toast } from "sonner";
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogTitle, AlertDialogTrigger } from "./ui/alert-dialog";
+import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "./ui/form";
+import { MapIcon } from "lucide-react";
+import AddressItems from "./address-items";
+import AddressForm from "./address-form";
+import { ConfirmDialog } from "./confirm-dialog";
 
 export interface UserProfileProps {
   user: {
@@ -45,30 +39,12 @@ export interface UserProfileProps {
   }>;
 }
 
-const statusColors: Record<string, string> = {
-  pending: "bg-yellow-100 text-yellow-800",
-  processing: "bg-blue-100 text-blue-800",
-  shipped: "bg-purple-100 text-purple-800",
-  delivered: "bg-green-100 text-green-800",
-  cancelled: "bg-red-100 text-red-800",
-};
-
-const statusLabels: Record<string, string> = {
-  pending: "Pending",
-  processing: "Processing",
-  shipped: "Shipped",
-  delivered: "Delivered",
-  cancelled: "Cancelled",
-};
-
-export function UserProfile({ user, orders = [] }: UserProfileProps) {
+export function UserProfile({ user }: UserProfileProps) {
   const { fetchMe } = useAuth();
+  const [addresses, setAddresses] = useState<Address[]>([]);
+  const [selectedAddress, setSelectedAddress] = useState<Address | null>(null);
   const [editEmail, setEditEmail] = useState(false);
-  const [newEmail, setNewEmail] = useState(user.email);
   const [changePassOpen, setChangePassOpen] = useState(false);
-  const [currentPassword, setCurrentPassword] = useState("");
-  const [newPassword, setNewPassword] = useState("");
-  const [confirmPassword, setConfirmPassword] = useState("");
   const [loading, setLoading] = useState(false);
   const [editProfileOpen, setEditProfileOpen] = useState(false);
   const [newUsername, setNewUsername] = useState(user.username);
@@ -77,9 +53,16 @@ export function UserProfile({ user, orders = [] }: UserProfileProps) {
   );
   const [avatarFile, setAvatarFile] = useState<File | null>(null);
   const [avatarKey, setAvatarKey] = useState(Date.now()); // For forcing re-render
+  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [confirmDialogOpen, setConfirmDialogOpen] = useState(false);
+  const [confirmDialogAction, setConfirmDialogAction] = useState<
+    "setDefault" | "delete" | null
+  >(null);
+  const [pendingAddressId, setPendingAddressId] = useState<string | null>(null);
+  const [isSettingDefault, setIsSettingDefault] = useState(false);
+  const [isDeletingAddress, setIsDeletingAddress] = useState(false);
 
   useEffect(() => {
-    setNewEmail(user.email);
     setNewUsername(user.username);
     // Add timestamp to force cache refresh
     const avatarUrl = user.avatarUrl
@@ -89,15 +72,43 @@ export function UserProfile({ user, orders = [] }: UserProfileProps) {
     setAvatarKey(Date.now());
   }, [user]);
 
-  const handleUpdateEmail = async () => {
-    if (!newEmail || newEmail === user.email) {
+  const fetchAddresses = async () => {
+    try {
+      setLoading(true);
+      const res = await getAddresses();
+      // nếu API return { message, data }
+      setAddresses(res.data);
+    } catch (error) {
+      console.error("Failed to fetch addresses", error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchAddresses();
+  }, []);
+
+  const form = useForm<EmailFormValues>({
+    resolver: zodResolver(emailSchema),
+    defaultValues: {
+      email: user.email,
+    },
+  });
+
+  useEffect(() => {
+    form.setValue("email", user.email);
+  }, [user.email, form]);
+
+  const onEmailSubmit = async (values: EmailFormValues) => {
+    if (values.email === user.email) {
       setEditEmail(false);
       return;
     }
 
     try {
       setLoading(true);
-      await updateUserEmail(newEmail);
+      await updateUserEmail(values.email);
       await fetchMe();
       setEditEmail(false);
       toast.success("Email has been updated successfully!");
@@ -109,31 +120,30 @@ export function UserProfile({ user, orders = [] }: UserProfileProps) {
     }
   };
 
-  const handleChangePassword = async () => {
-    if (newPassword !== confirmPassword) {
-      toast.error("New password and confirmation do not match");
-      return;
-    }
+  const passwordForm = useForm<ChangePasswordFormValues>({
+    resolver: zodResolver(changePasswordSchema),
+    defaultValues: {
+      currentPassword: "",
+      newPassword: "",
+      confirmPassword: "",
+    },
+  });
 
-    if (newPassword.length < 6) {
-      toast.error("Password must be at least 6 characters long");
-      return;
-    }
-
+  const onChangePasswordSubmit = async (values: ChangePasswordFormValues) => {
     try {
       setLoading(true);
-      await changeUserPassword(currentPassword, newPassword);
+      await changeUserPassword(values.currentPassword, values.newPassword);
       await fetchMe();
       setChangePassOpen(false);
-      setCurrentPassword("");
-      setNewPassword("");
-      setConfirmPassword("");
+      passwordForm.reset();
       toast.success("Password has been changed successfully");
     } catch (error: any) {
       if (error.response && error.response.status === 400) {
         toast.error(error.response.data.message);
       } else if (error.response && error.response.status === 404) {
         toast.error("User not found");
+      } else {
+         toast.error("Failed to change password");
       }
     } finally {
       setLoading(false);
@@ -198,6 +208,47 @@ export function UserProfile({ user, orders = [] }: UserProfileProps) {
     setNewUsername(user.username);
     setAvatarPreview(user.avatarUrl);
     setAvatarFile(null);
+  };
+
+  const handleEditAddress = (address: Address) => {
+    setSelectedAddress(address);
+    setIsModalOpen(true);
+  };
+
+  const handleConfirmDialog = async () => {
+    if (confirmDialogAction === "setDefault") {
+      if (!pendingAddressId) return;
+      try {
+        setIsSettingDefault(true);
+        await setDefaultAddress(pendingAddressId);
+        await fetchAddresses();
+        toast.success("Set Default Address Successfully");
+        setConfirmDialogOpen(false);
+        setPendingAddressId(null);
+        setConfirmDialogAction(null);
+      } catch (error: any) {
+        console.log(error);
+        toast.error("Failed to set default address");
+      } finally {
+        setIsSettingDefault(false);
+      }
+    } else if (confirmDialogAction === "delete") {
+      if (!pendingAddressId) return;
+      try {
+        setIsDeletingAddress(true);
+        await deleteAddress(pendingAddressId);
+        await fetchAddresses();
+        toast.success("Delete Address Successfully");
+        setConfirmDialogOpen(false);
+        setPendingAddressId(null);
+        setConfirmDialogAction(null);
+      } catch (error: any) {
+        console.log(error);
+        toast.error("Failed to delete address");
+      } finally {
+        setIsDeletingAddress(false);
+      }
+    }
   };
 
   return (
@@ -291,7 +342,7 @@ export function UserProfile({ user, orders = [] }: UserProfileProps) {
                     Cancel
                   </AlertDialogCancel>
                   <AlertDialogAction
-                    className="cursor-pointer"
+                    className="cursor-pointer bg-[#AAED56] text-[#324E0F] hover:bg-[#8feb1d]"
                     onClick={handleUpdateProfile}
                     disabled={loading}
                   >
@@ -327,37 +378,49 @@ export function UserProfile({ user, orders = [] }: UserProfileProps) {
                   </Button>
                 </>
               ) : (
-                <>
-                  <div className="space-y-2">
-                    <Label htmlFor="new-email">New email</Label>
-                    <Input
-                      id="new-email"
-                      type="email"
-                      value={newEmail}
-                      onChange={(e) => setNewEmail(e.target.value)}
-                      placeholder="Enter new email"
+                <Form {...form}>
+                  <form
+                    onSubmit={form.handleSubmit(onEmailSubmit)}
+                    className="space-y-4"
+                  >
+                    <FormField
+                      control={form.control}
+                      name="email"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>New email</FormLabel>
+                          <FormControl>
+                            <Input
+                              placeholder="Enter new email"
+                              {...field}
+                            />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
                     />
-                  </div>
-                  <div className="flex gap-2">
-                    <Button
-                      onClick={handleUpdateEmail}
-                      disabled={loading}
-                      className="flex-1 cursor-pointer"
-                    >
-                      {loading ? "Saving..." : "Saved Changes"}
-                    </Button>
-                    <Button
-                      variant="outline"
-                      onClick={() => {
-                        setEditEmail(false);
-                        setNewEmail(user.email);
-                      }}
-                      className="flex-1 cursor-pointer"
-                    >
-                      Cancel
-                    </Button>
-                  </div>
-                </>
+                    <div className="flex gap-2">
+                      <Button
+                        type="submit"
+                        disabled={loading}
+                        className="flex-1 cursor-pointer bg-[#AAED56] text-[#324E0F] hover:bg-[#8feb1d]"
+                      >
+                        {loading ? "Saving..." : "Save Email"}
+                      </Button>
+                      <Button
+                        type="button"
+                        variant="outline"
+                        onClick={() => {
+                          setEditEmail(false);
+                          form.reset({ email: user.email });
+                        }}
+                        className="flex-1 cursor-pointer"
+                      >
+                        Cancel
+                      </Button>
+                    </div>
+                  </form>
+                </Form>
               )}
             </CardContent>
           </Card>
@@ -383,110 +446,193 @@ export function UserProfile({ user, orders = [] }: UserProfileProps) {
                     Enter your current password and a new password to change it.
                   </AlertDialogDescription>
 
-                  <div className="space-y-4 py-4">
-                    <div className="space-y-2">
-                      <Label htmlFor="old-pass">Current Password</Label>
-                      <Input
-                        id="old-pass"
-                        type="password"
-                        value={currentPassword}
-                        onChange={(e) => setCurrentPassword(e.target.value)}
-                        placeholder="Enter current password"
-                      />
-                    </div>
-
-                    <div className="space-y-2">
-                      <Label htmlFor="new-pass">New Password</Label>
-                      <Input
-                        id="new-pass"
-                        type="password"
-                        value={newPassword}
-                        onChange={(e) => setNewPassword(e.target.value)}
-                        placeholder="Enter new password"
-                      />
-                    </div>
-
-                    <div className="space-y-2">
-                      <Label htmlFor="confirm-pass">Confirm Password</Label>
-                      <Input
-                        id="confirm-pass"
-                        type="password"
-                        value={confirmPassword}
-                        onChange={(e) => setConfirmPassword(e.target.value)}
-                        placeholder="Confirm new password"
-                      />
-                    </div>
-                  </div>
-
-                  <div className="flex gap-2 justify-end">
-                    <AlertDialogCancel className="cursor-pointer">
-                      Cancel
-                    </AlertDialogCancel>
-                    <AlertDialogAction
-                      className="cursor-pointer"
-                      onClick={handleChangePassword}
-                      disabled={loading}
+                  <Form {...passwordForm}>
+                    <form
+                      onSubmit={passwordForm.handleSubmit(
+                        onChangePasswordSubmit,
+                      )}
+                      className="space-y-4 py-4"
                     >
-                      {loading ? "Saving..." : "Save Password"}
-                    </AlertDialogAction>
-                  </div>
+                      <FormField
+                        control={passwordForm.control}
+                        name="currentPassword"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>Current Password</FormLabel>
+                            <FormControl>
+                              <Input
+                                type="password"
+                                placeholder="Enter current password"
+                                {...field}
+                              />
+                            </FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+
+                      <FormField
+                        control={passwordForm.control}
+                        name="newPassword"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>New Password</FormLabel>
+                            <FormControl>
+                              <Input
+                                type="password"
+                                placeholder="Enter new password"
+                                {...field}
+                              />
+                            </FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+
+                      <FormField
+                        control={passwordForm.control}
+                        name="confirmPassword"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>Confirm Password</FormLabel>
+                            <FormControl>
+                              <Input
+                                type="password"
+                                placeholder="Confirm new password"
+                                {...field}
+                              />
+                            </FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+
+                      <div className="flex gap-2 justify-end">
+                        <AlertDialogCancel
+                          className="cursor-pointer"
+                          onClick={() => passwordForm.reset()}
+                        >
+                          Cancel
+                        </AlertDialogCancel>
+                        <Button
+                          type="submit"
+                          className="cursor-pointer bg-[#AAED56] text-[#324E0F] hover:bg-[#8feb1d]"
+                          disabled={loading}
+                        >
+                          {loading ? "Saving..." : "Save Password"}
+                        </Button>
+                      </div>
+                    </form>
+                  </Form>
                 </AlertDialogContent>
               </AlertDialog>
             </CardContent>
           </Card>
         </div>
 
-        {/* Section 3: Order History (Right) */}
+        {/* Section 3: User Address */}
         <div className="lg:col-span-2">
           <Card>
             <CardHeader>
-              <CardTitle>My Orders</CardTitle>
+              <div className="flex items-center justify-between">
+                <CardTitle className="text-lg">Address</CardTitle>
+                {Array.isArray(addresses) && addresses.length >= 1 && (
+                  <Button
+                    className="cursor-pointer bg-[#AAED56] text-[#324E0F] hover:bg-[#8feb1d]"
+                    onClick={() => setIsModalOpen(true)}
+                  >
+                    Add Address
+                  </Button>
+                )}
+              </div>
               <CardDescription>
-                {orders.length > 0
-                  ? `You have ${orders.length} orders`
-                  : "You don't have any orders yet"}
+                Your saved addresses will appear here.
               </CardDescription>
             </CardHeader>
-            <CardContent>
-              {orders.length === 0 ? (
-                <div className="text-center py-8">
-                  <p className="text-gray-500">Not found Order</p>
-                </div>
-              ) : (
-                <div className="space-y-3">
-                  {orders.map((order) => (
-                    <div
-                      key={order.id}
-                      className="border rounded-lg p-4 hover:bg-gray-50 transition"
-                    >
-                      <div className="flex items-start justify-between mb-2">
-                        <div>
-                          <p className="font-semibold text-gray-900">
-                            Order #{order.orderNumber}
-                          </p>
-                          <p className="text-sm text-gray-600">{order.date}</p>
-                        </div>
-                        <Badge className={statusColors[order.status]}>
-                          {statusLabels[order.status]}
-                        </Badge>
-                      </div>
-
-                      <div className="flex items-center justify-between">
-                        <p className="text-sm text-gray-600">
-                          {order.items} products
-                        </p>
-                        <p className="font-semibold text-lg text-gray-900">
-                          {order.total.toLocaleString("vi-VN")} VNĐ
-                        </p>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              )}
+            {!loading && addresses.length === 0 && (
+              <CardContent className="flex flex-col items-center mt-4 justify-center gap-2">
+                <MapIcon className="w-10 h-10 text-muted-foreground" />
+                <p className="text-md text-muted-foreground">
+                  You have no address yet
+                </p>
+                <Button
+                  className="cursor-pointer bg-[#AAED56] text-[#324E0F] hover:bg-[#8feb1d]"
+                  onClick={() => setIsModalOpen(true)}
+                >
+                  Create Address
+                </Button>
+              </CardContent>
+            )}
+            <CardContent className="space-y-4">
+              {addresses.map((address) => (
+                <AddressItems
+                  key={address._id}
+                  address={address}
+                  onEdit={handleEditAddress}
+                  onSetDefault={() => {
+                    setPendingAddressId(address._id);
+                    setConfirmDialogAction("setDefault");
+                    setConfirmDialogOpen(true);
+                  }}
+                  onDelete={() => {
+                    setPendingAddressId(address._id);
+                    setConfirmDialogAction("delete");
+                    setConfirmDialogOpen(true);
+                  }}
+                />
+              ))}
             </CardContent>
           </Card>
         </div>
       </div>
+      <AddressForm
+        open={isModalOpen}
+        onClose={() => {
+          setIsModalOpen(false);
+          setSelectedAddress(null);
+        }}
+        initialData={selectedAddress}
+        onSubmit={async (payload) => {
+          if (selectedAddress) {
+            await updateAddress(selectedAddress._id, payload);
+          } else {
+            await createAddress(payload);
+          }
+          fetchAddresses();
+          setIsModalOpen(false);
+        }}
+      />
+      <ConfirmDialog
+        open={confirmDialogOpen}
+        onOpenChange={(open) => {
+          setConfirmDialogOpen(open);
+          if (!open) {
+            setConfirmDialogAction(null);
+            setPendingAddressId(null);
+          }
+        }}
+        title={
+          confirmDialogAction === "setDefault"
+            ? "Set Default Address?"
+            : "Delete Address?"
+        }
+        description={
+          confirmDialogAction === "setDefault"
+            ? "Are you sure you want to set this as your default address?"
+            : "Are you sure you want to delete this address?"
+        }
+        confirmText={
+          confirmDialogAction === "setDefault" ? "Set as Default" : "Delete"
+        }
+        cancelText="Cancel"
+        loading={
+          confirmDialogAction === "setDefault"
+            ? isSettingDefault
+            : isDeletingAddress
+        }
+        isDangerous={confirmDialogAction === "delete"}
+        onConfirm={handleConfirmDialog}
+      />
     </div>
   );
 }

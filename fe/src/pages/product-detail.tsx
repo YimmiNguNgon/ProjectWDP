@@ -20,11 +20,17 @@ import {
   DialogTrigger,
 } from "@/components/ui/dialog";
 import { Messages } from "@/components/chat/messages";
-import { MessageContext, type Conversation, type Message } from "@/hooks/use-message";
+import {
+  MessageContext,
+  type Conversation,
+  type Message,
+} from "@/hooks/use-message";
 import { useAuth } from "@/hooks/use-auth";
 import api from "@/lib/axios";
-import { ChevronRight, Minus, Plus } from "lucide-react";
+import { ChevronRight, Minus, Plus, Heart } from "lucide-react";
 import { useEffect, useState } from "react";
+import { toggleWatchlist, getUserWatchlist } from "@/api/watchlist";
+import { cn } from "@/lib/utils";
 import { Link, useParams } from "react-router-dom";
 import { toast } from "sonner";
 
@@ -42,6 +48,7 @@ export interface ProductDetail {
   ratingCount: number;
   createdAt: Date;
   updatedAt: Date;
+  watchCount?: number;
   __v: number;
 }
 
@@ -50,6 +57,8 @@ export default function ProductDetailPage() {
 
   const [product, setProduct] = useState<ProductDetail>();
   const [quantity, setQuantity] = useState(1);
+  const [isWatched, setIsWatched] = useState(false);
+  const [watchCount, setWatchCount] = useState(0);
 
   // Chat dialog states
   const [open, setOpen] = useState(false);
@@ -60,27 +69,56 @@ export default function ProductDetailPage() {
   const [conversation, setConversation] = useState<Conversation | undefined>();
   const [messages, setMessages] = useState<Message[] | undefined>();
   const [productRef, setProductRef] = useState<string | undefined>();
-  const [productContext, setProductContext] = useState<ProductDetail | undefined>();
+  const [productContext, setProductContext] = useState<
+    ProductDetail | undefined
+  >();
 
   useEffect(() => {
     api.get(`/api/products/${productId}`).then((res) => {
       setProduct(res.data.data);
+      setWatchCount(res.data.data.watchCount || 0);
     });
+
+    getUserWatchlist()
+      .then((res) => {
+        const watched = res.data.data.some(
+          (item: any) => item.product._id === productId,
+        );
+        setIsWatched(watched);
+      })
+      .catch((err) => console.error(err));
   }, [productId]);
+
+  const handleToggleWatchlist = async () => {
+    if (!product) return;
+    try {
+      const res = await toggleWatchlist(product._id);
+      const newStatus = res.data.watched;
+      setIsWatched(newStatus);
+      setWatchCount((prev) => Math.max(0, prev + (newStatus ? 1 : -1)));
+      toast.success(
+        newStatus ? "Added to watchlist" : "Removed from watchlist",
+      );
+    } catch (err) {
+      toast.error("Failed to update watchlist");
+    }
+  };
 
   const sellerDisplayName = product?.sellerId
     ? `Seller #${product.sellerId.slice(-5)}`
     : "Seller";
 
   const handleQuantityChange = (delta: number) => {
-    setQuantity((prev) => Math.max(1, Math.min(product?.quantity || 999, prev + delta)));
+    setQuantity((prev) =>
+      Math.max(1, Math.min(product?.quantity || 999, prev + delta)),
+    );
   };
 
   const handleJoinChat = () => {
     const sender = payload?.userId;
     const receiver = product?.sellerId;
     if (!sender || !receiver) {
-      toast.error('Vui lòng đăng nhập để chat với seller');
+      toast.error("Vui lòng đăng nhập để chat với seller");
       return;
     }
     setParticipantsState([sender, receiver]);
@@ -90,13 +128,13 @@ export default function ProductDetailPage() {
 
   const handleBuyNow = async () => {
     if (!product) {
-      toast.error('Product not found');
+      toast.error("Product not found");
       return;
     }
 
     try {
       // Create order with the product and quantity
-      await api.post('/api/orders', {
+      await api.post("/api/orders", {
         items: [
           {
             productId: product._id,
@@ -105,23 +143,43 @@ export default function ProductDetailPage() {
         ],
       });
 
-      toast.success('Order created successfully!');
+      toast.success("Order created successfully!");
       // Navigate to purchase history
-      window.location.href = '/my-ebay/activity/purchases';
+      window.location.href = "/my-ebay/activity/purchases";
     } catch (err: any) {
-      console.error('Failed to create order:', err);
-      toast.error(err.response?.data?.message || 'Failed to create order');
+      console.error("Failed to create order:", err);
+      toast.error(err.response?.data?.message || "Failed to create order");
     }
   };
 
   return (
     <>
       <div className="w-full flex gap-4">
-        <img
-          src={product?.images?.[0] || '/placeholder.png'}
-          alt={product?.title}
-          className="aspect-square h-128 w-3/4 object-cover"
-        />
+        <div className="relative w-3/4">
+          <img
+            src={product?.images?.[0] || "/placeholder.png"}
+            alt={product?.title}
+            className="aspect-square h-128 w-full object-cover"
+          />
+          <Button
+            size="icon"
+            variant="secondary"
+            className="absolute top-4 cursor-pointer right-4 h-10 w-auto min-w-[3.75rem] px-3 rounded-full shadow-md bg-white/80 hover:bg-white"
+            onClick={handleToggleWatchlist}
+          >
+            <div className="flex items-center justify-center gap-1">
+              <span className="text-sm font-semibold leading-none">
+                {watchCount}
+              </span>
+              <Heart
+                className={cn(
+                  "h-5 w-5",
+                  isWatched ? "fill-red-500 text-red-500" : "text-gray-600",
+                )}
+              />
+            </div>
+          </Button>
+        </div>
 
         <div className="w-2/5 flex flex-col gap-4">
           <h1 className="text-2xl font-medium">{product?.title}</h1>
@@ -186,7 +244,9 @@ export default function ProductDetailPage() {
           <Separator />
           <div className="flex flex-col gap-2">
             <h2 className="text-sm text-muted-foreground">Product Price</h2>
-            <h1 className="text-3xl font-bold">${product?.price?.toFixed(2) || '0.00'}</h1>
+            <h1 className="text-3xl font-bold">
+              ${product?.price?.toFixed(2) || "0.00"}
+            </h1>
           </div>
           <Separator />
           <div className="flex gap-4 items-center">
@@ -206,7 +266,9 @@ export default function ProductDetailPage() {
                 min={1}
                 max={product?.quantity}
                 value={quantity}
-                onChange={(e) => setQuantity(Math.max(1, parseInt(e.target.value) || 1))}
+                onChange={(e) =>
+                  setQuantity(Math.max(1, parseInt(e.target.value) || 1))
+                }
                 className="h-12 px-6 w-20 text-center"
               />
               <Button
@@ -230,8 +292,19 @@ export default function ProductDetailPage() {
           <Button variant={"outline"} size={"lg"} className="w-full">
             Add to Cart
           </Button>
-          <Button variant={"outline"} size={"lg"} className="w-full">
-            Add to Watchlist
+          <Button
+            variant={"outline"}
+            size={"lg"}
+            className="w-full gap-2 cursor-pointer"
+            onClick={handleToggleWatchlist}
+          >
+            <Heart
+              className={cn(
+                "h-4 w-4",
+                isWatched ? "fill-red-500 text-red-500" : "",
+              )}
+            />
+            {isWatched ? "Remove from Watchlist" : "Add to Watchlist"}
           </Button>
         </div>
       </div>

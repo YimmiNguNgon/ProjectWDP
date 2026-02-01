@@ -465,34 +465,18 @@ export default function ProductManagement() {
                             </div>
                         </div>
 
-                        <div className="grid grid-cols-2 gap-4">
-                            <div className="grid gap-2">
-                                <Label htmlFor="condition">Tình trạng</Label>
-                                <select
-                                    id="condition"
-                                    className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
-                                    value={formData.condition}
-                                    onChange={(e) => setFormData({ ...formData, condition: e.target.value })}
-                                >
-                                    <option value="new">Mới</option>
-                                    <option value="used">Đã sử dụng</option>
-                                    <option value="refurbished">Tân trang</option>
-                                </select>
-                            </div>
-
-                            <div className="grid gap-2">
-                                <Label htmlFor="status">Trạng thái</Label>
-                                <select
-                                    id="status"
-                                    className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
-                                    value={formData.status}
-                                    onChange={(e) => setFormData({ ...formData, status: e.target.value })}
-                                >
-                                    <option value="available">Có sẵn</option>
-                                    <option value="sold">Đã bán</option>
-                                    <option value="pending">Đang chờ</option>
-                                </select>
-                            </div>
+                        <div className="grid gap-2">
+                            <Label htmlFor="status">Trạng thái</Label>
+                            <select
+                                id="status"
+                                className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
+                                value={formData.status}
+                                onChange={(e) => setFormData({ ...formData, status: e.target.value })}
+                            >
+                                <option value="available">Có sẵn</option>
+                                <option value="sold">Đã bán</option>
+                                <option value="pending">Đang chờ</option>
+                            </select>
                         </div>
 
                         <div className="grid gap-2">

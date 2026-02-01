@@ -12,34 +12,25 @@ import ResetPasswordPage from "@/pages/reset-password";
 import UserManagement from "@/pages/admin/user-management";
 import AdminDashboard from "@/pages/admin/dashboard";
 import ProductManagement from "@/pages/admin/product-management";
-import ProtectedRoute from "@/components/ProtectedRoute";
-import { RoleGuard } from "@/components/RoleGuard";
+import FeedbackManagement from "@/pages/admin/feedback-management";
+import PermissionsPage from "@/pages/admin/permissions-page";
 
 import { MainLayout } from "@/layouts/main";
 import AuthLayout from "@/layouts/auth";
 import UserProfilePage from "@/pages/profile";
 import AdminLayout from "@/layouts/admin";
-import SellerLayout from "@/layouts/seller";
-import MyEbayLayout from "@/layouts/my-ebay";
-import SellerOverview from "@/pages/seller/Overview";
-import SellerOrders from "@/pages/seller/Orders";
-import SellerRevenue from "@/pages/seller/Revenue";
-import SellerReviews from "@/pages/seller/Reviews";
-import SellerProducts from "@/pages/seller/Products";
-import SellerAddProduct from "@/pages/seller/AddProduct";
 import PurchaseHistoryPage from "@/pages/purchases/purchase-history-page";
-import WatchlistPage from "@/pages/purchases/watchlist-page";
 import LeaveFeedbackPage from "@/pages/purchases/leave-feedback-page";
-import FeatureUnderConstructionPage from "@/pages/feature-under-construction";
 import MessagesPage from "@/pages/messages-page";
 import MyListingsPage from "@/pages/seller/my-listings";
 import InventoryPage from "@/pages/seller/inventory";
 import SellerSoldPage from "@/pages/seller/seller-sold-page";
 import PromotionRequestsPage from "@/pages/seller/promotion-requests";
 import AdminPromotionRequestsPage from "@/pages/admin/promotion-requests";
-import FeedbackManagement from "@/pages/admin/feedback-management";
-import PermissionsPage from "@/pages/admin/permissions-page";
 import UnauthorizedPage from "@/pages/unauthorized";
+
+import ProtectedRoute from "@/components/ProtectedRoute";
+import { RoleGuard } from "@/components/RoleGuard";
 
 // Placeholder components for admin pages
 const AdminComplaints = () => (
@@ -73,6 +64,10 @@ export const AppRouter = () => {
               path: "profile",
               element: <UserProfilePage />,
             },
+            {
+              path: "messages",
+              element: <MessagesPage />,
+            },
           ],
         },
         {
@@ -84,22 +79,8 @@ export const AppRouter = () => {
           element: <ProductDetailPage />,
         },
         {
-          path: "my-ebay",
-          element: <MyEbayLayout />,
-          children: [
-            {
-              path: "activity/purchases",
-              element: <PurchaseHistoryPage />,
-            },
-            {
-              path: "activity/watchlist",
-              element: <WatchlistPage />,
-            },
-            {
-              path: "messages",
-              element: <MessagesPage />,
-            },
-          ],
+          path: "my-ebay/activity/purchases",
+          element: <PurchaseHistoryPage />,
         },
         {
           path: "purchases/:orderId/feedback/:productId",
@@ -166,50 +147,12 @@ export const AppRouter = () => {
       ],
     },
     {
-      path: "/seller",
-      element: <SellerLayout />,
-      children: [
-        {
-          index: true,
-          element: <SellerOverview />,
-        },
-        {
-          path: "orders",
-          element: <SellerOrders />,
-        },
-        {
-          path: "products",
-          element: <SellerProducts />,
-        },
-        {
-          path: "products/new",
-          element: <SellerAddProduct />,
-        },
-        {
-          path: "revenue",
-          element: <SellerRevenue />,
-        },
-        {
-          path: "reviews",
-          element: <SellerReviews />,
-        },
-      ],
-    },
-    {
       path: "/unauthorized",
       element: <UnauthorizedPage />,
     },
     {
       path: "/verify-email",
       element: <VerifyEmailPage />,
-    },
-    {
-      path: "/reset-password",
-      element: <ResetPasswordPage />,
-    },
-    {
-      path: "/coming-soon",
-      element: <FeatureUnderConstructionPage />,
     },
     {
       path: "/auth",
