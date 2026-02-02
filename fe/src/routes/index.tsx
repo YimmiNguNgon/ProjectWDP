@@ -20,7 +20,9 @@ import AuthLayout from "@/layouts/auth";
 import UserProfilePage from "@/pages/profile";
 import AdminLayout from "@/layouts/admin";
 import PurchaseHistoryPage from "@/pages/purchases/purchase-history-page";
+import WatchlistPage from "@/pages/purchases/watchlist-page";
 import LeaveFeedbackPage from "@/pages/purchases/leave-feedback-page";
+import FeatureUnderConstructionPage from "@/pages/feature-under-construction";
 import MessagesPage from "@/pages/messages-page";
 import MyListingsPage from "@/pages/seller/my-listings";
 import InventoryPage from "@/pages/seller/inventory";
@@ -31,6 +33,13 @@ import UnauthorizedPage from "@/pages/unauthorized";
 
 import ProtectedRoute from "@/components/ProtectedRoute";
 import { RoleGuard } from "@/components/RoleGuard";
+import SellerLayout from "@/layouts/seller";
+import SellerOverview from "@/pages/seller/Overview";
+import SellerOrders from "@/pages/seller/Orders";
+import SellerProducts from "@/pages/seller/Products";
+import SellerRevenue from "@/pages/seller/Revenue";
+import SellerReviews from "@/pages/seller/Reviews";
+import MyEbayLayout from "@/layouts/my-ebay";
 
 // Placeholder components for admin pages
 const AdminComplaints = () => (
@@ -64,10 +73,10 @@ export const AppRouter = () => {
               path: "profile",
               element: <UserProfilePage />,
             },
-            {
-              path: "messages",
-              element: <MessagesPage />,
-            },
+            // {
+            //   path: "messages",
+            //   element: <MessagesPage />,
+            // },
           ],
         },
         {
@@ -79,8 +88,22 @@ export const AppRouter = () => {
           element: <ProductDetailPage />,
         },
         {
-          path: "my-ebay/activity/purchases",
-          element: <PurchaseHistoryPage />,
+          path: "my-ebay",
+          element: <MyEbayLayout />,
+          children: [
+            {
+              path: "activity/purchases",
+              element: <PurchaseHistoryPage />,
+            },
+            {
+              path: "activity/watchlist",
+              element: <WatchlistPage />,
+            },
+            {
+              path: "messages",
+              element: <MessagesPage />,
+            },
+          ],
         },
         {
           path: "purchases/:orderId/feedback/:productId",
@@ -147,12 +170,46 @@ export const AppRouter = () => {
       ],
     },
     {
-      path: "/unauthorized",
-      element: <UnauthorizedPage />,
+      path: "/seller",
+      element: <SellerLayout />,
+      children: [
+        {
+          index: true,
+          element: <SellerOverview />,
+        },
+        {
+          path: "orders",
+          element: <SellerOrders />,
+        },
+        {
+          path: "products",
+          element: <SellerProducts />,
+        },
+        // {
+        //   path: "products/new",
+        //   element: <SellerAddProduct />,
+        // },
+        // {
+        //   path: "products/edit/:id",
+        //   element: <SellerEditProduct />,
+        // },
+        {
+          path: "revenue",
+          element: <SellerRevenue />,
+        },
+        {
+          path: "reviews",
+          element: <SellerReviews />,
+        },
+      ],
     },
     {
       path: "/verify-email",
       element: <VerifyEmailPage />,
+    },
+    {
+      path: "coming-soon",
+      element: <FeatureUnderConstructionPage />,
     },
     {
       path: "/auth",
@@ -179,6 +236,10 @@ export const AppRouter = () => {
           element: <ResetPasswordPage />,
         },
       ],
+    },
+    {
+      path: "/unauthorized",
+      element: <UnauthorizedPage />,
     },
   ]);
 };
