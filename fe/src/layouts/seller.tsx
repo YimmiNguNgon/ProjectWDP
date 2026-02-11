@@ -1,47 +1,53 @@
 // src/layouts/seller.tsx
 import { Link, Outlet, useLocation } from 'react-router-dom';
-import { 
-  LayoutDashboard, 
-  PlusCircle, 
-  Package, 
-  ShoppingBag, 
-  DollarSign, 
-  Star, 
-  Home 
+import {
+    LayoutDashboard,
+    PlusCircle,
+    Package,
+    ShoppingBag,
+    DollarSign,
+    Star,
+    Home,
+    MessageSquare
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useAuth } from '@/hooks/use-auth';
 
 const navigation = [
-    { 
-      name: 'Tổng quan', 
-      href: '/seller', 
-      icon: LayoutDashboard,
+    {
+        name: 'Tổng quan',
+        href: '/seller',
+        icon: LayoutDashboard,
     },
     // { 
     //   name: 'Thêm sản phẩm mới', 
     //   href: '/seller/products/new', 
     //   icon: PlusCircle,
     // },
-    { 
-      name: 'Quản lý sản phẩm', 
-      href: '/seller/products', 
-      icon: Package,
+    {
+        name: 'Quản lý sản phẩm',
+        href: '/seller/products',
+        icon: Package,
     },
-    { 
-      name: 'Quản lý đơn hàng', 
-      href: '/seller/orders', 
-      icon: ShoppingBag,
+    {
+        name: 'Quản lý đơn hàng',
+        href: '/seller/orders',
+        icon: ShoppingBag,
     },
-    { 
-      name: 'Quản lý doanh thu', 
-      href: '/seller/revenue', 
-      icon: DollarSign,
+    {
+        name: 'Quản lý doanh thu',
+        href: '/seller/revenue',
+        icon: DollarSign,
     },
-    { 
-      name: 'Phản hồi khách hàng', 
-      href: '/seller/reviews', 
-      icon: Star,
+    {
+        name: 'Phản hồi khách hàng',
+        href: '/seller/reviews',
+        icon: Star,
+    },
+    {
+        name: 'Quản lý Feedback',
+        href: '/seller/feedback',
+        icon: MessageSquare,
     },
 ];
 
@@ -67,7 +73,7 @@ export default function SellerLayout() {
                             </div>
                         </div>
                     </div>
-                    
+
                     <nav className="px-3 space-y-1">
                         {navigation.map((item) => {
                             const Icon = item.icon;
@@ -99,7 +105,7 @@ export default function SellerLayout() {
                         })}
                     </nav>
 
-                    
+
 
                     {/* Home Button */}
                     <div className="px-3 mt-6 pt-6 border-t border-gray-200">
@@ -122,14 +128,14 @@ export default function SellerLayout() {
                             <div className="flex items-center justify-between">
                                 <div>
                                     <h2 className="text-lg font-semibold text-gray-900">
-                                        {navigation.find(nav => 
-                                            nav.href === location.pathname || 
+                                        {navigation.find(nav =>
+                                            nav.href === location.pathname ||
                                             (nav.href !== '/seller' && location.pathname.startsWith(nav.href))
                                         )?.name || 'Tổng quan'}
                                     </h2>
                                     <p className="text-sm text-gray-600">
-                                        {navigation.find(nav => 
-                                            nav.href === location.pathname || 
+                                        {navigation.find(nav =>
+                                            nav.href === location.pathname ||
                                             (nav.href !== '/seller' && location.pathname.startsWith(nav.href))
                                         )?.name || 'Quản lý cửa hàng của bạn'}
                                     </p>

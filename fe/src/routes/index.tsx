@@ -40,6 +40,10 @@ import SellerProducts from "@/pages/seller/Products";
 import SellerRevenue from "@/pages/seller/Revenue";
 import SellerReviews from "@/pages/seller/Reviews";
 import MyEbayLayout from "@/layouts/my-ebay";
+import SellerFeedbackPage from "@/pages/seller/seller-feedback";
+import FeedbackRevisionRequestPage from "@/pages/seller/feedback-revision-request";
+import SellerFeedbackRequestsPage from "@/pages/seller/feedback-requests";
+import BuyerFeedbackRequestsPage from "@/pages/buyer/feedback-requests";
 
 // Placeholder components for admin pages
 const AdminComplaints = () => (
@@ -102,6 +106,10 @@ export const AppRouter = () => {
             {
               path: "messages",
               element: <MessagesPage />,
+            },
+            {
+              path: "feedback-requests",
+              element: <BuyerFeedbackRequestsPage />,
             },
           ],
         },
@@ -200,6 +208,18 @@ export const AppRouter = () => {
         {
           path: "reviews",
           element: <SellerReviews />,
+        },
+        {
+          path: "feedback",
+          element: <SellerFeedbackPage />,
+        },
+        {
+          path: "feedback-revision-request/:reviewId",
+          element: <FeedbackRevisionRequestPage />,
+        },
+        {
+          path: "feedback-requests",
+          element: <SellerFeedbackRequestsPage />,
         },
       ],
     },

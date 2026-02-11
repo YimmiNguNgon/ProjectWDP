@@ -311,7 +311,7 @@ export function Messages({
         conversationId: conversation._id,
         sender: payload.userId,
         text: text || '',
-        attachments: imageUrl ? [{ url: `${import.meta.env.VITE_API_URL || 'http://localhost:8080'}${imageUrl}`, type: 'image' }] : [],
+        attachments: imageUrl ? [{ url: imageUrl, type: 'image' }] : [],
         productRef,
       };
 
@@ -469,52 +469,68 @@ export function Messages({
                       </Item>
                     )}
                     <div
-                      className={`flex ${isMe ? 'justify-end' : 'justify-start'
-                        } `}
+                      className={`flex flex-col ${isMe ? 'items-end' : 'items-start'} gap-2`}
                     >
-                      <div
-                        className={`max-w-90 px-4 py-2 rounded-lg ${isMe
-                          ? 'bg-primary text-primary-foreground rounded-br-none'
-                          : 'bg-muted text-foreground rounded-bl-none'
-                          }`}
-                      >
-                        {/* Display image attachments */}
-                        {message.attachments && message.attachments.length > 0 && (
-                          <div className='mb-2'>
-                            {message.attachments.map((att: any, idx: number) => (
+                      {/* Display image attachments - OUTSIDE bubble */}
+                      {message.attachments && message.attachments.length > 0 && (
+                        <div className='space-y-2'>
+                          {message.attachments.map((att: any, idx: number) => (
+                            <div key={idx} className="relative group">
                               <img
-                                key={idx}
                                 src={att.url}
                                 alt='Attachment'
-                                className='max-w-full rounded-md max-h-60 object-cover cursor-pointer hover:opacity-90 transition-opacity'
+                                className='w-full max-w-sm rounded-lg shadow-md object-cover cursor-pointer hover:shadow-lg transition-all duration-200'
+                                style={{ maxHeight: '300px' }}
                                 onClick={() => setViewerImage(att.url)}
                                 onError={(e) => {
                                   (e.target as HTMLImageElement).style.display = 'none';
                                 }}
                               />
-                            ))}
-                          </div>
-                        )}
-                        {message.text && (
-                          <p className='text-sm whitespace-pre-wrap wrap-break-word'>
-                            {message.text}
-                          </p>
-                        )}
-                        <p
-                          className={`text-xs mt-1 ${isMe
-                            ? 'text-primary-foreground/80'
-                            : 'text-muted-foreground'
+                              {/* Zoom icon overlay on hover */}
+                              <div className="absolute inset-0 bg-black/0 group-hover:bg-black/10 transition-all duration-200 rounded-lg flex items-center justify-center">
+                                <svg
+                                  className="w-8 h-8 text-white opacity-0 group-hover:opacity-100 transition-opacity duration-200"
+                                  fill="none"
+                                  stroke="currentColor"
+                                  viewBox="0 0 24 24"
+                                >
+                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0zM10 7v6m3-3H7" />
+                                </svg>
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      )}
+
+                      {/* Text and timestamp in bubble */}
+                      {(message.text || !message.attachments || message.attachments.length === 0) && (
+                        <div
+                          className={`max-w-90 px-4 py-2 rounded-lg ${isMe
+                            ? 'bg-primary text-primary-foreground rounded-br-none'
+                            : 'bg-muted text-foreground rounded-bl-none'
                             }`}
                         >
-                          {new Date(message.createdAt).toLocaleTimeString(
-                            'vi-VN',
-                            {
-                              hour: '2-digit',
-                              minute: '2-digit',
-                            }
+                          {message.text && (
+                            <p className='text-sm whitespace-pre-wrap wrap-break-word'>
+                              {message.text}
+                            </p>
                           )}
-                        </p>
-                      </div>
+                          <p
+                            className={`text-xs mt-1 ${isMe
+                              ? 'text-primary-foreground/80'
+                              : 'text-muted-foreground'
+                              }`}
+                          >
+                            {new Date(message.createdAt).toLocaleTimeString(
+                              'vi-VN',
+                              {
+                                hour: '2-digit',
+                                minute: '2-digit',
+                              }
+                            )}
+                          </p>
+                        </div>
+                      )}
                     </div>
                   </React.Fragment>
                 );

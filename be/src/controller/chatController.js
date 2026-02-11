@@ -141,22 +141,38 @@ exports.createConversation = async (req, res, next) => {
         .json({ message: 'Participants required (2 users).' });
     }
 
-    participants = participants.map((p) => p.toString()).sort();
+    // Normalize participants: convert to ObjectId strings and sort
+    participants = participants
+      .map((p) => {
+        // Handle both ObjectId and string formats
+        const id = typeof p === 'object' && p._id ? p._id.toString() : p.toString();
+        return id;
+      })
+      .sort();
 
+    console.log('[Chat] Looking for conversation with participants:', participants);
+
+    // Find existing conversation with these exact participants
     const existing = await Conversation.findOne({
       participants: { $all: participants, $size: participants.length },
-    })
-      .populate('participants', 'username')
-      .lean();
+    }).populate('participants', 'username');
 
-    if (existing)
+    if (existing) {
+      console.log('[Chat] Found existing conversation:', existing._id);
       return res
         .status(200)
         .json({ data: existing, message: 'Conversation already exists.' });
+    }
 
+    console.log('[Chat] Creating new conversation');
     const conv = await Conversation.create({ participants });
-    return res.status(201).json({ data: conv });
+
+    // Populate before returning
+    const populated = await Conversation.findById(conv._id).populate('participants', 'username');
+
+    return res.status(201).json({ data: populated });
   } catch (err) {
+    console.error('[Chat] Error in createConversation:', err);
     next(err);
   }
 };
