@@ -26,6 +26,7 @@ import {
 import { Link } from 'react-router-dom';
 import { ChatGuidelines } from './chat-guidelines';
 import { Alert, AlertDescription } from '@/components/ui/alert';
+import { toast } from 'sonner';
 
 export function Messages({
   className,
@@ -117,6 +118,14 @@ export function Messages({
         );
         console.log('[Messages] Messages response:', messagesRes.data);
         setMessages(messagesRes.data.data);
+
+        // Mark all messages as read when conversation is opened
+        try {
+          await api.post(`/api/chats/conversations/${response.data.data._id}/read`);
+          console.log('[Messages] Marked conversation as read');
+        } catch (readError) {
+          console.error('[Messages] Failed to mark as read:', readError);
+        }
       } catch (error: any) {
         console.error('[Messages] Failed to create/fetch conversation:', error);
 
@@ -164,6 +173,18 @@ export function Messages({
     const handleNewMessage = (msg: Message) => {
       if (msg.conversationId !== conversationId) return;
       setMessages((prev) => [msg, ...prev!]);
+
+      // Show notification if message is from another user
+      if (msg.sender !== userId) {
+        // Get sender name from conversation participants
+        const sender = conversation.participants?.find((p: any) => p._id === msg.sender);
+        const senderName = sender?.username || 'Someone';
+
+        toast.info(`💬 Tin nhắn mới từ ${senderName}`, {
+          description: msg.text || 'Đã gửi một file',
+          duration: 3000,
+        });
+      }
     };
 
     socket.on('new_message', handleNewMessage);

@@ -19,6 +19,7 @@ import {
 import { Archive, Inbox, MailOpen, Search, Trash, X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useAuth } from '@/hooks/use-auth';
+import socket from '@/lib/socket';
 
 export default function ConversationList() {
   const { setParticipants } = useMessage();
@@ -28,12 +29,61 @@ export default function ConversationList() {
   const { payload } = useAuth();
   const [filtered, setFiltered] = React.useState<Conversation[]>([]);
 
-  React.useEffect(() => {
+  const fetchConversations = React.useCallback(() => {
     api.get('/api/chats/conversations').then((res) => {
-      setConversations(res.data.data);
-      setFiltered(res.data.data);
+      const allConversations = res.data.data;
+
+      // Deduplicate conversations by participants
+      // Keep only the most recent conversation for each unique set of participants
+      const deduped = allConversations.reduce((acc: Conversation[], conv: Conversation) => {
+        const participantIds = conv.participants.map((p: any) => p._id).sort().join(',');
+
+        // Check if we already have a conversation with these participants
+        const existingIndex = acc.findIndex((c: Conversation) =>
+          c.participants.map((p: any) => p._id).sort().join(',') === participantIds
+        );
+
+        if (existingIndex === -1) {
+          // No existing conversation with these participants, add it
+          acc.push(conv);
+        } else {
+          // Compare lastMessageAt and keep the more recent one
+          const existing = acc[existingIndex];
+          if (new Date(conv.lastMessageAt) > new Date(existing.lastMessageAt)) {
+            acc[existingIndex] = conv;
+          }
+        }
+
+        return acc;
+      }, []);
+
+      console.log('[ConversationList] Deduped conversations:', {
+        before: allConversations.length,
+        after: deduped.length,
+        removed: allConversations.length - deduped.length
+      });
+
+      setConversations(deduped);
+      setFiltered(deduped);
     });
   }, []);
+
+  React.useEffect(() => {
+    fetchConversations();
+  }, [fetchConversations]);
+
+  // Listen for read status updates
+  React.useEffect(() => {
+    const handleReadUpdate = () => {
+      fetchConversations(); // Refresh to update unread counts
+    };
+
+    socket.on('conversation_read', handleReadUpdate);
+
+    return () => {
+      socket.off('conversation_read', handleReadUpdate);
+    };
+  }, [fetchConversations]);
 
   React.useEffect(() => {
     if (!search) setFiltered(conversations);
@@ -57,24 +107,42 @@ export default function ConversationList() {
     else setSelected((prev) => prev.filter((id) => id !== conversationId));
   };
 
+  const handleConversationClick = (conversation: Conversation) => {
+    // Set participants to open conversation
+    setParticipants(conversation.participants.map((p) => p._id));
+
+    // Immediately clear unread count in local state for instant feedback
+    setConversations((prev) =>
+      prev.map((c) =>
+        c._id === conversation._id ? { ...c, unreadCount: 0 } as any : c
+      )
+    );
+  };
+
   const handleDeleteConversation = async () => {
     if (selected.length === 0) return;
 
     try {
+      console.log('[ConversationList] Deleting conversations:', selected);
+
       // Delete each selected conversation
-      await Promise.all(
+      const results = await Promise.all(
         selected.map((conversationId) =>
           api.delete(`/api/chats/conversations/${conversationId}`)
         )
       );
+
+      console.log('[ConversationList] Delete results:', results);
 
       // Update local state by removing deleted conversations
       setConversations((prev) =>
         prev.filter((c) => !selected.includes(c._id))
       );
       setSelected([]);
+
+      console.log('[ConversationList] Conversations deleted successfully');
     } catch (error) {
-      console.error('Failed to delete conversations:', error);
+      console.error('[ConversationList] Failed to delete conversations:', error);
       alert('Không thể xóa cuộc trò chuyện. Vui lòng thử lại.');
     }
   };
@@ -218,17 +286,13 @@ export default function ConversationList() {
               />
             </ItemActions>
             <ItemMedia
-              onClick={() =>
-                setParticipants(conversation.participants.map((p) => p._id))
-              }
+              onClick={() => handleConversationClick(conversation)}
               className='cursor-pointer'
             >
               <div className='aspect-square w-14 bg-muted rounded-full'></div>
             </ItemMedia>
             <ItemContent
-              onClick={() =>
-                setParticipants(conversation.participants.map((p) => p._id))
-              }
+              onClick={() => handleConversationClick(conversation)}
               className='cursor-pointer'
             >
               <ItemTitle className='capitalize'>
@@ -239,9 +303,7 @@ export default function ConversationList() {
               <ItemDescription>Short Message</ItemDescription>
             </ItemContent>
             <ItemContent
-              onClick={() =>
-                setParticipants(conversation.participants.map((p) => p._id))
-              }
+              onClick={() => handleConversationClick(conversation)}
               className='cursor-pointer'
             >
               <ItemTitle className='text-end'>
@@ -249,10 +311,17 @@ export default function ConversationList() {
                   'vi-VN'
                 )}
               </ItemTitle>
-              <ItemDescription className='text-end'>
-                {new Date(conversation.lastMessageAt).toLocaleTimeString(
-                  'vi-VN',
-                  { hour: '2-digit', minute: '2-digit', hour12: false }
+              <ItemDescription className='text-end flex items-center justify-end gap-2'>
+                <span>
+                  {new Date(conversation.lastMessageAt).toLocaleTimeString(
+                    'vi-VN',
+                    { hour: '2-digit', minute: '2-digit', hour12: false }
+                  )}
+                </span>
+                {(conversation as any).unreadCount > 0 && (
+                  <span className='inline-flex items-center justify-center min-w-[20px] h-5 px-1.5 text-xs font-semibold text-white bg-blue-600 rounded-full'>
+                    {(conversation as any).unreadCount}
+                  </span>
                 )}
               </ItemDescription>
             </ItemContent>
