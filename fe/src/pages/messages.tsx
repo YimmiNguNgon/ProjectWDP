@@ -30,7 +30,7 @@ export function MessagesProvider({ children }: React.PropsWithChildren) {
   React.useEffect(() => {
     if (!participants) return;
     api
-      .post('/api/v1/chats/conversations', {
+      .post('/api/chats/conversations', {
         participants,
       })
       .then((res) => {
@@ -41,7 +41,7 @@ export function MessagesProvider({ children }: React.PropsWithChildren) {
   React.useEffect(() => {
     if (!conversation) return;
     api
-      .get(`/api/v1/chats/conversations/${conversation._id}/messages`)
+      .get(`/api/chats/conversations/${conversation._id}/messages`)
       .then((res) => {
         setMessages(res.data.data);
       });
@@ -51,7 +51,7 @@ export function MessagesProvider({ children }: React.PropsWithChildren) {
     if (!productRef) {
       setProduct(undefined);
     } else {
-      api.get(`/api/v1/products/${productRef}`).then((res) => {
+      api.get(`/api/products/${productRef}`).then((res) => {
         setProduct(res.data.data);
       });
     }

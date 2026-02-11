@@ -71,12 +71,36 @@ export function Messages({
 
   // Fetch or create conversation when participants change
   useEffect(() => {
-    if (!participants || participants.length < 2) return;
-    if (conversation) return; // Already have conversation
-    if (loading) return; // Already fetching
+    console.log('[Messages] useEffect triggered:', {
+      participants,
+      hasConversation: !!conversation,
+      loading,
+      userId: payload?.userId
+    });
+
+    if (!participants || participants.length < 2) {
+      console.log('[Messages] No participants or insufficient participants');
+      return;
+    }
+    if (conversation) {
+      console.log('[Messages] Conversation already exists');
+      return; // Already have conversation
+    }
+    if (loading) {
+      console.log('[Messages] Already loading');
+      return; // Already fetching
+    }
+
+    // Check if user is authenticated
+    if (!payload?.userId) {
+      console.error('[Messages] User not authenticated');
+      setModerationError('Vui lòng đăng nhập để sử dụng tính năng chat');
+      return;
+    }
 
     const fetchOrCreateConversation = async () => {
       try {
+        console.log('[Messages] Starting to fetch/create conversation...');
         setLoading(true);
 
         // Create or get existing conversation
@@ -84,24 +108,32 @@ export function Messages({
           participants: participants
         });
 
+        console.log('[Messages] Conversation response:', response.data);
         setConversation(response.data.data);
 
         // Fetch messages for this conversation
         const messagesRes = await api.get(
           `/api/chats/conversations/${response.data.data._id}/messages`
         );
+        console.log('[Messages] Messages response:', messagesRes.data);
         setMessages(messagesRes.data.data);
-      } catch (error) {
-        console.error('Failed to create/fetch conversation:', error);
-        setModerationError('Không thể tạo cuộc trò chuyện. Vui lòng thử lại.');
-        setTimeout(() => setModerationError(null), 3000);
+      } catch (error: any) {
+        console.error('[Messages] Failed to create/fetch conversation:', error);
+
+        if (error.response?.status === 401) {
+          setModerationError('Phiên đăng nhập đã hết hạn. Vui lòng đăng nhập lại.');
+        } else {
+          setModerationError('Không thể tạo cuộc trò chuyện. Vui lòng thử lại.');
+        }
+
+        setTimeout(() => setModerationError(null), 5000);
       } finally {
         setLoading(false);
       }
     };
 
     fetchOrCreateConversation();
-  }, [participants, conversation, loading, setConversation, setMessages]);
+  }, [participants, conversation, loading, setConversation, setMessages, payload]);
 
   // Lắng nghe socket events
   useEffect(() => {
@@ -235,7 +267,7 @@ export function Messages({
     try {
       const token = localStorage.getItem('token');
       const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:8080';
-      const response = await fetch(`${apiUrl}/uploads/chat-files`, {
+      const response = await fetch(`${apiUrl}/api/upload/chat-file`, {
         method: 'POST',
         headers: {
           Authorization: `Bearer ${token}`,
@@ -328,8 +360,9 @@ export function Messages({
     }, 1000);
   };
 
-  // Show loading while fetching conversation
-  if (loading) {
+
+  // Show loading while fetching conversation (only if authenticated)
+  if (loading && payload?.userId) {
     return (
       <div className="flex items-center justify-center h-full p-8">
         <div className="flex flex-col items-center gap-4">
@@ -342,6 +375,11 @@ export function Messages({
 
   // Only show empty message if no participants and no conversation
   if (!conversation && (!participants || participants.length < 2)) {
+    return <EmptyMessage />;
+  }
+
+  // If we have participants but user is not authenticated, show empty with error
+  if (participants && participants.length >= 2 && !payload?.userId) {
     return <EmptyMessage />;
   }
 
