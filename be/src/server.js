@@ -24,6 +24,7 @@ const orderRoutes = require("./routes/orders");
 const searchRoutes = require("./routes/search");
 const addressRoutes = require("./routes/addressRoute");
 const watchlistRoutes = require("./routes/watchlistRoute");
+const cartRoutes = require("./routes/cartRoute");
 const User = require("./models/User");
 
 // Passport config (sau khi dotenv.config())
@@ -70,6 +71,7 @@ app.use("/api/orders", orderRoutes);
 app.use("/api/search", searchRoutes);
 app.use("/api/addresses", addressRoutes);
 app.use("/api/watchlist", watchlistRoutes);
+app.use("/api/cart", cartRoutes);
 
 // Chat routes
 const chatRoutes = require("./routes/chats");

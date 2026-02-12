@@ -19,6 +19,7 @@ const productSchema = new mongoose.Schema(
       ref: "Category",
       index: true,
     },
+    stock: { type: Number, default: 0 }, // Stock/inventory
     quantity: { type: Number, default: 0 }, // Stock/inventory
     condition: { type: String, default: "" },
     status: { type: String, default: "available" },

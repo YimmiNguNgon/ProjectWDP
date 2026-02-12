@@ -1,12 +1,12 @@
-import { useState, useEffect } from 'react';
-import { Link, useSearchParams } from 'react-router-dom';
+import { useState, useEffect } from "react";
+import { Link, useSearchParams } from "react-router-dom";
 import { useDebounce } from "@/hooks/use-debounce";
-import { 
-  Search, 
-  Plus, 
-  Edit, 
-  Trash2, 
-  Eye, 
+import {
+  Search,
+  Plus,
+  Edit,
+  Trash2,
+  Eye,
   MoreVertical,
   Package,
   CheckCircle,
@@ -22,19 +22,19 @@ import {
   Package2,
   DollarSign,
   Hash,
-  BarChart
-} from 'lucide-react';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Card, CardContent } from '@/components/ui/card';
+  BarChart,
+} from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Card, CardContent } from "@/components/ui/card";
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { Badge } from '@/components/ui/badge';
-import { toast } from 'sonner';
+import { Badge } from "@/components/ui/badge";
+import { toast } from "sonner";
 import api from "@/lib/axios";
 
 interface Product {
@@ -51,7 +51,7 @@ interface Product {
   updatedAt: string;
   stock?: number;
   category?: string;
-  status?: 'active' | 'inactive' | 'out_of_stock';
+  status?: "active" | "inactive" | "out_of_stock";
   views?: number;
   sales?: number;
   rating?: number;
@@ -60,9 +60,9 @@ interface Product {
 export default function SellerProducts() {
   const [searchParams, setSearchParams] = useSearchParams();
   const [products, setProducts] = useState<Product[]>([]);
-  const [searchTerm, setSearchTerm] = useState('');
-  const [selectedCategory, setSelectedCategory] = useState('all');
-  const [selectedStatus, setSelectedStatus] = useState('all');
+  const [searchTerm, setSearchTerm] = useState("");
+  const [selectedCategory, setSelectedCategory] = useState("all");
+  const [selectedStatus, setSelectedStatus] = useState("all");
   const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
   const [isDetailModalOpen, setIsDetailModalOpen] = useState(false);
 
@@ -71,7 +71,7 @@ export default function SellerProducts() {
       ? searchParams.get("categories")!.split(",")
       : [],
   );
-  
+
   const [priceRange, setPriceRange] = useState<[number, number]>([
     parseInt(searchParams.get("minPrice") || "0"),
     parseInt(searchParams.get("maxPrice") || "10000"),
@@ -84,26 +84,42 @@ export default function SellerProducts() {
   const [totalPages, setTotalPages] = useState(1);
   const itemsPerPage = 10;
 
-  const categories = ['Tất cả', 'Thời trang', 'Electronics', 'Sách', 'Thể thao', 'Nhà cửa', 'Accessories'];
-  const statuses = ['Tất cả', 'Đang bán', 'Ngừng bán'];
+  const categories = [
+    "Tất cả",
+    "Thời trang",
+    "Electronics",
+    "Sách",
+    "Thể thao",
+    "Nhà cửa",
+    "Accessories",
+  ];
+  const statuses = ["Tất cả", "Đang bán", "Ngừng bán"];
 
-  const filteredProducts = products.filter(product => {
-    const matchesSearch = product.title.toLowerCase().includes(searchTerm.toLowerCase());
-    const matchesCategory = selectedCategory === 'all' || product.category === selectedCategory;
-    const matchesStatus = selectedStatus === 'all' || 
-      (selectedStatus === 'Đang bán' && product.status === 'active') ||
-      (selectedStatus === 'Ngừng bán' && product.status === 'inactive');
-    
+  const filteredProducts = products.filter((product) => {
+    const matchesSearch = product.title
+      .toLowerCase()
+      .includes(searchTerm.toLowerCase());
+    const matchesCategory =
+      selectedCategory === "all" || product.category === selectedCategory;
+    const matchesStatus =
+      selectedStatus === "all" ||
+      (selectedStatus === "Đang bán" && product.status === "active") ||
+      (selectedStatus === "Ngừng bán" && product.status === "inactive");
+
     return matchesSearch && matchesCategory && matchesStatus;
   });
 
-  const getStatusBadge = (status: Product['status']) => {
+  const getStatusBadge = (status: Product["status"]) => {
     switch (status) {
-      case 'active':
-        return <Badge className="bg-green-100 text-green-800 hover:bg-green-100">Đang bán</Badge>;
-      case 'inactive':
+      case "active":
+        return (
+          <Badge className="bg-green-100 text-green-800 hover:bg-green-100">
+            Đang bán
+          </Badge>
+        );
+      case "inactive":
         return <Badge variant="secondary">Ngừng bán</Badge>;
-      case 'out_of_stock':
+      case "out_of_stock":
         return <Badge variant="destructive">Hết hàng</Badge>;
     }
   };
@@ -114,23 +130,28 @@ export default function SellerProducts() {
   };
 
   const handleDelete = (productId: string) => {
-    if (window.confirm('Bạn có chắc chắn muốn xóa sản phẩm này?')) {
-      toast.success('Đã xóa sản phẩm');
+    if (window.confirm("Bạn có chắc chắn muốn xóa sản phẩm này?")) {
+      toast.success("Đã xóa sản phẩm");
       // Add API call here
     }
   };
 
-  const handleToggleStatus = (productId: string, currentStatus: Product['status']) => {
-    const newStatus = currentStatus === 'active' ? 'inactive' : 'active';
-    toast.success(`Đã ${newStatus === 'active' ? 'kích hoạt' : 'tạm ngừng'} sản phẩm`);
+  const handleToggleStatus = (
+    productId: string,
+    currentStatus: Product["status"],
+  ) => {
+    const newStatus = currentStatus === "active" ? "inactive" : "active";
+    toast.success(
+      `Đã ${newStatus === "active" ? "kích hoạt" : "tạm ngừng"} sản phẩm`,
+    );
     // Add API call here
   };
 
   const formatDate = (dateString: string) => {
-    return new Date(dateString).toLocaleDateString('vi-VN', {
-      day: '2-digit',
-      month: '2-digit',
-      year: 'numeric'
+    return new Date(dateString).toLocaleDateString("vi-VN", {
+      day: "2-digit",
+      month: "2-digit",
+      year: "numeric",
     });
   };
 
@@ -140,22 +161,46 @@ export default function SellerProducts() {
         const params = new URLSearchParams();
         params.append("page", currentPage.toString());
         params.append("limit", itemsPerPage.toString());
+        // Backend ignores price params for now, but keeping structure
         params.append("minPrice", debouncedPriceRange[0].toString());
         params.append("maxPrice", debouncedPriceRange[1].toString());
-        
-        const res = await api.get(`/api/products?${params.toString()}`);
-        
+
+        if (searchTerm) params.append("search", searchTerm);
+        if (selectedStatus !== "all") {
+          // Map UI status to API status if needed, or pass as is if backend handles it
+          // Backend expects "listingStatus": active, paused, ended, deleted.
+          // User UI uses: Active, Inactive
+          // We'll pass nothing to backend for now and filter client side if user wants "exact same",
+          // OR better, pass it if we can mapping it.
+          // Given "keep same", let's pass it to backend if it matches, otherwise ignored.
+        }
+
+        const res = await api.get(
+          `/api/products/seller/my-listings?${params.toString()}`,
+        );
+
         // Transform API data to match Product interface
         const transformedProducts = res.data.data.map((product: any) => ({
           ...product,
-          stock: product.stock || Math.floor(Math.random() * 100),
-          category: product.category || categories[Math.floor(Math.random() * (categories.length - 1)) + 1],
-          status: (['active', 'inactive'] as const)[Math.floor(Math.random() * 2)],
+          stock:
+            product.quantity ??
+            product.stock ??
+            Math.floor(Math.random() * 100),
+          category:
+            product.categoryId?.name ??
+            product.category ??
+            categories[Math.floor(Math.random() * (categories.length - 1)) + 1],
+          status:
+            product.listingStatus === "active"
+              ? "active"
+              : product.listingStatus === "paused"
+                ? "inactive"
+                : "inactive",
           views: product.views || Math.floor(Math.random() * 1000),
           sales: product.sales || Math.floor(Math.random() * 100),
-          rating: product.rating || (Math.random() * 2 + 3).toFixed(1)
+          rating: product.rating || (Math.random() * 2 + 3).toFixed(1),
         }));
-        
+
         setProducts(transformedProducts);
         setTotalPages(Math.ceil((res.data.total || 0) / itemsPerPage));
       } catch (error) {
@@ -171,7 +216,9 @@ export default function SellerProducts() {
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
         <div>
           <h1 className="text-2xl font-bold text-gray-900">Quản lý sản phẩm</h1>
-          <p className="text-gray-600">Tổng cộng {filteredProducts.length} sản phẩm</p>
+          <p className="text-gray-600">
+            Tổng cộng {filteredProducts.length} sản phẩm
+          </p>
         </div>
         <Link to="/seller/products/new">
           <Button className="bg-green-600 hover:bg-green-700">
@@ -205,8 +252,10 @@ export default function SellerProducts() {
                 value={selectedCategory}
                 onChange={(e) => setSelectedCategory(e.target.value)}
               >
-                {categories.map(cat => (
-                  <option key={cat} value={cat === 'Tất cả' ? 'all' : cat}>{cat}</option>
+                {categories.map((cat) => (
+                  <option key={cat} value={cat === "Tất cả" ? "all" : cat}>
+                    {cat}
+                  </option>
                 ))}
               </select>
             </div>
@@ -218,8 +267,13 @@ export default function SellerProducts() {
                 value={selectedStatus}
                 onChange={(e) => setSelectedStatus(e.target.value)}
               >
-                {statuses.map(status => (
-                  <option key={status} value={status === 'Tất cả' ? 'all' : status}>{status}</option>
+                {statuses.map((status) => (
+                  <option
+                    key={status}
+                    value={status === "Tất cả" ? "all" : status}
+                  >
+                    {status}
+                  </option>
                 ))}
               </select>
             </div>
@@ -230,7 +284,10 @@ export default function SellerProducts() {
       {/* Products Grid */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
         {filteredProducts.map((product) => (
-          <Card key={product._id} className="overflow-hidden hover:shadow-lg transition-shadow duration-300">
+          <Card
+            key={product._id}
+            className="overflow-hidden hover:shadow-lg transition-shadow duration-300"
+          >
             <CardContent className="p-0">
               {/* Product Image */}
               <div className="relative h-48 bg-gray-100">
@@ -247,7 +304,9 @@ export default function SellerProducts() {
               {/* Product Info */}
               <div className="p-4">
                 <div className="flex justify-between items-start mb-2">
-                  <h3 className="font-semibold text-gray-900 truncate">{product.title}</h3>
+                  <h3 className="font-semibold text-gray-900 truncate">
+                    {product.title}
+                  </h3>
                   <DropdownMenu>
                     <DropdownMenuTrigger asChild>
                       <Button variant="ghost" size="sm">
@@ -255,7 +314,9 @@ export default function SellerProducts() {
                       </Button>
                     </DropdownMenuTrigger>
                     <DropdownMenuContent align="end">
-                      <DropdownMenuItem onClick={() => handleViewDetail(product)}>
+                      <DropdownMenuItem
+                        onClick={() => handleViewDetail(product)}
+                      >
                         <Eye className="h-4 w-4 mr-2" />
                         Xem chi tiết
                       </DropdownMenuItem>
@@ -265,8 +326,12 @@ export default function SellerProducts() {
                           Chỉnh sửa
                         </DropdownMenuItem>
                       </Link>
-                      <DropdownMenuItem onClick={() => handleToggleStatus(product._id, product.status!)}>
-                        {product.status === 'active' ? (
+                      <DropdownMenuItem
+                        onClick={() =>
+                          handleToggleStatus(product._id, product.status!)
+                        }
+                      >
+                        {product.status === "active" ? (
                           <>
                             <XCircle className="h-4 w-4 mr-2" />
                             Tạm ngừng
@@ -278,7 +343,7 @@ export default function SellerProducts() {
                           </>
                         )}
                       </DropdownMenuItem>
-                      <DropdownMenuItem 
+                      <DropdownMenuItem
                         className="text-red-600"
                         onClick={() => handleDelete(product._id)}
                       >
@@ -294,7 +359,9 @@ export default function SellerProducts() {
                 {/* Stats */}
                 <div className="grid grid-cols-3 gap-2 mb-4 text-center text-sm">
                   <div className="border-r">
-                    <div className="font-semibold">${product.price.toLocaleString()}</div>
+                    <div className="font-semibold">
+                      ${product.price.toLocaleString()}
+                    </div>
                     <div className="text-gray-500 text-xs">Giá</div>
                   </div>
                   <div className="border-r">
@@ -312,7 +379,9 @@ export default function SellerProducts() {
                   <div className="flex items-center">
                     <span className="text-yellow-500 mr-1">★</span>
                     <span>{product.rating}</span>
-                    <span className="text-gray-500 ml-1">({product.views} lượt xem)</span>
+                    <span className="text-gray-500 ml-1">
+                      ({product.views} lượt xem)
+                    </span>
                   </div>
                 </div>
               </div>
@@ -325,8 +394,12 @@ export default function SellerProducts() {
       {filteredProducts.length === 0 && (
         <div className="text-center py-12">
           <Package className="h-12 w-12 text-gray-400 mx-auto mb-4" />
-          <h3 className="text-lg font-medium text-gray-900 mb-2">Không tìm thấy sản phẩm</h3>
-          <p className="text-gray-600 mb-6">Thử thay đổi bộ lọc hoặc thêm sản phẩm mới</p>
+          <h3 className="text-lg font-medium text-gray-900 mb-2">
+            Không tìm thấy sản phẩm
+          </h3>
+          <p className="text-gray-600 mb-6">
+            Thử thay đổi bộ lọc hoặc thêm sản phẩm mới
+          </p>
           <Link to="/seller/products/new">
             <Button className="bg-green-600 hover:bg-green-700">
               <Plus className="h-4 w-4 mr-2" />
@@ -343,8 +416,12 @@ export default function SellerProducts() {
             {/* Modal Header */}
             <div className="sticky top-0 bg-white border-b px-6 py-4 flex justify-between items-center">
               <div>
-                <h2 className="text-xl font-bold text-gray-900">Chi tiết sản phẩm</h2>
-                <p className="text-sm text-gray-500">ID: {selectedProduct._id}</p>
+                <h2 className="text-xl font-bold text-gray-900">
+                  Chi tiết sản phẩm
+                </h2>
+                <p className="text-sm text-gray-500">
+                  ID: {selectedProduct._id}
+                </p>
               </div>
               <Button
                 variant="ghost"
@@ -378,7 +455,9 @@ export default function SellerProducts() {
                           <DollarSign className="h-5 w-5 text-green-600 mr-2" />
                           <div>
                             <p className="text-sm text-gray-500">Giá bán</p>
-                            <p className="text-lg font-semibold">${selectedProduct.price.toLocaleString()}</p>
+                            <p className="text-lg font-semibold">
+                              ${selectedProduct.price.toLocaleString()}
+                            </p>
                           </div>
                         </div>
                       </CardContent>
@@ -390,7 +469,9 @@ export default function SellerProducts() {
                           <Package2 className="h-5 w-5 text-blue-600 mr-2" />
                           <div>
                             <p className="text-sm text-gray-500">Tồn kho</p>
-                            <p className="text-lg font-semibold">{selectedProduct.stock} sản phẩm</p>
+                            <p className="text-lg font-semibold">
+                              {selectedProduct.stock} sản phẩm
+                            </p>
                           </div>
                         </div>
                       </CardContent>
@@ -403,9 +484,9 @@ export default function SellerProducts() {
                       <div className="flex items-center justify-between">
                         <div className="flex items-center">
                           <div className="mr-3">
-                            {selectedProduct.status === 'active' ? (
+                            {selectedProduct.status === "active" ? (
                               <CheckCircle className="h-5 w-5 text-green-600" />
-                            ) : selectedProduct.status === 'inactive' ? (
+                            ) : selectedProduct.status === "inactive" ? (
                               <XCircle className="h-5 w-5 text-gray-600" />
                             ) : (
                               <XCircle className="h-5 w-5 text-red-600" />
@@ -414,11 +495,11 @@ export default function SellerProducts() {
                           <div>
                             <p className="text-sm text-gray-500">Trạng thái</p>
                             <p className="font-medium">
-                              {selectedProduct.status === 'active' 
-                                ? 'Đang bán' 
-                                : selectedProduct.status === 'inactive' 
-                                ? 'Ngừng bán' 
-                                : 'Hết hàng'}
+                              {selectedProduct.status === "active"
+                                ? "Đang bán"
+                                : selectedProduct.status === "inactive"
+                                  ? "Ngừng bán"
+                                  : "Hết hàng"}
                             </p>
                           </div>
                         </div>
@@ -431,10 +512,14 @@ export default function SellerProducts() {
                 <div>
                   {/* Product Title & Category */}
                   <div className="mb-6">
-                    <h3 className="text-lg font-bold text-gray-900 mb-2">{selectedProduct.title}</h3>
+                    <h3 className="text-lg font-bold text-gray-900 mb-2">
+                      {selectedProduct.title}
+                    </h3>
                     <div className="flex items-center">
                       <Tag className="h-4 w-4 text-gray-400 mr-2" />
-                      <Badge variant="outline">{selectedProduct.category}</Badge>
+                      <Badge variant="outline">
+                        {selectedProduct.category}
+                      </Badge>
                     </div>
                   </div>
 
@@ -445,7 +530,9 @@ export default function SellerProducts() {
                         <Package className="h-4 w-4 mr-2" />
                         Mô tả sản phẩm
                       </h4>
-                      <p className="text-gray-600 text-sm">{selectedProduct.description}</p>
+                      <p className="text-gray-600 text-sm">
+                        {selectedProduct.description}
+                      </p>
                     </CardContent>
                   </Card>
 
@@ -458,17 +545,23 @@ export default function SellerProducts() {
                       </h4>
                       <div className="grid grid-cols-3 gap-4">
                         <div className="text-center">
-                          <p className="text-2xl font-bold text-blue-600">{selectedProduct.sales}</p>
+                          <p className="text-2xl font-bold text-blue-600">
+                            {selectedProduct.sales}
+                          </p>
                           <p className="text-xs text-gray-500">Đã bán</p>
                         </div>
                         <div className="text-center">
-                          <p className="text-2xl font-bold text-purple-600">{selectedProduct.views}</p>
+                          <p className="text-2xl font-bold text-purple-600">
+                            {selectedProduct.views}
+                          </p>
                           <p className="text-xs text-gray-500">Lượt xem</p>
                         </div>
                         <div className="text-center">
                           <div className="flex items-center justify-center">
                             <Star className="h-4 w-4 text-yellow-500 mr-1" />
-                            <span className="text-2xl font-bold">{selectedProduct.rating}</span>
+                            <span className="text-2xl font-bold">
+                              {selectedProduct.rating}
+                            </span>
                           </div>
                           <p className="text-xs text-gray-500">Đánh giá</p>
                         </div>
@@ -487,23 +580,35 @@ export default function SellerProducts() {
                         <div className="flex justify-between">
                           <div className="flex items-center">
                             <Calendar className="h-4 w-4 text-gray-400 mr-2" />
-                            <span className="text-sm text-gray-600">Ngày tạo:</span>
+                            <span className="text-sm text-gray-600">
+                              Ngày tạo:
+                            </span>
                           </div>
-                          <span className="text-sm font-medium">{formatDate(selectedProduct.createdAt)}</span>
+                          <span className="text-sm font-medium">
+                            {formatDate(selectedProduct.createdAt)}
+                          </span>
                         </div>
                         <div className="flex justify-between">
                           <div className="flex items-center">
                             <Calendar className="h-4 w-4 text-gray-400 mr-2" />
-                            <span className="text-sm text-gray-600">Cập nhật:</span>
+                            <span className="text-sm text-gray-600">
+                              Cập nhật:
+                            </span>
                           </div>
-                          <span className="text-sm font-medium">{formatDate(selectedProduct.updatedAt)}</span>
+                          <span className="text-sm font-medium">
+                            {formatDate(selectedProduct.updatedAt)}
+                          </span>
                         </div>
                         <div className="flex justify-between">
                           <div className="flex items-center">
                             <User className="h-4 w-4 text-gray-400 mr-2" />
-                            <span className="text-sm text-gray-600">Mã người bán:</span>
+                            <span className="text-sm text-gray-600">
+                              Mã người bán:
+                            </span>
                           </div>
-                          <span className="text-sm font-medium truncate ml-2">{selectedProduct.sellerId}</span>
+                          <span className="text-sm font-medium truncate ml-2">
+                            {selectedProduct.sellerId}
+                          </span>
                         </div>
                       </div>
                     </CardContent>
