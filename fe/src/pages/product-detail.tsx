@@ -27,12 +27,13 @@ import {
 } from "@/hooks/use-message";
 import { useAuth } from "@/hooks/use-auth";
 import api from "@/lib/axios";
-import { ChevronRight, Minus, Plus, Heart } from "lucide-react";
+import { ChevronRight, Minus, Plus, Heart, UserPlus, UserCheck } from "lucide-react";
 import { useEffect, useState } from "react";
 import { toggleWatchlist, getUserWatchlist } from "@/api/watchlist";
 import { cn } from "@/lib/utils";
 import { Link, useParams } from "react-router-dom";
 import { toast } from "sonner";
+import axios from "@/lib/axios";
 
 export interface ProductDetail {
   _id: string;
@@ -59,6 +60,7 @@ export default function ProductDetailPage() {
   const [quantity, setQuantity] = useState(1);
   const [isWatched, setIsWatched] = useState(false);
   const [watchCount, setWatchCount] = useState(0);
+  const [isFollowingSeller, setIsFollowingSeller] = useState(false);
 
   // Chat dialog states
   const [open, setOpen] = useState(false);
@@ -87,7 +89,41 @@ export default function ProductDetailPage() {
         setIsWatched(watched);
       })
       .catch((err) => console.error(err));
-  }, [productId]);
+
+    // Check if following seller
+    if (product?.sellerId) {
+      axios
+        .get("/api/saved-sellers")
+        .then((res) => {
+          const savedSellers = res.data.data || [];
+          const isFollowing = savedSellers.some(
+            (seller: any) => seller._id === product.sellerId
+          );
+          setIsFollowingSeller(isFollowing);
+        })
+        .catch((err) => console.error(err));
+    }
+  }, [productId, product?.sellerId]);
+
+  const handleToggleFollowSeller = async () => {
+    if (!product) return;
+    try {
+      if (isFollowingSeller) {
+        // Unfollow
+        await axios.delete(`/api/saved-sellers/${product.sellerId}`);
+        setIsFollowingSeller(false);
+        toast.success("Unfollowed seller");
+      } else {
+        // Follow
+        await axios.post("/api/saved-sellers", { sellerId: product.sellerId });
+        setIsFollowingSeller(true);
+        toast.success("Following seller");
+      }
+    } catch (err: any) {
+      console.error("Failed to toggle follow seller:", err);
+      toast.error(err.response?.data?.message || "Failed to update follow status");
+    }
+  };
 
   const handleToggleWatchlist = async () => {
     if (!product) return;
@@ -235,7 +271,25 @@ export default function ProductDetailPage() {
                 </Dialog>
               </ItemDescription>
             </ItemContent>
-            <ItemActions>
+            <ItemActions className="flex gap-2">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={handleToggleFollowSeller}
+                className="gap-2"
+              >
+                {isFollowingSeller ? (
+                  <>
+                    <UserCheck className="h-4 w-4" />
+                    Following
+                  </>
+                ) : (
+                  <>
+                    <UserPlus className="h-4 w-4" />
+                    Follow Seller
+                  </>
+                )}
+              </Button>
               <Link to={"#"} className="hover:bg-transparent">
                 <ChevronRight className="size-6" />
               </Link>

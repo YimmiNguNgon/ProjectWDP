@@ -44,6 +44,8 @@ import SellerFeedbackPage from "@/pages/seller/seller-feedback";
 import FeedbackRevisionRequestPage from "@/pages/seller/feedback-revision-request";
 import SellerFeedbackRequestsPage from "@/pages/seller/feedback-requests";
 import BuyerFeedbackRequestsPage from "@/pages/buyer/feedback-requests";
+import SavedSearchesPage from "@/pages/saved-searches-page";
+import SavedSellersPage from "@/pages/saved-sellers-page";
 
 // Placeholder components for admin pages
 const AdminComplaints = () => (
@@ -110,6 +112,14 @@ export const AppRouter = () => {
             {
               path: "feedback-requests",
               element: <BuyerFeedbackRequestsPage />,
+            },
+            {
+              path: "saved-searches",
+              element: <SavedSearchesPage />,
+            },
+            {
+              path: "saved-sellers",
+              element: <SavedSellersPage />,
             },
           ],
         },

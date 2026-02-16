@@ -73,6 +73,12 @@ app.use("/api/addresses", addressRoutes);
 app.use("/api/watchlist", watchlistRoutes);
 app.use("/api/cart", cartRoutes);
 
+// Saved searches and sellers routes
+const savedSearchRoutes = require("./routes/savedSearchRoutes");
+const savedSellerRoutes = require("./routes/savedSellerRoutes");
+app.use("/api/saved-searches", savedSearchRoutes);
+app.use("/api/saved-sellers", savedSellerRoutes);
+
 // Chat routes
 const chatRoutes = require("./routes/chats");
 const chatHistoryRoutes = require("./routes/chatHistory");

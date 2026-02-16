@@ -24,7 +24,7 @@ import { Pagination } from "@/components/pagination";
 import { useDebounce } from "@/hooks/use-debounce";
 import api from "@/lib/axios";
 import { cn } from "@/lib/utils";
-import { Heart, ShoppingCart, Star, Package } from "lucide-react";
+import { Heart, ShoppingCart, Star, Package, Bookmark } from "lucide-react";
 import React, { useEffect } from "react";
 import { Link, useSearchParams } from "react-router-dom";
 import {
@@ -35,6 +35,7 @@ import {
 } from "@/components/promotion/promotion-display";
 import { toggleWatchlist, getUserWatchlist } from "@/api/watchlist";
 import { toast } from "sonner";
+import { SaveSearchDialog } from "@/components/dialogs/save-search-dialog";
 
 interface Category {
   _id: string;
@@ -79,6 +80,7 @@ export default function ProductsPage() {
   const [watchedProductIds, setWatchedProductIds] = React.useState<Set<string>>(
     new Set(),
   );
+  const [saveSearchDialogOpen, setSaveSearchDialogOpen] = React.useState(false);
 
   // Get search query from URL params (read-only)
   const searchQuery = searchParams.get("search") || "";
@@ -341,9 +343,8 @@ export default function ProductsPage() {
                       setCurrentPage(1);
                       setSelectedRating(selectedRating === rating ? 0 : rating);
                     }}
-                    className={`flex w-full items-center gap-2 rounded py-1 px-2 text-sm transition-colors hover:bg-muted ${
-                      selectedRating === rating ? "bg-muted font-semibold" : ""
-                    }`}
+                    className={`flex w-full items-center gap-2 rounded py-1 px-2 text-sm transition-colors hover:bg-muted ${selectedRating === rating ? "bg-muted font-semibold" : ""
+                      }`}
                   >
                     {[...Array(rating)].map((_, i) => (
                       <Star
@@ -371,6 +372,16 @@ export default function ProductsPage() {
             <h1 className="text-3xl font-bold text-foreground">
               {searchQuery ? `Search Results for "${searchQuery}"` : "Products"}
             </h1>
+            {searchQuery && (
+              <Button
+                variant="outline"
+                onClick={() => setSaveSearchDialogOpen(true)}
+                className="gap-2"
+              >
+                <Bookmark className="h-4 w-4" />
+                Save Search
+              </Button>
+            )}
           </div>
 
           {/* Empty State */}
@@ -427,11 +438,10 @@ export default function ProductsPage() {
                           {[...Array(5)].map((_, i) => (
                             <Star
                               key={i}
-                              className={`h-3.5 w-3.5 ${
-                                i < Math.round(product.averageRating)
-                                  ? "fill-yellow-400 text-yellow-400"
-                                  : "text-muted-foreground"
-                              }`}
+                              className={`h-3.5 w-3.5 ${i < Math.round(product.averageRating)
+                                ? "fill-yellow-400 text-yellow-400"
+                                : "text-muted-foreground"
+                                }`}
                             />
                           ))}
                         </div>
@@ -497,6 +507,19 @@ export default function ProductsPage() {
           )}
         </div>
       </SidebarInset>
+
+      {/* Save Search Dialog */}
+      <SaveSearchDialog
+        open={saveSearchDialogOpen}
+        onOpenChange={setSaveSearchDialogOpen}
+        searchQuery={searchQuery}
+        filters={{
+          categories: selectedCategories,
+          minPrice: priceRange[0],
+          maxPrice: priceRange[1],
+          rating: selectedRating,
+        }}
+      />
     </SidebarProvider>
   );
 }

@@ -8,21 +8,25 @@ import BuyingSidebar from "./BuyingSidebar";
 export default function MyEbayLayout() {
   const { pathname } = useLocation();
   const paths = pathname.split("/");
-  // Handle case where path is just /my-ebay, defaulting to activity
-  const current =
-    paths.length > 2 && paths.includes("my-ebay")
+
+  // Map routes to tabs
+  // saved-searches and saved-sellers belong to 'activity' (Buying) tab
+  const getTabFromPath = () => {
+    if (paths.includes("saved-searches") || paths.includes("saved-sellers")) {
+      return "activity";
+    }
+    // Handle case where path is just /my-ebay, defaulting to activity
+    return paths.length > 2 && paths.includes("my-ebay")
       ? paths[paths.indexOf("my-ebay") + 1]
       : "activity";
+  };
 
-  const [value, setValue] = React.useState(current);
+  const [value, setValue] = React.useState(getTabFromPath());
   const navigate = useNavigate();
 
   React.useEffect(() => {
     // Sync current tab with URL path segment if it changes
-    const newTab =
-      paths.length > 2 && paths.includes("my-ebay")
-        ? paths[paths.indexOf("my-ebay") + 1]
-        : "activity";
+    const newTab = getTabFromPath();
 
     if (newTab !== value) {
       setValue(newTab);

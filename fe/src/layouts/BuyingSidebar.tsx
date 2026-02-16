@@ -49,14 +49,14 @@ export default function BuyingSidebar() {
           Watchlist
         </Link>
         <Link
-          to="/coming-soon"
-          className={linkClass("/coming-soon/saved-searches")}
+          to="/my-ebay/saved-searches"
+          className={linkClass("/my-ebay/saved-searches")}
         >
           Saved searches
         </Link>
         <Link
-          to="/coming-soon"
-          className={linkClass("/coming-soon/saved-sellers")}
+          to="/my-ebay/saved-sellers"
+          className={linkClass("/my-ebay/saved-sellers")}
         >
           Saved sellers
         </Link>
