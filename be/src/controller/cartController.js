@@ -18,7 +18,9 @@ exports.getMyCart = async (req, res, next) => {
       .populate("seller", "name")
       .lean();
 
-    return res.status(204).json({ cart, items });
+    return res
+      .status(200)
+      .json({ message: "Get Cart", cart: { ...cart, items } });
   } catch (error) {
     next(error);
   }
@@ -56,9 +58,19 @@ exports.addToCart = async (req, res, next) => {
     });
 
     if (item) {
+      if (product.stock < item.quantity + quantity) {
+        return res
+          .status(400)
+          .json({ message: "Product stock is not enough to add." });
+      }
       item.quantity += quantity;
       await item.save();
     } else {
+      if (product.stock < quantity) {
+        return res
+          .status(400)
+          .json({ message: "Product stock is not enough to add." });
+      }
       await CartItem.create({
         cart: cart._id,
         product: product._id,

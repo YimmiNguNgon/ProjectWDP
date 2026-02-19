@@ -46,6 +46,7 @@ import SellerFeedbackRequestsPage from "@/pages/seller/feedback-requests";
 import BuyerFeedbackRequestsPage from "@/pages/buyer/feedback-requests";
 import SavedSearchesPage from "@/pages/saved-searches-page";
 import SavedSellersPage from "@/pages/saved-sellers-page";
+import CartPage from "@/pages/buyer/cart";
 
 // Placeholder components for admin pages
 const AdminComplaints = () => (
@@ -83,6 +84,10 @@ export const AppRouter = () => {
             //   path: "messages",
             //   element: <MessagesPage />,
             // },
+            {
+              path: "/cart",
+              element: <CartPage />,
+            },
           ],
         },
         {

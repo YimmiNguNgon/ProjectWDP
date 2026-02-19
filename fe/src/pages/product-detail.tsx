@@ -27,13 +27,21 @@ import {
 } from "@/hooks/use-message";
 import { useAuth } from "@/hooks/use-auth";
 import api from "@/lib/axios";
-import { ChevronRight, Minus, Plus, Heart, UserPlus, UserCheck } from "lucide-react";
+import {
+  ChevronRight,
+  Minus,
+  Plus,
+  Heart,
+  UserPlus,
+  UserCheck,
+} from "lucide-react";
 import { useEffect, useState } from "react";
 import { toggleWatchlist, getUserWatchlist } from "@/api/watchlist";
 import { cn } from "@/lib/utils";
 import { Link, useParams } from "react-router-dom";
 import { toast } from "sonner";
 import axios from "@/lib/axios";
+import { useCart } from "@/contexts/cart-context";
 
 export interface ProductDetail {
   _id: string;
@@ -55,6 +63,7 @@ export interface ProductDetail {
 
 export default function ProductDetailPage() {
   const { productId } = useParams();
+  const { addToCart } = useCart();
 
   const [product, setProduct] = useState<ProductDetail>();
   const [quantity, setQuantity] = useState(1);
@@ -97,7 +106,7 @@ export default function ProductDetailPage() {
         .then((res) => {
           const savedSellers = res.data.data || [];
           const isFollowing = savedSellers.some(
-            (seller: any) => seller._id === product.sellerId
+            (seller: any) => seller._id === product.sellerId,
           );
           setIsFollowingSeller(isFollowing);
         })
@@ -121,7 +130,9 @@ export default function ProductDetailPage() {
       }
     } catch (err: any) {
       console.error("Failed to toggle follow seller:", err);
-      toast.error(err.response?.data?.message || "Failed to update follow status");
+      toast.error(
+        err.response?.data?.message || "Failed to update follow status",
+      );
     }
   };
 
@@ -186,6 +197,11 @@ export default function ProductDetailPage() {
       console.error("Failed to create order:", err);
       toast.error(err.response?.data?.message || "Failed to create order");
     }
+  };
+
+  const handleAddToCart = async () => {
+    if (!product) return;
+    await addToCart(product._id, quantity);
   };
 
   return (
@@ -338,12 +354,17 @@ export default function ProductDetailPage() {
           <Button
             variant={"default"}
             size={"lg"}
-            className="w-full"
+            className="w-full cursor-pointer"
             onClick={handleBuyNow}
           >
             Buy it Now
           </Button>
-          <Button variant={"outline"} size={"lg"} className="w-full">
+          <Button
+            variant={"outline"}
+            size={"lg"}
+            className="w-full cursor-pointer"
+            onClick={handleAddToCart}
+          >
             Add to Cart
           </Button>
           <Button

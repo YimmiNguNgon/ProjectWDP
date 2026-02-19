@@ -36,6 +36,7 @@ import {
 import { toggleWatchlist, getUserWatchlist } from "@/api/watchlist";
 import { toast } from "sonner";
 import { SaveSearchDialog } from "@/components/dialogs/save-search-dialog";
+import AddToCartDialog from "@/components/cart/add-to-cart-dialog";
 
 interface Category {
   _id: string;
@@ -51,8 +52,10 @@ export interface Product {
   sellerId: string;
   title: string;
   images: string[];
+  image: string;
   description: string;
   price: number;
+  stock: number;
   quantity: number;
   averageRating: number;
   ratingCount: number;
@@ -74,6 +77,8 @@ export interface Product {
 }
 
 export default function ProductsPage() {
+  const [openAddToCartDialog, setOpenAddToCartDialog] = React.useState(false);
+  const [selectedProduct, setSelectedProduct] = React.useState<Product>();
   const [searchParams, setSearchParams] = useSearchParams();
   const [products, setProducts] = React.useState<Product[]>([]);
   const [categories, setCategories] = React.useState<Category[]>([]);
@@ -268,6 +273,11 @@ export default function ProductsPage() {
     }
   };
 
+  const handleOpenDialog = (product: Product) => {
+    setSelectedProduct(product);
+    setOpenAddToCartDialog(true);
+  };
+
   return (
     <SidebarProvider className="gap-4 min-h-fit">
       <Sidebar
@@ -343,8 +353,9 @@ export default function ProductsPage() {
                       setCurrentPage(1);
                       setSelectedRating(selectedRating === rating ? 0 : rating);
                     }}
-                    className={`flex w-full items-center gap-2 rounded py-1 px-2 text-sm transition-colors hover:bg-muted ${selectedRating === rating ? "bg-muted font-semibold" : ""
-                      }`}
+                    className={`flex w-full items-center gap-2 rounded py-1 px-2 text-sm transition-colors hover:bg-muted ${
+                      selectedRating === rating ? "bg-muted font-semibold" : ""
+                    }`}
                   >
                     {[...Array(rating)].map((_, i) => (
                       <Star
@@ -438,10 +449,11 @@ export default function ProductsPage() {
                           {[...Array(5)].map((_, i) => (
                             <Star
                               key={i}
-                              className={`h-3.5 w-3.5 ${i < Math.round(product.averageRating)
-                                ? "fill-yellow-400 text-yellow-400"
-                                : "text-muted-foreground"
-                                }`}
+                              className={`h-3.5 w-3.5 ${
+                                i < Math.round(product.averageRating)
+                                  ? "fill-yellow-400 text-yellow-400"
+                                  : "text-muted-foreground"
+                              }`}
                             />
                           ))}
                         </div>
@@ -484,7 +496,12 @@ export default function ProductsPage() {
                                 )}
                               />
                             </Button>
-                            <Button size="icon-sm" variant={"default"}>
+                            <Button
+                              size="icon-sm"
+                              variant={"default"}
+                              className="cursor-pointer"
+                              onClick={() => handleOpenDialog(product)}
+                            >
                               <ShoppingCart className="h-4 w-4" />
                             </Button>
                           </div>
@@ -519,6 +536,12 @@ export default function ProductsPage() {
           maxPrice: priceRange[1],
           rating: selectedRating,
         }}
+      />
+
+      <AddToCartDialog
+        open={openAddToCartDialog}
+        onOpenChange={setOpenAddToCartDialog}
+        product={selectedProduct || undefined}
       />
     </SidebarProvider>
   );

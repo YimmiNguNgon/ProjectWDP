@@ -13,14 +13,17 @@ import api, { setAuthToken } from "./lib/axios.ts";
 import { Toaster } from "./components/ui/sonner.tsx";
 import { jwtDecode } from "jwt-decode";
 import { toast } from "sonner";
+import { CartProvider } from "./contexts/cart-context";
 
 createRoot(document.getElementById("root")!).render(
   <StrictMode>
     <AuthProvider>
-      <BrowserRouter>
-        <AppRouter />
-      </BrowserRouter>
-      <Toaster />
+      <CartProvider>
+        <BrowserRouter>
+          <AppRouter />
+        </BrowserRouter>
+        <Toaster />
+      </CartProvider>
     </AuthProvider>
   </StrictMode>,
 );
