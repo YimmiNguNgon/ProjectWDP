@@ -18,6 +18,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { toast } from "sonner";
 import { WatchlistPreview } from "@/components/watchlist/watchlist-preview";
+import CartDropdown from "@/components/cart/cart-dropdown";
 
 const LEFT_NAV_ITEMS = [
   { name: "Browse Products", to: "/products" },
@@ -27,11 +28,10 @@ const LEFT_NAV_ITEMS = [
   { name: "Help & Contact", to: "#" },
 ] as const;
 
-
 const RIGHT_NAV_ITEMS = [
   { name: "Ship to", to: "#" },
   { name: "Sell", to: "#" },
-]
+];
 
 export function Protected() {
   const { user } = useAuth();
@@ -110,12 +110,11 @@ export function MainLayout() {
               >
                 <Bell className="size-4" />
               </button>
-              <button
-                onClick={() => toast.info("Shopping cart coming soon!")}
-                className="hover:opacity-70"
-              >
-                <ShoppingCart className="size-4" />
-              </button>
+              <CartDropdown>
+                <button className="hover:opacity-70 cursor-pointer">
+                  <ShoppingCart className="size-4" />
+                </button>
+              </CartDropdown>
             </div>
           </Container>
         </section>
@@ -342,19 +341,29 @@ function MyEbayMenu() {
       <DropdownMenuTrigger className="font-medium cursor-pointer text-sm outline-none">
         My eBay
       </DropdownMenuTrigger>
-      <DropdownMenuContent className="w-48 max-h-96 overflow-y-auto" align="end">
+      <DropdownMenuContent
+        className="w-48 max-h-96 overflow-y-auto"
+        align="end"
+      >
         {MY_EBAY_ITEMS.map((item, index) => {
           // Section divider
           if (item.disabled) {
             return (
-              <div key={index} className="px-2 py-1.5 text-xs font-semibold text-gray-500">
-                {item.label.replace(/---/g, '').trim()}
+              <div
+                key={index}
+                className="px-2 py-1.5 text-xs font-semibold text-gray-500"
+              >
+                {item.label.replace(/---/g, "").trim()}
               </div>
             );
           }
 
           return (
-            <DropdownMenuItem key={item.label} asChild className="cursor-pointer">
+            <DropdownMenuItem
+              key={item.label}
+              asChild
+              className="cursor-pointer"
+            >
               <Link
                 to={item.to.startsWith("/") ? item.to : `/my-ebay/${item.to}`}
               >
