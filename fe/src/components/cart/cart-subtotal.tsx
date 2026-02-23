@@ -1,11 +1,19 @@
 import { useCart } from "@/contexts/cart-context";
 import { Button } from "../ui/button";
 
-const CartSubtotal = () => {
+interface CartSubtotalProps {
+  itemCount?: number;
+  totalItemPrice?: number;
+}
+
+const CartSubtotal = ({
+  itemCount: propsItemCount,
+  totalItemPrice: propsTotalItemPrice,
+}: CartSubtotalProps) => {
   const { cart } = useCart();
 
-  const itemCount = cart?.totalItems || 0;
-  const totalItemPrice = cart?.totalPrice || 0;
+  const itemCount = propsItemCount ?? cart?.totalItems ?? 0;
+  const totalItemPrice = propsTotalItemPrice ?? cart?.totalPrice ?? 0;
 
   const subtotal = totalItemPrice + 0 + 1000;
   return (
@@ -28,7 +36,7 @@ const CartSubtotal = () => {
           <p>$1000</p>
         </div>
       </div>
-      <div className="border-1 border-gray-300 my-6"></div>
+      <div className="border border-gray-300 my-6"></div>
       <div className="flex flex-col gap-4">
         <div className="flex items-center justify-between font-semibold text-xl">
           <p>Subtotal:</p>
