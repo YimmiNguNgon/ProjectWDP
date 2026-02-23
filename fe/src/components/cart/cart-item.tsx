@@ -6,11 +6,13 @@ import { Link } from "react-router-dom";
 
 interface CartItemProps {
   item: CartItemType;
+  isSelected?: boolean;
+  onToggle?: () => void;
 }
 
 const formatVND = (amount: number) => amount.toLocaleString("vi-VN") + " VND";
 
-export const CartItem = ({ item }: CartItemProps) => {
+export const CartItem = ({ item, isSelected, onToggle }: CartItemProps) => {
   const { updateQuantity, removeFromCart } = useCart();
   const [quantity, setQuantity] = useState(item.quantity);
 
@@ -18,16 +20,12 @@ export const CartItem = ({ item }: CartItemProps) => {
   const sellerName = item.seller?.name || "Unknown Seller";
   // Mock data for missing fields
   const sellerFeedback = 98;
-  const description = item.product.description; // This could come from product description or attributes if available
-  const shipping = 0; // Free shipping for now or calculate
-  const shippingVND = 0;
-  const shippingMethod = "Standard Shipping";
-  const inCartCount = 1; // Mock
+  const description = item.product.description;
 
   const price = item.priceSnapShot;
   const priceVND = price * 25400; // Approx rate
 
-  const imageUrl = item.product.images || ""; // Use the string directly as per Step 102
+  const imageUrl = item.product.images || "";
 
   const handleDecrease = () => {
     if (quantity > 1) {
@@ -35,8 +33,6 @@ export const CartItem = ({ item }: CartItemProps) => {
       setQuantity(newQty);
       updateQuantity(item._id, "decrease");
     } else {
-      // If quantity is 1 and user clicks minus, maybe ask to remove?
-      // Current UI has specific delete button, so maybe just do nothing or remove?
       removeFromCart(item._id);
     }
   };
@@ -54,9 +50,14 @@ export const CartItem = ({ item }: CartItemProps) => {
   };
 
   return (
-    <div className="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden font-sans w-full mb-4">
+    <div
+      onClick={onToggle}
+      className={`bg-white rounded-xl border-2 transition-all duration-200 shadow-sm overflow-hidden font-sans w-full mb-4 cursor-pointer hover:shadow-md ${
+        isSelected ? "border-blue-300 ring-1 ring-blue-300" : "border-gray-200"
+      }`}
+    >
       {/* Seller header */}
-      <div className="flex items-center justify-between px-4 py-3 border-b border-gray-100 bg-gray-50">
+      <div className="flex items-center justify-between px-4 py-3 border-b border-gray-100 bg-gray-50/50">
         <div className="flex items-center gap-2">
           {/* Seller avatar placeholder */}
           <div className="w-8 h-8 rounded-full bg-gradient-to-br from-orange-400 to-rose-500 flex items-center justify-center text-white text-xs font-bold shadow-sm">
@@ -71,13 +72,24 @@ export const CartItem = ({ item }: CartItemProps) => {
             </p>
           </div>
         </div>
-        {/* <button className="text-xs text-blue-600 hover:text-blue-800 hover:underline font-medium transition-colors">
-          Pay only this seller
-        </button> */}
       </div>
 
       {/* Item body */}
-      <div className="p-4 flex gap-4">
+      <div className="p-4 flex gap-4 items-start">
+        {/* Selection Checkbox */}
+        {/* <div className="flex items-center h-28">
+          <input
+            type="checkbox"
+            checked={isSelected}
+            onChange={(e) => {
+              e.stopPropagation();
+              onToggle?.();
+            }}
+            onClick={(e) => e.stopPropagation()}
+            className="w-5 h-5 rounded border-gray-300 text-blue-600 focus:ring-blue-500 cursor-pointer transition-all"
+          />
+        </div> */}
+
         {/* Product image */}
         <div className="flex-shrink-0 w-28 h-28 rounded-lg bg-gray-100 border border-gray-200 overflow-hidden flex items-center justify-center relative">
           {imageUrl ? (
@@ -87,7 +99,6 @@ export const CartItem = ({ item }: CartItemProps) => {
               className="w-full h-full object-cover"
             />
           ) : (
-            /* Placeholder bag SVG */
             <svg
               viewBox="0 0 100 100"
               className="w-20 h-20 text-gray-300"
@@ -118,18 +129,13 @@ export const CartItem = ({ item }: CartItemProps) => {
               />
             </svg>
           )}
-          {/* In other carts badge */}
-          {/* <div className="absolute top-1 left-1">
-            <span className="bg-blue-600 text-white text-[9px] font-bold px-1.5 py-0.5 rounded-sm uppercase tracking-wide whitespace-nowrap">
-              In {inCartCount} other carts
-            </span>
-          </div> */}
         </div>
 
         {/* Product details */}
         <div className="flex-1 min-w-0">
           <Link
-            to={`/products/${item.product._id}`} // Assuming ID for now as slug wasn't in new type definition
+            to={`/products/${item.product._id}`}
+            onClick={(e) => e.stopPropagation()}
             className="text-lg font-semibold text-blue-700 hover:text-blue-900 hover:underline leading-snug line-clamp-2 block transition-colors"
           >
             {item.product.title}
@@ -146,23 +152,20 @@ export const CartItem = ({ item }: CartItemProps) => {
                 ({formatVND(priceVND)})
               </span>
             </div>
-            {/* <div className="flex items-baseline gap-1">
-              <span className="text-base font-medium text-gray-700">
-                + US ${shipping.toFixed(2)}
-              </span>
-              <span className="text-sm text-gray-400">
-                ({formatVND(shippingVND)})
-              </span>
-            </div> */}
-            {/* <p className="text-sm text-gray-500">{shippingMethod}</p> */}
           </div>
 
           {/* Quantity + Actions */}
           <div className="flex items-center justify-between mt-3 flex-wrap gap-2">
             {/* Quantity controls */}
-            <div className="flex items-center gap-0 border border-gray-300 rounded-lg overflow-hidden h-8 shadow-sm">
+            <div
+              className="flex items-center gap-0 border border-gray-300 rounded-lg overflow-hidden h-8 shadow-sm bg-white"
+              onClick={(e) => e.stopPropagation()}
+            >
               <button
-                onClick={handleDecrease}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  handleDecrease();
+                }}
                 className="w-8 h-8 flex cursor-pointer items-center justify-center text-gray-500 hover:bg-gray-100 disabled:opacity-30 disabled:cursor-not-allowed transition-colors border-r border-gray-300"
               >
                 {quantity === 1 ? (
@@ -175,7 +178,10 @@ export const CartItem = ({ item }: CartItemProps) => {
                 {quantity}
               </span>
               <button
-                onClick={handleIncrease}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  handleIncrease();
+                }}
                 disabled={quantity >= item.product.stock}
                 className="w-8 h-8 flex cursor-pointer items-center justify-center text-gray-500 hover:bg-gray-100 disabled:opacity-30 disabled:cursor-not-allowed transition-colors border-l border-gray-300"
               >
@@ -186,21 +192,24 @@ export const CartItem = ({ item }: CartItemProps) => {
             {/* Action links */}
             <div className="flex items-center gap-1 text-sm flex-wrap">
               <button
-                // onClick={onBuyNow}
+                onClick={(e) => e.stopPropagation()}
                 className="text-blue-600 cursor-pointer hover:text-blue-800 hover:underline font-medium transition-colors px-1"
               >
                 Buy it now
               </button>
               <span className="text-gray-300">|</span>
               <button
-                // onClick={onSaveForLater}
+                onClick={(e) => e.stopPropagation()}
                 className="text-blue-600 cursor-pointer hover:text-blue-800 hover:underline font-medium transition-colors px-1"
               >
                 Save for later
               </button>
               <span className="text-gray-300">|</span>
               <button
-                onClick={handleRemove}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  handleRemove();
+                }}
                 className="text-blue-600 cursor-pointer hover:text-blue-800 hover:underline font-medium transition-colors px-1"
               >
                 Remove
