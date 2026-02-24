@@ -38,7 +38,7 @@ import {
 import { useEffect, useState } from "react";
 import { toggleWatchlist, getUserWatchlist } from "@/api/watchlist";
 import { cn } from "@/lib/utils";
-import { Link, useParams } from "react-router-dom";
+import { Link, useNavigate, useParams } from "react-router-dom";
 import { toast } from "sonner";
 import axios from "@/lib/axios";
 import { useCart } from "@/contexts/cart-context";
@@ -48,6 +48,7 @@ export interface ProductDetail {
   sellerId: string;
   title: string;
   images: string[];
+  image: string;
   description: string;
   price: number;
   quantity: number;
@@ -73,7 +74,8 @@ export default function ProductDetailPage() {
 
   // Chat dialog states
   const [open, setOpen] = useState(false);
-  const { payload } = useAuth();
+  const { payload, accessToken } = useAuth();
+  const navigate = useNavigate();
 
   // Message context states
   const [participants, setParticipantsState] = useState<string[]>([]);
@@ -90,32 +92,39 @@ export default function ProductDetailPage() {
       setWatchCount(res.data.data.watchCount || 0);
     });
 
-    getUserWatchlist()
-      .then((res) => {
-        const watched = res.data.data.some(
-          (item: any) => item.product._id === productId,
-        );
-        setIsWatched(watched);
-      })
-      .catch((err) => console.error(err));
-
-    // Check if following seller
-    if (product?.sellerId) {
-      axios
-        .get("/api/saved-sellers")
+    if (accessToken) {
+      getUserWatchlist()
         .then((res) => {
-          const savedSellers = res.data.data || [];
-          const isFollowing = savedSellers.some(
-            (seller: any) => seller._id === product.sellerId,
+          const watched = res.data.data.some(
+            (item: any) => item.product._id === productId,
           );
-          setIsFollowingSeller(isFollowing);
+          setIsWatched(watched);
         })
         .catch((err) => console.error(err));
+
+      // Check if following seller
+      if (product?.sellerId) {
+        axios
+          .get("/api/saved-sellers")
+          .then((res) => {
+            const savedSellers = res.data.data || [];
+            const isFollowing = savedSellers.some(
+              (seller: any) => seller._id === product.sellerId,
+            );
+            setIsFollowingSeller(isFollowing);
+          })
+          .catch((err) => console.error(err));
+      }
     }
-  }, [productId, product?.sellerId]);
+  }, [productId, product?.sellerId, accessToken]);
 
   const handleToggleFollowSeller = async () => {
     if (!product) return;
+    if (!accessToken) {
+      toast.error("Please sign in to follow seller");
+      navigate("/auth/sign-in");
+      return;
+    }
     try {
       if (isFollowingSeller) {
         // Unfollow
@@ -138,6 +147,11 @@ export default function ProductDetailPage() {
 
   const handleToggleWatchlist = async () => {
     if (!product) return;
+    if (!accessToken) {
+      toast.error("Please sign in to add to watchlist");
+      navigate("/auth/sign-in");
+      return;
+    }
     try {
       const res = await toggleWatchlist(product._id);
       const newStatus = res.data.watched;
@@ -179,6 +193,12 @@ export default function ProductDetailPage() {
       return;
     }
 
+    if (!accessToken) {
+      toast.error("Please sign in to buy products");
+      navigate("/auth/sign-in");
+      return;
+    }
+
     try {
       // Create order with the product and quantity
       await api.post("/api/orders", {
@@ -201,6 +221,11 @@ export default function ProductDetailPage() {
 
   const handleAddToCart = async () => {
     if (!product) return;
+    if (!accessToken) {
+      toast.error("Please sign in to add to cart");
+      navigate("/auth/sign-in");
+      return;
+    }
     await addToCart(product._id, quantity);
   };
 
@@ -209,9 +234,9 @@ export default function ProductDetailPage() {
       <div className="w-full flex gap-4">
         <div className="relative w-3/4">
           <img
-            src={product?.images?.[0] || "/placeholder.png"}
+            src={product?.image || "/placeholder.png"}
             alt={product?.title}
-            className="aspect-square h-128 w-full object-cover"
+            className="aspect-square h-128 w-full object-contain"
           />
           <Button
             size="icon"

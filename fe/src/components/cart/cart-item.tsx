@@ -25,7 +25,7 @@ export const CartItem = ({ item, isSelected, onToggle }: CartItemProps) => {
   const price = item.priceSnapShot;
   const priceVND = price * 25400; // Approx rate
 
-  const imageUrl = item.product.images || "";
+  const imageUrl = item.product.image || "";
 
   const handleDecrease = () => {
     if (quantity > 1) {
@@ -157,36 +157,41 @@ export const CartItem = ({ item, isSelected, onToggle }: CartItemProps) => {
           {/* Quantity + Actions */}
           <div className="flex items-center justify-between mt-3 flex-wrap gap-2">
             {/* Quantity controls */}
-            <div
-              className="flex items-center gap-0 border border-gray-300 rounded-lg overflow-hidden h-8 shadow-sm bg-white"
-              onClick={(e) => e.stopPropagation()}
-            >
-              <button
-                onClick={(e) => {
-                  e.stopPropagation();
-                  handleDecrease();
-                }}
-                className="w-8 h-8 flex cursor-pointer items-center justify-center text-gray-500 hover:bg-gray-100 disabled:opacity-30 disabled:cursor-not-allowed transition-colors border-r border-gray-300"
+            <div className="flex items-center gap-5">
+              <div
+                className="flex items-center gap-0 border border-gray-300 rounded-lg overflow-hidden h-8 shadow-sm bg-white"
+                onClick={(e) => e.stopPropagation()}
               >
-                {quantity === 1 ? (
-                  <Trash2 className="size-3.5" />
-                ) : (
-                  <Minus className="size-3.5" />
-                )}
-              </button>
-              <span className="w-8 text-center text-base font-semibold text-gray-800 select-none">
-                {quantity}
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    handleDecrease();
+                  }}
+                  className="w-8 h-8 flex cursor-pointer items-center justify-center text-gray-500 hover:bg-gray-100 disabled:opacity-30 disabled:cursor-not-allowed transition-colors border-r border-gray-300"
+                >
+                  {quantity === 1 ? (
+                    <Trash2 className="size-3.5" />
+                  ) : (
+                    <Minus className="size-3.5" />
+                  )}
+                </button>
+                <span className="w-8 text-center text-base font-semibold text-gray-800 select-none">
+                  {quantity}
+                </span>
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    handleIncrease();
+                  }}
+                  disabled={quantity >= item.product.stock}
+                  className="w-8 h-8 flex cursor-pointer items-center justify-center text-gray-500 hover:bg-gray-100 disabled:opacity-30 disabled:cursor-not-allowed transition-colors border-l border-gray-300"
+                >
+                  <Plus className="size-3.5" />
+                </button>
+              </div>
+              <span className="text-muted-foreground">
+                Stock: {item.product.stock}
               </span>
-              <button
-                onClick={(e) => {
-                  e.stopPropagation();
-                  handleIncrease();
-                }}
-                disabled={quantity >= item.product.stock}
-                className="w-8 h-8 flex cursor-pointer items-center justify-center text-gray-500 hover:bg-gray-100 disabled:opacity-30 disabled:cursor-not-allowed transition-colors border-l border-gray-300"
-              >
-                <Plus className="size-3.5" />
-              </button>
             </div>
 
             {/* Action links */}
