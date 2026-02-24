@@ -3,10 +3,13 @@ import CartItem from "@/components/cart/cart-item";
 import CartSubtotal from "@/components/cart/cart-subtotal";
 import { useCart } from "@/contexts/cart-context";
 import { ShoppingBag } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { useNavigate } from "react-router-dom";
 
 const CartPage = () => {
   const { cart } = useCart();
   const [selectedItemIds, setSelectedItemIds] = useState<string[]>([]);
+  const navigate = useNavigate();
 
   const items = cart?.items || [];
 
@@ -84,6 +87,14 @@ const CartPage = () => {
               <div className="flex flex-col bg-white p-12 rounded-xl border border-gray-200 shadow-sm text-center items-center gap-2">
                 <ShoppingBag className="h-20 w-20 text-gray-200" />
                 <p className="text-xl text-gray-500">Your cart is empty</p>
+                <Button
+                  className="cursor-pointer"
+                  onClick={() =>
+                    navigate("/products?minPrice=0&maxPrice=10000")
+                  }
+                >
+                  Browse Product
+                </Button>
               </div>
             )}
           </div>

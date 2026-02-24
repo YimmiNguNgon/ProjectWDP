@@ -31,7 +31,7 @@ export const CartDropdownItem = ({ item }: CartItemProps) => {
     <div className="flex gap-4 py-3 group">
       <div className="h-20 w-20 overflow-hidden rounded-md border shrink-0">
         <img
-          src={item.product?.images}
+          src={item.product?.image}
           alt={item.product?.title}
           className="h-full w-full object-cover"
         />

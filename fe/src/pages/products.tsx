@@ -37,6 +37,8 @@ import { toggleWatchlist, getUserWatchlist } from "@/api/watchlist";
 import { toast } from "sonner";
 import { SaveSearchDialog } from "@/components/dialogs/save-search-dialog";
 import AddToCartDialog from "@/components/cart/add-to-cart-dialog";
+import { useAuth } from "@/hooks/use-auth";
+import { useNavigate } from "react-router-dom";
 
 interface Category {
   _id: string;
@@ -80,13 +82,15 @@ export default function ProductsPage() {
   const [openAddToCartDialog, setOpenAddToCartDialog] = React.useState(false);
   const [selectedProduct, setSelectedProduct] = React.useState<Product>();
   const [searchParams, setSearchParams] = useSearchParams();
+  const { accessToken } = useAuth();
+  const navigate = useNavigate();
   const [products, setProducts] = React.useState<Product[]>([]);
   const [categories, setCategories] = React.useState<Category[]>([]);
   const [watchedProductIds, setWatchedProductIds] = React.useState<Set<string>>(
     new Set(),
   );
   const [saveSearchDialogOpen, setSaveSearchDialogOpen] = React.useState(false);
-
+  
   // Get search query from URL params (read-only)
   const searchQuery = searchParams.get("search") || "";
 
@@ -153,6 +157,7 @@ export default function ProductsPage() {
   // Fetch user's watchlist to set initial watched state
   useEffect(() => {
     const fetchWatchlist = async () => {
+      if (!accessToken) return;
       try {
         const res = await getUserWatchlist();
         // Since WatchlistItem has product object, we map to get ids
@@ -163,7 +168,7 @@ export default function ProductsPage() {
       }
     };
     fetchWatchlist();
-  }, []);
+  }, [accessToken]);
 
   useEffect(() => {
     const fetchProducts = async () => {
@@ -237,6 +242,13 @@ export default function ProductsPage() {
   ) => {
     e.preventDefault();
     e.stopPropagation();
+
+    if (!accessToken) {
+      toast.error("Please sign in to add to watchlist");
+      navigate("/auth/sign-in");
+      return;
+    }
+
     try {
       const res = await toggleWatchlist(productId);
       const isWatched = res.data.watched;
@@ -274,6 +286,11 @@ export default function ProductsPage() {
   };
 
   const handleOpenDialog = (product: Product) => {
+    if (!accessToken) {
+      toast.error("Please sign in to add to cart");
+      navigate("/auth/sign-in");
+      return;
+    }
     setSelectedProduct(product);
     setOpenAddToCartDialog(true);
   };
@@ -424,7 +441,7 @@ export default function ProductsPage() {
 
                       <Link to={`/products/${product._id}`}>
                         <img
-                          src={product.images?.[0] || "/placeholder.png"}
+                          src={product.image || "/placeholder.png"}
                           alt={product.title}
                           className="aspect-square w-full bg-muted flex items-center justify-center"
                         />

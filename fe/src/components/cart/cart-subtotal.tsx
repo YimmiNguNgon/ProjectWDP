@@ -15,7 +15,7 @@ const CartSubtotal = ({
   const itemCount = propsItemCount ?? cart?.totalItems ?? 0;
   const totalItemPrice = propsTotalItemPrice ?? cart?.totalPrice ?? 0;
 
-  const subtotal = totalItemPrice + 0 + 1000;
+  const subtotal = totalItemPrice === 0 ? 0 : totalItemPrice + 0;
   return (
     <div className="flex flex-col bg-gray-400/10 p-10 rounded-md">
       {/* Title */}
@@ -33,7 +33,7 @@ const CartSubtotal = ({
         </div> */}
         <div className="flex items-center justify-between text-xl">
           <p>Discount:</p>
-          <p>$1000</p>
+          <p>$0</p>
         </div>
       </div>
       <div className="border border-gray-300 my-6"></div>
