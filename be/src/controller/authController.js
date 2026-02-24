@@ -375,11 +375,18 @@ exports.googleCallback = async (req, res, next) => {
             role: user.role,
         };
 
-        const token = jwt.sign(payload, JWT_SECRET, { expiresIn: "7d" });
+        const token = jwt.sign(payload, process.env.ACCESS_TOKEN_SECRET, { expiresIn: "7d" });
 
-        // Redirect to frontend with token
+        const userData = {
+            username: user.username,
+            email: user.email,
+            role: user.role,
+        };
+
+        // Redirect to frontend with token and user data
         const clientUrl = process.env.CLIENT_URL || "http://localhost:5173";
-        res.redirect(`${clientUrl}/auth/google/success?token=${token}`);
+        const encodedUser = encodeURIComponent(JSON.stringify(userData));
+        res.redirect(`${clientUrl}/auth/google/success?token=${token}&user=${encodedUser}`);
     } catch (err) {
         next(err);
     }

@@ -22,7 +22,7 @@ createRoot(document.getElementById("root")!).render(
         <BrowserRouter>
           <AppRouter />
         </BrowserRouter>
-        <Toaster />
+        <Toaster position="bottom-right" />
       </CartProvider>
     </AuthProvider>
   </StrictMode>,
@@ -195,6 +195,8 @@ export function AuthProvider({ children }: PropsWithChildren) {
     setUser,
     setToken: (token: string) => {
       setAuthToken(token);
+      localStorage.setItem("token", token);
+      setAccessToken(token);
       const payload = jwtDecode<Payload>(token);
       setPayload(payload);
     },

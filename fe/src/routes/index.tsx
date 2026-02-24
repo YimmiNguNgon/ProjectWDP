@@ -15,7 +15,7 @@ import ProductManagement from "@/pages/admin/product-management";
 import FeedbackManagement from "@/pages/admin/feedback-management";
 import PermissionsPage from "@/pages/admin/permissions-page";
 
-import { MainLayout } from "@/layouts/main";
+import { MainLayout, SocketProvider } from "@/layouts/main";
 import AuthLayout from "@/layouts/auth";
 import UserProfilePage from "@/pages/profile";
 import AdminLayout from "@/layouts/admin";
@@ -30,6 +30,9 @@ import SellerSoldPage from "@/pages/seller/seller-sold-page";
 import PromotionRequestsPage from "@/pages/seller/promotion-requests";
 import AdminPromotionRequestsPage from "@/pages/admin/promotion-requests";
 import UnauthorizedPage from "@/pages/unauthorized";
+import BecomeSellerPage from "@/pages/become-seller";
+import SellerApplyPage from "@/pages/seller-apply";
+import AdminSellerApplicationsPage from "@/pages/admin/seller-applications";
 
 import ProtectedRoute from "@/components/ProtectedRoute";
 import { RoleGuard } from "@/components/RoleGuard";
@@ -67,7 +70,11 @@ export const AppRouter = () => {
   return useRoutes([
     {
       path: "/",
-      element: <MainLayout />,
+      element: (
+        <SocketProvider>
+          <MainLayout />
+        </SocketProvider>
+      ),
       children: [
         {
           index: true,
@@ -148,6 +155,14 @@ export const AppRouter = () => {
           path: "seller/promotion-requests",
           element: <PromotionRequestsPage />,
         },
+        {
+          path: "become-seller",
+          element: <BecomeSellerPage />,
+        },
+        {
+          path: "become-seller/apply",
+          element: <SellerApplyPage />,
+        },
       ],
     },
     {
@@ -189,6 +204,10 @@ export const AppRouter = () => {
         {
           path: "permissions",
           element: <PermissionsPage />,
+        },
+        {
+          path: "seller-applications",
+          element: <AdminSellerApplicationsPage />,
         },
       ],
     },

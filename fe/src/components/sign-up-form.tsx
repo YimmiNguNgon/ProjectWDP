@@ -218,6 +218,7 @@ export function SignupForm({ ...props }: React.ComponentProps<typeof Card>) {
                 className="cursor-pointer w-full"
                 variant="outline"
                 type="button"
+                onClick={() => window.location.href = "http://localhost:8080/api/auth/google"}
               >
                 Sign up with Google
               </Button>

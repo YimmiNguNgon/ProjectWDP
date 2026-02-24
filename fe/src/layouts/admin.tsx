@@ -1,13 +1,15 @@
 // src/layouts/admin.tsx
 import { Link, Outlet, useLocation } from 'react-router-dom';
-import { LayoutDashboard, Users, ShoppingBag, MessageCircle, Home } from 'lucide-react';
+import { LayoutDashboard, Users, ShoppingBag, MessageCircle, Home, ClipboardList } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import AdminBroadcast from '@/components/admin-broadcast';
 
 const navigation = [
     { name: 'Dashboard', href: '/admin', icon: LayoutDashboard },
     { name: 'Quản lý người dùng', href: '/admin/users', icon: Users },
     { name: 'Quản lý sản phẩm', href: '/admin/products', icon: ShoppingBag },
     { name: 'Feedback Revision', href: '/admin/feedback', icon: MessageCircle },
+    { name: 'Don dang ky Seller', href: '/admin/seller-applications', icon: ClipboardList },
 ];
 
 export default function AdminLayout() {
@@ -44,6 +46,11 @@ export default function AdminLayout() {
                             );
                         })}
                     </nav>
+
+                    {/* Broadcast button */}
+                    <div className="px-3 mt-4">
+                        <AdminBroadcast />
+                    </div>
 
                     {/* Home Button */}
                     <div className="px-3 mt-6 pt-6 border-t border-gray-200">

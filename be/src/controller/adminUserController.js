@@ -1,6 +1,7 @@
 // src/controllers/adminUserController.js
 const mongoose = require("mongoose");
 const User = require("../models/User");
+const notificationService = require("../services/notificationService");
 
 /**
  * @desc Lấy tất cả người dùng với phân trang và lọc
@@ -277,6 +278,16 @@ exports.banUser = async (req, res, next) => {
         user.banReason = reason.trim();
         await user.save();
 
+        // Gui notification cho user bi ban
+        await notificationService.sendNotification({
+            recipientId: user._id,
+            type: "user_banned",
+            title: "Tai khoan da bi khoa",
+            body: `Tai khoan cua ban da bi khoa boi Admin. Ly do: ${reason.trim()}`,
+            link: "/",
+            metadata: { reason: reason.trim() },
+        });
+
         return res.json({
             success: true,
             message: "User banned successfully",
@@ -322,6 +333,15 @@ exports.unbanUser = async (req, res, next) => {
         user.bannedBy = null;
         user.banReason = null;
         await user.save();
+
+        // Gui notification cho user duoc unban
+        await notificationService.sendNotification({
+            recipientId: user._id,
+            type: "user_unbanned",
+            title: "Tai khoan da duoc mo khoa",
+            body: "Tai khoan cua ban da duoc Admin mo khoa. Chuc mung ban tro lai!",
+            link: "/",
+        });
 
         return res.json({
             success: true,

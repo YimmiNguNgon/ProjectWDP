@@ -3,9 +3,9 @@ import { Container } from "@/components/ui/container";
 import UserMenu from "@/components/user-menu";
 import { SearchContainer } from "@/components/search-container";
 import { useAuth } from "@/hooks/use-auth";
-import { useMessage, type Message } from "@/hooks/use-message";
+import { MessageContext, type Message } from "@/hooks/use-message";
 import { SocketContext } from "@/hooks/use-socket";
-import { Bell, ShoppingCart } from "lucide-react";
+import { ShoppingCart } from "lucide-react";
 import type { PropsWithChildren } from "react";
 import React from "react";
 import { Link, Outlet, useNavigate } from "react-router-dom";
@@ -19,6 +19,7 @@ import {
 import { toast } from "sonner";
 import { WatchlistPreview } from "@/components/watchlist/watchlist-preview";
 import CartDropdown from "@/components/cart/cart-dropdown";
+import NotificationBell from "@/components/notification-bell";
 
 const LEFT_NAV_ITEMS = [
   { name: "Browse Products", to: "/products" },
@@ -45,6 +46,7 @@ export function Protected() {
 export function MainLayout() {
   const navigate = useNavigate();
   const { user } = useAuth();
+  const socketCtx = React.useContext(SocketContext);
 
   return (
     <div className="flex flex-col gap-4 min-h-dvh">
@@ -104,12 +106,10 @@ export function MainLayout() {
               {user?.role === "admin" && <AdminMenu />}
               {/* Seller Menu - only show for seller users */}
               {user?.role === "seller" && <SellerMenu />}
-              <button
-                onClick={() => toast.info("Notifications coming soon!")}
-                className="hover:opacity-70"
-              >
-                <Bell className="size-4" />
-              </button>
+              {/* Notification Bell */}
+              {user && (
+                <NotificationBell socket={socketCtx?.socket ?? undefined} />
+              )}
               <CartDropdown>
                 <button className="hover:opacity-70 cursor-pointer">
                   <ShoppingCart className="size-4" />
@@ -270,40 +270,61 @@ export function MainLayout() {
 export const SocketProvider = ({ children }: PropsWithChildren) => {
   const [socket, setSocket] = React.useState<Socket>();
   const { payload } = useAuth();
-  const { conversation, setMessages } = useMessage();
+  const msgCtx = React.useContext(MessageContext);
 
   const socketRef = React.useRef<Socket>(null);
 
+  // Effect 1: Tao socket 1 lan duy nhat
   React.useEffect(() => {
     const url = import.meta.env.VITE_API_BASE_URL;
-    const socket = io(url);
-    socketRef.current = socket;
+    const newSocket = io(url, { autoConnect: true });
+    socketRef.current = newSocket;
 
-    socket.on("connect", () => {
-      setSocket(socket);
-      socket.emit("auth", { userId: payload?.userId });
+    newSocket.on("connect", () => {
+      setSocket(newSocket);
     });
 
-    socket.on("disconnect", () => {
+    newSocket.on("disconnect", () => {
       setSocket(undefined);
     });
 
-    socket.on("new_message", (res: { ok: boolean; data: Message }) => {
+    newSocket.on("new_message", (res: { ok: boolean; data: Message }) => {
       const { ok, data } = res;
-      if (ok && data) {
-        setMessages((messages) => [data, ...messages!]);
+      if (ok && data && msgCtx?.setMessages) {
+        msgCtx.setMessages((messages) => [data, ...messages!]);
       }
     });
 
     return () => {
-      socket.off("new_message");
-      socket.disconnect();
+      newSocket.off("new_message");
+      newSocket.disconnect();
     };
-  }, [payload, conversation, setMessages]);
+    // Chi chay 1 lan khi mount
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
-  const value = {
-    socket,
-  };
+  // Effect 2: Emit auth moi khi payload thay doi (login/logout)
+  React.useEffect(() => {
+    const sock = socketRef.current;
+    if (!sock) return;
+
+    if (payload?.userId) {
+      // Neu socket da connect thi emit ngay, neu chua thi cho connect
+      if (sock.connected) {
+        sock.emit("auth", { userId: payload.userId });
+      } else {
+        const onConnect = () => {
+          sock.emit("auth", { userId: payload.userId });
+        };
+        sock.once("connect", onConnect);
+        return () => {
+          sock.off("connect", onConnect);
+        };
+      }
+    }
+  }, [payload?.userId]);
+
+  const value = React.useMemo(() => ({ socket }), [socket]);
 
   return (
     <SocketContext.Provider value={value}>{children}</SocketContext.Provider>

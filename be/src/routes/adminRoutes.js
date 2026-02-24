@@ -4,6 +4,9 @@ const router = express.Router();
 const adminUserController = require("../controller/adminUserController");
 const adminDashboardController = require("../controller/adminDashboardController");
 const adminProductController = require("../controller/adminProductController");
+const sellerApplicationController = require("../controller/sellerApplicationController");
+const notificationService = require("../services/notificationService");
+const User = require("../models/User");
 const { protectedRoute } = require("../middleware/authMiddleware");
 
 // Middleware to check if user is admin
@@ -35,5 +38,37 @@ router.post("/products", adminProductController.createProduct);
 router.get("/products/:id", adminProductController.getProductDetail);
 router.put("/products/:id", adminProductController.updateProduct);
 router.delete("/products/:id", adminProductController.deleteProduct);
+
+// Seller application management routes
+router.get("/seller-applications", sellerApplicationController.getAllApplications);
+router.post("/seller-applications/:id/approve", sellerApplicationController.approveApplication);
+router.post("/seller-applications/:id/reject", sellerApplicationController.rejectApplication);
+
+// Broadcast notification to all users
+router.post("/notifications/broadcast", async (req, res, next) => {
+    try {
+        const { title, body, link = "/" } = req.body;
+        if (!title || !body) {
+            return res.status(400).json({ message: "title va body la bat buoc" });
+        }
+
+        // Lay tat ca user (tru admin)
+        const users = await User.find({ status: "active" }).select("_id").lean();
+        const recipientIds = users.map(u => u._id);
+
+        await notificationService.sendBroadcast({
+            recipientIds,
+            type: "admin_broadcast",
+            title,
+            body,
+            link,
+            metadata: { fromAdmin: req.user.username },
+        });
+
+        return res.json({ ok: true, sentTo: recipientIds.length });
+    } catch (err) {
+        next(err);
+    }
+});
 
 module.exports = router;

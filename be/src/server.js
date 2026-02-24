@@ -72,6 +72,10 @@ app.use("/api/search", searchRoutes);
 app.use("/api/addresses", addressRoutes);
 app.use("/api/watchlist", watchlistRoutes);
 app.use("/api/cart", cartRoutes);
+const sellerApplicationRoutes = require("./routes/sellerApplicationRoutes");
+app.use("/api/seller-applications", sellerApplicationRoutes);
+const notificationRoutes = require("./routes/notificationRoutes");
+app.use("/api/notifications", notificationRoutes);
 
 // Saved searches and sellers routes
 const savedSearchRoutes = require("./routes/savedSearchRoutes");
@@ -139,9 +143,39 @@ async function createDefaultAdmin() {
   }
 }
 
+async function createDefaultSeller() {
+  try {
+    const existingSeller = await User.findOne({ username: "seller" });
+
+    if (!existingSeller) {
+      const salt = await bcrypt.genSalt(10);
+      const passwordHash = await bcrypt.hash("seller", salt);
+
+      const sellerUser = new User({
+        username: "seller",
+        email: "seller@seller.com",
+        passwordHash: passwordHash,
+        role: "seller",
+        isEmailVerified: true,
+        status: "active",
+      });
+
+      await sellerUser.save();
+      console.log(
+        "✅ Tài khoản seller mặc định đã được tạo (username: seller, password: seller)",
+      );
+    } else {
+      console.log("ℹ️ Tài khoản seller đã tồn tại");
+    }
+  } catch (error) {
+    console.error("❌ Lỗi khi tạo tài khoản seller mặc định:", error);
+  }
+}
+
 async function start() {
   await connectDB(process.env.MONGO_URI);
   await createDefaultAdmin();
+  await createDefaultSeller();
 
   // Initialize deal expiration cron job
   const { initDealExpirationJob } = require("./jobs/dealExpirationJob");
@@ -163,6 +197,10 @@ async function start() {
   // Initialize Socket.IO handlers
   const initSocket = require("./socket");
   initSocket(io);
+
+  // Pass io to notificationService
+  const notificationService = require("./services/notificationService");
+  notificationService.setIO(io);
 
   server.listen(PORT, () => {
     console.log(`✅ Server is running on port ${PORT}`);
