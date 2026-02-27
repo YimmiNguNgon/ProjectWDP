@@ -5,12 +5,12 @@ export interface OrderItem {
   productId: {
     _id: string;
     title: string;
-    price: number;
-    image?: string;  // Main product image
-    images?: string[]; // Additional product images
+    price?: number;
+    image?: string;
+    images?: string[];
   };
   title: string;
-  price: number;
+  unitPrice: number;
   quantity: number;
 }
 

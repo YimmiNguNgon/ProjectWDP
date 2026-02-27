@@ -37,7 +37,7 @@ exports.addToCart = async (req, res, next) => {
       return res.status(404).json({ message: "Not found product" });
     }
 
-    if (product.stock < quantity) {
+    if (product.quantity < quantity) {
       return res
         .status(400)
         .json({ message: "Product stock is not enough to add." });
@@ -58,7 +58,7 @@ exports.addToCart = async (req, res, next) => {
     });
 
     if (item) {
-      if (product.stock < item.quantity + quantity) {
+      if (product.quantity < item.quantity + quantity) {
         return res
           .status(400)
           .json({ message: "Product stock is not enough to add." });
@@ -66,7 +66,7 @@ exports.addToCart = async (req, res, next) => {
       item.quantity += quantity;
       await item.save();
     } else {
-      if (product.stock < quantity) {
+      if (product.quantity < quantity) {
         return res
           .status(400)
           .json({ message: "Product stock is not enough to add." });
@@ -151,7 +151,7 @@ exports.updateCartItemQuantity = async (req, res, next) => {
       return res.json({ message: "Item removed" });
     }
 
-    if (product.stock < newQuantity) {
+    if (product.quantity < newQuantity) {
       return res.status(400).json({
         message: "Not enough stock",
       });

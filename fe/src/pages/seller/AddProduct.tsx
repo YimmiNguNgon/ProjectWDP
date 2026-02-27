@@ -1,44 +1,52 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { 
-  Upload, 
+import {
+  Upload,
   Image as ImageIcon,
   Tag,
   DollarSign,
   Package,
-  Hash,
+  Layers,
   AlertCircle
 } from 'lucide-react';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { toast } from 'sonner';
+import { createProduct } from '@/api/seller-products';
+import type { ProductVariant } from '@/api/seller-products';
+import ProductVariantsManager from '@/components/seller/product-variants-manager';
+import api from '@/lib/axios';
+
+interface Category {
+  _id: string;
+  name: string;
+  slug: string;
+}
 
 export default function AddProduct() {
   const navigate = useNavigate();
   const [loading, setLoading] = useState(false);
+  const [categories, setCategories] = useState<Category[]>([]);
+  const [variants, setVariants] = useState<ProductVariant[]>([]);
   const [formData, setFormData] = useState({
-    name: '',
+    title: '',
     description: '',
     price: '',
-    stock: '',
-    category: '',
-    images: [] as string[]
+    quantity: '',
+    condition: 'new',
+    categoryId: '',
   });
 
-  const categories = [
-    'Thời trang',
-    'Điện tử',
-    'Nhà cửa & Đời sống',
-    'Sức khỏe & Làm đẹp',
-    'Thể thao & Du lịch',
-    'Sách & Văn phòng phẩm',
-    'Ô tô & Xe máy',
-    'Mẹ & Bé'
-  ];
+  useEffect(() => {
+    api.get('/api/categories').then((res) => {
+      const list = res.data?.data ?? res.data ?? [];
+      setCategories(list);
+    }).catch(() => { });
+  }, []);
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
     const { name, value } = e.target;
@@ -49,21 +57,28 @@ export default function AddProduct() {
     e.preventDefault();
     setLoading(true);
 
-    // Validation
-    if (!formData.name || !formData.price || !formData.category) {
-      toast.error('Vui lòng điền đầy đủ thông tin bắt buộc');
+    if (!formData.title || !formData.price) {
+      toast.error('Vui lòng điền tên sản phẩm và giá bán');
       setLoading(false);
       return;
     }
 
     try {
-      // Simulate API call
-      await new Promise(resolve => setTimeout(resolve, 1500));
-      
+      await createProduct({
+        title: formData.title,
+        description: formData.description,
+        price: parseFloat(formData.price),
+        quantity: parseInt(formData.quantity) || 0,
+        condition: formData.condition,
+        categoryId: formData.categoryId || undefined,
+        variants,
+      });
+
       toast.success('Sản phẩm đã được thêm thành công!');
       navigate('/seller/products');
-    } catch (error) {
-      toast.error('Có lỗi xảy ra khi thêm sản phẩm');
+    } catch (error: any) {
+      const msg = error?.response?.data?.message || 'Có lỗi xảy ra khi thêm sản phẩm';
+      toast.error(msg);
     } finally {
       setLoading(false);
     }
@@ -82,7 +97,7 @@ export default function AddProduct() {
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
             {/* Left Column - Main Info */}
             <div className="lg:col-span-2 space-y-6">
-              {/* Product Name */}
+              {/* Product Info */}
               <Card>
                 <CardHeader>
                   <CardTitle className="text-lg flex items-center gap-2">
@@ -92,12 +107,12 @@ export default function AddProduct() {
                 </CardHeader>
                 <CardContent className="space-y-4">
                   <div className="space-y-2">
-                    <Label htmlFor="name">Tên sản phẩm *</Label>
+                    <Label htmlFor="title">Tên sản phẩm *</Label>
                     <Input
-                      id="name"
-                      name="name"
+                      id="title"
+                      name="title"
                       placeholder="Nhập tên sản phẩm"
-                      value={formData.name}
+                      value={formData.title}
                       onChange={handleChange}
                       required
                     />
@@ -142,6 +157,25 @@ export default function AddProduct() {
                   </Alert>
                 </CardContent>
               </Card>
+
+              {/* Variants / Đặc điểm */}
+              <Card>
+                <CardHeader>
+                  <CardTitle className="text-lg flex items-center gap-2">
+                    <Layers className="h-5 w-5" />
+                    Đặc điểm sản phẩm
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <p className="text-sm text-gray-500 mb-4">
+                    Thêm các đặc điểm như Kích thước, Màu sắc... và liệt kê các giá trị tương ứng.
+                  </p>
+                  <ProductVariantsManager
+                    variants={variants}
+                    onChange={setVariants}
+                  />
+                </CardContent>
+              </Card>
             </div>
 
             {/* Right Column - Pricing & Details */}
@@ -173,59 +207,50 @@ export default function AddProduct() {
                   </div>
 
                   <div className="space-y-2">
-                    <Label htmlFor="stock">Số lượng tồn kho *</Label>
+                    <Label htmlFor="quantity">Số lượng tồn kho</Label>
                     <div className="relative">
                       <Package className="absolute left-3 top-2.5 h-4 w-4 text-gray-500" />
                       <Input
-                        id="stock"
-                        name="stock"
+                        id="quantity"
+                        name="quantity"
                         type="number"
                         placeholder="Số lượng"
                         className="pl-10"
-                        value={formData.stock}
+                        value={formData.quantity}
                         onChange={handleChange}
-                        required
                       />
                     </div>
                   </div>
 
                   <div className="space-y-2">
-                    <Label htmlFor="category">Danh mục *</Label>
+                    <Label htmlFor="categoryId">Danh mục</Label>
                     <select
-                      id="category"
-                      name="category"
+                      id="categoryId"
+                      name="categoryId"
                       className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
-                      value={formData.category}
+                      value={formData.categoryId}
                       onChange={handleChange}
-                      required
                     >
                       <option value="">Chọn danh mục</option>
                       {categories.map(cat => (
-                        <option key={cat} value={cat}>{cat}</option>
+                        <option key={cat._id} value={cat._id}>{cat.name}</option>
                       ))}
                     </select>
                   </div>
-                </CardContent>
-              </Card>
 
-              {/* Shipping & Settings */}
-              <Card>
-                <CardHeader>
-                  <CardTitle className="text-lg">Cài đặt</CardTitle>
-                </CardHeader>
-                <CardContent className="space-y-4">
                   <div className="space-y-2">
-                    <Label>Trạng thái sản phẩm</Label>
-                    <div className="space-y-2">
-                      <label className="flex items-center space-x-2">
-                        <input type="radio" name="status" value="active" defaultChecked />
-                        <span className="text-sm">Hiển thị ngay</span>
-                      </label>
-                      <label className="flex items-center space-x-2">
-                        <input type="radio" name="status" value="draft" />
-                        <span className="text-sm">Lưu nháp</span>
-                      </label>
-                    </div>
+                    <Label htmlFor="condition">Tình trạng</Label>
+                    <select
+                      id="condition"
+                      name="condition"
+                      className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
+                      value={formData.condition}
+                      onChange={handleChange}
+                    >
+                      <option value="new">Mới</option>
+                      <option value="like_new">Như mới</option>
+                      <option value="used">Đã qua sử dụng</option>
+                    </select>
                   </div>
                 </CardContent>
               </Card>
@@ -234,16 +259,16 @@ export default function AddProduct() {
               <Card>
                 <CardContent className="pt-6">
                   <div className="space-y-3">
-                    <Button 
-                      type="submit" 
+                    <Button
+                      type="submit"
                       className="w-full bg-green-600 hover:bg-green-700"
                       disabled={loading}
                     >
                       {loading ? 'Đang xử lý...' : 'Thêm sản phẩm'}
                     </Button>
-                    <Button 
-                      type="button" 
-                      variant="outline" 
+                    <Button
+                      type="button"
+                      variant="outline"
                       className="w-full"
                       onClick={() => navigate('/seller/products')}
                     >

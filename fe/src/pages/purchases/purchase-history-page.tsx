@@ -34,11 +34,11 @@ type OrderItem = {
   productId: {
     _id: string;
     title: string;
-    price: number;
+    price?: number;
     imageUrl?: string;
   };
   title: string;
-  price: number;
+  unitPrice: number;
   quantity: number;
 };
 
@@ -236,7 +236,7 @@ export default function PurchaseHistoryPage() {
           sellerName: order.seller?.username,
           productId: item.productId?._id || "",
           productTitle: item.productId?.title || item.title,
-          productPrice: item.price,
+          productPrice: item.unitPrice || 0,
           quantity: item.quantity,
           status: order.status,
         });
@@ -333,7 +333,7 @@ export default function PurchaseHistoryPage() {
 
                   {/* ITEM PRICE */}
                   <div className="font-semibold">
-                    US ${row.productPrice.toFixed(2)}
+                    US ${(row.productPrice || 0).toFixed(2)}
                   </div>
                 </div>
 
@@ -345,11 +345,11 @@ export default function PurchaseHistoryPage() {
                   <div className="flex gap-3">
                     <div className="flex h-24 w-24 items-center justify-center rounded border bg-muted overflow-hidden">
                       {row.productId &&
-                      orders
-                        .find((o) => o._id === row.orderId)
-                        ?.items.find(
-                          (item) => item.productId?._id === row.productId,
-                        )?.productId?.imageUrl ? (
+                        orders
+                          .find((o) => o._id === row.orderId)
+                          ?.items.find(
+                            (item) => item.productId?._id === row.productId,
+                          )?.productId?.imageUrl ? (
                         <img
                           src={
                             orders

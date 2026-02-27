@@ -124,6 +124,7 @@ getOrderById = async (req, res) => {
 getOrders = async (req, res) => {
   try {
     const {
+      role,
       status,
       customer,
       startDate,
@@ -135,14 +136,15 @@ getOrders = async (req, res) => {
     // Build filter query
     let filter = {};
 
-    if (status && status !== "all") {
-      filter.status = status;
+    // Lọc theo role của user hiện tại
+    if (role === "buyer" && req.user) {
+      filter.buyer = req.user._id;
+    } else if (role === "seller" && req.user) {
+      filter.seller = req.user._id;
     }
 
-    if (customer) {
-      // Tìm theo tên customer thông qua populate
-      // Cần query phức tạp hơn nếu muốn filter theo tên
-      // Tạm thời bỏ qua filter này hoặc implement sau
+    if (status && status !== "all") {
+      filter.status = status;
     }
 
     if (startDate || endDate) {
@@ -165,8 +167,9 @@ getOrders = async (req, res) => {
     // Query với populate và filter
     const [orders, total] = await Promise.all([
       Order.find(filter)
-        .populate("buyer", "name email")
-        .populate("seller", "name")
+        .populate("buyer", "username email")
+        .populate("seller", "username email")
+        .populate("items.productId", "title images image")
         .sort({ createdAt: -1 })
         .skip(skip)
         .limit(parseInt(limit)),
@@ -184,11 +187,13 @@ getOrders = async (req, res) => {
       return {
         _id: order._id,
         orderId: `#ORD${String(order._id).slice(-6).toUpperCase()}`,
-        customer: order.buyer?.name || "Khách hàng",
+        buyer: order.buyer,
+        seller: order.seller,
+        customer: order.buyer?.username || "Khách hàng",
         email: order.buyer?.email || "",
         totalAmount: order.totalAmount,
         status: order.status,
-        items: order.items, // Return the actual items array
+        items: order.items,
         itemCount: totalItems,
         date: formatDate(order.createdAt),
         paymentMethod: paymentMethod,
@@ -252,9 +257,74 @@ getOrderStats = async (req, res) => {
   }
 };
 
+// Tạo đơn hàng mới
+createOrder = async (req, res) => {
+  try {
+    const buyerId = req.user._id;
+    const { items } = req.body;
+
+    if (!items || !Array.isArray(items) || items.length === 0) {
+      return res.status(400).json({ success: false, message: "Danh sách sản phẩm không hợp lệ" });
+    }
+
+    const Product = require("../models/Product");
+
+    // Validate và lấy thông tin sản phẩm
+    const orderItems = [];
+    let totalAmount = 0;
+    let sellerId = null;
+
+    for (const item of items) {
+      const product = await Product.findById(item.productId);
+      if (!product) {
+        return res.status(404).json({ success: false, message: `Không tìm thấy sản phẩm ${item.productId}` });
+      }
+      // Không cho phép mua sản phẩm của chính mình
+      if (product.sellerId && product.sellerId.toString() === buyerId.toString()) {
+        return res.status(403).json({ success: false, message: `Bạn không thể mua sản phẩm của chính mình` });
+      }
+      const qty = parseInt(item.quantity) || 1;
+      if (product.quantity < qty) {
+        return res.status(400).json({ success: false, message: `Sản phẩm "${product.title}" không đủ số lượng tồn kho` });
+      }
+      orderItems.push({
+        productId: product._id,
+        title: product.title,
+        unitPrice: product.price,
+        quantity: qty,
+      });
+      totalAmount += product.price * qty;
+      // Lấy sellerId từ sản phẩm đầu tiên
+      if (!sellerId) sellerId = product.sellerId;
+
+      // Trừ tồn kho
+      product.quantity -= qty;
+      await product.save();
+    }
+
+    if (!sellerId) {
+      return res.status(400).json({ success: false, message: "Không xác định được người bán" });
+    }
+
+    const order = await Order.create({
+      buyer: buyerId,
+      seller: sellerId,
+      items: orderItems,
+      totalAmount,
+      status: "created",
+      statusHistory: [{ status: "created", timestamp: new Date() }],
+    });
+
+    return res.status(201).json({ success: true, message: "Đặt hàng thành công", data: order });
+  } catch (error) {
+    res.status(500).json({ success: false, message: "Lỗi khi tạo đơn hàng", error: error.message });
+  }
+};
+
 module.exports = {
   getAllOrders,
   getOrderById,
   getOrders,
   getOrderStats,
+  createOrder,
 };

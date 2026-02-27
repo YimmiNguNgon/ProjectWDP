@@ -3,8 +3,18 @@ const Product = require("../models/Product");
 
 exports.createProduct = async (req, res, next) => {
   try {
-    const { title, description, price, stock, imageUrl, categoryId } = req.body;
-    const sellerId = req.user ? req.user._id : req.body.sellerId; // allow sellerId in body for tests if no auth
+    const {
+      title,
+      description,
+      price,
+      quantity,
+      condition,
+      categoryId,
+      image,
+      images,
+      variants,
+    } = req.body;
+    const sellerId = req.user ? req.user._id : req.body.sellerId;
     if (!sellerId)
       return res.status(400).json({ message: "sellerId required" });
     if (!title || price == null)
@@ -15,9 +25,12 @@ exports.createProduct = async (req, res, next) => {
       title,
       description,
       price,
-      imageUrl: imageUrl || "",
-      stock: stock || 0,
+      quantity: quantity || 0,
+      condition: condition || "",
       categoryId,
+      image: image || "",
+      images: images || [],
+      variants: variants || [],
     });
     await p.save();
     return res.status(201).json({ data: p });

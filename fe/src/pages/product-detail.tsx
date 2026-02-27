@@ -43,6 +43,18 @@ import { toast } from "sonner";
 import axios from "@/lib/axios";
 import { useCart } from "@/contexts/cart-context";
 
+export interface ProductVariantOption {
+  value: string;
+  price?: number;
+  quantity: number;
+  sku?: string;
+}
+
+export interface ProductVariant {
+  name: string;
+  options: ProductVariantOption[];
+}
+
 export interface ProductDetail {
   _id: string;
   sellerId: string;
@@ -56,6 +68,7 @@ export interface ProductDetail {
   status: string;
   averageRating: number;
   ratingCount: number;
+  variants?: ProductVariant[];
   createdAt: Date;
   updatedAt: Date;
   watchCount?: number;
@@ -68,6 +81,7 @@ export default function ProductDetailPage() {
 
   const [product, setProduct] = useState<ProductDetail>();
   const [quantity, setQuantity] = useState(1);
+  const [selectedVariants, setSelectedVariants] = useState<Record<string, string>>({});
   const [isWatched, setIsWatched] = useState(false);
   const [watchCount, setWatchCount] = useState(0);
   const [isFollowingSeller, setIsFollowingSeller] = useState(false);
@@ -344,6 +358,49 @@ export default function ProductDetailPage() {
             </h1>
           </div>
           <Separator />
+          {/* Variants - Đặc điểm sản phẩm */}
+          {product?.variants && product.variants.length > 0 && (
+            <div className="flex flex-col gap-3">
+              {product.variants.map((variant) => (
+                <div key={variant.name} className="flex flex-col gap-2">
+                  <h3 className="text-sm font-semibold">
+                    {variant.name}:
+                    {selectedVariants[variant.name] && (
+                      <span className="ml-2 font-normal text-muted-foreground">
+                        {selectedVariants[variant.name]}
+                      </span>
+                    )}
+                  </h3>
+                  <div className="flex flex-wrap gap-2">
+                    {variant.options.map((opt) => (
+                      <button
+                        key={opt.value}
+                        type="button"
+                        onClick={() =>
+                          setSelectedVariants((prev) => ({
+                            ...prev,
+                            [variant.name]: prev[variant.name] === opt.value ? '' : opt.value,
+                          }))
+                        }
+                        className={`px-3 py-1.5 rounded-md border text-sm transition-all ${selectedVariants[variant.name] === opt.value
+                          ? 'border-primary bg-primary text-primary-foreground'
+                          : 'border-border hover:border-primary'
+                          } ${opt.quantity === 0 ? 'opacity-40 cursor-not-allowed line-through' : 'cursor-pointer'}`}
+                        disabled={opt.quantity === 0}
+                        title={opt.quantity === 0 ? 'Hết hàng' : undefined}
+                      >
+                        {opt.value}
+                        {opt.price != null && opt.price !== product.price && (
+                          <span className="ml-1 text-xs opacity-75">(+${opt.price.toFixed(2)})</span>
+                        )}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+          <Separator />
           <div className="flex gap-4 items-center">
             <Label className="font-bold text-lg">Quantity:</Label>
             <div className="flex gap-2 items-center">
@@ -376,22 +433,31 @@ export default function ProductDetailPage() {
               </Button>
             </div>
           </div>
-          <Button
-            variant={"default"}
-            size={"lg"}
-            className="w-full cursor-pointer"
-            onClick={handleBuyNow}
-          >
-            Buy it Now
-          </Button>
-          <Button
-            variant={"outline"}
-            size={"lg"}
-            className="w-full cursor-pointer"
-            onClick={handleAddToCart}
-          >
-            Add to Cart
-          </Button>
+          {/* Nút mua - ẩn khi là sản phẩm của chính mình */}
+          {product?.sellerId && payload?.userId && String(product.sellerId) === String(payload.userId) ? (
+            <div className="w-full text-center py-3 bg-muted rounded-md text-sm text-muted-foreground">
+              Đây là sản phẩm của bạn
+            </div>
+          ) : (
+            <>
+              <Button
+                variant={"default"}
+                size={"lg"}
+                className="w-full cursor-pointer"
+                onClick={handleBuyNow}
+              >
+                Buy it Now
+              </Button>
+              <Button
+                variant={"outline"}
+                size={"lg"}
+                className="w-full cursor-pointer"
+                onClick={handleAddToCart}
+              >
+                Add to Cart
+              </Button>
+            </>
+          )}
           <Button
             variant={"outline"}
             size={"lg"}

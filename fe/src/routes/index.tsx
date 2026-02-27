@@ -40,6 +40,8 @@ import SellerLayout from "@/layouts/seller";
 import SellerOverview from "@/pages/seller/Overview";
 import SellerOrders from "@/pages/seller/Orders";
 import SellerProducts from "@/pages/seller/Products";
+import AddProduct from "@/pages/seller/AddProduct";
+import EditProduct from "@/pages/seller/EditProduct";
 import SellerRevenue from "@/pages/seller/Revenue";
 import SellerReviews from "@/pages/seller/Reviews";
 import MyEbayLayout from "@/layouts/my-ebay";
@@ -227,14 +229,14 @@ export const AppRouter = () => {
           path: "products",
           element: <SellerProducts />,
         },
-        // {
-        //   path: "products/new",
-        //   element: <SellerAddProduct />,
-        // },
-        // {
-        //   path: "products/edit/:id",
-        //   element: <SellerEditProduct />,
-        // },
+        {
+          path: "products/new",
+          element: <AddProduct />,
+        },
+        {
+          path: "products/edit/:id",
+          element: <EditProduct />,
+        },
         {
           path: "revenue",
           element: <SellerRevenue />,

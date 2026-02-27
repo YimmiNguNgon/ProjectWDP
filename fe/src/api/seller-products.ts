@@ -39,6 +39,26 @@ export interface InventorySummary {
   outOfStock: number;
 }
 
+export interface CreateProductPayload {
+  title: string;
+  description?: string;
+  price: number;
+  quantity: number;
+  condition?: string;
+  categoryId?: string;
+  image?: string;
+  images?: string[];
+  variants?: ProductVariant[];
+}
+
+/**
+ * Create new product
+ */
+export async function createProduct(data: CreateProductPayload) {
+  const response = await api.post("/api/products", data);
+  return response.data;
+}
+
 /**
  * Get seller's product listings
  */
