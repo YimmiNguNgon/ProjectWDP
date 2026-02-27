@@ -1,5 +1,9 @@
 const Category = require("../models/Category");
 const Product = require("../models/Product");
+const {
+  normalizeVariantCombinations,
+  syncProductStockFromVariants,
+} = require("../utils/productInventory");
 
 exports.createProduct = async (req, res, next) => {
   try {
@@ -13,6 +17,7 @@ exports.createProduct = async (req, res, next) => {
       image,
       images,
       variants,
+      variantCombinations,
     } = req.body;
     const sellerId = req.user ? req.user._id : req.body.sellerId;
     if (!sellerId)
@@ -20,18 +25,24 @@ exports.createProduct = async (req, res, next) => {
     if (!title || price == null)
       return res.status(400).json({ message: "title and price required" });
 
+    const normalizedCombinations = normalizeVariantCombinations(
+      variantCombinations,
+    );
     const p = new Product({
       sellerId,
       title,
       description,
       price,
       quantity: quantity || 0,
+      stock: quantity || 0,
       condition: condition || "",
       categoryId,
       image: image || "",
       images: images || [],
       variants: variants || [],
+      variantCombinations: normalizedCombinations,
     });
+    syncProductStockFromVariants(p);
     await p.save();
     return res.status(201).json({ data: p });
   } catch (err) {

@@ -56,6 +56,19 @@ const productSchema = new mongoose.Schema(
         ],
       },
     ],
+    variantCombinations: [
+      {
+        key: { type: String, required: true },
+        selections: [
+          {
+            name: { type: String, required: true },
+            value: { type: String, required: true },
+          },
+        ],
+        quantity: { type: Number, default: 0 },
+        sku: { type: String, default: "" },
+      },
+    ],
 
     averageRating: { type: Number, default: 0 },
     ratingCount: { type: Number, default: 0 },

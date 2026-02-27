@@ -6,7 +6,11 @@ import { toast } from "sonner";
 interface CartContextProps {
   cart: Cart | null;
   loading: boolean;
-  addToCart: (productId: string, quantity: number) => Promise<void>;
+  addToCart: (
+    productId: string,
+    quantity: number,
+    selectedVariants?: { name: string; value: string }[],
+  ) => Promise<void>;
   updateQuantity: (
     itemId: string,
     action: "increase" | "decrease",
@@ -44,14 +48,18 @@ export const CartProvider = ({ children }: { children: React.ReactNode }) => {
     fetchCart();
   }, [user]);
 
-  const addToCart = async (productId: string, quantity: number) => {
+  const addToCart = async (
+    productId: string,
+    quantity: number,
+    selectedVariants?: { name: string; value: string }[],
+  ) => {
     if (!user) {
       toast.error("Please login to add items to cart");
       return;
     }
 
     try {
-      await cartService.addToCart(productId, quantity);
+      await cartService.addToCart(productId, quantity, selectedVariants);
       toast.success("Added to cart");
       await fetchCart();
     } catch (error: any) {

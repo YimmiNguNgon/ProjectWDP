@@ -1,21 +1,115 @@
-import { useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card } from '@/components/ui/card';
 import { PlusIcon, TrashIcon, XIcon } from 'lucide-react';
-import type { ProductVariant } from '@/api/seller-products';
+import type {
+    ProductVariant,
+    ProductVariantCombination,
+} from '@/api/seller-products';
 
 interface ProductVariantsManagerProps {
     variants: ProductVariant[];
+    variantCombinations: ProductVariantCombination[];
     onChange: (variants: ProductVariant[]) => void;
+    onCombinationsChange: (variantCombinations: ProductVariantCombination[]) => void;
 }
 
 export default function ProductVariantsManager({
     variants,
+    variantCombinations,
     onChange,
+    onCombinationsChange,
 }: ProductVariantsManagerProps) {
     const [newVariantName, setNewVariantName] = useState('');
+
+    const buildVariantKey = (selections: { name: string; value: string }[]) =>
+        [...selections]
+            .sort((a, b) => a.name.localeCompare(b.name))
+            .map((s) => `${s.name}:${s.value}`)
+            .join('|');
+
+    const generatedCombinations = useMemo(() => {
+        if (!variants.length) return [];
+        if (variants.some((v) => !v.options || v.options.length === 0)) return [];
+
+        const normalizedVariants = variants.map((variant) => {
+            const seen = new Set<string>();
+            const uniqueOptions = (variant.options || []).filter((option) => {
+                const value = String(option.value || '').trim();
+                if (!value) return false;
+                const dedupeKey = value.toLowerCase();
+                if (seen.has(dedupeKey)) return false;
+                seen.add(dedupeKey);
+                return true;
+            });
+            return {
+                ...variant,
+                options: uniqueOptions,
+            };
+        });
+
+        const cartesian = (
+            index: number,
+            acc: { name: string; value: string }[],
+        ): ProductVariantCombination[] => {
+            if (index >= normalizedVariants.length) {
+                const selections = [...acc].sort((a, b) => a.name.localeCompare(b.name));
+                return [
+                    {
+                        key: buildVariantKey(selections),
+                        selections,
+                        quantity: 0,
+                        sku: '',
+                    },
+                ];
+            }
+
+            const current = normalizedVariants[index];
+            const results: ProductVariantCombination[] = [];
+            for (const option of current.options || []) {
+                const value = String(option.value || '').trim();
+                if (!value) continue;
+                results.push(
+                    ...cartesian(index + 1, [...acc, { name: current.name, value }]),
+                );
+            }
+            return results;
+        };
+
+        return cartesian(0, []);
+    }, [variants]);
+
+    useEffect(() => {
+        if (!generatedCombinations.length) {
+            if (variantCombinations.length) onCombinationsChange([]);
+            return;
+        }
+
+        const prevMap = new Map(
+            variantCombinations.map((c) => [c.key, c]),
+        );
+        const merged = generatedCombinations.map((combo) => {
+            const prev = prevMap.get(combo.key);
+            return {
+                ...combo,
+                quantity: Number(prev?.quantity || 0),
+                sku: String(prev?.sku || ''),
+            };
+        });
+        const mergedSorted = [...merged].sort((a, b) => a.key.localeCompare(b.key));
+        const currentSorted = [...variantCombinations].sort((a, b) =>
+            a.key.localeCompare(b.key),
+        );
+        const mergedJson = JSON.stringify(mergedSorted);
+        const currentJson = JSON.stringify(
+            currentSorted,
+        );
+        if (mergedJson !== currentJson) {
+            onCombinationsChange(mergedSorted);
+        }
+    }, [generatedCombinations, variantCombinations, onCombinationsChange]);
 
     const addVariant = () => {
         if (!newVariantName.trim()) return;
@@ -37,7 +131,6 @@ export default function ProductVariantsManager({
         const updated = [...variants];
         updated[variantIndex].options.push({
             value: '',
-            quantity: 0,
         });
         onChange(updated);
     };
@@ -59,6 +152,18 @@ export default function ProductVariantsManager({
         const updated = [...variants];
         (updated[variantIndex].options[optionIndex] as any)[field] = value;
         onChange(updated);
+    };
+
+    const updateCombination = (
+        key: string,
+        field: 'quantity' | 'sku',
+        value: number | string,
+    ) => {
+        onCombinationsChange(
+            variantCombinations.map((combo) =>
+                combo.key === key ? { ...combo, [field]: value } : combo,
+            ),
+        );
     };
 
     return (
@@ -106,7 +211,7 @@ export default function ProductVariantsManager({
                     <div className="space-y-2 ml-4">
                         {variant.options.map((option, optionIndex) => (
                             <div key={optionIndex} className="flex gap-2 items-end">
-                                <div className="flex-1 grid grid-cols-4 gap-2">
+                                <div className="flex-1 grid grid-cols-2 gap-2">
                                     <div>
                                         <Label className="text-xs">Value</Label>
                                         <Input
@@ -115,42 +220,6 @@ export default function ProductVariantsManager({
                                                 updateOption(variantIndex, optionIndex, 'value', e.target.value)
                                             }
                                             placeholder="e.g., M, Red"
-                                            size={1}
-                                        />
-                                    </div>
-                                    <div>
-                                        <Label className="text-xs">Quantity</Label>
-                                        <Input
-                                            type="number"
-                                            min="0"
-                                            value={option.quantity}
-                                            onChange={(e) =>
-                                                updateOption(
-                                                    variantIndex,
-                                                    optionIndex,
-                                                    'quantity',
-                                                    parseInt(e.target.value) || 0
-                                                )
-                                            }
-                                            size={1}
-                                        />
-                                    </div>
-                                    <div>
-                                        <Label className="text-xs">Price ($)</Label>
-                                        <Input
-                                            type="number"
-                                            step="0.01"
-                                            min="0"
-                                            value={option.price || ''}
-                                            onChange={(e) =>
-                                                updateOption(
-                                                    variantIndex,
-                                                    optionIndex,
-                                                    'price',
-                                                    e.target.value ? parseFloat(e.target.value) : undefined
-                                                )
-                                            }
-                                            placeholder="Optional"
                                             size={1}
                                         />
                                     </div>
@@ -192,8 +261,51 @@ export default function ProductVariantsManager({
 
             {variants.length === 0 && (
                 <p className="text-sm text-gray-500 italic">
-                    No variants added. Add variants like Size or Color to offer multiple options.
+                    No variants added yet.
                 </p>
+            )}
+
+            {variantCombinations.length > 0 && (
+                <Card className="p-4">
+                    <h4 className="font-medium mb-3">Stock theo tổ hợp</h4>
+                    <div className="space-y-2">
+                        {variantCombinations.map((combo) => (
+                            <div key={combo.key} className="grid grid-cols-12 gap-2 items-end">
+                                <div className="col-span-6">
+                                    <Label className="text-xs">Tổ hợp</Label>
+                                    <div className="h-10 px-3 rounded-md border bg-muted/30 flex items-center text-sm">
+                                        {combo.selections.map((s) => s.value).join(' / ')}
+                                    </div>
+                                </div>
+                                <div className="col-span-3">
+                                    <Label className="text-xs">Số lượng</Label>
+                                    <Input
+                                        type="number"
+                                        min="0"
+                                        value={combo.quantity}
+                                        onChange={(e) =>
+                                            updateCombination(
+                                                combo.key,
+                                                'quantity',
+                                                parseInt(e.target.value) || 0,
+                                            )
+                                        }
+                                    />
+                                </div>
+                                <div className="col-span-3">
+                                    <Label className="text-xs">SKU</Label>
+                                    <Input
+                                        value={combo.sku || ''}
+                                        onChange={(e) =>
+                                            updateCombination(combo.key, 'sku', e.target.value)
+                                        }
+                                        placeholder="Optional"
+                                    />
+                                </div>
+                            </div>
+                        ))}
+                    </div>
+                </Card>
             )}
         </div>
     );

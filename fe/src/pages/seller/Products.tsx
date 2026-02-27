@@ -30,6 +30,7 @@ import {
   deleteProduct,
   type Product,
   type ProductVariant,
+  type ProductVariantCombination,
 } from '@/api/seller-products';
 import ProductVariantsManager from '@/components/seller/product-variants-manager';
 import api from '@/lib/axios';
@@ -48,6 +49,7 @@ interface EditFormData {
   categoryId: string;
   images: string[];
   variants: ProductVariant[];
+  variantCombinations: ProductVariantCombination[];
 }
 
 const listingStatusLabel: Record<string, string> = {
@@ -90,7 +92,12 @@ export default function SellerProducts() {
     categoryId: '',
     images: [],
     variants: [],
+    variantCombinations: [],
   });
+  const totalVariantStock = formData.variantCombinations.reduce(
+    (sum, combo) => sum + (Number(combo.quantity) || 0),
+    0,
+  );
 
   useEffect(() => {
     api.get('/api/categories').then((res) => {
@@ -136,6 +143,7 @@ export default function SellerProducts() {
       categoryId: typeof product.categoryId === 'object' ? product.categoryId?._id ?? '' : product.categoryId ?? '',
       images: product.images ?? [],
       variants: product.variants ?? [],
+      variantCombinations: product.variantCombinations ?? [],
     });
     setIsDialogOpen(true);
   };
@@ -183,6 +191,7 @@ export default function SellerProducts() {
         categoryId: formData.categoryId || undefined,
         images: formData.images,
         variants: formData.variants,
+        variantCombinations: formData.variantCombinations,
       });
       toast.success('Cập nhật sản phẩm thành công');
       setIsDialogOpen(false);
@@ -445,19 +454,28 @@ export default function SellerProducts() {
                           {variant.options.map((opt) => (
                             <div
                               key={opt.value}
-                              className={`border rounded-md px-3 py-2 text-sm ${opt.quantity === 0 ? 'border-dashed bg-gray-50 text-gray-400' : 'border-solid bg-white'
-                                }`}
+                              className="border rounded-md px-3 py-2 text-sm border-solid bg-white"
                             >
                               <div className="font-medium">{opt.value}</div>
                               <div className="text-xs text-gray-500 space-x-2">
-                                <span>Kho: {opt.quantity}</span>
-                                {opt.price != null && <span>Giá: ${opt.price.toFixed(2)}</span>}
                                 {opt.sku && <span>SKU: {opt.sku}</span>}
                               </div>
-                              {opt.quantity === 0 && <div className="text-xs text-red-400">Hết hàng</div>}
                             </div>
                           ))}
                         </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+              {viewingProduct.variantCombinations && viewingProduct.variantCombinations.length > 0 && (
+                <div>
+                  <h4 className="font-semibold mb-3">Tồn kho theo tổ hợp</h4>
+                  <div className="space-y-2">
+                    {viewingProduct.variantCombinations.map((combo) => (
+                      <div key={combo.key} className="flex items-center justify-between border rounded-md px-3 py-2 text-sm">
+                        <span>{combo.selections.map((s) => s.value).join(' / ')}</span>
+                        <span className="font-semibold">Kho: {combo.quantity}</span>
                       </div>
                     ))}
                   </div>
@@ -516,8 +534,9 @@ export default function SellerProducts() {
                 <Input
                   type="number"
                   min="0"
-                  value={formData.quantity}
+                  value={formData.variantCombinations.length > 0 ? totalVariantStock : formData.quantity}
                   onChange={(e) => setFormData({ ...formData, quantity: parseInt(e.target.value) || 0 })}
+                  disabled={formData.variantCombinations.length > 0}
                 />
               </div>
             </div>
@@ -588,6 +607,10 @@ export default function SellerProducts() {
               <ProductVariantsManager
                 variants={formData.variants}
                 onChange={(variants) => setFormData({ ...formData, variants })}
+                variantCombinations={formData.variantCombinations}
+                onCombinationsChange={(variantCombinations) =>
+                  setFormData({ ...formData, variantCombinations })
+                }
               />
             </div>
           </div>
@@ -603,3 +626,6 @@ export default function SellerProducts() {
     </div>
   );
 }
+
+
+

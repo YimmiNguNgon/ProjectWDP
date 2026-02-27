@@ -40,6 +40,7 @@ type OrderItem = {
   title: string;
   unitPrice: number;
   quantity: number;
+  selectedVariants?: { name: string; value: string }[];
 };
 
 type Order = {
@@ -47,6 +48,12 @@ type Order = {
   buyer: { _id: string; username: string };
   seller: { _id: string; username: string };
   items: OrderItem[];
+  subtotalAmount?: number;
+  discountAmount?: number;
+  voucher?: {
+    code?: string;
+    discountAmount?: number;
+  } | null;
   totalAmount: number;
   status: string;
   createdAt: string;
@@ -56,6 +63,8 @@ type PurchaseRow = {
   orderId: string;
   orderDate: string;
   totalAmount: number;
+  discountAmount: number;
+  voucherCode: string;
   sellerId: string;
   sellerName: string;
   productId: string;
@@ -232,6 +241,8 @@ export default function PurchaseHistoryPage() {
           orderId: order._id,
           orderDate: order.createdAt,
           totalAmount: order.totalAmount,
+          discountAmount: order.discountAmount || order.voucher?.discountAmount || 0,
+          voucherCode: order.voucher?.code || "",
           sellerId: order.seller?._id,
           sellerName: order.seller?.username,
           productId: item.productId?._id || "",
@@ -323,6 +334,11 @@ export default function PurchaseHistoryPage() {
                   {/* ORDER TOTAL + ICON giống hình */}
                   <div className="flex flex-col gap-1 font-semibold">
                     <span>US ${row.totalAmount?.toFixed(2)}</span>
+                    {row.discountAmount > 0 && (
+                      <span className="text-xs text-green-700 font-medium">
+                        Voucher {row.voucherCode ? `(${row.voucherCode})` : ""}: -US ${row.discountAmount.toFixed(2)}
+                      </span>
+                    )}
                     <div className="flex items-center gap-1 text-muted-foreground">
                       <DollarSign className="h-3 w-3" />
                       <Package className="h-3 w-3" />
@@ -374,6 +390,19 @@ export default function PurchaseHistoryPage() {
                     <div className="font-medium leading-snug">
                       {row.productTitle}
                     </div>
+                    {orders
+                      .find((o) => o._id === row.orderId)
+                      ?.items.find((item) => item.productId?._id === row.productId)
+                      ?.selectedVariants?.length ? (
+                      <div className="text-xs text-muted-foreground">
+                        Variant:{" "}
+                        {orders
+                          .find((o) => o._id === row.orderId)
+                          ?.items.find((item) => item.productId?._id === row.productId)
+                          ?.selectedVariants?.map((variant) => `${variant.name}: ${variant.value}`)
+                          .join(", ")}
+                      </div>
+                    ) : null}
                     {/* có thể thêm item ID nếu muốn */}
                     {/* <div className="text-xs text-muted-foreground">
                         (item ID ...)

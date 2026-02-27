@@ -1,4 +1,15 @@
 const Order = require("../models/Order");
+const Voucher = require("../models/Voucher");
+const {
+  validateVoucherForUser,
+  markVoucherAsUsed,
+} = require("./voucherController");
+const {
+  findVariantOption,
+  normalizeSelectedVariants,
+  buildVariantKey,
+  syncProductStockFromVariants,
+} = require("../utils/productInventory");
 
 // Helper function để format date
 const formatDate = (date) => {
@@ -37,6 +48,14 @@ getAllOrders = async (req, res) => {
         customer: order.buyer?.name || "Khách hàng",
         email: order.buyer?.email || "",
         total: order.totalAmount,
+        subtotal: order.subtotalAmount ?? order.totalAmount,
+        discountAmount: order.discountAmount ?? 0,
+        voucher: order.voucher
+          ? {
+              code: order.voucher.code || "",
+              discountAmount: order.voucher.discountAmount || 0,
+            }
+          : null,
         status: order.status,
         items: order.items, // Return the actual items array
         itemCount: totalItems, // Số lượng items (tổng quantity)
@@ -92,6 +111,9 @@ getOrderById = async (req, res) => {
       address: order.buyer?.address || "",
       seller: order.seller?.name || "",
       totalAmount: order.totalAmount,
+      subtotalAmount: order.subtotalAmount ?? order.totalAmount,
+      discountAmount: order.discountAmount ?? 0,
+      voucher: order.voucher || null,
       status: order.status,
       items: totalItems,
       date: formatDate(order.createdAt),
@@ -192,6 +214,14 @@ getOrders = async (req, res) => {
         customer: order.buyer?.username || "Khách hàng",
         email: order.buyer?.email || "",
         totalAmount: order.totalAmount,
+        subtotalAmount: order.subtotalAmount ?? order.totalAmount,
+        discountAmount: order.discountAmount ?? 0,
+        voucher: order.voucher
+          ? {
+              code: order.voucher.code || "",
+              discountAmount: order.voucher.discountAmount || 0,
+            }
+          : null,
         status: order.status,
         items: order.items,
         itemCount: totalItems,
@@ -261,63 +291,144 @@ getOrderStats = async (req, res) => {
 createOrder = async (req, res) => {
   try {
     const buyerId = req.user._id;
-    const { items } = req.body;
+    const { items, voucherCode } = req.body;
 
     if (!items || !Array.isArray(items) || items.length === 0) {
-      return res.status(400).json({ success: false, message: "Danh sách sản phẩm không hợp lệ" });
+      return res.status(400).json({ success: false, message: "Invalid order items" });
     }
 
     const Product = require("../models/Product");
 
-    // Validate và lấy thông tin sản phẩm
     const orderItems = [];
-    let totalAmount = 0;
+    let subtotalAmount = 0;
     let sellerId = null;
 
     for (const item of items) {
       const product = await Product.findById(item.productId);
       if (!product) {
-        return res.status(404).json({ success: false, message: `Không tìm thấy sản phẩm ${item.productId}` });
+        return res
+          .status(404)
+          .json({ success: false, message: `Product not found: ${item.productId}` });
       }
-      // Không cho phép mua sản phẩm của chính mình
+
       if (product.sellerId && product.sellerId.toString() === buyerId.toString()) {
-        return res.status(403).json({ success: false, message: `Bạn không thể mua sản phẩm của chính mình` });
+        return res
+          .status(403)
+          .json({ success: false, message: "You cannot buy your own product" });
       }
+
       const qty = parseInt(item.quantity) || 1;
-      if (product.quantity < qty) {
-        return res.status(400).json({ success: false, message: `Sản phẩm "${product.title}" không đủ số lượng tồn kho` });
+      const variantCheck = findVariantOption(product, item.selectedVariants);
+      if (!variantCheck.ok) {
+        return res.status(400).json({ success: false, message: variantCheck.message });
       }
+
+      if (variantCheck.optionQuantity < qty) {
+        return res.status(400).json({
+          success: false,
+          message: `Product "${product.title}" does not have enough stock`,
+        });
+      }
+
+      const normalizedVariants = normalizeSelectedVariants(item.selectedVariants);
       orderItems.push({
         productId: product._id,
         title: product.title,
-        unitPrice: product.price,
+        unitPrice: variantCheck.optionPrice,
         quantity: qty,
+        selectedVariants: normalizedVariants,
+        variantSku: variantCheck.optionSku,
       });
-      totalAmount += product.price * qty;
-      // Lấy sellerId từ sản phẩm đầu tiên
-      if (!sellerId) sellerId = product.sellerId;
+      subtotalAmount += variantCheck.optionPrice * qty;
 
-      // Trừ tồn kho
-      product.quantity -= qty;
+      if (!sellerId) sellerId = product.sellerId;
+      if (sellerId.toString() !== product.sellerId.toString()) {
+        return res.status(400).json({
+          success: false,
+          message: "All items in one order must belong to the same seller",
+        });
+      }
+
+      const hasVariantCombos =
+        Array.isArray(product.variantCombinations) &&
+        product.variantCombinations.length > 0 &&
+        normalizedVariants.length > 0;
+      if (hasVariantCombos) {
+        const key = buildVariantKey(normalizedVariants);
+        const combo = product.variantCombinations.find((c) => c.key === key);
+        if (!combo) {
+          return res.status(400).json({
+            success: false,
+            message: `Variant combination is not configured for "${product.title}"`,
+          });
+        }
+        combo.quantity = Math.max(0, (Number(combo.quantity) || 0) - qty);
+        syncProductStockFromVariants(product);
+      } else {
+        product.quantity = Math.max(0, (Number(product.quantity) || 0) - qty);
+        product.stock = Math.max(0, (Number(product.stock) || 0) - qty);
+      }
       await product.save();
     }
 
     if (!sellerId) {
-      return res.status(400).json({ success: false, message: "Không xác định được người bán" });
+      return res.status(400).json({ success: false, message: "Cannot resolve seller" });
     }
+
+    let discountAmount = 0;
+    let appliedVoucher = null;
+
+    if (voucherCode) {
+      const normalizedCode = String(voucherCode).trim().toUpperCase();
+      const voucher = await Voucher.findOne({
+        code: normalizedCode,
+        seller: sellerId,
+      });
+
+      if (!voucher) {
+        return res
+          .status(404)
+          .json({ success: false, message: "Voucher not found" });
+      }
+
+      const validation = validateVoucherForUser(voucher, buyerId, subtotalAmount);
+      if (!validation.ok) {
+        return res.status(400).json({ success: false, message: validation.message });
+      }
+
+      discountAmount = validation.discountAmount;
+      appliedVoucher = voucher;
+    }
+
+    const totalAmount = Number((subtotalAmount - discountAmount).toFixed(2));
 
     const order = await Order.create({
       buyer: buyerId,
       seller: sellerId,
       items: orderItems,
+      subtotalAmount,
+      discountAmount,
+      voucher: appliedVoucher
+        ? {
+            voucherId: appliedVoucher._id,
+            code: appliedVoucher.code,
+            type: appliedVoucher.type,
+            value: appliedVoucher.value,
+            discountAmount,
+          }
+        : undefined,
       totalAmount,
       status: "created",
       statusHistory: [{ status: "created", timestamp: new Date() }],
     });
 
-    return res.status(201).json({ success: true, message: "Đặt hàng thành công", data: order });
+    if (appliedVoucher) {
+      await markVoucherAsUsed(appliedVoucher, buyerId, order._id);
+    }
+
+    return res.status(201).json({ success: true, message: "Order created successfully", data: order });
   } catch (error) {
-    res.status(500).json({ success: false, message: "Lỗi khi tạo đơn hàng", error: error.message });
+    res.status(500).json({ success: false, message: "Failed to create order", error: error.message });
   }
 };
 
@@ -328,3 +439,4 @@ module.exports = {
   getOrderStats,
   createOrder,
 };
+

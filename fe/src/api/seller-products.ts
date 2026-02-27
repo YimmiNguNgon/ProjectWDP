@@ -5,9 +5,16 @@ export interface ProductVariant {
   options: {
     value: string;
     price?: number;
-    quantity: number;
+    quantity?: number;
     sku?: string;
   }[];
+}
+
+export interface ProductVariantCombination {
+  key: string;
+  selections: { name: string; value: string }[];
+  quantity: number;
+  sku?: string;
 }
 
 export interface Product {
@@ -25,6 +32,7 @@ export interface Product {
   listingStatus: "active" | "paused" | "ended" | "deleted";
   lowStockThreshold: number;
   variants?: ProductVariant[];
+  variantCombinations?: ProductVariantCombination[];
   averageRating: number;
   ratingCount: number;
   createdAt: string;
@@ -49,6 +57,7 @@ export interface CreateProductPayload {
   image?: string;
   images?: string[];
   variants?: ProductVariant[];
+  variantCombinations?: ProductVariantCombination[];
 }
 
 /**

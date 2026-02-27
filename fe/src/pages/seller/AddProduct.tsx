@@ -17,7 +17,7 @@ import {
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { toast } from 'sonner';
 import { createProduct } from '@/api/seller-products';
-import type { ProductVariant } from '@/api/seller-products';
+import type { ProductVariant, ProductVariantCombination } from '@/api/seller-products';
 import ProductVariantsManager from '@/components/seller/product-variants-manager';
 import api from '@/lib/axios';
 
@@ -32,6 +32,11 @@ export default function AddProduct() {
   const [loading, setLoading] = useState(false);
   const [categories, setCategories] = useState<Category[]>([]);
   const [variants, setVariants] = useState<ProductVariant[]>([]);
+  const [variantCombinations, setVariantCombinations] = useState<ProductVariantCombination[]>([]);
+  const totalVariantStock = variantCombinations.reduce(
+    (sum, combo) => sum + (Number(combo.quantity) || 0),
+    0,
+  );
   const [formData, setFormData] = useState({
     title: '',
     description: '',
@@ -72,6 +77,7 @@ export default function AddProduct() {
         condition: formData.condition,
         categoryId: formData.categoryId || undefined,
         variants,
+        variantCombinations,
       });
 
       toast.success('Sản phẩm đã được thêm thành công!');
@@ -173,6 +179,8 @@ export default function AddProduct() {
                   <ProductVariantsManager
                     variants={variants}
                     onChange={setVariants}
+                    variantCombinations={variantCombinations}
+                    onCombinationsChange={setVariantCombinations}
                   />
                 </CardContent>
               </Card>
@@ -216,8 +224,9 @@ export default function AddProduct() {
                         type="number"
                         placeholder="Số lượng"
                         className="pl-10"
-                        value={formData.quantity}
+                        value={variantCombinations.length > 0 ? String(totalVariantStock) : formData.quantity}
                         onChange={handleChange}
+                        disabled={variantCombinations.length > 0}
                       />
                     </div>
                   </div>
@@ -284,3 +293,7 @@ export default function AddProduct() {
     </div>
   );
 }
+
+
+
+

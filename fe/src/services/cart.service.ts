@@ -8,11 +8,15 @@ export interface CartItem {
     title: string;
     description: string;
     price: number;
+    quantity?: number;
     stock: number;
     image: string;
   };
   quantity: number;
   priceSnapShot: number;
+  selectedVariants?: { name: string; value: string }[];
+  variantSku?: string;
+  availableStock?: number;
   seller: {
     _id: string;
     name: string;
@@ -34,8 +38,16 @@ export const cartService = {
     return response.data.cart;
   },
 
-  addToCart: async (productId: string, quantity: number) => {
-    const response = await api.post("/api/cart", { productId, quantity });
+  addToCart: async (
+    productId: string,
+    quantity: number,
+    selectedVariants?: { name: string; value: string }[],
+  ) => {
+    const response = await api.post("/api/cart", {
+      productId,
+      quantity,
+      selectedVariants,
+    });
     return response.data;
   },
 

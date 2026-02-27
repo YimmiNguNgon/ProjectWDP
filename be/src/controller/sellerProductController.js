@@ -1,5 +1,9 @@
 const Product = require("../models/Product");
 const mongoose = require("mongoose");
+const {
+    normalizeVariantCombinations,
+    syncProductStockFromVariants,
+} = require("../utils/productInventory");
 
 /**
  * Get seller's own products/listings
@@ -84,6 +88,7 @@ exports.updateProduct = async (req, res, next) => {
             image,
             images,
             variants,
+            variantCombinations,
             lowStockThreshold,
         } = req.body;
 
@@ -96,7 +101,17 @@ exports.updateProduct = async (req, res, next) => {
         if (image !== undefined) product.image = image;
         if (images !== undefined) product.images = images;
         if (variants !== undefined) product.variants = variants;
+        if (variantCombinations !== undefined) {
+            product.variantCombinations =
+                normalizeVariantCombinations(variantCombinations);
+            syncProductStockFromVariants(product);
+        }
         if (lowStockThreshold !== undefined) product.lowStockThreshold = lowStockThreshold;
+
+        if (quantity !== undefined && variantCombinations === undefined) {
+            product.quantity = Number(quantity) || 0;
+            product.stock = Number(quantity) || 0;
+        }
 
         product.updatedAt = new Date();
         await product.save();

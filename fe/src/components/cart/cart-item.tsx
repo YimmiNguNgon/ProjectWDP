@@ -24,6 +24,7 @@ export const CartItem = ({ item, isSelected, onToggle }: CartItemProps) => {
 
   const price = item.priceSnapShot;
   const priceVND = price * 25400; // Approx rate
+  const availableStock = item.availableStock ?? item.product.quantity ?? item.product.stock;
 
   const imageUrl = item.product.image || "";
 
@@ -38,7 +39,7 @@ export const CartItem = ({ item, isSelected, onToggle }: CartItemProps) => {
   };
 
   const handleIncrease = () => {
-    if (quantity < item.product.stock) {
+    if (quantity < availableStock) {
       const newQty = quantity + 1;
       setQuantity(newQty);
       updateQuantity(item._id, "increase");
@@ -183,16 +184,21 @@ export const CartItem = ({ item, isSelected, onToggle }: CartItemProps) => {
                     e.stopPropagation();
                     handleIncrease();
                   }}
-                  disabled={quantity >= item.product.stock}
+                  disabled={quantity >= availableStock}
                   className="w-8 h-8 flex cursor-pointer items-center justify-center text-gray-500 hover:bg-gray-100 disabled:opacity-30 disabled:cursor-not-allowed transition-colors border-l border-gray-300"
                 >
                   <Plus className="size-3.5" />
                 </button>
               </div>
               <span className="text-muted-foreground">
-                Stock: {item.product.stock}
+                Stock: {availableStock}
               </span>
             </div>
+            {item.selectedVariants && item.selectedVariants.length > 0 && (
+              <div className="text-sm text-muted-foreground">
+                Variant: {item.selectedVariants.map((v) => `${v.name}: ${v.value}`).join(", ")}
+              </div>
+            )}
 
             {/* Action links */}
             <div className="flex items-center gap-1 text-sm flex-wrap">

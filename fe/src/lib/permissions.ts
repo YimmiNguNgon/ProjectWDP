@@ -17,6 +17,7 @@ export const ROLE_PERMISSIONS: Record<UserRole, Permission[]> = {
         { resource: 'feedback-revision', actions: ['read', 'approve', 'reject', 'cancel'] },
         { resource: 'complaints', actions: ['read', 'resolve'] },
         { resource: 'promotions', actions: ['read', 'approve', 'reject'] },
+        { resource: 'vouchers', actions: ['read', 'approve', 'reject'] },
         { resource: 'dashboard', actions: ['read'] },
         { resource: 'reports', actions: ['read'] },
     ],
@@ -27,6 +28,7 @@ export const ROLE_PERMISSIONS: Record<UserRole, Permission[]> = {
         { resource: 'reviews', actions: ['read', 'respond'] },
         { resource: 'feedback-revision', actions: ['create', 'read', 'cancel'] },
         { resource: 'promotions', actions: ['create', 'read'] },
+        { resource: 'vouchers', actions: ['create', 'read', 'update'] },
         { resource: 'messages', actions: ['read', 'send'] },
         { resource: 'analytics', actions: ['read'] },
     ],
@@ -95,6 +97,8 @@ export const getAllowedRoutes = (userRole: UserRole): string[] => {
             '/admin/complaints',
             '/admin/reviews',
             '/admin/promotion-requests'
+            ,
+            '/admin/voucher-requests'
         );
     }
 
@@ -104,6 +108,8 @@ export const getAllowedRoutes = (userRole: UserRole): string[] => {
             '/seller/inventory',
             '/seller/sold',
             '/seller/promotion-requests'
+            ,
+            '/seller/vouchers'
         );
     }
 

@@ -52,6 +52,8 @@ import BuyerFeedbackRequestsPage from "@/pages/buyer/feedback-requests";
 import SavedSearchesPage from "@/pages/saved-searches-page";
 import SavedSellersPage from "@/pages/saved-sellers-page";
 import CartPage from "@/pages/buyer/cart";
+import SellerVouchersPage from "@/pages/seller/vouchers";
+import AdminVoucherRequestsPage from "@/pages/admin/voucher-requests";
 
 // Placeholder components for admin pages
 const AdminComplaints = () => (
@@ -204,6 +206,10 @@ export const AppRouter = () => {
           element: <AdminPromotionRequestsPage />,
         },
         {
+          path: "voucher-requests",
+          element: <AdminVoucherRequestsPage />,
+        },
+        {
           path: "permissions",
           element: <PermissionsPage />,
         },
@@ -256,6 +262,10 @@ export const AppRouter = () => {
         {
           path: "feedback-requests",
           element: <SellerFeedbackRequestsPage />,
+        },
+        {
+          path: "vouchers",
+          element: <SellerVouchersPage />,
         },
       ],
     },

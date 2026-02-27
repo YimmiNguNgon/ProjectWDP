@@ -7,7 +7,11 @@ import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tag, DollarSign, Package, Layers, ArrowLeft, Image as ImageIcon } from 'lucide-react';
 import { toast } from 'sonner';
-import { updateProduct, type ProductVariant } from '@/api/seller-products';
+import {
+    updateProduct,
+    type ProductVariant,
+    type ProductVariantCombination,
+} from '@/api/seller-products';
 import ProductVariantsManager from '@/components/seller/product-variants-manager';
 import api from '@/lib/axios';
 
@@ -24,6 +28,11 @@ export default function EditProduct() {
     const [uploading, setUploading] = useState(false);
     const [categories, setCategories] = useState<Category[]>([]);
     const [variants, setVariants] = useState<ProductVariant[]>([]);
+    const [variantCombinations, setVariantCombinations] = useState<ProductVariantCombination[]>([]);
+    const totalVariantStock = variantCombinations.reduce(
+        (sum, combo) => sum + (Number(combo.quantity) || 0),
+        0,
+    );
     const [images, setImages] = useState<string[]>([]);
     const [formData, setFormData] = useState({
         title: '',
@@ -55,6 +64,7 @@ export default function EditProduct() {
                 });
                 setImages(p.images ?? []);
                 setVariants(p.variants ?? []);
+                setVariantCombinations(p.variantCombinations ?? []);
             })
             .catch(() => {
                 toast.error('Không thể tải thông tin sản phẩm');
@@ -109,6 +119,7 @@ export default function EditProduct() {
                 categoryId: formData.categoryId || undefined,
                 images,
                 variants,
+                variantCombinations,
             } as any);
             toast.success('Cập nhật sản phẩm thành công!');
             navigate('/seller/products');
@@ -208,7 +219,12 @@ export default function EditProduct() {
                                     <p className="text-sm text-gray-500 mb-4">
                                         Thêm các đặc điểm như Kích thước, Màu sắc... và liệt kê các giá trị tương ứng.
                                     </p>
-                                    <ProductVariantsManager variants={variants} onChange={setVariants} />
+                                    <ProductVariantsManager
+                                        variants={variants}
+                                        onChange={setVariants}
+                                        variantCombinations={variantCombinations}
+                                        onCombinationsChange={setVariantCombinations}
+                                    />
                                 </CardContent>
                             </Card>
                         </div>
@@ -239,7 +255,7 @@ export default function EditProduct() {
                                             <Package className="absolute left-3 top-2.5 h-4 w-4 text-gray-500" />
                                             <Input
                                                 id="quantity" name="quantity" type="number" placeholder="Số lượng"
-                                                className="pl-10" value={formData.quantity} onChange={handleChange}
+                                                className="pl-10" value={variantCombinations.length > 0 ? String(totalVariantStock) : formData.quantity} onChange={handleChange} disabled={variantCombinations.length > 0}
                                             />
                                         </div>
                                     </div>
@@ -290,3 +306,4 @@ export default function EditProduct() {
         </div>
     );
 }
+

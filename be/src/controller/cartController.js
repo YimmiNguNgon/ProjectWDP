@@ -2,6 +2,11 @@ const Cart = require("../models/Cart.js");
 const CartItem = require("../models/CartItem.js");
 const Product = require("../models/Product.js");
 const recalculateCart = require("../utils/cart.js");
+const {
+  buildVariantKey,
+  findVariantOption,
+  normalizeSelectedVariants,
+} = require("../utils/productInventory");
 
 exports.getMyCart = async (req, res, next) => {
   try {
@@ -18,9 +23,21 @@ exports.getMyCart = async (req, res, next) => {
       .populate("seller", "name")
       .lean();
 
+    const mappedItems = items.map((item) => {
+      const variantCheck = findVariantOption(item.product, item.selectedVariants || []);
+      const availableStock = variantCheck.ok
+        ? variantCheck.optionQuantity
+        : Number(item.product.quantity || item.product.stock || 0);
+
+      return {
+        ...item,
+        availableStock,
+      };
+    });
+
     return res
       .status(200)
-      .json({ message: "Get Cart", cart: { ...cart, items } });
+      .json({ message: "Get Cart", cart: { ...cart, items: mappedItems } });
   } catch (error) {
     next(error);
   }
@@ -29,7 +46,11 @@ exports.getMyCart = async (req, res, next) => {
 exports.addToCart = async (req, res, next) => {
   try {
     const userId = req.user._id;
-    const { productId, quantity } = req.body;
+    const { productId, quantity, selectedVariants } = req.body;
+    const parsedQty = parseInt(quantity) || 1;
+    if (parsedQty <= 0) {
+      return res.status(400).json({ message: "Invalid quantity" });
+    }
 
     const product = await Product.findById(productId);
 
@@ -37,11 +58,19 @@ exports.addToCart = async (req, res, next) => {
       return res.status(404).json({ message: "Not found product" });
     }
 
-    if (product.quantity < quantity) {
+    const variantCheck = findVariantOption(product, selectedVariants);
+    if (!variantCheck.ok) {
+      return res.status(400).json({ message: variantCheck.message });
+    }
+
+    if (variantCheck.optionQuantity < parsedQty) {
       return res
         .status(400)
         .json({ message: "Product stock is not enough to add." });
     }
+
+    const normalizedVariants = normalizeSelectedVariants(selectedVariants);
+    const variantKey = buildVariantKey(normalizedVariants);
 
     let cart = await Cart.findOne({
       user: userId,
@@ -55,28 +84,27 @@ exports.addToCart = async (req, res, next) => {
     let item = await CartItem.findOne({
       cart: cart._id,
       product: product._id,
+      variantKey,
     });
 
     if (item) {
-      if (product.quantity < item.quantity + quantity) {
+      if (variantCheck.optionQuantity < item.quantity + parsedQty) {
         return res
           .status(400)
           .json({ message: "Product stock is not enough to add." });
       }
-      item.quantity += quantity;
+      item.quantity += parsedQty;
       await item.save();
     } else {
-      if (product.quantity < quantity) {
-        return res
-          .status(400)
-          .json({ message: "Product stock is not enough to add." });
-      }
       await CartItem.create({
         cart: cart._id,
         product: product._id,
         seller: product.sellerId,
-        quantity,
-        priceSnapShot: product.price,
+        quantity: parsedQty,
+        priceSnapShot: variantCheck.optionPrice,
+        selectedVariants: normalizedVariants,
+        variantKey,
+        variantSku: variantCheck.optionSku,
       });
     }
 
@@ -121,6 +149,15 @@ exports.updateCartItemQuantity = async (req, res, next) => {
     }
 
     const product = await Product.findById(item.product);
+    if (!product) {
+      return res.status(404).json({ message: "Product not found" });
+    }
+    const variantCheck = findVariantOption(product, item.selectedVariants || []);
+    if (!variantCheck.ok) {
+      return res.status(400).json({
+        message: variantCheck.message,
+      });
+    }
 
     let newQuantity = item.quantity;
 
@@ -151,7 +188,7 @@ exports.updateCartItemQuantity = async (req, res, next) => {
       return res.json({ message: "Item removed" });
     }
 
-    if (product.quantity < newQuantity) {
+    if (variantCheck.optionQuantity < newQuantity) {
       return res.status(400).json({
         message: "Not enough stock",
       });

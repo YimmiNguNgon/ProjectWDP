@@ -39,6 +39,36 @@ router.get("/products/:id", adminProductController.getProductDetail);
 router.put("/products/:id", adminProductController.updateProduct);
 router.delete("/products/:id", adminProductController.deleteProduct);
 
+// Report product - gửi cảnh báo tới seller
+router.post("/products/:id/report", async (req, res, next) => {
+    try {
+        const Product = require("../models/Product");
+        const { reason, message } = req.body;
+        if (!reason) {
+            return res.status(400).json({ message: "Lý do báo cáo là bắt buộc" });
+        }
+        const product = await Product.findById(req.params.id).lean();
+        if (!product) {
+            return res.status(404).json({ message: "Không tìm thấy sản phẩm" });
+        }
+        await notificationService.sendNotification({
+            recipientId: product.sellerId,
+            type: "product_warning",
+            title: `Cảnh báo sản phẩm: ${product.title}`,
+            body: `[Admin] Lý do: ${reason}${message ? '. ' + message : ''}`,
+            link: `/seller/products`,
+            metadata: {
+                productId: product._id,
+                fromAdmin: req.user.username,
+                reason,
+            },
+        });
+        return res.json({ ok: true, message: "Đã gửi cảnh báo tới seller" });
+    } catch (err) {
+        next(err);
+    }
+});
+
 // Seller application management routes
 router.get("/seller-applications", sellerApplicationController.getAllApplications);
 router.post("/seller-applications/:id/approve", sellerApplicationController.approveApplication);

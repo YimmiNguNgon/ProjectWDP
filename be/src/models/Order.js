@@ -10,6 +10,13 @@ const orderItemSchema = new mongoose.Schema(
     title: String,
     unitPrice: Number,  
     quantity: { type: Number, default: 1 },
+    selectedVariants: [
+      {
+        name: { type: String, required: true },
+        value: { type: String, required: true },
+      },
+    ],
+    variantSku: { type: String, default: "" },
   },
   { _id: false }
 );
@@ -33,6 +40,23 @@ const orderSchema = new mongoose.Schema({
     index: true,
   },
   items: [orderItemSchema],
+  subtotalAmount: { type: Number, default: 0 },
+  discountAmount: { type: Number, default: 0 },
+  voucher: {
+    voucherId: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "Voucher",
+      default: null,
+    },
+    code: { type: String, default: "" },
+    type: {
+      type: String,
+      enum: ["percentage", "fixed", ""],
+      default: "",
+    },
+    value: { type: Number, default: 0 },
+    discountAmount: { type: Number, default: 0 },
+  },
   totalAmount: { type: Number, required: true },
   status: {
     type: String,

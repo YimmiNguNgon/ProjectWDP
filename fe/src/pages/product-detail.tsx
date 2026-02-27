@@ -55,6 +55,13 @@ export interface ProductVariant {
   options: ProductVariantOption[];
 }
 
+export interface ProductVariantCombination {
+  key: string;
+  selections: { name: string; value: string }[];
+  quantity: number;
+  sku?: string;
+}
+
 export interface ProductDetail {
   _id: string;
   sellerId: string;
@@ -69,6 +76,7 @@ export interface ProductDetail {
   averageRating: number;
   ratingCount: number;
   variants?: ProductVariant[];
+  variantCombinations?: ProductVariantCombination[];
   createdAt: Date;
   updatedAt: Date;
   watchCount?: number;
@@ -81,6 +89,7 @@ export default function ProductDetailPage() {
 
   const [product, setProduct] = useState<ProductDetail>();
   const [quantity, setQuantity] = useState(1);
+  const [voucherCode, setVoucherCode] = useState("");
   const [selectedVariants, setSelectedVariants] = useState<Record<string, string>>({});
   const [isWatched, setIsWatched] = useState(false);
   const [watchCount, setWatchCount] = useState(0);
@@ -183,9 +192,56 @@ export default function ProductDetailPage() {
     ? `Seller #${product.sellerId.slice(-5)}`
     : "Seller";
 
+  const selectedVariantPairs = Object.entries(selectedVariants)
+    .filter(([, value]) => value)
+    .map(([name, value]) => ({ name, value }));
+
+  const getSelectedCombinationStock = () => {
+    if (!product?.variantCombinations?.length) return product?.quantity || 0;
+    if (!product?.variants?.length) return product?.quantity || 0;
+    if (selectedVariantPairs.length !== product.variants.length) {
+      return product?.quantity || 0;
+    }
+
+    const key = [...selectedVariantPairs]
+      .sort((a, b) => a.name.localeCompare(b.name))
+      .map((p) => `${p.name}:${p.value}`)
+      .join("|");
+    const combo = product.variantCombinations.find((c) => c.key === key);
+    return combo?.quantity || 0;
+  };
+
+  const getOptionAvailable = (variantName: string, optionValue: string) => {
+    if (!product?.variantCombinations?.length) return true;
+    const expected = selectedVariantPairs.filter((p) => p.name !== variantName);
+    expected.push({ name: variantName, value: optionValue });
+
+    return product.variantCombinations.some((combo) => {
+      if ((combo.quantity || 0) <= 0) return false;
+      return expected.every((item) =>
+        combo.selections.some(
+          (s) => s.name === item.name && s.value === item.value,
+        ),
+      );
+    });
+  };
+
+  const selectedStock = getSelectedCombinationStock();
+  const isExactVariantSelected =
+    (product?.variants?.length || 0) > 0 &&
+    selectedVariantPairs.length === (product?.variants?.length || 0);
+  const maxSelectableQty = isExactVariantSelected
+    ? selectedStock
+    : product?.quantity || 0;
+
+  useEffect(() => {
+    const maxQty = Math.max(1, maxSelectableQty || 1);
+    setQuantity((prev) => Math.max(1, Math.min(prev, maxQty)));
+  }, [maxSelectableQty]);
+
   const handleQuantityChange = (delta: number) => {
     setQuantity((prev) =>
-      Math.max(1, Math.min(product?.quantity || 999, prev + delta)),
+      Math.max(1, Math.min(Math.max(1, maxSelectableQty), prev + delta)),
     );
   };
 
@@ -213,6 +269,11 @@ export default function ProductDetailPage() {
       return;
     }
 
+    if ((product.variants?.length || 0) > 0 && selectedVariantPairs.length !== product.variants!.length) {
+      toast.error("Please select all product variants");
+      return;
+    }
+
     try {
       // Create order with the product and quantity
       await api.post("/api/orders", {
@@ -220,8 +281,10 @@ export default function ProductDetailPage() {
           {
             productId: product._id,
             quantity: quantity,
+            selectedVariants: selectedVariantPairs,
           },
         ],
+        voucherCode: voucherCode.trim() || undefined,
       });
 
       toast.success("Order created successfully!");
@@ -240,7 +303,12 @@ export default function ProductDetailPage() {
       navigate("/auth/sign-in");
       return;
     }
-    await addToCart(product._id, quantity);
+    if ((product.variants?.length || 0) > 0 && selectedVariantPairs.length !== product.variants!.length) {
+      toast.error("Please select all product variants");
+      return;
+    }
+
+    await addToCart(product._id, quantity, selectedVariantPairs);
   };
 
   return (
@@ -372,7 +440,9 @@ export default function ProductDetailPage() {
                     )}
                   </h3>
                   <div className="flex flex-wrap gap-2">
-                    {variant.options.map((opt) => (
+                    {variant.options.map((opt) => {
+                      const optionAvailable = getOptionAvailable(variant.name, opt.value);
+                      return (
                       <button
                         key={opt.value}
                         type="button"
@@ -382,24 +452,33 @@ export default function ProductDetailPage() {
                             [variant.name]: prev[variant.name] === opt.value ? '' : opt.value,
                           }))
                         }
-                        className={`px-3 py-1.5 rounded-md border text-sm transition-all ${selectedVariants[variant.name] === opt.value
-                          ? 'border-primary bg-primary text-primary-foreground'
-                          : 'border-border hover:border-primary'
-                          } ${opt.quantity === 0 ? 'opacity-40 cursor-not-allowed line-through' : 'cursor-pointer'}`}
-                        disabled={opt.quantity === 0}
-                        title={opt.quantity === 0 ? 'Hết hàng' : undefined}
+                        className={`px-3 py-1.5 rounded-md border text-sm transition-all ${
+                          selectedVariants[variant.name] === opt.value
+                            ? "border-primary bg-primary text-primary-foreground"
+                            : "border-border hover:border-primary"
+                        } ${optionAvailable ? "cursor-pointer" : "opacity-40 cursor-not-allowed line-through"}`}
+                        disabled={!optionAvailable}
                       >
                         {opt.value}
-                        {opt.price != null && opt.price !== product.price && (
-                          <span className="ml-1 text-xs opacity-75">(+${opt.price.toFixed(2)})</span>
-                        )}
                       </button>
-                    ))}
+                      );
+                    })}
                   </div>
                 </div>
               ))}
             </div>
           )}
+          <Separator />
+          <div className="flex flex-col gap-2">
+            <Label className="font-bold text-lg">Voucher code:</Label>
+            <Input
+              type="text"
+              placeholder="Enter voucher code (optional)"
+              value={voucherCode}
+              onChange={(e) => setVoucherCode(e.target.value.toUpperCase())}
+              className="h-12"
+            />
+          </div>
           <Separator />
           <div className="flex gap-4 items-center">
             <Label className="font-bold text-lg">Quantity:</Label>
@@ -416,10 +495,15 @@ export default function ProductDetailPage() {
                 type="number"
                 required
                 min={1}
-                max={product?.quantity}
+                max={Math.max(1, maxSelectableQty)}
                 value={quantity}
                 onChange={(e) =>
-                  setQuantity(Math.max(1, parseInt(e.target.value) || 1))
+                  setQuantity(
+                    Math.max(
+                      1,
+                      Math.min(Math.max(1, maxSelectableQty), parseInt(e.target.value) || 1),
+                    ),
+                  )
                 }
                 className="h-12 px-6 w-20 text-center"
               />
@@ -427,12 +511,15 @@ export default function ProductDetailPage() {
                 variant={"outline"}
                 size={"icon"}
                 onClick={() => handleQuantityChange(1)}
-                disabled={quantity >= (product?.quantity || 999)}
+                disabled={quantity >= Math.max(1, maxSelectableQty)}
               >
                 <Plus />
               </Button>
             </div>
           </div>
+          <p className="text-sm text-muted-foreground">
+            In stock: {Math.max(0, maxSelectableQty)}
+          </p>
           {/* Nút mua - ẩn khi là sản phẩm của chính mình */}
           {product?.sellerId && payload?.userId && String(product.sellerId) === String(payload.userId) ? (
             <div className="w-full text-center py-3 bg-muted rounded-md text-sm text-muted-foreground">
@@ -445,6 +532,7 @@ export default function ProductDetailPage() {
                 size={"lg"}
                 className="w-full cursor-pointer"
                 onClick={handleBuyNow}
+                disabled={maxSelectableQty <= 0}
               >
                 Buy it Now
               </Button>
@@ -453,6 +541,7 @@ export default function ProductDetailPage() {
                 size={"lg"}
                 className="w-full cursor-pointer"
                 onClick={handleAddToCart}
+                disabled={maxSelectableQty <= 0}
               >
                 Add to Cart
               </Button>
@@ -490,3 +579,4 @@ export default function ProductDetailPage() {
     </>
   );
 }
+

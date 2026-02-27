@@ -97,6 +97,10 @@ app.use("/api/promotions", promotionRoutes);
 const uploadRoutes = require("./routes/uploadRoutes");
 app.use("/api/upload", uploadRoutes);
 
+// Voucher routes
+const voucherRoutes = require("./routes/vouchers");
+app.use("/api/vouchers", voucherRoutes);
+
 // Feedback Revision routes
 const feedbackRevisionRoutes = require("./routes/feedbackRevision");
 app.use("/api/feedback-revision", feedbackRevisionRoutes);

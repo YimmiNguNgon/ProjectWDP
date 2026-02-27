@@ -28,10 +28,25 @@ const cartItemSchema = new mongoose.Schema(
       required: true,
       min: 0,
     },
+    selectedVariants: [
+      {
+        name: { type: String, required: true },
+        value: { type: String, required: true },
+      },
+    ],
+    variantKey: {
+      type: String,
+      default: "",
+      index: true,
+    },
+    variantSku: {
+      type: String,
+      default: "",
+    },
   },
   { timestamps: true },
 );
 
-cartItemSchema.index({ cart: 1, product: 1 }, { unique: true });
+cartItemSchema.index({ cart: 1, product: 1, variantKey: 1 }, { unique: true });
 
 module.exports = mongoose.model("CartItem", cartItemSchema);
