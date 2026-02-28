@@ -252,10 +252,16 @@ export default function ProductDetailPage() {
       toast.error("Vui lòng đăng nhập để chat với seller");
       return;
     }
+    // Seller không thể chat với chính mình
+    if (sender === receiver || String(sender) === String(receiver)) {
+      toast.info("Đây là sản phẩm của bạn");
+      return;
+    }
     setParticipantsState([sender, receiver]);
     setProductRef(productId);
     setProductContext(product);
   };
+
 
   const handleBuyNow = async () => {
     if (!product) {
@@ -311,33 +317,93 @@ export default function ProductDetailPage() {
     await addToCart(product._id, quantity, selectedVariantPairs);
   };
 
+  const [selectedImageIdx, setSelectedImageIdx] = useState(0);
+
+  // Danh sách ảnh hiển thị: ưu tiên images[], fallback sang image, cuối cùng placeholder
+  const allImages: string[] = (() => {
+    const arr: string[] = [];
+    if (product?.images && product.images.length > 0) {
+      product.images.forEach(u => { if (u) arr.push(u); });
+    }
+    if (product?.image && !arr.includes(product.image)) {
+      arr.push(product.image);
+    }
+    return arr;
+  })();
+  const displayImage = allImages[selectedImageIdx] ?? null;
+
   return (
     <>
       <div className="w-full flex gap-4">
-        <div className="relative w-3/4">
-          <img
-            src={product?.image || "/placeholder.png"}
-            alt={product?.title}
-            className="aspect-square h-128 w-full object-contain"
-          />
-          <Button
-            size="icon"
-            variant="secondary"
-            className="absolute top-4 cursor-pointer right-4 h-10 w-auto min-w-[3.75rem] px-3 rounded-full shadow-md bg-white/80 hover:bg-white"
-            onClick={handleToggleWatchlist}
-          >
-            <div className="flex items-center justify-center gap-1">
-              <span className="text-sm font-semibold leading-none">
-                {watchCount}
-              </span>
-              <Heart
-                className={cn(
-                  "h-5 w-5",
-                  isWatched ? "fill-red-500 text-red-500" : "text-gray-600",
-                )}
-              />
+        <div className="relative w-3/4 flex flex-col gap-3">
+          {/* Main image */}
+          <div className="relative">
+            <img
+              src={displayImage ?? ""}
+              alt={product?.title}
+              className="aspect-square h-128 w-full object-contain rounded-lg bg-muted/30"
+              onError={(e) => {
+                const el = e.currentTarget;
+                el.onerror = null; // prevent loop
+                el.src = "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='400' height='400' fill='none' viewBox='0 0 24 24'%3E%3Crect width='24' height='24' fill='%23f3f4f6'/%3E%3Cpath stroke='%239ca3af' stroke-linecap='round' stroke-linejoin='round' stroke-width='1.5' d='M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2zm6-8a2 2 0 100-4 2 2 0 000 4z'/%3E%3C/svg%3E";
+              }}
+              style={{ display: 'block' }}
+            />
+            {!displayImage && (
+              <div className="absolute inset-0 flex flex-col items-center justify-center text-muted-foreground bg-muted/30 rounded-lg">
+                <svg className="h-16 w-16 mb-2 opacity-30" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2zm6-8a2 2 0 100-4 2 2 0 000 4z" />
+                </svg>
+                <p className="text-sm">Chưa có hình ảnh</p>
+              </div>
+            )}
+            <Button
+              size="icon"
+              variant="secondary"
+              className="absolute top-4 cursor-pointer right-4 h-10 w-auto min-w-[3.75rem] px-3 rounded-full shadow-md bg-white/80 hover:bg-white"
+              onClick={handleToggleWatchlist}
+            >
+              <div className="flex items-center justify-center gap-1">
+                <span className="text-sm font-semibold leading-none">
+                  {watchCount}
+                </span>
+                <Heart
+                  className={cn(
+                    "h-5 w-5",
+                    isWatched ? "fill-red-500 text-red-500" : "text-gray-600",
+                  )}
+                />
+              </div>
+            </Button>
+          </div>
+
+          {/* Thumbnail strip */}
+          {allImages.length > 1 && (
+            <div className="flex gap-2 overflow-x-auto pb-1">
+              {allImages.map((url, idx) => (
+                <button
+                  key={idx}
+                  type="button"
+                  onClick={() => setSelectedImageIdx(idx)}
+                  className={`flex-shrink-0 w-16 h-16 rounded-md border-2 overflow-hidden transition-all ${idx === selectedImageIdx
+                    ? 'border-primary ring-2 ring-primary/30'
+                    : 'border-border hover:border-primary/50'
+                    }`}
+                >
+                  <img
+                    src={url}
+                    alt={`${product?.title} ${idx + 1}`}
+                    className="w-full h-full object-cover"
+                    onError={(e) => {
+                      const el = e.currentTarget;
+                      el.onerror = null;
+                      el.parentElement!.style.display = 'none';
+                    }}
+                  />
+                </button>
+              ))}
             </div>
-          </Button>
+          )}
         </div>
 
         <div className="w-2/5 flex flex-col gap-4">
@@ -358,40 +424,42 @@ export default function ProductDetailPage() {
               </Link>
               <ItemDescription className="inline-flex flex-nowrap gap-2 items-center">
                 <span>Shop Desciption</span>
-                {/* Chat Dialog */}
-                <Dialog open={open} onOpenChange={setOpen}>
-                  <DialogTrigger asChild>
-                    <Button
-                      variant="link"
-                      className="p-0 h-fit"
-                      onClick={handleJoinChat}
+                {/* Chỉ hiện Contact Seller khi KHÔNG phải sản phẩm của chính mình */}
+                {(!payload?.userId || String(payload.userId) !== String(product?.sellerId)) && (
+                  <Dialog open={open} onOpenChange={setOpen}>
+                    <DialogTrigger asChild>
+                      <Button
+                        variant="link"
+                        className="p-0 h-fit"
+                        onClick={handleJoinChat}
+                      >
+                        Contact Seller
+                      </Button>
+                    </DialogTrigger>
+                    <DialogContent
+                      className="h-fit overflow-auto flex flex-col p-0 gap-0 left-[unset] right-0 top-[unset] bottom-0 translate-0 m-4"
+                      aria-describedby=""
+                      showCloseButton={false}
                     >
-                      Contact Seller
-                    </Button>
-                  </DialogTrigger>
-                  <DialogContent
-                    className="h-fit overflow-auto flex flex-col p-0 gap-0 left-[unset] right-0 top-[unset] bottom-0 translate-0 m-4"
-                    aria-describedby=""
-                    showCloseButton={false}
-                  >
-                    <DialogTitle hidden>Chat box</DialogTitle>
-                    <MessageContext.Provider
-                      value={{
-                        participants,
-                        setParticipants: setParticipantsState,
-                        conversation,
-                        setConversation,
-                        messages,
-                        setMessages,
-                        productRef,
-                        setProductRef,
-                        product: productContext,
-                      }}
-                    >
-                      <Messages onCloseDialog={() => setOpen(false)} />
-                    </MessageContext.Provider>
-                  </DialogContent>
-                </Dialog>
+                      <DialogTitle hidden>Chat box</DialogTitle>
+                      <MessageContext.Provider
+                        value={{
+                          participants,
+                          setParticipants: setParticipantsState,
+                          conversation,
+                          setConversation,
+                          messages,
+                          setMessages,
+                          productRef,
+                          setProductRef,
+                          product: productContext,
+                        }}
+                      >
+                        <Messages onCloseDialog={() => setOpen(false)} />
+                      </MessageContext.Provider>
+                    </DialogContent>
+                  </Dialog>
+                )}
               </ItemDescription>
             </ItemContent>
             <ItemActions className="flex gap-2">
@@ -443,24 +511,23 @@ export default function ProductDetailPage() {
                     {variant.options.map((opt) => {
                       const optionAvailable = getOptionAvailable(variant.name, opt.value);
                       return (
-                      <button
-                        key={opt.value}
-                        type="button"
-                        onClick={() =>
-                          setSelectedVariants((prev) => ({
-                            ...prev,
-                            [variant.name]: prev[variant.name] === opt.value ? '' : opt.value,
-                          }))
-                        }
-                        className={`px-3 py-1.5 rounded-md border text-sm transition-all ${
-                          selectedVariants[variant.name] === opt.value
+                        <button
+                          key={opt.value}
+                          type="button"
+                          onClick={() =>
+                            setSelectedVariants((prev) => ({
+                              ...prev,
+                              [variant.name]: prev[variant.name] === opt.value ? '' : opt.value,
+                            }))
+                          }
+                          className={`px-3 py-1.5 rounded-md border text-sm transition-all ${selectedVariants[variant.name] === opt.value
                             ? "border-primary bg-primary text-primary-foreground"
                             : "border-border hover:border-primary"
-                        } ${optionAvailable ? "cursor-pointer" : "opacity-40 cursor-not-allowed line-through"}`}
-                        disabled={!optionAvailable}
-                      >
-                        {opt.value}
-                      </button>
+                            } ${optionAvailable ? "cursor-pointer" : "opacity-40 cursor-not-allowed line-through"}`}
+                          disabled={!optionAvailable}
+                        >
+                          {opt.value}
+                        </button>
                       );
                     })}
                   </div>
