@@ -9,14 +9,12 @@ const sellerApplicationSchema = new mongoose.Schema(
             index: true,
         },
         shopName: { type: String, required: true, trim: true },
-        phoneNumber: { type: String, required: true, trim: true },
-        bankAccountNumber: { type: String, required: true, trim: true },
-        bankName: { type: String, required: true, trim: true },
         productDescription: { type: String, required: true, trim: true },
+        // status luôn là "approved" vì hệ thống tự động duyệt
         status: {
             type: String,
             enum: ["pending", "approved", "rejected"],
-            default: "pending",
+            default: "approved",
             index: true,
         },
         adminNote: { type: String, default: "" },

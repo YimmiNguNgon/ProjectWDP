@@ -62,6 +62,7 @@ export const searchProducts = async (
     minPrice?: number;
     maxPrice?: number;
     minRating?: number;
+    sort?: string;
   },
 ): Promise<SearchProductsResponse> => {
   const params = new URLSearchParams();
@@ -74,6 +75,7 @@ export const searchProducts = async (
     params.append("maxPrice", String(options.maxPrice));
   if (options?.minRating !== undefined)
     params.append("minRating", String(options.minRating));
+  if (options?.sort) params.append("sort", options.sort);
 
   const response = await api.get<SearchProductsResponse>(
     `/api/products?${params}`,
