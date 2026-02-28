@@ -66,7 +66,7 @@ exports.listProducts = async (req, res, next) => {
     const limit = Math.min(parseInt(req.query.limit) || 20, 100);
     const skip = (page - 1) * limit;
 
-    const { categories, minPrice, maxPrice, search } = req.query;
+    const { categories, minPrice, maxPrice, search, sort } = req.query;
 
     const filter = {
       $or: [
@@ -114,9 +114,15 @@ exports.listProducts = async (req, res, next) => {
       }
     }
 
+    let sortOptions = { averageRating: -1, createdAt: -1 };
+    if (sort === "price_asc") sortOptions = { price: 1, createdAt: -1 };
+    else if (sort === "price_desc") sortOptions = { price: -1, createdAt: -1 };
+    else if (sort === "name_asc") sortOptions = { title: 1, createdAt: -1 };
+    else if (sort === "name_desc") sortOptions = { title: -1, createdAt: -1 };
+
     const total = await Product.countDocuments(filter);
     const products = await Product.find(filter)
-      .sort({ averageRating: -1, createdAt: -1 })
+      .sort(sortOptions)
       .skip(skip)
       .limit(limit)
       .populate("categoryId", "name slug")
