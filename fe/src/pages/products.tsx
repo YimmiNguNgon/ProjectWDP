@@ -9,6 +9,13 @@ import {
 import { Checkbox } from "@/components/ui/checkbox";
 import { Label } from "@/components/ui/label";
 import { ScrollArea, ScrollBar } from "@/components/ui/scroll-area";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { Separator } from "@/components/ui/separator";
 import {
   Sidebar,
@@ -107,6 +114,9 @@ export default function ProductsPage() {
   const [selectedRating, setSelectedRating] = React.useState<number>(
     parseInt(searchParams.get("rating") || "0"),
   );
+  const [selectedSort, setSelectedSort] = React.useState<string>(
+    searchParams.get("sort") || "",
+  );
   const [currentPage, setCurrentPage] = React.useState(
     parseInt(searchParams.get("page") || "1"),
   );
@@ -132,12 +142,16 @@ export default function ProductsPage() {
     if (currentPage > 1) {
       params.set("page", currentPage.toString());
     }
+    if (selectedSort) {
+      params.set("sort", selectedSort);
+    }
     setSearchParams(params);
   }, [
     selectedCategories,
     priceRange,
     selectedRating,
     currentPage,
+    selectedSort,
     setSearchParams,
     searchQuery,
   ]);
@@ -185,6 +199,7 @@ export default function ProductsPage() {
             limit: itemsPerPage,
             minPrice: debouncedPriceRange[0],
             maxPrice: debouncedPriceRange[1],
+            sort: selectedSort || undefined,
           });
           let filteredData = result.data as unknown as Product[];
           // Client-side rating filter for search results
@@ -203,6 +218,9 @@ export default function ProductsPage() {
           if (selectedRating > 0) {
             params.append("minRating", selectedRating.toString());
           }
+          if (selectedSort) {
+            params.append("sort", selectedSort);
+          }
           const res = await api.get(`/api/products?${params.toString()}`);
           setProducts(res.data.data);
           setTotalPages(Math.ceil((res.data.total || 0) / itemsPerPage));
@@ -218,6 +236,7 @@ export default function ProductsPage() {
     currentPage,
     debouncedPriceRange,
     selectedRating,
+    selectedSort,
   ]);
 
   const handleCategoryChange = (categorySlug: string, checked: boolean) => {
@@ -370,8 +389,9 @@ export default function ProductsPage() {
                       setCurrentPage(1);
                       setSelectedRating(selectedRating === rating ? 0 : rating);
                     }}
-                    className={`flex w-full items-center gap-2 rounded py-1 px-2 text-sm transition-colors hover:bg-muted ${selectedRating === rating ? "bg-muted font-semibold" : ""
-                      }`}
+                    className={`flex w-full items-center gap-2 rounded py-1 px-2 text-sm transition-colors hover:bg-muted ${
+                      selectedRating === rating ? "bg-muted font-semibold" : ""
+                    }`}
                   >
                     {[...Array(rating)].map((_, i) => (
                       <Star
@@ -395,20 +415,50 @@ export default function ProductsPage() {
       <SidebarInset className="w-full">
         <div className="flex flex-col gap-6 p-6">
           {/* Header */}
-          <div className="flex items-center justify-between">
+          <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
             <h1 className="text-3xl font-bold text-foreground">
               {searchQuery ? `Search Results for "${searchQuery}"` : "Products"}
             </h1>
-            {searchQuery && (
-              <Button
-                variant="outline"
-                onClick={() => setSaveSearchDialogOpen(true)}
-                className="gap-2"
+            <div className="flex items-center gap-2">
+              <Select
+                value={selectedSort}
+                onValueChange={(val) => {
+                  setCurrentPage(1);
+                  setSelectedSort(val);
+                }}
               >
-                <Bookmark className="h-4 w-4" />
-                Save Search
-              </Button>
-            )}
+                <SelectTrigger className="w-[180px] cursor-pointer">
+                  <SelectValue placeholder="Sort by" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem className="cursor-pointer" value="newest">
+                    Newest Arrivals
+                  </SelectItem>
+                  <SelectItem className="cursor-pointer" value="price_asc">
+                    Price: Low to High
+                  </SelectItem>
+                  <SelectItem className="cursor-pointer" value="price_desc">
+                    Price: High to Low
+                  </SelectItem>
+                  <SelectItem className="cursor-pointer" value="name_asc">
+                    Name: A to Z
+                  </SelectItem>
+                  <SelectItem className="cursor-pointer" value="name_desc">
+                    Name: Z to A
+                  </SelectItem>
+                </SelectContent>
+              </Select>
+              {searchQuery && (
+                <Button
+                  variant="outline"
+                  onClick={() => setSaveSearchDialogOpen(true)}
+                  className="gap-2"
+                >
+                  <Bookmark className="h-4 w-4" />
+                  Save Search
+                </Button>
+              )}
+            </div>
           </div>
 
           {/* Empty State */}
@@ -456,14 +506,22 @@ export default function ProductsPage() {
                       </CardTitle>
                       {(product as any).variants?.length > 0 && (
                         <div className="flex flex-wrap gap-1">
-                          {(product as any).variants.slice(0, 2).map((v: any) => (
-                            <span key={v.name} className="text-xs bg-muted px-2 py-0.5 rounded-full text-muted-foreground">
-                              {v.name}: {v.options.map((o: any) => o.value).join(', ')}
-                            </span>
-                          ))}
+                          {(product as any).variants
+                            .slice(0, 2)
+                            .map((v: any) => (
+                              <span
+                                key={v.name}
+                                className="text-xs bg-muted px-2 py-0.5 rounded-full text-muted-foreground"
+                              >
+                                {v.name}:{" "}
+                                {v.options.map((o: any) => o.value).join(", ")}
+                              </span>
+                            ))}
                         </div>
                       )}
-                      <CardDescription className="line-clamp-2">{product.description}</CardDescription>
+                      <CardDescription className="line-clamp-2">
+                        {product.description}
+                      </CardDescription>
                     </CardHeader>
 
                     {/* Rating & Price */}
@@ -474,10 +532,11 @@ export default function ProductsPage() {
                           {[...Array(5)].map((_, i) => (
                             <Star
                               key={i}
-                              className={`h-3.5 w-3.5 ${i < Math.round(product.averageRating)
+                              className={`h-3.5 w-3.5 ${
+                                i < Math.round(product.averageRating)
                                   ? "fill-yellow-400 text-yellow-400"
                                   : "text-muted-foreground"
-                                }`}
+                              }`}
                             />
                           ))}
                         </div>
