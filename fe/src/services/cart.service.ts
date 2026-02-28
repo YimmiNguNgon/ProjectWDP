@@ -17,6 +17,9 @@ export interface CartItem {
   selectedVariants?: { name: string; value: string }[];
   variantSku?: string;
   availableStock?: number;
+  isOutOfStock?: boolean;
+  availabilityStatus?: "ok" | "out_of_stock" | "insufficient_stock";
+  availabilityMessage?: string;
   seller: {
     _id: string;
     name: string;

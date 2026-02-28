@@ -52,6 +52,7 @@ import BuyerFeedbackRequestsPage from "@/pages/buyer/feedback-requests";
 import SavedSearchesPage from "@/pages/saved-searches-page";
 import SavedSellersPage from "@/pages/saved-sellers-page";
 import CartPage from "@/pages/buyer/cart";
+import CheckoutPage from "@/pages/checkout";
 import SellerVouchersPage from "@/pages/seller/vouchers";
 import AdminVoucherRequestsPage from "@/pages/admin/voucher-requests";
 
@@ -98,6 +99,10 @@ export const AppRouter = () => {
             {
               path: "/cart",
               element: <CartPage />,
+            },
+            {
+              path: "/checkout",
+              element: <CheckoutPage />,
             },
           ],
         },

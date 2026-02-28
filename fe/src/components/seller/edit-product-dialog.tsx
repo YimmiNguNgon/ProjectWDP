@@ -34,6 +34,7 @@ export default function EditProductDialog({
         condition: product.condition,
         lowStockThreshold: product.lowStockThreshold || 5,
         variants: product.variants || [],
+        variantCombinations: product.variantCombinations || [],
     });
     const [loading, setLoading] = useState(false);
 
@@ -47,6 +48,7 @@ export default function EditProductDialog({
             condition: product.condition,
             lowStockThreshold: product.lowStockThreshold || 5,
             variants: product.variants || [],
+            variantCombinations: product.variantCombinations || [],
         });
     }, [product]);
 
@@ -174,6 +176,11 @@ export default function EditProductDialog({
                         <ProductVariantsManager
                             variants={formData.variants}
                             onChange={(variants: import('@/api/seller-products').ProductVariant[]) => setFormData({ ...formData, variants })}
+                            variantCombinations={formData.variantCombinations}
+                            basePrice={Number(formData.price) || 0}
+                            onCombinationsChange={(variantCombinations) =>
+                                setFormData({ ...formData, variantCombinations })
+                            }
                         />
                     </div>
 

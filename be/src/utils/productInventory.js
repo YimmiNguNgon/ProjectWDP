@@ -1,4 +1,4 @@
-const normalizeSelectedVariants = (selectedVariants) => {
+﻿const normalizeSelectedVariants = (selectedVariants) => {
   if (!selectedVariants) return [];
 
   if (Array.isArray(selectedVariants)) {
@@ -41,6 +41,10 @@ const normalizeVariantCombinations = (variantCombinations) => {
         key: buildVariantKey(selections),
         selections,
         quantity: Number(combo?.quantity || 0),
+        price:
+          combo?.price === undefined || combo?.price === null
+            ? undefined
+            : Number(combo.price),
         sku: String(combo?.sku || "").trim(),
       };
     })
@@ -54,6 +58,9 @@ const normalizeVariantCombinations = (variantCombinations) => {
     }
     const prev = dedupedMap.get(combo.key);
     prev.quantity = Number(prev.quantity || 0) + Number(combo.quantity || 0);
+    if ((prev.price === undefined || Number.isNaN(prev.price)) && combo.price !== undefined) {
+      prev.price = Number(combo.price);
+    }
     if (!prev.sku && combo.sku) prev.sku = combo.sku;
     dedupedMap.set(combo.key, prev);
   }
@@ -179,7 +186,10 @@ const findVariantOption = (product, selectedVariants) => {
     message: "",
     normalized,
     optionRef: matchedCombination,
-    optionPrice: Number(product.price) || 0,
+    optionPrice:
+      matchedCombination.price === undefined || Number.isNaN(matchedCombination.price)
+        ? Number(product.price) || 0
+        : Number(matchedCombination.price),
     optionQuantity: Number(matchedCombination.quantity || 0),
     optionSku: matchedCombination.sku || optionSkus.join("|"),
     combinationKey,
@@ -193,3 +203,4 @@ module.exports = {
   syncProductStockFromVariants,
   findVariantOption,
 };
+

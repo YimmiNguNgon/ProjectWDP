@@ -1,8 +1,8 @@
 import { type CartItem as CartItemType } from "@/services/cart.service";
 import { useCart } from "@/contexts/cart-context";
 import { Minus, Plus, Trash2 } from "lucide-react";
-import React, { useState } from "react";
-import { Link } from "react-router-dom";
+import { useEffect, useState } from "react";
+import { Link, useNavigate } from "react-router-dom";
 
 interface CartItemProps {
   item: CartItemType;
@@ -15,16 +15,21 @@ const formatVND = (amount: number) => amount.toLocaleString("vi-VN") + " VND";
 export const CartItem = ({ item, isSelected, onToggle }: CartItemProps) => {
   const { updateQuantity, removeFromCart } = useCart();
   const [quantity, setQuantity] = useState(item.quantity);
+  const navigate = useNavigate();
 
-  // Helper values mapping from item
-  const sellerName = item.seller?.name || "Unknown Seller";
-  // Mock data for missing fields
-  const sellerFeedback = 98;
+  useEffect(() => {
+    setQuantity(item.quantity);
+  }, [item.quantity]);
+
   const description = item.product.description;
 
   const price = item.priceSnapShot;
   const priceVND = price * 25400; // Approx rate
   const availableStock = item.availableStock ?? item.product.quantity ?? item.product.stock;
+  const isOutOfStock = Boolean(item.isOutOfStock);
+  const isInsufficient = item.availabilityStatus === "insufficient_stock";
+  const isPurchasable = !isOutOfStock && !isInsufficient && quantity <= availableStock;
+  const availabilityMessage = item.availabilityMessage;
 
   const imageUrl = item.product.image || "";
 
@@ -39,7 +44,7 @@ export const CartItem = ({ item, isSelected, onToggle }: CartItemProps) => {
   };
 
   const handleIncrease = () => {
-    if (quantity < availableStock) {
+    if (!isOutOfStock && quantity < availableStock) {
       const newQty = quantity + 1;
       setQuantity(newQty);
       updateQuantity(item._id, "increase");
@@ -50,31 +55,26 @@ export const CartItem = ({ item, isSelected, onToggle }: CartItemProps) => {
     removeFromCart(item._id);
   };
 
+  const handleBuyNow = () => {
+    if (!isPurchasable) return;
+    navigate("/checkout", {
+      state: {
+        source: "cart",
+        cartItemIds: [item._id],
+      },
+    });
+  };
+
   return (
     <div
-      onClick={onToggle}
+      onClick={() => {
+        if (!isPurchasable) return;
+        onToggle?.();
+      }}
       className={`bg-white rounded-xl border-2 transition-all duration-200 shadow-sm overflow-hidden font-sans w-full mb-4 cursor-pointer hover:shadow-md ${
         isSelected ? "border-blue-300 ring-1 ring-blue-300" : "border-gray-200"
       }`}
     >
-      {/* Seller header */}
-      <div className="flex items-center justify-between px-4 py-3 border-b border-gray-100 bg-gray-50/50">
-        <div className="flex items-center gap-2">
-          {/* Seller avatar placeholder */}
-          <div className="w-8 h-8 rounded-full bg-gradient-to-br from-orange-400 to-rose-500 flex items-center justify-center text-white text-xs font-bold shadow-sm">
-            {sellerName.slice(0, 2).toUpperCase()}
-          </div>
-          <div>
-            <p className="text-base font-semibold text-gray-900 leading-tight">
-              {sellerName}
-            </p>
-            <p className="text-sm text-green-600 font-medium">
-              {sellerFeedback}% positive feedback
-            </p>
-          </div>
-        </div>
-      </div>
-
       {/* Item body */}
       <div className="p-4 flex gap-4 items-start">
         {/* Selection Checkbox */}
@@ -184,7 +184,7 @@ export const CartItem = ({ item, isSelected, onToggle }: CartItemProps) => {
                     e.stopPropagation();
                     handleIncrease();
                   }}
-                  disabled={quantity >= availableStock}
+                  disabled={isOutOfStock || quantity >= availableStock}
                   className="w-8 h-8 flex cursor-pointer items-center justify-center text-gray-500 hover:bg-gray-100 disabled:opacity-30 disabled:cursor-not-allowed transition-colors border-l border-gray-300"
                 >
                   <Plus className="size-3.5" />
@@ -194,6 +194,11 @@ export const CartItem = ({ item, isSelected, onToggle }: CartItemProps) => {
                 Stock: {availableStock}
               </span>
             </div>
+            {availabilityMessage && (
+              <div className="w-full text-sm font-medium text-red-600">
+                {availabilityMessage}
+              </div>
+            )}
             {item.selectedVariants && item.selectedVariants.length > 0 && (
               <div className="text-sm text-muted-foreground">
                 Variant: {item.selectedVariants.map((v) => `${v.name}: ${v.value}`).join(", ")}
@@ -203,8 +208,12 @@ export const CartItem = ({ item, isSelected, onToggle }: CartItemProps) => {
             {/* Action links */}
             <div className="flex items-center gap-1 text-sm flex-wrap">
               <button
-                onClick={(e) => e.stopPropagation()}
-                className="text-blue-600 cursor-pointer hover:text-blue-800 hover:underline font-medium transition-colors px-1"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  handleBuyNow();
+                }}
+                disabled={!isPurchasable}
+                className="text-blue-600 cursor-pointer hover:text-blue-800 hover:underline font-medium transition-colors px-1 disabled:opacity-40 disabled:cursor-not-allowed"
               >
                 Buy it now
               </button>

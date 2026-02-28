@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+﻿import { useEffect, useMemo, useState } from 'react';
 import { createComplaint, getMyComplaints, getMyOrders } from '@/api/complaint';
 import {
   Table,
@@ -153,10 +153,8 @@ export default function MyOrdersPage() {
       <div className='p-4 md:p-6'>
         <Empty className='border'>
           <EmptyHeader>
-            <EmptyTitle>Chưa có đơn hàng</EmptyTitle>
-            <EmptyDescription>
-              Khi bạn mua hàng, đơn hàng sẽ xuất hiện tại đây.
-            </EmptyDescription>
+            <EmptyTitle>No orders yet</EmptyTitle>
+            <EmptyDescription>When you place an order, it will appear here.</EmptyDescription>
           </EmptyHeader>
         </Empty>
       </div>
@@ -328,3 +326,4 @@ export default function MyOrdersPage() {
     </div>
   );
 }
+

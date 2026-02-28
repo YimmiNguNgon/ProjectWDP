@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useState, type ComponentProps } from 'react';
+﻿import React, { useEffect, useRef, useState, type ComponentProps } from 'react';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -57,7 +57,7 @@ export function Messages({
   const viewportRef = useRef<HTMLDivElement>(null);
   const typingTimeout = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  // Scroll xuống khi có tin nhắn mới
+  // Scroll xuá»‘ng khi cÃ³ tin nháº¯n má»›i
   useEffect(() => {
     if (!viewportRef.current) return;
     const viewport = viewportRef.current.querySelector(
@@ -95,7 +95,7 @@ export function Messages({
     // Check if user is authenticated
     if (!payload?.userId) {
       console.error('[Messages] User not authenticated');
-      setModerationError('Vui lòng đăng nhập để sử dụng tính năng chat');
+      setModerationError('Please sign in to use chat');
       return;
     }
 
@@ -130,9 +130,9 @@ export function Messages({
         console.error('[Messages] Failed to create/fetch conversation:', error);
 
         if (error.response?.status === 401) {
-          setModerationError('Phiên đăng nhập đã hết hạn. Vui lòng đăng nhập lại.');
+          setModerationError('Session expired. Please sign in again.');
         } else {
-          setModerationError('Không thể tạo cuộc trò chuyện. Vui lòng thử lại.');
+          setModerationError('Unable to create conversation. Please try again.');
         }
 
         setTimeout(() => setModerationError(null), 5000);
@@ -144,17 +144,17 @@ export function Messages({
     fetchOrCreateConversation();
   }, [participants, conversation, loading, setConversation, setMessages, payload]);
 
-  // Lắng nghe socket events
+  // Láº¯ng nghe socket events
   useEffect(() => {
     if (!payload?.userId || !conversation?._id) return;
 
     const { userId } = payload;
     const conversationId = conversation._id;
 
-    // --- Kết nối socket ---
+    // --- Káº¿t ná»‘i socket ---
     if (!socket.connected) socket.connect();
 
-    // Gửi auth ngay khi connect
+    // Gá»­i auth ngay khi connect
     const handleConnect = () => {
       socket.emit('auth', { userId });
       socket.emit(
@@ -169,7 +169,7 @@ export function Messages({
     socket.on('connect', handleConnect);
     if (socket.connected) handleConnect(); // reconnect case
 
-    // --- Nhận tin nhắn mới ---
+    // --- Nháº­n tin nháº¯n má»›i ---
     const handleNewMessage = (msg: Message) => {
       if (msg.conversationId !== conversationId) return;
       setMessages((prev) => [msg, ...prev!]);
@@ -180,8 +180,8 @@ export function Messages({
         const sender = conversation.participants?.find((p: any) => p._id === msg.sender);
         const senderName = sender?.username || 'Someone';
 
-        toast.info(`💬 Tin nhắn mới từ ${senderName}`, {
-          description: msg.text || 'Đã gửi một file',
+        toast.info(`New message from ${senderName}`, {
+          description: msg.text || 'Sent a file',
           duration: 3000,
         });
       }
@@ -189,7 +189,7 @@ export function Messages({
 
     socket.on('new_message', handleNewMessage);
 
-    // --- Khi user khác đang gõ ---
+    // --- Khi user khÃ¡c Ä‘ang gÃµ ---
     const handleTyping = (data: { conversationId: string; userId: string }) => {
       if (data.conversationId !== conversationId || data.userId === userId)
         return;
@@ -212,7 +212,7 @@ export function Messages({
       }
     );
 
-    // --- Khi tin nhắn bị chặn ---
+    // --- Khi tin nháº¯n bá»‹ cháº·n ---
     const handleMessageBlocked = (data: { violations: string[]; reason: string }) => {
       setModerationError(data.reason);
       // Auto-hide error after 8 seconds
@@ -221,16 +221,16 @@ export function Messages({
 
     socket.on('message_blocked', handleMessageBlocked);
 
-    // --- Khi có enforcement action (eBay-style) ---
+    // --- Khi cÃ³ enforcement action (eBay-style) ---
     const handleEnforcementAction = (data: {
       action: string;
       message: string;
       violationCount: number
     }) => {
       // Show enforcement notification
-      const icon = data.action === 'warning' ? '⚠️' :
-        data.action === 'restriction' ? '🔒' :
-          data.action === 'suspension' ? '🚫' : '🔨';
+      const icon = data.action === 'warning' ? '[warning]' :
+        data.action === 'restriction' ? '[restricted]' :
+          data.action === 'suspension' ? '[suspended]' : '[action]';
 
       setModerationError(`${icon} ${data.message}`);
 
@@ -258,14 +258,14 @@ export function Messages({
 
     // Validate file type
     if (!file.type.startsWith('image/')) {
-      setModerationError('Chỉ chấp nhận file ảnh');
+      setModerationError('Only image files are allowed');
       setTimeout(() => setModerationError(null), 3000);
       return;
     }
 
     // Validate file size (max 5MB)
     if (file.size > 5 * 1024 * 1024) {
-      setModerationError('Kích thước ảnh tối đa 5MB');
+      setModerationError('Maximum image size is 5MB');
       setTimeout(() => setModerationError(null), 3000);
       return;
     }
@@ -302,13 +302,13 @@ export function Messages({
       return data.url;
     } catch (error) {
       console.error('Image upload error:', error);
-      setModerationError('Không thể upload ảnh. Vui lòng thử lại.');
+      setModerationError('Unable to upload image. Please try again.');
       setTimeout(() => setModerationError(null), 3000);
       return null;
     }
   };
 
-  // Gửi tin nhắn
+  // Gá»­i tin nháº¯n
   const handleSendMessage = async () => {
     const text = input.trim();
     if ((!text && !selectedImage) || !payload?.userId || !conversation?._id) return;
@@ -347,26 +347,26 @@ export function Messages({
           if (fileInputRef.current) fileInputRef.current.value = '';
         } else if (ack?.error === 'user_restricted') {
           // User is banned/suspended/restricted
-          setModerationError(`🚫 ${ack.reason || 'Your account has been restricted'}`);
+          setModerationError(`[restricted] ${ack.reason || 'Your account has been restricted'}`);
           setTimeout(() => setModerationError(null), 15000);
         } else if (ack?.error === 'content_violation') {
           // Content moderation violation
-          setModerationError(ack.reason || 'Tin nhắn chứa nội dung không được phép');
+          setModerationError(ack.reason || 'Message contains disallowed content');
           setTimeout(() => setModerationError(null), 8000);
         } else {
           // Other errors
-          setModerationError('Không thể gửi tin nhắn. Vui lòng thử lại.');
+          setModerationError('Unable to send message. Please try again.');
           setTimeout(() => setModerationError(null), 5000);
         }
       });
     } catch (error) {
       setUploading(false);
-      setModerationError('Đã xảy ra lỗi. Vui lòng thử lại.');
+      setModerationError('An error occurred. Please try again.');
       setTimeout(() => setModerationError(null), 3000);
     }
   };
 
-  // Gửi sự kiện typing
+  // Gá»­i sá»± kiá»‡n typing
   const handleTyping = () => {
     if (!conversation?._id || !payload?.userId) return;
 
@@ -377,7 +377,7 @@ export function Messages({
 
     if (typingTimeout.current) clearTimeout(typingTimeout.current);
     typingTimeout.current = setTimeout(() => {
-      // stop typing logic nếu cần
+      // stop typing logic náº¿u cáº§n
     }, 1000);
   };
 
@@ -388,7 +388,7 @@ export function Messages({
       <div className="flex items-center justify-center h-full p-8">
         <div className="flex flex-col items-center gap-4">
           <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
-          <p className="text-sm text-muted-foreground">Đang tải cuộc trò chuyện...</p>
+          <p className="text-sm text-muted-foreground">Loading conversation...</p>
         </div>
       </div>
     );
@@ -410,7 +410,7 @@ export function Messages({
       <div className="flex items-center justify-center h-full p-8">
         <div className="flex flex-col items-center gap-4">
           <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
-          <p className="text-sm text-muted-foreground">Đang khởi tạo cuộc trò chuyện...</p>
+          <p className="text-sm text-muted-foreground">Starting conversation...</p>
         </div>
       </div>
     );
@@ -652,7 +652,7 @@ export function Messages({
             size='icon-lg'
             onClick={() => fileInputRef.current?.click()}
             disabled={uploading}
-            title='Upload ảnh'
+            title='Upload image'
           >
             {uploading ? (
               <Loader2 className='h-5 w-5 animate-spin' />
@@ -662,7 +662,7 @@ export function Messages({
           </Button>
 
           <Input
-            placeholder='Nhập tin nhắn...'
+            placeholder='Type a message...'
             value={input}
             onChange={(e) => {
               setInput(e.target.value);
@@ -735,3 +735,4 @@ export function EmptyMessage() {
     </Empty>
   );
 }
+

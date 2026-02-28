@@ -1,5 +1,4 @@
-import { Button } from "@/components/ui/button";
-import { Card, CardContent } from "@/components/ui/card";
+﻿import { Button } from "@/components/ui/button";
 import {
   Carousel,
   CarouselContent,
@@ -22,55 +21,55 @@ export default function HomePage() {
     {
       id: "1",
       title: "Flash Sale Mega",
-      description: "Giảm giá lên đến 70% cho các sản phẩm được chọn",
+      description: "Up to 70% off selected products",
       badge: "HOT DEAL",
       bgColor: "bg-red-500",
       textColor: "text-white",
-      buttonText: "Mua Ngay",
+      buttonText: "Shop Now",
       buttonAction: () => console.log("Flash sale clicked"),
       icon: "🛍️",
     },
     {
       id: "2",
-      title: "Miễn Phí Vận Chuyển",
-      description: "Vận chuyển miễn phí cho đơn hàng từ 100.000 VNĐ trở lên",
-      badge: "VẬN CHUYỂN",
+      title: "Free Shipping",
+      description: "Free shipping for orders above 100,000 VND",
+      badge: "SHIPPING",
       bgColor: "bg-blue-500",
       textColor: "text-white",
-      buttonText: "Xem Chi Tiết",
+      buttonText: "View Details",
       buttonAction: () => console.log("Free shipping clicked"),
       icon: "🚚",
     },
     {
       id: "3",
-      title: "Sản Phẩm Mới",
-      description: "Khám phá bộ sưu tập mới nhất từ các nhà bán hàng hàng đầu",
-      badge: "MỚI NHẤT",
+      title: "New Arrivals",
+      description: "Explore the latest collection from top sellers",
+      badge: "NEW",
       bgColor: "bg-purple-500",
       textColor: "text-white",
-      buttonText: "Khám Phá",
+      buttonText: "Explore",
       buttonAction: () => console.log("New products clicked"),
       icon: "⭐",
     },
     {
       id: "4",
-      title: "Chương Trình Khuyến Mãi",
-      description: "Nhận phiếu giảm giá và hoàn tiền khi mua sắm hôm nay",
+      title: "Voucher Program",
+      description: "Get discount vouchers and cashback for today's orders",
       badge: "VOUCHER",
       bgColor: "bg-green-500",
       textColor: "text-white",
-      buttonText: "Nhận Voucher",
+      buttonText: "Get Voucher",
       buttonAction: () => console.log("Voucher clicked"),
       icon: "🎁",
     },
     {
       id: "5",
-      title: "Hàng Chính Hãng",
-      description: "Cam kết 100% hàng chính hãng hoặc hoàn tiền 200%",
-      badge: "BẢO ĐẢM",
+      title: "Authentic Products",
+      description: "100% authentic guarantee or 200% money back",
+      badge: "GUARANTEE",
       bgColor: "bg-orange-500",
       textColor: "text-white",
-      buttonText: "Tìm Hiểu",
+      buttonText: "Learn More",
       buttonAction: () => console.log("Authentic products clicked"),
       icon: "🏆",
     },
@@ -122,3 +121,5 @@ export default function HomePage() {
     </div>
   );
 }
+
+

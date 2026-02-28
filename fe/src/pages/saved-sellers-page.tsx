@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+﻿import { useState, useEffect } from "react";
 import { Trash2, Store, ExternalLink, Package } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
@@ -44,7 +44,7 @@ export default function SavedSellersPage() {
             }
         } catch (error) {
             console.error("Error fetching saved sellers:", error);
-            toast.error("Không thể tải saved sellers");
+            toast.error("Unable to load saved sellers");
         } finally {
             setLoading(false);
         }
@@ -55,11 +55,11 @@ export default function SavedSellersPage() {
             const response = await axios.delete(`/api/saved-sellers/${sellerId}`);
             if (response.data.success) {
                 setSavedSellers(savedSellers.filter((s) => s._id !== sellerId));
-                toast.success("Đã xóa seller khỏi danh sách");
+                toast.success("Seller removed from saved list");
             }
         } catch (error) {
             console.error("Error removing saved seller:", error);
-            toast.error("Không thể xóa saved seller");
+            toast.error("Unable to remove saved seller");
         }
     };
 
@@ -185,3 +185,4 @@ export default function SavedSellersPage() {
         </div>
     );
 }
+

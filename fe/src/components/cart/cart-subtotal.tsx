@@ -4,11 +4,15 @@ import { Button } from "../ui/button";
 interface CartSubtotalProps {
   itemCount?: number;
   totalItemPrice?: number;
+  onCheckout?: () => void;
+  checkoutDisabled?: boolean;
 }
 
 const CartSubtotal = ({
   itemCount: propsItemCount,
   totalItemPrice: propsTotalItemPrice,
+  onCheckout,
+  checkoutDisabled = false,
 }: CartSubtotalProps) => {
   const { cart } = useCart();
 
@@ -42,7 +46,12 @@ const CartSubtotal = ({
           <p>Subtotal:</p>
           <p>${subtotal}</p>
         </div>
-        <Button className="text-lg cursor-pointer" size="lg">
+        <Button
+          className="text-lg cursor-pointer"
+          size="lg"
+          onClick={onCheckout}
+          disabled={checkoutDisabled}
+        >
           Go to Checkout
         </Button>
       </div>

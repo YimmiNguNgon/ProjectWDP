@@ -36,7 +36,6 @@ import {
 import { toggleWatchlist, getUserWatchlist } from "@/api/watchlist";
 import { toast } from "sonner";
 import { SaveSearchDialog } from "@/components/dialogs/save-search-dialog";
-import AddToCartDialog from "@/components/cart/add-to-cart-dialog";
 import { useAuth } from "@/hooks/use-auth";
 import { useNavigate } from "react-router-dom";
 
@@ -79,8 +78,6 @@ export interface Product {
 }
 
 export default function ProductsPage() {
-  const [openAddToCartDialog, setOpenAddToCartDialog] = React.useState(false);
-  const [selectedProduct, setSelectedProduct] = React.useState<Product>();
   const [searchParams, setSearchParams] = useSearchParams();
   const { accessToken } = useAuth();
   const navigate = useNavigate();
@@ -283,16 +280,6 @@ export default function ProductsPage() {
       console.error("Failed to toggle watchlist", error);
       toast.error("Failed to update watchlist");
     }
-  };
-
-  const handleOpenDialog = (product: Product) => {
-    if (!accessToken) {
-      toast.error("Please sign in to add to cart");
-      navigate("/auth/sign-in");
-      return;
-    }
-    setSelectedProduct(product);
-    setOpenAddToCartDialog(true);
   };
 
   return (
@@ -524,7 +511,7 @@ export default function ProductsPage() {
                               size="icon-sm"
                               variant={"default"}
                               className="cursor-pointer"
-                              onClick={() => handleOpenDialog(product)}
+                              onClick={() => navigate(`/products/${product._id}`)}
                             >
                               <ShoppingCart className="h-4 w-4" />
                             </Button>
@@ -560,12 +547,6 @@ export default function ProductsPage() {
           maxPrice: priceRange[1],
           rating: selectedRating,
         }}
-      />
-
-      <AddToCartDialog
-        open={openAddToCartDialog}
-        onOpenChange={setOpenAddToCartDialog}
-        product={selectedProduct || undefined}
       />
     </SidebarProvider>
   );

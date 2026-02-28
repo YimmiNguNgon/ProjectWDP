@@ -1,9 +1,9 @@
-import axios from 'axios';
+﻿import axios from 'axios';
 
-// Vite sử dụng import.meta.env thay vì process.env
+// Vite sá»­ dá»¥ng import.meta.env thay vÃ¬ process.env
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:8080';
 
-// Tạo axios instance
+// Táº¡o axios instance
 const api = axios.create({
   baseURL: API_URL,
   headers: {
@@ -12,7 +12,7 @@ const api = axios.create({
   timeout: 10000,
 });
 
-// Request interceptor để thêm token
+// Request interceptor Ä‘á»ƒ thÃªm token
 api.interceptors.request.use(
   (config) => {
     const token = localStorage.getItem('token');
@@ -26,14 +26,14 @@ api.interceptors.request.use(
   }
 );
 
-// Response interceptor để xử lý lỗi
+// Response interceptor Ä‘á»ƒ xá»­ lÃ½ lá»—i
 api.interceptors.response.use(
   (response) => response,
   (error) => {
     console.error('API Error:', error.response?.data || error.message);
     
     if (error.response?.status === 401) {
-      // Token hết hạn hoặc không hợp lệ
+      // Token háº¿t háº¡n hoáº·c khÃ´ng há»£p lá»‡
       localStorage.removeItem('token');
       window.location.href = '/auth/sign-in';
     }
@@ -44,7 +44,7 @@ api.interceptors.response.use(
 
 // API cho product
 export const productAPI = {
-  // Tạo sản phẩm mới
+  // Táº¡o sáº£n pháº©m má»›i
   createProduct: async (formData) => {
     const response = await api.post('/api/products', formData, {
       headers: {
@@ -54,31 +54,31 @@ export const productAPI = {
     return response.data;
   },
 
-  // Lấy danh sách sản phẩm
+  // Láº¥y danh sÃ¡ch sáº£n pháº©m
   getProducts: async (params) => {
     const response = await api.get('/api/products', { params });
     return response.data;
   },
 
-  // Lấy sản phẩm của seller hiện tại
+  // Láº¥y sáº£n pháº©m cá»§a seller hiá»‡n táº¡i
   getSellerProducts: async (params) => {
     const response = await api.get('/api/products/seller/my-products', { params });
     return response.data;
   },
 
-  // Lấy danh mục
+  // Láº¥y danh má»¥c
   getCategories: async () => {
     const response = await api.get('/api/products/categories');
     return response.data;
   },
 
-  // Lấy chi tiết sản phẩm
+  // Láº¥y chi tiáº¿t sáº£n pháº©m
   getProduct: async (productId) => {
     const response = await api.get(`/api/products/${productId}`);
     return response.data;
   },
 
-  // Cập nhật sản phẩm
+  // Cáº­p nháº­t sáº£n pháº©m
   updateProduct: async (productId, formData) => {
     const response = await api.put(`/api/products/${productId}`, formData, {
       headers: {
@@ -88,7 +88,7 @@ export const productAPI = {
     return response.data;
   },
 
-  // Xóa sản phẩm
+  // XÃ³a sáº£n pháº©m
   deleteProduct: async (productId) => {
     const response = await api.delete(`/api/products/${productId}`);
     return response.data;
@@ -97,25 +97,25 @@ export const productAPI = {
 
 // API cho orders
 export const orderAPI = {
-  // Lấy danh sách đơn hàng của seller
+  // Láº¥y danh sÃ¡ch Ä‘Æ¡n hÃ ng cá»§a seller
   getSellerOrders: async (params) => {
     const response = await api.get('/api/orders', { params });
     return response.data;
   },
 
-  // Lấy chi tiết đơn hàng
+  // Láº¥y chi tiáº¿t Ä‘Æ¡n hÃ ng
   getOrderDetail: async (orderId) => {
     const response = await api.get(`/api/orders/${orderId}`);
     return response.data;
   },
 
-  // Cập nhật trạng thái đơn hàng
+  // Cáº­p nháº­t tráº¡ng thÃ¡i Ä‘Æ¡n hÃ ng
   updateOrderStatus: async (orderId, statusData) => {
     const response = await api.put(`/api/orders/${orderId}/status`, statusData);
     return response.data;
   },
 
-  // Lấy thống kê doanh thu
+  // Láº¥y thá»‘ng kÃª doanh thu
   getRevenueStats: async (params) => {
     const response = await api.get('/api/orders/stats/revenue', { params });
     return response.data;
@@ -124,25 +124,25 @@ export const orderAPI = {
 
 // API cho authentication
 export const authAPI = {
-  // Đăng nhập
+  // ÄÄƒng nháº­p
   login: async (email, password) => {
     const response = await api.post('/api/auth/login', { email, password });
     return response.data;
   },
 
-  // Đăng ký
+  // ÄÄƒng kÃ½
   register: async (userData) => {
     const response = await api.post('/api/auth/register', userData);
     return response.data;
   },
 
-  // Lấy thông tin user hiện tại
+  // Láº¥y thÃ´ng tin user hiá»‡n táº¡i
   getCurrentUser: async () => {
     const response = await api.get('/api/auth/me');
     return response.data;
   },
 
-  // Đổi mật khẩu
+  // Äá»•i máº­t kháº©u
   changePassword: async (oldPassword, newPassword) => {
     const response = await api.post('/api/auth/change-password', { oldPassword, newPassword });
     return response.data;
@@ -151,13 +151,13 @@ export const authAPI = {
 
 // API cho user
 export const userAPI = {
-  // Lấy thông tin user
+  // Láº¥y thÃ´ng tin user
   getUser: async (userId) => {
     const response = await api.get(`/api/users/${userId}`);
     return response.data;
   },
 
-  // Cập nhật thông tin user
+  // Cáº­p nháº­t thÃ´ng tin user
   updateUser: async (userId, userData) => {
     const response = await api.put(`/api/users/${userId}`, userData);
     return response.data;
@@ -174,9 +174,9 @@ export const userAPI = {
   },
 };
 
-// API upload ảnh lên Cloudinary (cho Vite)
+// API upload áº£nh lÃªn Cloudinary (cho Vite)
 export const uploadAPI = {
-  // Upload ảnh lên Cloudinary
+  // Upload áº£nh lÃªn Cloudinary
   uploadToCloudinary: async (file) => {
     const cloudName = import.meta.env.VITE_CLOUDINARY_CLOUD_NAME;
     const uploadPreset = import.meta.env.VITE_CLOUDINARY_UPLOAD_PRESET;
@@ -193,11 +193,11 @@ export const uploadAPI = {
       return response.data;
     } catch (error) {
       console.error('Cloudinary upload error:', error);
-      throw new Error('Upload ảnh thất bại');
+      throw new Error('Image upload failed');
     }
   },
 
-  // Upload nhiều ảnh
+  // Upload nhiá»u áº£nh
   uploadMultipleImages: async (files) => {
     const uploadPromises = files.map(file => 
       uploadAPI.uploadToCloudinary(file).catch(error => {
@@ -207,37 +207,37 @@ export const uploadAPI = {
     );
     
     const results = await Promise.all(uploadPromises);
-    // Lọc bỏ những upload thất bại
+    // Lá»c bá» nhá»¯ng upload tháº¥t báº¡i
     return results.filter(result => result !== null);
   }
 };
 
 export const reviewsAPI = {
-  // Lấy danh sách reviews của seller
+  // Láº¥y danh sÃ¡ch reviews cá»§a seller
   getSellerReviews: async (params) => {
     const response = await api.get('/api/reviews/seller', { params });
     return response.data;
   },
 
-  // Duyệt review
+  // Duyá»‡t review
   approveReview: async (reviewId) => {
     const response = await api.put(`/api/reviews/${reviewId}/approve`);
     return response.data;
   },
 
-  // Từ chối review
+  // Tá»« chá»‘i review
   rejectReview: async (reviewId) => {
     const response = await api.put(`/api/reviews/${reviewId}/reject`);
     return response.data;
   },
 
-  // Phản hồi review
+  // Pháº£n há»“i review
   replyToReview: async (reviewId, replyData) => {
     const response = await api.post(`/api/reviews/${reviewId}/reply`, replyData);
     return response.data;
   },
 
-  // Đánh dấu hữu ích
+  // ÄÃ¡nh dáº¥u há»¯u Ã­ch
   markHelpful: async (reviewId) => {
     const response = await api.put(`/api/reviews/${reviewId}/helpful`);
     return response.data;

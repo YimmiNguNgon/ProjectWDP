@@ -23,7 +23,7 @@ export default function AdminBroadcast() {
 
     const handleSend = async () => {
         if (!title.trim() || !body.trim()) {
-            toast.error("Vui long dien tieu de va noi dung");
+            toast.error("Please enter both title and content");
             return;
         }
         setLoading(true);
@@ -32,12 +32,12 @@ export default function AdminBroadcast() {
                 title: title.trim(),
                 body: body.trim(),
             });
-            toast.success(`Da gui thong bao toi ${res.data.sentTo} nguoi dung`);
+            toast.success(`Notification sent to ${res.data.sentTo} users`);
             setTitle("");
             setBody("");
             setOpen(false);
         } catch (err: any) {
-            toast.error(err.response?.data?.message || "Gui that bai");
+            toast.error(err.response?.data?.message || "Failed to send broadcast");
         } finally {
             setLoading(false);
         }
@@ -53,24 +53,24 @@ export default function AdminBroadcast() {
                     className="gap-2 cursor-pointer"
                 >
                     <Megaphone className="h-4 w-4" />
-                    Gui thong bao
+                    Send Broadcast
                 </Button>
             </DialogTrigger>
             <DialogContent>
                 <DialogHeader>
                     <DialogTitle className="flex items-center gap-2">
                         <Megaphone className="h-5 w-5" />
-                        Gui thong bao toi tat ca nguoi dung
+                        Send notification to all users
                     </DialogTitle>
                 </DialogHeader>
                 <div className="flex flex-col gap-4 py-2">
                     <div className="flex flex-col gap-1.5">
                         <Label htmlFor="broadcast-title">
-                            Tieu de <span className="text-destructive">*</span>
+                            Title <span className="text-destructive">*</span>
                         </Label>
                         <Input
                             id="broadcast-title"
-                            placeholder="Vi du: Thong bao bao tri he thong"
+                            placeholder="Example: Scheduled system maintenance"
                             value={title}
                             onChange={(e) => setTitle(e.target.value)}
                             maxLength={100}
@@ -78,11 +78,11 @@ export default function AdminBroadcast() {
                     </div>
                     <div className="flex flex-col gap-1.5">
                         <Label htmlFor="broadcast-body">
-                            Noi dung <span className="text-destructive">*</span>
+                            Content <span className="text-destructive">*</span>
                         </Label>
                         <Textarea
                             id="broadcast-body"
-                            placeholder="Noi dung thong bao gui den nguoi dung..."
+                            placeholder="Write the notification message for users..."
                             value={body}
                             onChange={(e) => setBody(e.target.value)}
                             rows={4}
@@ -99,7 +99,7 @@ export default function AdminBroadcast() {
                         onClick={() => setOpen(false)}
                         className="cursor-pointer"
                     >
-                        Huy
+                        Cancel
                     </Button>
                     <Button
                         id="broadcast-send-btn"
@@ -108,7 +108,7 @@ export default function AdminBroadcast() {
                         className="gap-2 cursor-pointer"
                     >
                         <Send className="h-4 w-4" />
-                        {loading ? "Dang gui..." : "Gui ngay"}
+                        {loading ? "Sending..." : "Send now"}
                     </Button>
                 </DialogFooter>
             </DialogContent>

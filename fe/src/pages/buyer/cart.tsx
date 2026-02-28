@@ -11,26 +11,56 @@ const CartPage = () => {
   const [selectedItemIds, setSelectedItemIds] = useState<string[]>([]);
   const navigate = useNavigate();
 
-  const items = cart?.items || [];
+  const items = useMemo(() => cart?.items || [], [cart?.items]);
+  const purchasableItems = useMemo(
+    () =>
+      items.filter((item) => {
+        const availableStock = item.availableStock ?? 0;
+        return !item.isOutOfStock && item.quantity <= availableStock;
+      }),
+    [items],
+  );
+  const purchasableItemIds = useMemo(
+    () => purchasableItems.map((item) => item._id),
+    [purchasableItems],
+  );
 
   const isAllSelected =
-    items.length > 0 && selectedItemIds.length === items.length;
+    purchasableItems.length > 0 &&
+    selectedItemIds.length === purchasableItems.length;
 
   const handleToggleSelectAll = () => {
     if (isAllSelected) {
       setSelectedItemIds([]);
     } else {
-      setSelectedItemIds(items.map((item) => item._id));
+      setSelectedItemIds(purchasableItems.map((item) => item._id));
     }
   };
 
   const handleToggleItem = (itemId: string) => {
+    const item = items.find((x) => x._id === itemId);
+    const availableStock = item?.availableStock ?? 0;
+    const isPurchasable =
+      !!item && !item.isOutOfStock && item.quantity <= availableStock;
+    if (!isPurchasable) return;
+
     setSelectedItemIds((prev) =>
       prev.includes(itemId)
         ? prev.filter((id) => id !== itemId)
         : [...prev, itemId],
     );
   };
+
+  React.useEffect(() => {
+    const allowedIds = new Set(purchasableItemIds);
+    setSelectedItemIds((prev) => {
+      const next = prev.filter((id) => allowedIds.has(id));
+      if (next.length === prev.length && next.every((id, idx) => id === prev[idx])) {
+        return prev;
+      }
+      return next;
+    });
+  }, [purchasableItemIds]);
 
   const selectedItems = useMemo(() => {
     return items.filter((item) => selectedItemIds.includes(item._id));
@@ -46,6 +76,16 @@ const CartPage = () => {
   const selectedCount = useMemo(() => {
     return selectedItems.reduce((total, item) => total + item.quantity, 0);
   }, [selectedItems]);
+
+  const handleCheckout = () => {
+    if (!selectedItemIds.length) return;
+    navigate("/checkout", {
+      state: {
+        source: "cart",
+        cartItemIds: selectedItemIds,
+      },
+    });
+  };
 
   return (
     <div className="max-w-7xl mx-auto px-4 py-8">
@@ -67,7 +107,7 @@ const CartPage = () => {
                 htmlFor="select-all"
                 className="text-base font-medium text-gray-700 cursor-pointer"
               >
-                Select all items ({items.length})
+                Select all purchasable items ({purchasableItems.length})
               </label>
             </div>
           )}
@@ -104,6 +144,8 @@ const CartPage = () => {
           <CartSubtotal
             itemCount={selectedCount}
             totalItemPrice={selectedTotalPrice}
+            onCheckout={handleCheckout}
+            checkoutDisabled={!selectedItemIds.length}
           />
         </div>
       </div>

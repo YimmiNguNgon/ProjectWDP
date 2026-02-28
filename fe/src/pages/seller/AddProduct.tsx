@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+﻿import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -63,7 +63,7 @@ export default function AddProduct() {
     setLoading(true);
 
     if (!formData.title || !formData.price) {
-      toast.error('Vui lòng điền tên sản phẩm và giá bán');
+      toast.error('Please enter product name and selling price');
       setLoading(false);
       return;
     }
@@ -80,10 +80,10 @@ export default function AddProduct() {
         variantCombinations,
       });
 
-      toast.success('Sản phẩm đã được thêm thành công!');
+      toast.success('Product added successfully!');
       navigate('/seller/products');
     } catch (error: any) {
-      const msg = error?.response?.data?.message || 'Có lỗi xảy ra khi thêm sản phẩm';
+      const msg = error?.response?.data?.message || 'Failed to add product';
       toast.error(msg);
     } finally {
       setLoading(false);
@@ -95,8 +95,8 @@ export default function AddProduct() {
       <div className="max-w-4xl mx-auto">
         {/* Header */}
         <div className="mb-8">
-          <h1 className="text-2xl font-bold text-gray-900">Thêm sản phẩm mới</h1>
-          <p className="text-gray-600">Tạo sản phẩm mới cho cửa hàng của bạn</p>
+          <h1 className="text-2xl font-bold text-gray-900">Add New Product</h1>
+          <p className="text-gray-600">Create a new product for your store</p>
         </div>
 
         <form onSubmit={handleSubmit}>
@@ -108,16 +108,16 @@ export default function AddProduct() {
                 <CardHeader>
                   <CardTitle className="text-lg flex items-center gap-2">
                     <Tag className="h-5 w-5" />
-                    Thông tin sản phẩm
+                    Product Information
                   </CardTitle>
                 </CardHeader>
                 <CardContent className="space-y-4">
                   <div className="space-y-2">
-                    <Label htmlFor="title">Tên sản phẩm *</Label>
+                    <Label htmlFor="title">Product Name *</Label>
                     <Input
                       id="title"
                       name="title"
-                      placeholder="Nhập tên sản phẩm"
+                      placeholder="Enter product name"
                       value={formData.title}
                       onChange={handleChange}
                       required
@@ -125,11 +125,11 @@ export default function AddProduct() {
                   </div>
 
                   <div className="space-y-2">
-                    <Label htmlFor="description">Mô tả sản phẩm</Label>
+                    <Label htmlFor="description">Product Description</Label>
                     <Textarea
                       id="description"
                       name="description"
-                      placeholder="Mô tả chi tiết về sản phẩm..."
+                      placeholder="Enter detailed product description..."
                       rows={6}
                       value={formData.description}
                       onChange={handleChange}
@@ -143,43 +143,44 @@ export default function AddProduct() {
                 <CardHeader>
                   <CardTitle className="text-lg flex items-center gap-2">
                     <ImageIcon className="h-5 w-5" />
-                    Hình ảnh sản phẩm
+                    Product Images
                   </CardTitle>
                 </CardHeader>
                 <CardContent>
                   <div className="border-2 border-dashed border-gray-300 rounded-lg p-8 text-center">
                     <Upload className="h-12 w-12 text-gray-400 mx-auto mb-4" />
-                    <p className="text-gray-600 mb-2">Kéo thả hình ảnh vào đây hoặc click để chọn</p>
-                    <p className="text-sm text-gray-500 mb-4">Định dạng: JPG, PNG, GIF. Tối đa 10MB</p>
+                    <p className="text-gray-600 mb-2">Drag and drop images here, or click to select</p>
+                    <p className="text-sm text-gray-500 mb-4">Formats: JPG, PNG, GIF. Max size 10MB</p>
                     <Button type="button" variant="outline">
-                      Chọn hình ảnh
+                      Select Images
                     </Button>
                   </div>
                   <Alert className="mt-4">
                     <AlertCircle className="h-4 w-4" />
                     <AlertDescription>
-                      Tải lên ít nhất 3 hình ảnh chất lượng cao để tăng tỷ lệ chuyển đổi
+                      Upload at least 3 high-quality images to improve conversion
                     </AlertDescription>
                   </Alert>
                 </CardContent>
               </Card>
 
-              {/* Variants / Đặc điểm */}
+              {/* Variants */}
               <Card>
                 <CardHeader>
                   <CardTitle className="text-lg flex items-center gap-2">
                     <Layers className="h-5 w-5" />
-                    Đặc điểm sản phẩm
+                    Product Variants
                   </CardTitle>
                 </CardHeader>
                 <CardContent>
                   <p className="text-sm text-gray-500 mb-4">
-                    Thêm các đặc điểm như Kích thước, Màu sắc... và liệt kê các giá trị tương ứng.
+                    Add attributes like Size and Color, then define their values.
                   </p>
                   <ProductVariantsManager
                     variants={variants}
                     onChange={setVariants}
                     variantCombinations={variantCombinations}
+                    basePrice={parseFloat(formData.price) || 0}
                     onCombinationsChange={setVariantCombinations}
                   />
                 </CardContent>
@@ -193,12 +194,12 @@ export default function AddProduct() {
                 <CardHeader>
                   <CardTitle className="text-lg flex items-center gap-2">
                     <DollarSign className="h-5 w-5" />
-                    Giá & Tồn kho
+                    Price & Stock
                   </CardTitle>
                 </CardHeader>
                 <CardContent className="space-y-4">
                   <div className="space-y-2">
-                    <Label htmlFor="price">Giá bán *</Label>
+                    <Label htmlFor="price">Selling Price *</Label>
                     <div className="relative">
                       <span className="absolute left-3 top-2.5 text-gray-500">$</span>
                       <Input
@@ -215,14 +216,14 @@ export default function AddProduct() {
                   </div>
 
                   <div className="space-y-2">
-                    <Label htmlFor="quantity">Số lượng tồn kho</Label>
+                    <Label htmlFor="quantity">Stock Quantity</Label>
                     <div className="relative">
                       <Package className="absolute left-3 top-2.5 h-4 w-4 text-gray-500" />
                       <Input
                         id="quantity"
                         name="quantity"
                         type="number"
-                        placeholder="Số lượng"
+                        placeholder="Quantity"
                         className="pl-10"
                         value={variantCombinations.length > 0 ? String(totalVariantStock) : formData.quantity}
                         onChange={handleChange}
@@ -232,7 +233,7 @@ export default function AddProduct() {
                   </div>
 
                   <div className="space-y-2">
-                    <Label htmlFor="categoryId">Danh mục</Label>
+                    <Label htmlFor="categoryId">Category</Label>
                     <select
                       id="categoryId"
                       name="categoryId"
@@ -240,7 +241,7 @@ export default function AddProduct() {
                       value={formData.categoryId}
                       onChange={handleChange}
                     >
-                      <option value="">Chọn danh mục</option>
+                      <option value="">Select category</option>
                       {categories.map(cat => (
                         <option key={cat._id} value={cat._id}>{cat.name}</option>
                       ))}
@@ -248,7 +249,7 @@ export default function AddProduct() {
                   </div>
 
                   <div className="space-y-2">
-                    <Label htmlFor="condition">Tình trạng</Label>
+                    <Label htmlFor="condition">Condition</Label>
                     <select
                       id="condition"
                       name="condition"
@@ -256,9 +257,9 @@ export default function AddProduct() {
                       value={formData.condition}
                       onChange={handleChange}
                     >
-                      <option value="new">Mới</option>
-                      <option value="like_new">Như mới</option>
-                      <option value="used">Đã qua sử dụng</option>
+                      <option value="new">New</option>
+                      <option value="like_new">Like New</option>
+                      <option value="used">Used</option>
                     </select>
                   </div>
                 </CardContent>
@@ -273,7 +274,7 @@ export default function AddProduct() {
                       className="w-full bg-green-600 hover:bg-green-700"
                       disabled={loading}
                     >
-                      {loading ? 'Đang xử lý...' : 'Thêm sản phẩm'}
+                      {loading ? 'Processing...' : 'Add Product'}
                     </Button>
                     <Button
                       type="button"
@@ -281,7 +282,7 @@ export default function AddProduct() {
                       className="w-full"
                       onClick={() => navigate('/seller/products')}
                     >
-                      Hủy bỏ
+                      Cancel
                     </Button>
                   </div>
                 </CardContent>
@@ -293,6 +294,8 @@ export default function AddProduct() {
     </div>
   );
 }
+
+
 
 
 

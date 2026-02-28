@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+﻿import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import {
   Card,
@@ -76,7 +76,7 @@ export function UserProfile({ user }: UserProfileProps) {
     try {
       setLoading(true);
       const res = await getAddresses();
-      // nếu API return { message, data }
+      // náº¿u API return { message, data }
       setAddresses(res.data);
     } catch (error) {
       console.error("Failed to fetch addresses", error);
@@ -153,7 +153,7 @@ export function UserProfile({ user }: UserProfileProps) {
   const handleAvatarChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
-      // Kiểm tra kích thước file (5MB max)
+      // Kiá»ƒm tra kÃ­ch thÆ°á»›c file (5MB max)
       if (file.size > 5 * 1024 * 1024) {
         toast.error("File size exceeds 5MB limit");
         return;
@@ -170,7 +170,7 @@ export function UserProfile({ user }: UserProfileProps) {
 
   const handleUpdateProfile = async () => {
     if (!newUsername.trim()) {
-      alert("Tên người dùng không thể trống");
+      alert("Username cannot be empty");
       return;
     }
 
@@ -178,18 +178,18 @@ export function UserProfile({ user }: UserProfileProps) {
       setLoading(true);
       let uploadedAvatarUrl = avatarPreview;
 
-      // Nếu có ảnh mới, upload lên Cloudinary
+      // Náº¿u cÃ³ áº£nh má»›i, upload lÃªn Cloudinary
       if (avatarFile) {
         uploadedAvatarUrl = await uploadImageToCloudinary(avatarFile);
       }
 
-      // Update profile với username và avatar URL
+      // Update profile vá»›i username vÃ  avatar URL
       await updateUserProfile({
         username: newUsername,
         avatarUrl: uploadedAvatarUrl,
       });
 
-      // Refresh user data từ backend
+      // Refresh user data tá»« backend
       await fetchMe();
 
       setEditProfileOpen(false);
@@ -318,7 +318,7 @@ export function UserProfile({ user }: UserProfileProps) {
                       className="cursor-pointer"
                     />
                     <p className="text-xs text-gray-500">
-                      Only accept: JPG, PNG, GIF (tối đa 5MB)
+                      Only accept: JPG, PNG, GIF (max 5MB)
                     </p>
                   </div>
 
@@ -636,3 +636,4 @@ export function UserProfile({ user }: UserProfileProps) {
     </div>
   );
 }
+

@@ -10,8 +10,11 @@ interface CartItemProps {
 
 export const CartDropdownItem = ({ item }: CartItemProps) => {
   const { updateQuantity, removeFromCart } = useCart();
+  const availableStock = item.availableStock ?? item.product.stock ?? 0;
+  const isOutOfStock = Boolean(item.isOutOfStock);
 
   const handleIncrease = () => {
+    if (isOutOfStock) return;
     updateQuantity(item._id, "increase");
   };
 
@@ -71,11 +74,16 @@ export const CartDropdownItem = ({ item }: CartItemProps) => {
               size="icon"
               className="h-5 w-5 rounded-sm cursor-pointer"
               onClick={handleIncrease}
-              disabled={item.quantity >= item.product.stock}
+              disabled={isOutOfStock || item.quantity >= availableStock}
             >
               <Plus className="size-3" />
             </Button>
           </div>
+          {item.availabilityMessage && (
+            <span className="text-[11px] font-medium text-red-600">
+              {item.availabilityMessage}
+            </span>
+          )}
           <button
             onClick={handleRemove}
             className="text-red-500 cursor-pointer hover:text-red-600 hover:bg-red-50 p-1 rounded transition-colors opacity-0 group-hover:opacity-100"

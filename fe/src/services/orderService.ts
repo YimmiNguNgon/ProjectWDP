@@ -3,14 +3,14 @@ import axios from 'axios';
 
 const API_URL = 'http://localhost:8080/api/orders';
 
-// Cập nhật interface ApiOrder để bao gồm tất cả trường từ backend
+// Cáº­p nháº­t interface ApiOrder Ä‘á»ƒ bao gá»“m táº¥t cáº£ trÆ°á»ng tá»« backend
 interface ApiOrder {
   _id: string;
   orderId?: string;
   username: string;
   email: string;
   total: number;
-  status: 'created' | 'paid' | 'shipped' | 'delivered' | 'cancelled';
+  status: 'created' | 'paid' | 'processing' | 'shipped' | 'delivered' | 'cancelled' | 'failed';
   items: any; // Can be array or number depending on backend version
   itemCount?: number;
   date: string;
@@ -29,13 +29,13 @@ interface ApiOrder {
   }>;
 }
 
-// Cập nhật interface Order cho FE
+// Cáº­p nháº­t interface Order cho FE
 interface Order {
   _id: string;
   username: string;
   email: string;
   total: number;
-  status: 'pending' | 'processing' | 'shipped' | 'delivered' | 'cancelled';
+  status: 'created' | 'paid' | 'processing' | 'shipped' | 'delivered' | 'cancelled' | 'failed';
   items: number;
   date: string;
   paymentMethod: string;
@@ -52,13 +52,14 @@ interface Order {
   updatedAt?: string;
 }
 
-// Map status từ backend sang frontend
+// Map status tá»« backend sang frontend
 const mapStatus = (status: string): Order['status'] => {
   switch (status.toLowerCase()) {
     case 'created':
     case 'pending':
-      return 'pending';
+      return 'created';
     case 'paid':
+      return 'paid';
     case 'processing':
       return 'processing';
     case 'shipped':
@@ -70,13 +71,15 @@ const mapStatus = (status: string): Order['status'] => {
     case 'cancelled':
     case 'canceled':
       return 'cancelled';
+    case 'failed':
+      return 'failed';
     default:
       console.warn('Unknown status:', status);
-      return 'pending';
+      return 'created';
   }
 };
 
-// Format date từ backend (YYYY-MM-DD) sang DD/MM/YYYY
+// Format date tá»« backend (YYYY-MM-DD) sang DD/MM/YYYY
 const formatDate = (dateString: string): string => {
   if (!dateString) return '';
   
@@ -90,7 +93,7 @@ const formatDate = (dateString: string): string => {
   return `${day}/${month}/${year}`;
 };
 
-// Format date đầy đủ cho popup (DD/MM/YYYY HH:MM)
+// Format date Ä‘áº§y Ä‘á»§ cho popup (DD/MM/YYYY HH:MM)
 const formatFullDate = (dateString: string): string => {
   if (!dateString) return '';
   
@@ -106,11 +109,11 @@ const formatFullDate = (dateString: string): string => {
   return `${day}/${month}/${year} ${hours}:${minutes}`;
 };
 
-// Chuyển đổi dữ liệu từ API sang format FE
+// Chuyá»ƒn Ä‘á»•i dá»¯ liá»‡u tá»« API sang format FE
 const transformOrder = (apiOrder: ApiOrder): Order => {
   return {
     _id: apiOrder.orderId || apiOrder._id, 
-    username: apiOrder.username || 'Khách hàng',
+    username: apiOrder.username || 'Customer',
     email: apiOrder.email || '',
     total: apiOrder.total || 0,
     status: mapStatus(apiOrder.status || 'pending'),
@@ -126,7 +129,7 @@ const transformOrder = (apiOrder: ApiOrder): Order => {
 };
 
 export const orderService = {
-  // Lấy tất cả orders
+  // Láº¥y táº¥t cáº£ orders
   async getAllOrders(): Promise<Order[]> {
     try {
       const response = await axios.get(`${API_URL}/all`);
@@ -139,14 +142,16 @@ export const orderService = {
     }
   },
 
-  // Lấy orders với filter và pagination
+  // Láº¥y orders vá»›i filter vÃ  pagination
   async getOrders(params?: {
     status?: string;
     page?: number;
     limit?: number;
   }): Promise<{ orders: Order[]; total: number }> {
     try {
-      const response = await axios.get(API_URL, { params });
+      const response = await axios.get(API_URL, {
+        params: { role: 'seller', ...params },
+      });
       console.log('Filtered orders response:', response.data); // Debug
       const apiOrders: ApiOrder[] = response.data.data || [];
       const orders = apiOrders.map(transformOrder);
@@ -161,26 +166,26 @@ export const orderService = {
     }
   },
 
-  // Lấy chi tiết order theo ID
+  // Láº¥y chi tiáº¿t order theo ID
   async getOrderById(id: string): Promise<Order | null> {
   try {
     console.log('=== FETCHING ORDER DETAILS ===');
     console.log('Original ID:', id);
     
-    // Test với ObjectId trực tiếp từ data bạn đã insert
-    // Dữ liệu bạn đã insert: "60d21b4667d0d8992e610cae"
-    // #ORD610CAE → phần cuối là "610cae"
+    // Test vá»›i ObjectId trá»±c tiáº¿p tá»« data báº¡n Ä‘Ã£ insert
+    // Dá»¯ liá»‡u báº¡n Ä‘Ã£ insert: "60d21b4667d0d8992e610cae"
+    // #ORD610CAE â†’ pháº§n cuá»‘i lÃ  "610cae"
     
     let actualId = id;
     
     if (id.startsWith('#ORD')) {
-      // #ORD610CAE → "610cae"
+      // #ORD610CAE â†’ "610cae"
       const hexPart = id.replace('#ORD', '').toLowerCase();
       console.log('Hex part from #ORD:', hexPart); // Should be "610cae"
       
-      // Kiểm tra độ dài hexPart
+      // Kiá»ƒm tra Ä‘á»™ dÃ i hexPart
       if (hexPart.length === 6) {
-        // Tạo ObjectId đầy đủ 24 ký tự hex
+        // Táº¡o ObjectId Ä‘áº§y Ä‘á»§ 24 kÃ½ tá»± hex
         // "60d21b4667d0d8992e610cae" - 24 characters
         actualId = `60d21b4667d0d8992e${hexPart}`;
       } else {
@@ -192,7 +197,7 @@ export const orderService = {
     console.log('Converted ID for API call:', actualId);
     console.log('API URL:', `${API_URL}/${actualId}`);
     
-    // Thử call API
+    // Thá»­ call API
     const response = await axios.get(`${API_URL}/${actualId}`);
     console.log('API Response:', response.data);
     
@@ -201,7 +206,7 @@ export const orderService = {
       return null;
     }
     
-    // Kiểm tra cấu trúc response
+    // Kiá»ƒm tra cáº¥u trÃºc response
     if (!response.data.data) {
       console.error('No data in response');
       return null;
@@ -227,7 +232,7 @@ export const orderService = {
         url: error.config?.url
       });
       
-      // Log URL đang gọi
+      // Log URL Ä‘ang gá»i
       console.error('Request URL:', error.config?.url);
     }
     
@@ -235,7 +240,7 @@ export const orderService = {
   }
 },
 
-  // Lấy thống kê
+  // Láº¥y thá»‘ng kÃª
   async getOrderStats() {
     try {
       const response = await axios.get(`${API_URL}/stats`);
@@ -249,19 +254,21 @@ export const orderService = {
   // Update status order
   async updateOrderStatus(orderId: string, newStatus: Order['status']): Promise<boolean> {
     try {
-      // Map status ngược lại từ FE sang BE
+      // Map status ngÆ°á»£c láº¡i tá»« FE sang BE
       const statusMapToBackend: Record<Order['status'], string> = {
-        'pending': 'created',
-        'processing': 'paid',
+        'created': 'created',
+        'paid': 'paid',
+        'processing': 'processing',
         'shipped': 'shipped',
         'delivered': 'delivered',
-        'cancelled': 'cancelled'
+        'cancelled': 'cancelled',
+        'failed': 'failed',
       };
       
       const backendStatus = statusMapToBackend[newStatus];
       console.log('Updating order status:', { orderId, newStatus, backendStatus });
       
-      const response = await axios.patch(`${API_URL}/${orderId}`, { 
+      const response = await axios.patch(`${API_URL}/${orderId}/status`, { 
         status: backendStatus 
       });
       
@@ -276,7 +283,7 @@ export const orderService = {
     }
   },
 
-  // Helper functions export nếu cần
+  // Helper functions export náº¿u cáº§n
   mapStatus,
   formatDate,
   formatFullDate

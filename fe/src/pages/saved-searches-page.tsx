@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+﻿import { useState, useEffect } from "react";
 import { Trash2, Search, ExternalLink, Edit2, Package } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
@@ -53,7 +53,7 @@ export default function SavedSearchesPage() {
             }
         } catch (error) {
             console.error("Error fetching saved searches:", error);
-            toast.error("Không thể tải saved searches");
+            toast.error("Unable to load saved searches");
         } finally {
             setLoading(false);
         }
@@ -81,11 +81,11 @@ export default function SavedSearchesPage() {
             const response = await axios.delete(`/api/saved-searches/${id}`);
             if (response.data.success) {
                 setSavedSearches(savedSearches.filter((s) => s._id !== id));
-                toast.success("Đã xóa saved search");
+                toast.success("Saved search deleted");
             }
         } catch (error) {
             console.error("Error deleting saved search:", error);
-            toast.error("Không thể xóa saved search");
+            toast.error("Unable to delete saved search");
         }
     };
 
@@ -101,11 +101,11 @@ export default function SavedSearchesPage() {
                 setSavedSearches((prev) =>
                     prev.map((s) => (s._id === id ? { ...s, name } : s))
                 );
-                toast.success("Đã cập nhật saved search");
+                toast.success("Saved search updated");
             }
         } catch (error) {
             console.error("Error updating saved search:", error);
-            toast.error("Không thể cập nhật saved search");
+            toast.error("Unable to update saved search");
         }
     };
 
@@ -238,3 +238,4 @@ export default function SavedSearchesPage() {
         </div>
     );
 }
+

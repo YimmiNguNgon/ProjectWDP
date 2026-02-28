@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+﻿import { useEffect, useMemo, useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -12,6 +12,7 @@ import type {
 interface ProductVariantsManagerProps {
     variants: ProductVariant[];
     variantCombinations: ProductVariantCombination[];
+    basePrice?: number;
     onChange: (variants: ProductVariant[]) => void;
     onCombinationsChange: (variantCombinations: ProductVariantCombination[]) => void;
 }
@@ -19,6 +20,7 @@ interface ProductVariantsManagerProps {
 export default function ProductVariantsManager({
     variants,
     variantCombinations,
+    basePrice = 0,
     onChange,
     onCombinationsChange,
 }: ProductVariantsManagerProps) {
@@ -61,6 +63,7 @@ export default function ProductVariantsManager({
                         key: buildVariantKey(selections),
                         selections,
                         quantity: 0,
+                        price: Number(basePrice || 0),
                         sku: '',
                     },
                 ];
@@ -79,7 +82,7 @@ export default function ProductVariantsManager({
         };
 
         return cartesian(0, []);
-    }, [variants]);
+    }, [variants, basePrice]);
 
     useEffect(() => {
         if (!generatedCombinations.length) {
@@ -95,6 +98,10 @@ export default function ProductVariantsManager({
             return {
                 ...combo,
                 quantity: Number(prev?.quantity || 0),
+                price:
+                    prev?.price === undefined || prev?.price === null
+                        ? Number(basePrice || 0)
+                        : Number(prev.price),
                 sku: String(prev?.sku || ''),
             };
         });
@@ -109,7 +116,7 @@ export default function ProductVariantsManager({
         if (mergedJson !== currentJson) {
             onCombinationsChange(mergedSorted);
         }
-    }, [generatedCombinations, variantCombinations, onCombinationsChange]);
+    }, [generatedCombinations, variantCombinations, basePrice, onCombinationsChange]);
 
     const addVariant = () => {
         if (!newVariantName.trim()) return;
@@ -156,7 +163,7 @@ export default function ProductVariantsManager({
 
     const updateCombination = (
         key: string,
-        field: 'quantity' | 'sku',
+        field: 'quantity' | 'price' | 'sku',
         value: number | string,
     ) => {
         onCombinationsChange(
@@ -267,18 +274,18 @@ export default function ProductVariantsManager({
 
             {variantCombinations.length > 0 && (
                 <Card className="p-4">
-                    <h4 className="font-medium mb-3">Stock theo tổ hợp</h4>
+                    <h4 className="font-medium mb-3">Combination Stock</h4>
                     <div className="space-y-2">
                         {variantCombinations.map((combo) => (
                             <div key={combo.key} className="grid grid-cols-12 gap-2 items-end">
-                                <div className="col-span-6">
-                                    <Label className="text-xs">Tổ hợp</Label>
+                                <div className="col-span-5">
+                                    <Label className="text-xs">Combination</Label>
                                     <div className="h-10 px-3 rounded-md border bg-muted/30 flex items-center text-sm">
                                         {combo.selections.map((s) => s.value).join(' / ')}
                                     </div>
                                 </div>
-                                <div className="col-span-3">
-                                    <Label className="text-xs">Số lượng</Label>
+                                <div className="col-span-2">
+                                    <Label className="text-xs">Quantity</Label>
                                     <Input
                                         type="number"
                                         min="0"
@@ -288,6 +295,22 @@ export default function ProductVariantsManager({
                                                 combo.key,
                                                 'quantity',
                                                 parseInt(e.target.value) || 0,
+                                            )
+                                        }
+                                    />
+                                </div>
+                                <div className="col-span-2">
+                                    <Label className="text-xs">Price</Label>
+                                    <Input
+                                        type="number"
+                                        min="0"
+                                        step="0.01"
+                                        value={combo.price ?? basePrice}
+                                        onChange={(e) =>
+                                            updateCombination(
+                                                combo.key,
+                                                'price',
+                                                e.target.value ? parseFloat(e.target.value) : 0,
                                             )
                                         }
                                     />
@@ -310,3 +333,6 @@ export default function ProductVariantsManager({
         </div>
     );
 }
+
+
+

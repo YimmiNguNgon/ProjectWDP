@@ -45,6 +45,7 @@ async function sendNotification({ recipientId, type, title, body, link = "", met
         return notification;
     } catch (err) {
         console.error("notificationService error:", err.message);
+        throw err;
     }
 }
 

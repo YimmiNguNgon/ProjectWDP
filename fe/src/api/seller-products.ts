@@ -14,6 +14,7 @@ export interface ProductVariantCombination {
   key: string;
   selections: { name: string; value: string }[];
   quantity: number;
+  price?: number;
   sku?: string;
 }
 

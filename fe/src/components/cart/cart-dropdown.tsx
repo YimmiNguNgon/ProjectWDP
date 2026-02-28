@@ -118,7 +118,9 @@ export const CartDropdown = ({ children }: PropsWithChildren) => {
                   <Link to="/cart">View Cart</Link>
                 </Button>
                 <Button asChild>
-                  <Link to="/checkout">Checkout</Link>
+                  <Link to="/checkout" state={{ source: "cart" }}>
+                    Checkout
+                  </Link>
                 </Button>
               </div>
             </div>

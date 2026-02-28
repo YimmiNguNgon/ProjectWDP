@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+﻿import { useEffect, useMemo, useState } from "react";
 import api from "@/lib/axios";
 import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
@@ -6,7 +6,7 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 type SellerFeedbackSectionProps = {
   sellerId: string;
   sellerName?: string;
-  productId?: string; // để dùng tab "This item"
+  productId?: string; // Ä‘á»ƒ dÃ¹ng tab "This item"
 };
 
 type SellerReviewApi = {
@@ -52,7 +52,7 @@ type SellerReviewsResponse = {
 type TabType = "thisItem" | "allItems";
 type RatingFilter = "all" | "positive" | "neutral" | "negative";
 
-// Tự suy ra type nếu review cũ chưa có field type
+// Tá»± suy ra type náº¿u review cÅ© chÆ°a cÃ³ field type
 function getComputedType(
   review: SellerReviewApi
 ): "positive" | "neutral" | "negative" {
@@ -95,7 +95,7 @@ export function SellerFeedbackSection({
         setAllData(res.data);
       } catch (err) {
         console.error(err);
-        setErrorMsg("Không thể tải feedback của seller.");
+        setErrorMsg("Unable to load seller feedback.");
       } finally {
         setLoading(false);
       }
@@ -104,7 +104,7 @@ export function SellerFeedbackSection({
     fetchData();
   }, [sellerId]);
 
-  // ===== TÍNH TOÁN TỪ DATA =====
+  // ===== TÃNH TOÃN Tá»ª DATA =====
   const allReviews = allData?.data ?? [];
 
   const thisItemReviews = useMemo(() => {
@@ -118,7 +118,7 @@ export function SellerFeedbackSection({
   const baseReviews =
     activeTab === "thisItem" && productId ? thisItemReviews : allReviews;
 
-  // filter theo ratingFilter, dùng computedType nên filter luôn đúng
+  // filter theo ratingFilter, dÃ¹ng computedType nÃªn filter luÃ´n Ä‘Ãºng
   const reviews: SellerReviewApi[] = useMemo(() => {
     if (ratingFilter === "all") return baseReviews;
 
@@ -188,7 +188,7 @@ export function SellerFeedbackSection({
             </div>
           )}
 
-          {/* 3 nút hành động */}
+          {/* 3 nÃºt hÃ nh Ä‘á»™ng */}
           <div className="mt-4 flex flex-col gap-2">
             <Button className="rounded-full">Visit store</Button>
             <Button
@@ -310,13 +310,13 @@ export function SellerFeedbackSection({
           <ScrollArea className="h-[420px] pb-4 pt-4">
             {loading ? (
               <p className="text-sm text-muted-foreground">
-                Đang tải feedback của seller...
+                Loading seller feedback...
               </p>
             ) : errorMsg ? (
               <p className="text-sm text-red-500">{errorMsg}</p>
             ) : reviews.length === 0 ? (
               <p className="text-sm text-muted-foreground">
-                Chưa có feedback nào cho seller này.
+                No feedback yet for this seller.
               </p>
             ) : (
               <div className="space-y-5">
@@ -420,9 +420,10 @@ function TypeBadge({ type }: TypeBadgeProps) {
   }
 
   if (type === "negative") {
-    return <div className={`${baseClass} bg-red-600`}>–</div>;
+    return <div className={`${baseClass} bg-red-600`}>-</div>;
   }
 
   // neutral
   return <div className={`${baseClass} bg-gray-400`} />;
 }
+

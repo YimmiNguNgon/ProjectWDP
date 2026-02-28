@@ -1,4 +1,4 @@
-// src/pages/admin/user-management.tsx
+﻿// src/pages/admin/user-management.tsx
 import { useState, useEffect } from 'react';
 import { getAllUsers, banUser, unbanUser, deleteUser, type User, type GetUsersParams } from '../../api/admin';
 import { Button } from '../../components/ui/button';
@@ -51,7 +51,7 @@ export default function UserManagement() {
             const params: GetUsersParams = {
                 page,
                 limit: 10,
-                // Khi chọn 'all' hoặc 'admin' thì không exclude admin
+                // When selecting 'all' or 'admin', do not exclude admin accounts
                 excludeAdmin: roleFilter !== 'all' && roleFilter !== 'admin',
             };
 
@@ -63,7 +63,7 @@ export default function UserManagement() {
             setUsers(response.data);
             setTotalPages(response.pagination.totalPages);
         } catch (error: any) {
-            toast.error(error.response?.data?.message || 'Lỗi khi tải danh sách người dùng');
+            toast.error(error.response?.data?.message || 'Failed to load users');
         } finally {
             setLoading(false);
         }
@@ -82,19 +82,19 @@ export default function UserManagement() {
     // Handle ban user
     const handleBanUser = async () => {
         if (!selectedUser || !banReason.trim()) {
-            toast.error('Vui lòng nhập lý do khóa tài khoản');
+            toast.error('Please enter a reason for banning this account');
             return;
         }
 
         try {
             await banUser(selectedUser._id, banReason);
-            toast.success('Đã khóa tài khoản thành công');
+            toast.success('Account banned successfully');
             setBanDialogOpen(false);
             setBanReason('');
             setSelectedUser(null);
             fetchUsers();
         } catch (error: any) {
-            toast.error(error.response?.data?.message || 'Lỗi khi khóa tài khoản');
+            toast.error(error.response?.data?.message || 'Failed to ban account');
         }
     };
 
@@ -102,25 +102,25 @@ export default function UserManagement() {
     const handleUnbanUser = async (user: User) => {
         try {
             await unbanUser(user._id);
-            toast.success('Đã mở khóa tài khoản thành công');
+            toast.success('Account unbanned successfully');
             fetchUsers();
         } catch (error: any) {
-            toast.error(error.response?.data?.message || 'Lỗi khi mở khóa tài khoản');
+            toast.error(error.response?.data?.message || 'Failed to unban account');
         }
     };
 
     // Handle delete user
     const handleDeleteUser = async (user: User) => {
-        if (!confirm(`Bạn có chắc muốn xóa người dùng ${user.username}?`)) {
+        if (!confirm(`Are you sure you want to delete user ${user.username}?`)) {
             return;
         }
 
         try {
             await deleteUser(user._id);
-            toast.success('Đã xóa người dùng thành công');
+            toast.success('User deleted successfully');
             fetchUsers();
         } catch (error: any) {
-            toast.error(error.response?.data?.message || 'Lỗi khi xóa người dùng');
+            toast.error(error.response?.data?.message || 'Failed to delete user');
         }
     };
 
@@ -147,13 +147,13 @@ export default function UserManagement() {
 
     return (
         <div className="container mx-auto py-8">
-            <h1 className="text-3xl font-bold mb-6">Quản lý người dùng</h1>
+            <h1 className="text-3xl font-bold mb-6">User Management</h1>
 
             {/* Filters */}
             <div className="flex gap-4 mb-6">
                 <div className="flex-1">
                     <Input
-                        placeholder="Tìm kiếm theo username hoặc email..."
+                        placeholder="Search by username or email..."
                         value={search}
                         onChange={(e) => setSearch(e.target.value)}
                         onKeyPress={(e) => e.key === 'Enter' && handleSearch()}
@@ -161,10 +161,10 @@ export default function UserManagement() {
                 </div>
                 <Select value={roleFilter} onValueChange={setRoleFilter}>
                     <SelectTrigger className="w-[180px]">
-                        <SelectValue placeholder="Lọc theo vai trò" />
+                        <SelectValue placeholder="Filter by role" />
                     </SelectTrigger>
                     <SelectContent>
-                        <SelectItem value="all">Tất cả vai trò</SelectItem>
+                        <SelectItem value="all">All roles</SelectItem>
                         <SelectItem value="buyer">Buyer</SelectItem>
                         <SelectItem value="seller">Seller</SelectItem>
                         <SelectItem value="admin">Admin</SelectItem>
@@ -172,17 +172,17 @@ export default function UserManagement() {
                 </Select>
                 <Select value={statusFilter} onValueChange={setStatusFilter}>
                     <SelectTrigger className="w-[180px]">
-                        <SelectValue placeholder="Lọc theo trạng thái" />
+                        <SelectValue placeholder="Filter by status" />
                     </SelectTrigger>
                     <SelectContent>
-                        <SelectItem value="all">Tất cả trạng thái</SelectItem>
+                        <SelectItem value="all">All statuses</SelectItem>
                         <SelectItem value="active">Active</SelectItem>
                         <SelectItem value="banned">Banned</SelectItem>
                         <SelectItem value="suspended">Suspended</SelectItem>
                     </SelectContent>
                 </Select>
 
-                <Button onClick={handleSearch}>Tìm kiếm</Button>
+                <Button onClick={handleSearch}>Search</Button>
             </div>
 
             {/* Users Table */}
@@ -192,24 +192,24 @@ export default function UserManagement() {
                         <TableRow>
                             <TableHead>Username</TableHead>
                             <TableHead>Email</TableHead>
-                            <TableHead>Vai trò</TableHead>
-                            <TableHead>Trạng thái</TableHead>
-                            <TableHead>Điểm uy tín</TableHead>
-                            <TableHead>Ngày tạo</TableHead>
-                            <TableHead className="text-right">Hành động</TableHead>
+                            <TableHead>Role</TableHead>
+                            <TableHead>Status</TableHead>
+                            <TableHead>Reputation</TableHead>
+                            <TableHead>Created At</TableHead>
+                            <TableHead className="text-right">Actions</TableHead>
                         </TableRow>
                     </TableHeader>
                     <TableBody>
                         {loading ? (
                             <TableRow>
                                 <TableCell colSpan={7} className="text-center py-8">
-                                    Đang tải...
+                                    Loading...
                                 </TableCell>
                             </TableRow>
                         ) : users.length === 0 ? (
                             <TableRow>
                                 <TableCell colSpan={7} className="text-center py-8">
-                                    Không tìm thấy người dùng
+                                    No users found
                                 </TableCell>
                             </TableRow>
                         ) : (
@@ -220,7 +220,7 @@ export default function UserManagement() {
                                     <TableCell>{getRoleBadge(user.role)}</TableCell>
                                     <TableCell>{getStatusBadge(user.status)}</TableCell>
                                     <TableCell>{user.reputationScore}</TableCell>
-                                    <TableCell>{new Date(user.createdAt).toLocaleDateString('vi-VN')}</TableCell>
+                                    <TableCell>{new Date(user.createdAt).toLocaleDateString('en-US')}</TableCell>
                                     <TableCell className="text-right">
                                         <div className="flex gap-2 justify-end">
                                             {user.status === 'banned' ? (
@@ -229,7 +229,7 @@ export default function UserManagement() {
                                                     variant="outline"
                                                     onClick={() => handleUnbanUser(user)}
                                                 >
-                                                    Mở khóa
+                                                    Unban
                                                 </Button>
                                             ) : (
                                                 <Button
@@ -240,7 +240,7 @@ export default function UserManagement() {
                                                         setBanDialogOpen(true);
                                                     }}
                                                 >
-                                                    Khóa
+                                                    Ban
                                                 </Button>
                                             )}
                                             <Button
@@ -248,7 +248,7 @@ export default function UserManagement() {
                                                 variant="outline"
                                                 onClick={() => handleDeleteUser(user)}
                                             >
-                                                Xóa
+                                                Delete
                                             </Button>
                                         </div>
                                     </TableCell>
@@ -266,17 +266,17 @@ export default function UserManagement() {
                     onClick={() => setPage((p) => Math.max(1, p - 1))}
                     disabled={page === 1}
                 >
-                    Trang trước
+                    Previous
                 </Button>
                 <span className="flex items-center px-4">
-                    Trang {page} / {totalPages}
+                    Page {page} / {totalPages}
                 </span>
                 <Button
                     variant="outline"
                     onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
                     disabled={page === totalPages}
                 >
-                    Trang sau
+                    Next
                 </Button>
             </div>
 
@@ -284,14 +284,14 @@ export default function UserManagement() {
             <Dialog open={banDialogOpen} onOpenChange={setBanDialogOpen}>
                 <DialogContent>
                     <DialogHeader>
-                        <DialogTitle>Khóa tài khoản</DialogTitle>
+                        <DialogTitle>Ban Account</DialogTitle>
                         <DialogDescription>
-                            Bạn đang khóa tài khoản: <strong>{selectedUser?.username}</strong>
+                            You are banning account: <strong>{selectedUser?.username}</strong>
                         </DialogDescription>
                     </DialogHeader>
                     <div className="py-4">
                         <Textarea
-                            placeholder="Nhập lý do khóa tài khoản..."
+                            placeholder="Enter ban reason..."
                             value={banReason}
                             onChange={(e) => setBanReason(e.target.value)}
                             rows={4}
@@ -299,10 +299,10 @@ export default function UserManagement() {
                     </div>
                     <DialogFooter>
                         <Button variant="outline" onClick={() => setBanDialogOpen(false)}>
-                            Hủy
+                            Cancel
                         </Button>
                         <Button variant="destructive" onClick={handleBanUser}>
-                            Khóa tài khoản
+                            Ban Account
                         </Button>
                     </DialogFooter>
                 </DialogContent>
@@ -310,3 +310,4 @@ export default function UserManagement() {
         </div>
     );
 }
+

@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+﻿import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/hooks/use-auth";
 import api from "@/lib/axios";
@@ -42,7 +42,7 @@ const BANKS = [
     "Sacombank",
     "HDBank",
     "NCB",
-    "Khac",
+    "Other",
 ];
 
 export default function SellerApplyPage() {
@@ -94,7 +94,7 @@ export default function SellerApplyPage() {
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
         if (form.productDescription.length < 20) {
-            toast.error("Mo ta san pham can it nhat 20 ky tu");
+            toast.error("Product description must be at least 20 characters");
             return;
         }
         setLoading(true);
@@ -103,7 +103,7 @@ export default function SellerApplyPage() {
             setSuccess(true);
         } catch (err: any) {
             toast.error(
-                err.response?.data?.message || "Gui don that bai, vui long thu lai."
+                err.response?.data?.message || "Application submission failed, please try again."
             );
         } finally {
             setLoading(false);
@@ -113,7 +113,7 @@ export default function SellerApplyPage() {
     if (checkingStatus) {
         return (
             <div className="flex items-center justify-center min-h-[50vh]">
-                <p className="text-muted-foreground">Dang kiem tra trang thai...</p>
+                <p className="text-muted-foreground">Checking application status...</p>
             </div>
         );
     }
@@ -123,19 +123,19 @@ export default function SellerApplyPage() {
         const statusConfig = {
             pending: {
                 icon: Clock,
-                label: "Dang cho xet duyet",
+                label: "Pending review",
                 badgeVariant: "secondary" as const,
                 iconClass: "text-amber-500",
             },
             approved: {
                 icon: CheckCircle2,
-                label: "Da duoc duyet",
+                label: "Approved",
                 badgeVariant: "default" as const,
                 iconClass: "text-green-600",
             },
             rejected: {
                 icon: XCircle,
-                label: "Da bi tu choi",
+                label: "Rejected",
                 badgeVariant: "destructive" as const,
                 iconClass: "text-destructive",
             },
@@ -148,23 +148,23 @@ export default function SellerApplyPage() {
                 <Icon className={`h-16 w-16 ${sc.iconClass}`} />
                 <div>
                     <h2 className="text-2xl font-bold text-foreground mb-2">
-                        Trang thai don dang ky
+                        Application status
                     </h2>
                     <p className="text-muted-foreground text-sm">
-                        Ten shop: <strong>{existingApp.shopName}</strong>
+                        Shop name: <strong>{existingApp.shopName}</strong>
                     </p>
                 </div>
 
                 <div className="w-full border border-border rounded-xl p-5 bg-muted/30 flex flex-col gap-3">
                     <div className="flex items-center justify-between">
-                        <span className="text-sm text-muted-foreground">Trang thai</span>
+                        <span className="text-sm text-muted-foreground">Status</span>
                         <Badge variant={sc.badgeVariant}>{sc.label}</Badge>
                     </div>
                     <Separator />
                     <div className="flex items-center justify-between">
-                        <span className="text-sm text-muted-foreground">Ngay gui</span>
+                        <span className="text-sm text-muted-foreground">Submitted date</span>
                         <span className="text-sm font-medium">
-                            {new Date(existingApp.createdAt).toLocaleDateString("vi-VN")}
+                            {new Date(existingApp.createdAt).toLocaleDateString("en-US")}
                         </span>
                     </div>
                     {existingApp.adminNote && (
@@ -172,7 +172,7 @@ export default function SellerApplyPage() {
                             <Separator />
                             <div className="text-left">
                                 <p className="text-sm text-muted-foreground mb-1">
-                                    Ghi chu tu Admin:
+                                    Admin note:
                                 </p>
                                 <p className="text-sm text-foreground">{existingApp.adminNote}</p>
                             </div>
@@ -183,7 +183,7 @@ export default function SellerApplyPage() {
                 <div className="flex flex-col gap-2 w-full">
                     {existingApp.status === "approved" && (
                         <Button onClick={() => navigate("/seller")} className="w-full cursor-pointer">
-                            Di toi Seller Panel
+                            Go to Seller Panel
                         </Button>
                     )}
                     {existingApp.status === "rejected" && (
@@ -191,7 +191,7 @@ export default function SellerApplyPage() {
                             onClick={() => setExistingApp(null)}
                             className="w-full cursor-pointer"
                         >
-                            Gui don moi
+                            Submit a new application
                         </Button>
                     )}
                     <Button
@@ -199,7 +199,7 @@ export default function SellerApplyPage() {
                         onClick={() => navigate("/")}
                         className="w-full cursor-pointer"
                     >
-                        Ve trang chu
+                        Back to Home
                     </Button>
                 </div>
             </div>
@@ -213,15 +213,15 @@ export default function SellerApplyPage() {
                 <CheckCircle2 className="h-16 w-16 text-green-600" />
                 <div>
                     <h2 className="text-2xl font-bold text-foreground mb-2">
-                        Don dang ky da duoc gui!
+                        Application submitted successfully!
                     </h2>
                     <p className="text-muted-foreground text-sm leading-relaxed">
-                        Chung toi se xem xet don cua ban trong vong{" "}
-                        <strong>1-3 ngay lam viec</strong>. Ket qua se duoc thong bao qua email.
+                        We will review your application within{" "}
+                        <strong>1-3 business days</strong>. The result will be sent via email.
                     </p>
                 </div>
                 <Button onClick={() => navigate("/")} className="cursor-pointer">
-                    Ve trang chu
+                    Back to Home
                 </Button>
             </div>
         );
@@ -235,16 +235,16 @@ export default function SellerApplyPage() {
                 className="flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground mb-6 cursor-pointer transition-colors"
             >
                 <ChevronLeft className="h-4 w-4" />
-                Quay lai
+                Back
             </button>
 
             {/* Header */}
             <div className="mb-8">
                 <h1 className="text-2xl font-bold text-foreground mb-1">
-                    Dang ky tro thanh Seller
+                    Apply to become a seller
                 </h1>
                 <p className="text-muted-foreground text-sm">
-                    Dien day du thong tin ben duoi. Admin se xem xet va phe duyet don cua ban.
+                    Complete the form below. Admin will review and approve your application.
                 </p>
             </div>
 
@@ -253,12 +253,12 @@ export default function SellerApplyPage() {
                 {/* Shop name */}
                 <div className="flex flex-col gap-1.5">
                     <Label htmlFor="shopName">
-                        Ten shop <span className="text-destructive">*</span>
+                        Shop name <span className="text-destructive">*</span>
                     </Label>
                     <Input
                         id="shopName"
                         name="shopName"
-                        placeholder="Vi du: Shop Thoi Trang ABC"
+                        placeholder="Example: ABC Fashion Store"
                         value={form.shopName}
                         onChange={handleChange}
                         required
@@ -268,7 +268,7 @@ export default function SellerApplyPage() {
                 {/* Phone */}
                 <div className="flex flex-col gap-1.5">
                     <Label htmlFor="phoneNumber">
-                        So dien thoai <span className="text-destructive">*</span>
+                        Phone number <span className="text-destructive">*</span>
                     </Label>
                     <Input
                         id="phoneNumber"
@@ -285,7 +285,7 @@ export default function SellerApplyPage() {
                 <div className="grid grid-cols-2 gap-4">
                     <div className="flex flex-col gap-1.5">
                         <Label htmlFor="bankName">
-                            Ngan hang <span className="text-destructive">*</span>
+                            Bank <span className="text-destructive">*</span>
                         </Label>
                         <Select
                             value={form.bankName}
@@ -295,7 +295,7 @@ export default function SellerApplyPage() {
                             required
                         >
                             <SelectTrigger id="bankName">
-                                <SelectValue placeholder="Chon ngan hang" />
+                                <SelectValue placeholder="Select bank" />
                             </SelectTrigger>
                             <SelectContent>
                                 {BANKS.map((b) => (
@@ -308,7 +308,7 @@ export default function SellerApplyPage() {
                     </div>
                     <div className="flex flex-col gap-1.5">
                         <Label htmlFor="bankAccountNumber">
-                            So tai khoan <span className="text-destructive">*</span>
+                            Bank account number <span className="text-destructive">*</span>
                         </Label>
                         <Input
                             id="bankAccountNumber"
@@ -324,19 +324,19 @@ export default function SellerApplyPage() {
                 {/* Product description */}
                 <div className="flex flex-col gap-1.5">
                     <Label htmlFor="productDescription">
-                        Mo ta san pham dinh ban <span className="text-destructive">*</span>
+                        Product description <span className="text-destructive">*</span>
                     </Label>
                     <Textarea
                         id="productDescription"
                         name="productDescription"
-                        placeholder="Mo ta ngan gon cac loai san pham ban dinh kinh doanh. Vi du: Thoi trang nu cao cap, tui xach hang hieu..."
+                        placeholder="Describe the products you plan to sell. Example: premium women fashion, branded handbags..."
                         value={form.productDescription}
                         onChange={handleChange}
                         required
                         rows={5}
                     />
                     <p className="text-xs text-muted-foreground">
-                        Toi thieu 20 ky tu. Hien tai: {form.productDescription.length} ky tu.
+                        Minimum 20 characters. Current: {form.productDescription.length} characters.
                     </p>
                 </div>
 
@@ -344,9 +344,9 @@ export default function SellerApplyPage() {
 
                 {/* Note */}
                 <p className="text-xs text-muted-foreground bg-muted/50 border border-border rounded-lg px-4 py-3">
-                    <strong>Luu y:</strong> Thong tin ngan hang se duoc su dung de thanh
-                    toan doanh thu ban hang. Vui long dam bao thong tin chinh xac. Don
-                    dang ky se duoc xu ly trong vong 1-3 ngay lam viec.
+                    <strong>Note:</strong> Your bank information will be used for seller payouts.
+                    Please make sure all details are accurate. Applications are processed
+                    within 1-3 business days.
                 </p>
 
                 {/* Submit */}
@@ -357,9 +357,10 @@ export default function SellerApplyPage() {
                     disabled={loading}
                     className="w-full cursor-pointer"
                 >
-                    {loading ? "Dang gui don..." : "Gui don dang ky"}
+                    {loading ? "Submitting application..." : "Submit application"}
                 </Button>
             </form>
         </div>
     );
 }
+

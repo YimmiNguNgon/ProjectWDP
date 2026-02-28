@@ -1,4 +1,4 @@
-import React, { StrictMode, type PropsWithChildren } from "react";
+﻿import React, { StrictMode, type PropsWithChildren } from "react";
 import { createRoot } from "react-dom/client";
 import { BrowserRouter } from "react-router-dom";
 import { AppRouter } from "./routes/index.tsx";
@@ -172,7 +172,7 @@ export function AuthProvider({ children }: PropsWithChildren) {
       const payload = jwtDecode<Payload>(accessToken);
       setPayload(payload);
 
-      toast.success("Làm mới token thành công!");
+      toast.success("Token refreshed successfully!");
     } catch (error) {
       console.error("Refresh token failed:", error);
       // Silent sign out when refresh fails as it is an automatic flow.
@@ -204,3 +204,4 @@ export function AuthProvider({ children }: PropsWithChildren) {
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 }
+

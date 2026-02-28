@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+﻿import { useState, useEffect } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -67,7 +67,7 @@ export default function EditProduct() {
                 setVariantCombinations(p.variantCombinations ?? []);
             })
             .catch(() => {
-                toast.error('Không thể tải thông tin sản phẩm');
+                toast.error('Unable to load product information');
                 navigate('/seller/products');
             })
             .finally(() => setPageLoading(false));
@@ -90,9 +90,9 @@ export default function EditProduct() {
             });
             const urls: string[] = res.data.urls ?? [];
             setImages((prev) => [...prev, ...urls]);
-            toast.success(`Đã upload ${urls.length} ảnh`);
+            toast.success(`Uploaded ${urls.length} images`);
         } catch {
-            toast.error('Lỗi khi upload ảnh');
+            toast.error('Image upload failed');
         } finally {
             setUploading(false);
         }
@@ -105,7 +105,7 @@ export default function EditProduct() {
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
         if (!formData.title || !formData.price) {
-            toast.error('Vui lòng điền tên sản phẩm và giá bán');
+            toast.error('Please enter product name and selling price');
             return;
         }
         setSaving(true);
@@ -121,10 +121,10 @@ export default function EditProduct() {
                 variants,
                 variantCombinations,
             } as any);
-            toast.success('Cập nhật sản phẩm thành công!');
+            toast.success('Product updated successfully!');
             navigate('/seller/products');
         } catch (err: any) {
-            toast.error(err?.response?.data?.message || 'Có lỗi xảy ra khi cập nhật sản phẩm');
+            toast.error(err?.response?.data?.message || 'Failed to update product');
         } finally {
             setSaving(false);
         }
@@ -133,7 +133,7 @@ export default function EditProduct() {
     if (pageLoading) {
         return (
             <div className="p-6 flex items-center justify-center h-64">
-                <p className="text-gray-500">Đang tải thông tin sản phẩm...</p>
+                <p className="text-gray-500">Loading product information...</p>
             </div>
         );
     }
@@ -145,11 +145,11 @@ export default function EditProduct() {
                 <div className="mb-8 flex items-center gap-4">
                     <Button variant="ghost" onClick={() => navigate('/seller/products')} className="flex items-center gap-2">
                         <ArrowLeft className="h-4 w-4" />
-                        Quay lại
+                        Back
                     </Button>
                     <div>
-                        <h1 className="text-2xl font-bold text-gray-900">Chỉnh sửa sản phẩm</h1>
-                        <p className="text-gray-600">Cập nhật thông tin sản phẩm của bạn</p>
+                        <h1 className="text-2xl font-bold text-gray-900">Edit Product</h1>
+                        <p className="text-gray-600">Update your product information</p>
                     </div>
                 </div>
 
@@ -162,16 +162,16 @@ export default function EditProduct() {
                                 <CardHeader>
                                     <CardTitle className="text-lg flex items-center gap-2">
                                         <Tag className="h-5 w-5" />
-                                        Thông tin sản phẩm
+                                        Product Information
                                     </CardTitle>
                                 </CardHeader>
                                 <CardContent className="space-y-4">
                                     <div className="space-y-2">
-                                        <Label htmlFor="title">Tên sản phẩm *</Label>
+                                        <Label htmlFor="title">Product Name *</Label>
                                         <Input id="title" name="title" value={formData.title} onChange={handleChange} required />
                                     </div>
                                     <div className="space-y-2">
-                                        <Label htmlFor="description">Mô tả sản phẩm</Label>
+                                        <Label htmlFor="description">Product Description</Label>
                                         <Textarea id="description" name="description" rows={6} value={formData.description} onChange={handleChange} />
                                     </div>
                                 </CardContent>
@@ -182,12 +182,12 @@ export default function EditProduct() {
                                 <CardHeader>
                                     <CardTitle className="text-lg flex items-center gap-2">
                                         <ImageIcon className="h-5 w-5" />
-                                        Hình ảnh sản phẩm
+                                        Product Images
                                     </CardTitle>
                                 </CardHeader>
                                 <CardContent className="space-y-3">
                                     <Input type="file" accept="image/*" multiple onChange={handleImageUpload} disabled={uploading} />
-                                    {uploading && <p className="text-sm text-gray-500">Đang upload...</p>}
+                                    {uploading && <p className="text-sm text-gray-500">Uploading...</p>}
                                     {images.length > 0 && (
                                         <div className="grid grid-cols-5 gap-2">
                                             {images.map((url, index) => (
@@ -212,17 +212,18 @@ export default function EditProduct() {
                                 <CardHeader>
                                     <CardTitle className="text-lg flex items-center gap-2">
                                         <Layers className="h-5 w-5" />
-                                        Đặc điểm sản phẩm
+                                        Product Variants
                                     </CardTitle>
                                 </CardHeader>
                                 <CardContent>
                                     <p className="text-sm text-gray-500 mb-4">
-                                        Thêm các đặc điểm như Kích thước, Màu sắc... và liệt kê các giá trị tương ứng.
+                                        Add attributes like Size and Color, then define their values.
                                     </p>
                                     <ProductVariantsManager
                                         variants={variants}
                                         onChange={setVariants}
                                         variantCombinations={variantCombinations}
+                                        basePrice={parseFloat(formData.price) || 0}
                                         onCombinationsChange={setVariantCombinations}
                                     />
                                 </CardContent>
@@ -235,12 +236,12 @@ export default function EditProduct() {
                                 <CardHeader>
                                     <CardTitle className="text-lg flex items-center gap-2">
                                         <DollarSign className="h-5 w-5" />
-                                        Giá & Tồn kho
+                                        Price & Stock
                                     </CardTitle>
                                 </CardHeader>
                                 <CardContent className="space-y-4">
                                     <div className="space-y-2">
-                                        <Label htmlFor="price">Giá bán *</Label>
+                                        <Label htmlFor="price">Selling Price *</Label>
                                         <div className="relative">
                                             <span className="absolute left-3 top-2.5 text-gray-500">$</span>
                                             <Input
@@ -250,38 +251,38 @@ export default function EditProduct() {
                                         </div>
                                     </div>
                                     <div className="space-y-2">
-                                        <Label htmlFor="quantity">Số lượng tồn kho</Label>
+                                        <Label htmlFor="quantity">Stock Quantity</Label>
                                         <div className="relative">
                                             <Package className="absolute left-3 top-2.5 h-4 w-4 text-gray-500" />
                                             <Input
-                                                id="quantity" name="quantity" type="number" placeholder="Số lượng"
+                                                id="quantity" name="quantity" type="number" placeholder="Quantity"
                                                 className="pl-10" value={variantCombinations.length > 0 ? String(totalVariantStock) : formData.quantity} onChange={handleChange} disabled={variantCombinations.length > 0}
                                             />
                                         </div>
                                     </div>
                                     <div className="space-y-2">
-                                        <Label htmlFor="categoryId">Danh mục</Label>
+                                        <Label htmlFor="categoryId">Category</Label>
                                         <select
                                             id="categoryId" name="categoryId"
                                             className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
                                             value={formData.categoryId} onChange={handleChange}
                                         >
-                                            <option value="">Chọn danh mục</option>
+                                            <option value="">Select category</option>
                                             {categories.map((cat) => (
                                                 <option key={cat._id} value={cat._id}>{cat.name}</option>
                                             ))}
                                         </select>
                                     </div>
                                     <div className="space-y-2">
-                                        <Label htmlFor="condition">Tình trạng</Label>
+                                        <Label htmlFor="condition">Condition</Label>
                                         <select
                                             id="condition" name="condition"
                                             className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
                                             value={formData.condition} onChange={handleChange}
                                         >
-                                            <option value="new">Mới</option>
-                                            <option value="like_new">Như mới</option>
-                                            <option value="used">Đã qua sử dụng</option>
+                                            <option value="new">New</option>
+                                            <option value="like_new">Like New</option>
+                                            <option value="used">Used</option>
                                         </select>
                                     </div>
                                 </CardContent>
@@ -291,10 +292,10 @@ export default function EditProduct() {
                                 <CardContent className="pt-6">
                                     <div className="space-y-3">
                                         <Button type="submit" className="w-full bg-green-600 hover:bg-green-700" disabled={saving}>
-                                            {saving ? 'Đang lưu...' : 'Lưu thay đổi'}
+                                            {saving ? 'Saving...' : 'Save Changes'}
                                         </Button>
                                         <Button type="button" variant="outline" className="w-full" onClick={() => navigate('/seller/products')}>
-                                            Hủy bỏ
+                                            Cancel
                                         </Button>
                                     </div>
                                 </CardContent>
@@ -306,4 +307,6 @@ export default function EditProduct() {
         </div>
     );
 }
+
+
 

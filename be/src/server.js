@@ -176,8 +176,81 @@ async function createDefaultSeller() {
   }
 }
 
+async function ensureCartItemVariantIndex() {
+  const CartItem = require("./models/CartItem");
+  const {
+    buildVariantKey,
+    normalizeSelectedVariants,
+  } = require("./utils/productInventory");
+
+  const legacyItems = await CartItem.find({
+    $or: [{ variantKey: { $exists: false } }, { variantKey: "" }],
+    "selectedVariants.0": { $exists: true },
+  })
+    .select("_id selectedVariants")
+    .lean();
+
+  if (legacyItems.length > 0) {
+    const updates = legacyItems
+      .map((item) => {
+        const normalized = normalizeSelectedVariants(item.selectedVariants || []);
+        const key = buildVariantKey(normalized);
+        if (!key) return null;
+        return {
+          updateOne: {
+            filter: { _id: item._id },
+            update: { $set: { selectedVariants: normalized, variantKey: key } },
+          },
+        };
+      })
+      .filter(Boolean);
+
+    if (updates.length > 0) {
+      await CartItem.bulkWrite(updates, { ordered: false });
+      console.log(
+        `Updated ${updates.length} legacy cart item(s) with missing variant key`,
+      );
+    }
+  }
+
+  const indexes = await CartItem.collection.indexes();
+  const legacyUniqueIndex = indexes.find(
+    (idx) =>
+      idx.unique === true &&
+      idx.key &&
+      idx.key.cart === 1 &&
+      idx.key.product === 1 &&
+      idx.key.variantKey === undefined,
+  );
+
+  if (legacyUniqueIndex) {
+    await CartItem.collection.dropIndex(legacyUniqueIndex.name);
+    console.log(`Dropped legacy cart index "${legacyUniqueIndex.name}"`);
+  }
+
+  const variantIndex = indexes.find(
+    (idx) =>
+      idx.key &&
+      idx.key.cart === 1 &&
+      idx.key.product === 1 &&
+      idx.key.variantKey === 1,
+  );
+
+  if (variantIndex && variantIndex.unique !== true) {
+    await CartItem.collection.dropIndex(variantIndex.name);
+  }
+
+  if (!variantIndex || variantIndex.unique !== true) {
+    await CartItem.collection.createIndex(
+      { cart: 1, product: 1, variantKey: 1 },
+      { unique: true, name: "cart_1_product_1_variantKey_1" },
+    );
+  }
+}
+
 async function start() {
   await connectDB(process.env.MONGO_URI);
+  await ensureCartItemVariantIndex();
   await createDefaultAdmin();
   await createDefaultSeller();
 

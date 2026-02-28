@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+﻿import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -53,10 +53,10 @@ interface EditFormData {
 }
 
 const listingStatusLabel: Record<string, string> = {
-  active: 'Đang bán',
-  paused: 'Tạm ngừng',
-  ended: 'Kết thúc',
-  deleted: 'Đã xóa',
+  active: 'Active',
+  paused: 'Pause',
+  ended: 'Ended',
+  deleted: 'Deleted',
 };
 
 const listingStatusColor: Record<string, string> = {
@@ -116,7 +116,7 @@ export default function SellerProducts() {
       setTotal(res.total ?? 0);
       setTotalPages(Math.ceil((res.total ?? 0) / 10) || 1);
     } catch {
-      toast.error('Lỗi khi tải danh sách sản phẩm');
+      toast.error('Failed to load product list');
     } finally {
       setLoading(false);
     }
@@ -161,9 +161,9 @@ export default function SellerProducts() {
       });
       const urls: string[] = res.data.urls ?? [];
       setFormData((prev) => ({ ...prev, images: [...prev.images, ...urls] }));
-      toast.success(`Đã upload ${urls.length} ảnh`);
+      toast.success(`Uploaded ${urls.length} images`);
     } catch {
-      toast.error('Lỗi khi upload ảnh');
+      toast.error('Image upload failed');
     } finally {
       setUploading(false);
     }
@@ -177,7 +177,7 @@ export default function SellerProducts() {
   const handleSave = async () => {
     if (!editingProduct) return;
     if (!formData.title || formData.price <= 0) {
-      toast.error('Vui lòng điền tên sản phẩm và giá hợp lệ');
+      toast.error('Please enter a valid product name and price');
       return;
     }
     setSaving(true);
@@ -193,11 +193,11 @@ export default function SellerProducts() {
         variants: formData.variants,
         variantCombinations: formData.variantCombinations,
       });
-      toast.success('Cập nhật sản phẩm thành công');
+      toast.success('Product updated successfully');
       setIsDialogOpen(false);
       fetchProducts();
     } catch (err: any) {
-      toast.error(err?.response?.data?.message || 'Lỗi khi cập nhật sản phẩm');
+      toast.error(err?.response?.data?.message || 'Failed to update product');
     } finally {
       setSaving(false);
     }
@@ -208,22 +208,22 @@ export default function SellerProducts() {
     const newStatus = product.listingStatus === 'active' ? 'paused' : 'active';
     try {
       await updateListingStatus(product._id, newStatus);
-      toast.success(`Đã chuyển sang "${listingStatusLabel[newStatus]}"`);
+      toast.success(`Changed to "${listingStatusLabel[newStatus]}"`);
       fetchProducts();
     } catch {
-      toast.error('Lỗi khi cập nhật trạng thái');
+      toast.error('Failed to update listing status');
     }
   };
 
   // Soft delete
   const handleDelete = async (product: Product) => {
-    if (!confirm(`Bạn có chắc muốn xóa sản phẩm "${product.title}"?`)) return;
+    if (!confirm(`Are you sure you want to delete product "${product.title}"?`)) return;
     try {
       await deleteProduct(product._id);
-      toast.success('Đã xóa sản phẩm');
+      toast.success('Product deleted');
       fetchProducts();
     } catch {
-      toast.error('Lỗi khi xóa sản phẩm');
+      toast.error('Failed to delete product');
     }
   };
 
@@ -231,13 +231,13 @@ export default function SellerProducts() {
     <div className="container mx-auto py-8">
       <div className="flex justify-between items-center mb-6">
         <div>
-          <h1 className="text-3xl font-bold">Quản lý sản phẩm</h1>
-          <p className="text-gray-600 mt-1">Tổng cộng {total} sản phẩm</p>
+          <h1 className="text-3xl font-bold">Product Management</h1>
+          <p className="text-gray-600 mt-1">Total {total} products</p>
         </div>
         <Link to="/seller/products/new">
           <Button className="bg-green-600 hover:bg-green-700">
             <Plus className="h-4 w-4 mr-2" />
-            Thêm sản phẩm mới
+            Add New Product
           </Button>
         </Link>
       </div>
@@ -246,7 +246,7 @@ export default function SellerProducts() {
       <div className="flex gap-4 mb-6">
         <div className="flex-1">
           <Input
-            placeholder="Tìm kiếm theo tên sản phẩm..."
+            placeholder="Search by product name..."
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             onKeyDown={(e) => e.key === 'Enter' && handleSearch()}
@@ -257,12 +257,12 @@ export default function SellerProducts() {
           value={statusFilter}
           onChange={(e) => { setStatusFilter(e.target.value); setPage(1); }}
         >
-          <option value="">Tất cả trạng thái</option>
-          <option value="active">Đang bán</option>
-          <option value="paused">Tạm ngừng</option>
-          <option value="ended">Kết thúc</option>
+          <option value="">All statuses</option>
+          <option value="active">Active</option>
+          <option value="paused">Pause</option>
+          <option value="ended">Ended</option>
         </select>
-        <Button onClick={handleSearch}>Tìm kiếm</Button>
+        <Button onClick={handleSearch}>Search</Button>
       </div>
 
       {/* Table */}
@@ -270,31 +270,31 @@ export default function SellerProducts() {
         <Table>
           <TableHeader>
             <TableRow>
-              <TableHead>Hình ảnh</TableHead>
-              <TableHead>Tên sản phẩm</TableHead>
-              <TableHead>Danh mục</TableHead>
-              <TableHead>Giá</TableHead>
-              <TableHead>Tồn kho</TableHead>
-              <TableHead>Đặc điểm</TableHead>
-              <TableHead>Trạng thái</TableHead>
-              <TableHead>Ngày tạo</TableHead>
-              <TableHead className="text-right">Hành động</TableHead>
+              <TableHead>Image</TableHead>
+              <TableHead>Product Name</TableHead>
+              <TableHead>Category</TableHead>
+              <TableHead>Price</TableHead>
+              <TableHead>Stock</TableHead>
+              <TableHead>Variants</TableHead>
+              <TableHead>Status</TableHead>
+              <TableHead>Created Date</TableHead>
+              <TableHead className="text-right">Actions</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
             {loading ? (
               <TableRow>
-                <TableCell colSpan={9} className="text-center py-8">Đang tải...</TableCell>
+                <TableCell colSpan={9} className="text-center py-8">Loading...</TableCell>
               </TableRow>
             ) : products.length === 0 ? (
               <TableRow>
                 <TableCell colSpan={9} className="text-center py-12">
                   <Package className="h-10 w-10 text-gray-400 mx-auto mb-3" />
-                  <p className="text-gray-500">Không có sản phẩm nào</p>
+                  <p className="text-gray-500">No products found</p>
                   <Link to="/seller/products/new">
                     <Button className="mt-4 bg-green-600 hover:bg-green-700" size="sm">
                       <Plus className="h-4 w-4 mr-1" />
-                      Thêm sản phẩm đầu tiên
+                      Add Your First Product
                     </Button>
                   </Link>
                 </TableCell>
@@ -320,7 +320,7 @@ export default function SellerProducts() {
                     <div className="truncate" title={product.title}>{product.title}</div>
                   </TableCell>
                   <TableCell>
-                    {typeof product.categoryId === 'object' ? product.categoryId?.name ?? '—' : '—'}
+                    {typeof product.categoryId === 'object' ? product.categoryId?.name ?? '-' : '-'}
                   </TableCell>
                   <TableCell>${product.price.toFixed(2)}</TableCell>
                   <TableCell>{product.quantity ?? 0}</TableCell>
@@ -328,10 +328,10 @@ export default function SellerProducts() {
                     {product.variants && product.variants.length > 0 ? (
                       <Badge variant="outline" className="flex items-center gap-1 w-fit">
                         <Layers className="h-3 w-3" />
-                        {product.variants.length} đặc điểm
+                        {product.variants.length} variants
                       </Badge>
                     ) : (
-                      <span className="text-gray-400 text-sm">—</span>
+                      <span className="text-gray-400 text-sm">-</span>
                     )}
                   </TableCell>
                   <TableCell>
@@ -347,7 +347,7 @@ export default function SellerProducts() {
                         Xem
                       </Button>
                       <Button size="sm" variant="outline" onClick={() => handleEditClick(product)}>
-                        Sửa
+                        Edit
                       </Button>
                       {product.listingStatus !== 'deleted' && (
                         <Button
@@ -355,11 +355,11 @@ export default function SellerProducts() {
                           variant="outline"
                           onClick={() => handleToggleStatus(product)}
                         >
-                          {product.listingStatus === 'active' ? 'Tạm ngừng' : 'Kích hoạt'}
+                          {product.listingStatus === 'active' ? 'Pause' : 'Activate'}
                         </Button>
                       )}
                       <Button size="sm" variant="destructive" onClick={() => handleDelete(product)}>
-                        Xóa
+                        Delete
                       </Button>
                     </div>
                   </TableCell>
@@ -373,11 +373,11 @@ export default function SellerProducts() {
       {/* Pagination */}
       <div className="flex justify-center gap-2 mt-6">
         <Button variant="outline" onClick={() => setPage((p) => Math.max(1, p - 1))} disabled={page === 1}>
-          Trang trước
+          Previous
         </Button>
-        <span className="flex items-center px-4">Trang {page} / {totalPages}</span>
+        <span className="flex items-center px-4">Page {page} / {totalPages}</span>
         <Button variant="outline" onClick={() => setPage((p) => Math.min(totalPages, p + 1))} disabled={page === totalPages}>
-          Trang sau
+          Next
         </Button>
       </div>
 
@@ -385,8 +385,8 @@ export default function SellerProducts() {
       <Dialog open={isViewDialogOpen} onOpenChange={setIsViewDialogOpen}>
         <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
-            <DialogTitle>Chi tiết sản phẩm</DialogTitle>
-            <DialogDescription>Thông tin đầy đủ của sản phẩm</DialogDescription>
+            <DialogTitle>Product Details</DialogTitle>
+            <DialogDescription>Full product information</DialogDescription>
           </DialogHeader>
           {viewingProduct && (
             <div className="space-y-5 py-2">
@@ -412,29 +412,29 @@ export default function SellerProducts() {
               {/* Basic Info */}
               <div className="grid grid-cols-2 gap-4 text-sm">
                 <div>
-                  <span className="text-gray-500">Giá:</span>
+                  <span className="text-gray-500">Price:</span>
                   <span className="ml-2 font-semibold">${viewingProduct.price.toFixed(2)}</span>
                 </div>
                 <div>
-                  <span className="text-gray-500">Tồn kho:</span>
+                  <span className="text-gray-500">Stock:</span>
                   <span className="ml-2 font-semibold">{viewingProduct.quantity ?? 0}</span>
                 </div>
                 <div>
-                  <span className="text-gray-500">Danh mục:</span>
-                  <span className="ml-2">{typeof viewingProduct.categoryId === 'object' ? viewingProduct.categoryId?.name ?? '—' : '—'}</span>
+                  <span className="text-gray-500">Category:</span>
+                  <span className="ml-2">{typeof viewingProduct.categoryId === 'object' ? viewingProduct.categoryId?.name ?? '-' : '-'}</span>
                 </div>
                 <div>
-                  <span className="text-gray-500">Tình trạng:</span>
-                  <span className="ml-2">{viewingProduct.condition === 'new' ? 'Mới' : viewingProduct.condition === 'like_new' ? 'Như mới' : viewingProduct.condition === 'used' ? 'Đã qua sử dụng' : viewingProduct.condition || '—'}</span>
+                  <span className="text-gray-500">Condition:</span>
+                  <span className="ml-2">{viewingProduct.condition === 'new' ? 'New' : viewingProduct.condition === 'like_new' ? 'Like New' : viewingProduct.condition === 'used' ? 'Used' : viewingProduct.condition || '-'}</span>
                 </div>
                 <div>
-                  <span className="text-gray-500">Trạng thái:</span>
+                  <span className="text-gray-500">Status:</span>
                   <span className={`ml-2 px-2 py-0.5 rounded text-xs ${listingStatusColor[viewingProduct.listingStatus] ?? 'bg-gray-100 text-gray-800'}`}>
                     {listingStatusLabel[viewingProduct.listingStatus]}
                   </span>
                 </div>
                 <div>
-                  <span className="text-gray-500">Ngày tạo:</span>
+                  <span className="text-gray-500">Created Date:</span>
                   <span className="ml-2">{new Date(viewingProduct.createdAt).toLocaleDateString('vi-VN')}</span>
                 </div>
               </div>
@@ -444,7 +444,7 @@ export default function SellerProducts() {
                 <div>
                   <h4 className="font-semibold mb-3 flex items-center gap-2">
                     <Layers className="h-4 w-4" />
-                    Đặc điểm sản phẩm
+                    Product Variants
                   </h4>
                   <div className="space-y-4">
                     {viewingProduct.variants.map((variant) => (
@@ -470,12 +470,14 @@ export default function SellerProducts() {
               )}
               {viewingProduct.variantCombinations && viewingProduct.variantCombinations.length > 0 && (
                 <div>
-                  <h4 className="font-semibold mb-3">Tồn kho theo tổ hợp</h4>
+                  <h4 className="font-semibold mb-3">Combination Stock</h4>
                   <div className="space-y-2">
                     {viewingProduct.variantCombinations.map((combo) => (
                       <div key={combo.key} className="flex items-center justify-between border rounded-md px-3 py-2 text-sm">
                         <span>{combo.selections.map((s) => s.value).join(' / ')}</span>
-                        <span className="font-semibold">Kho: {combo.quantity}</span>
+                        <span className="font-semibold">
+                          Price: ${Number(combo.price ?? viewingProduct.price ?? 0).toFixed(2)} | Stock: {combo.quantity}
+                        </span>
                       </div>
                     ))}
                   </div>
@@ -484,9 +486,9 @@ export default function SellerProducts() {
             </div>
           )}
           <DialogFooter>
-            <Button variant="outline" onClick={() => setIsViewDialogOpen(false)}>Đóng</Button>
+            <Button variant="outline" onClick={() => setIsViewDialogOpen(false)}>Close</Button>
             <Button onClick={() => { setIsViewDialogOpen(false); if (viewingProduct) handleEditClick(viewingProduct); }}>
-              Sửa sản phẩm
+              Edit Product
             </Button>
           </DialogFooter>
         </DialogContent>
@@ -496,13 +498,13 @@ export default function SellerProducts() {
       <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
         <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
-            <DialogTitle>Sửa sản phẩm</DialogTitle>
-            <DialogDescription>Cập nhật thông tin sản phẩm</DialogDescription>
+            <DialogTitle>Edit Product</DialogTitle>
+            <DialogDescription>Update product information</DialogDescription>
           </DialogHeader>
 
           <div className="grid gap-4 py-4">
             <div className="grid gap-2">
-              <Label>Tên sản phẩm *</Label>
+              <Label>Product Name *</Label>
               <Input
                 value={formData.title}
                 onChange={(e) => setFormData({ ...formData, title: e.target.value })}
@@ -510,7 +512,7 @@ export default function SellerProducts() {
             </div>
 
             <div className="grid gap-2">
-              <Label>Mô tả</Label>
+              <Label>Description</Label>
               <Textarea
                 rows={4}
                 value={formData.description}
@@ -520,7 +522,7 @@ export default function SellerProducts() {
 
             <div className="grid grid-cols-2 gap-4">
               <div className="grid gap-2">
-                <Label>Giá ($) *</Label>
+                <Label>Price ($) *</Label>
                 <Input
                   type="number"
                   min="0"
@@ -530,7 +532,7 @@ export default function SellerProducts() {
                 />
               </div>
               <div className="grid gap-2">
-                <Label>Số lượng</Label>
+                <Label>Quantity</Label>
                 <Input
                   type="number"
                   min="0"
@@ -543,35 +545,35 @@ export default function SellerProducts() {
 
             <div className="grid grid-cols-2 gap-4">
               <div className="grid gap-2">
-                <Label>Danh mục</Label>
+                <Label>Category</Label>
                 <select
                   className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
                   value={formData.categoryId}
                   onChange={(e) => setFormData({ ...formData, categoryId: e.target.value })}
                 >
-                  <option value="">Chọn danh mục</option>
+                  <option value="">Select category</option>
                   {categories.map((cat) => (
                     <option key={cat._id} value={cat._id}>{cat.name}</option>
                   ))}
                 </select>
               </div>
               <div className="grid gap-2">
-                <Label>Tình trạng</Label>
+                <Label>Condition</Label>
                 <select
                   className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
                   value={formData.condition}
                   onChange={(e) => setFormData({ ...formData, condition: e.target.value })}
                 >
-                  <option value="new">Mới</option>
-                  <option value="like_new">Như mới</option>
-                  <option value="used">Đã qua sử dụng</option>
+                  <option value="new">New</option>
+                  <option value="like_new">Like New</option>
+                  <option value="used">Used</option>
                 </select>
               </div>
             </div>
 
             {/* Images */}
             <div className="grid gap-2">
-              <Label>Hình ảnh sản phẩm</Label>
+              <Label>Product Images</Label>
               <Input
                 type="file"
                 accept="image/*"
@@ -579,7 +581,7 @@ export default function SellerProducts() {
                 onChange={handleImageUpload}
                 disabled={uploading}
               />
-              {uploading && <p className="text-sm text-gray-500">Đang upload...</p>}
+              {uploading && <p className="text-sm text-gray-500">Uploading...</p>}
               {formData.images.length > 0 && (
                 <div className="grid grid-cols-5 gap-2 mt-2">
                   {formData.images.map((url, index) => (
@@ -602,12 +604,13 @@ export default function SellerProducts() {
             <div className="grid gap-2">
               <Label className="flex items-center gap-2">
                 <Layers className="h-4 w-4" />
-                Đặc điểm sản phẩm
+                Product Variants
               </Label>
               <ProductVariantsManager
                 variants={formData.variants}
                 onChange={(variants) => setFormData({ ...formData, variants })}
                 variantCombinations={formData.variantCombinations}
+                basePrice={Number(formData.price) || 0}
                 onCombinationsChange={(variantCombinations) =>
                   setFormData({ ...formData, variantCombinations })
                 }
@@ -616,9 +619,9 @@ export default function SellerProducts() {
           </div>
 
           <DialogFooter>
-            <Button variant="outline" onClick={() => setIsDialogOpen(false)}>Hủy</Button>
+            <Button variant="outline" onClick={() => setIsDialogOpen(false)}>Cancel</Button>
             <Button onClick={handleSave} disabled={saving}>
-              {saving ? 'Đang lưu...' : 'Lưu thay đổi'}
+              {saving ? 'Saving...' : 'Save Changes'}
             </Button>
           </DialogFooter>
         </DialogContent>
@@ -626,6 +629,9 @@ export default function SellerProducts() {
     </div>
   );
 }
+
+
+
 
 
 

@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import { SellerFeedbackSection } from "@/components/feedback/seller-feedback-section";
 import { Button } from "@/components/ui/button";
@@ -59,6 +59,7 @@ export interface ProductVariantCombination {
   key: string;
   selections: { name: string; value: string }[];
   quantity: number;
+  price?: number;
   sku?: string;
 }
 
@@ -211,6 +212,22 @@ export default function ProductDetailPage() {
     return combo?.quantity || 0;
   };
 
+  const getSelectedCombinationPrice = () => {
+    if (!product?.variantCombinations?.length) return product?.price || 0;
+    if (!product?.variants?.length) return product?.price || 0;
+    if (selectedVariantPairs.length !== product.variants.length) {
+      return product?.price || 0;
+    }
+
+    const key = [...selectedVariantPairs]
+      .sort((a, b) => a.name.localeCompare(b.name))
+      .map((p) => `${p.name}:${p.value}`)
+      .join("|");
+    const combo = product.variantCombinations.find((c) => c.key === key);
+    if (!combo) return product?.price || 0;
+    return combo.price ?? product?.price ?? 0;
+  };
+
   const getOptionAvailable = (variantName: string, optionValue: string) => {
     if (!product?.variantCombinations?.length) return true;
     const expected = selectedVariantPairs.filter((p) => p.name !== variantName);
@@ -227,6 +244,7 @@ export default function ProductDetailPage() {
   };
 
   const selectedStock = getSelectedCombinationStock();
+  const selectedPrice = getSelectedCombinationPrice();
   const isExactVariantSelected =
     (product?.variants?.length || 0) > 0 &&
     selectedVariantPairs.length === (product?.variants?.length || 0);
@@ -249,7 +267,7 @@ export default function ProductDetailPage() {
     const sender = payload?.userId;
     const receiver = product?.sellerId;
     if (!sender || !receiver) {
-      toast.error("Vui lòng đăng nhập để chat với seller");
+      toast.error("Please sign in to chat with seller");
       return;
     }
     setParticipantsState([sender, receiver]);
@@ -273,27 +291,19 @@ export default function ProductDetailPage() {
       toast.error("Please select all product variants");
       return;
     }
-
-    try {
-      // Create order with the product and quantity
-      await api.post("/api/orders", {
+    navigate("/checkout", {
+      state: {
+        source: "buy_now",
         items: [
           {
             productId: product._id,
-            quantity: quantity,
+            quantity,
             selectedVariants: selectedVariantPairs,
           },
         ],
-        voucherCode: voucherCode.trim() || undefined,
-      });
-
-      toast.success("Order created successfully!");
-      // Navigate to purchase history
-      window.location.href = "/my-ebay/activity/purchases";
-    } catch (err: any) {
-      console.error("Failed to create order:", err);
-      toast.error(err.response?.data?.message || "Failed to create order");
-    }
+        voucherCode: voucherCode.trim() || "",
+      },
+    });
   };
 
   const handleAddToCart = async () => {
@@ -422,11 +432,11 @@ export default function ProductDetailPage() {
           <div className="flex flex-col gap-2">
             <h2 className="text-sm text-muted-foreground">Product Price</h2>
             <h1 className="text-3xl font-bold">
-              ${product?.price?.toFixed(2) || "0.00"}
+              ${selectedPrice.toFixed(2)}
             </h1>
           </div>
           <Separator />
-          {/* Variants - Đặc điểm sản phẩm */}
+          {/* Product variants */}
           {product?.variants && product.variants.length > 0 && (
             <div className="flex flex-col gap-3">
               {product.variants.map((variant) => (
@@ -520,10 +530,10 @@ export default function ProductDetailPage() {
           <p className="text-sm text-muted-foreground">
             In stock: {Math.max(0, maxSelectableQty)}
           </p>
-          {/* Nút mua - ẩn khi là sản phẩm của chính mình */}
+          {/* Hide purchase buttons when this is your own product */}
           {product?.sellerId && payload?.userId && String(product.sellerId) === String(payload.userId) ? (
             <div className="w-full text-center py-3 bg-muted rounded-md text-sm text-muted-foreground">
-              Đây là sản phẩm của bạn
+              This is your product
             </div>
           ) : (
             <>
@@ -579,4 +589,5 @@ export default function ProductDetailPage() {
     </>
   );
 }
+
 

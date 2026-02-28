@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+﻿import { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import api from "@/lib/axios";
 import { Button } from "@/components/ui/button";
@@ -218,7 +218,7 @@ export default function PurchaseHistoryPage() {
   const handleContactSeller = (sellerId: string, productId: string) => {
     const sender = payload?.userId;
     if (!sender) {
-      toast.error("Vui lòng đăng nhập để chat với seller");
+      toast.error("Please sign in to chat with the seller");
       return;
     }
 
@@ -274,6 +274,57 @@ export default function PurchaseHistoryPage() {
 
   const shortOrderNumber = (id: string) =>
     id.length > 10 ? id.slice(0, 2) + "-" + id.slice(-8) : id;
+
+  const getStatusMeta = (status: string) => {
+    const normalized = String(status || "").toLowerCase();
+    if (normalized === "paid") {
+      return {
+        label: "Paid",
+        note: "Payment completed. Seller will process this order.",
+        dotClass: "bg-emerald-500",
+        textClass: "text-emerald-700",
+      };
+    }
+    if (normalized === "failed") {
+      return {
+        label: "Payment failed",
+        note: "Payment failed. This order was marked as failed.",
+        dotClass: "bg-red-500",
+        textClass: "text-red-700",
+      };
+    }
+    if (normalized === "cancelled") {
+      return {
+        label: "Cancelled",
+        note: "This order was cancelled.",
+        dotClass: "bg-red-500",
+        textClass: "text-red-700",
+      };
+    }
+    if (normalized === "shipped") {
+      return {
+        label: "Shipped",
+        note: "This order is on the way.",
+        dotClass: "bg-amber-500",
+        textClass: "text-amber-700",
+      };
+    }
+    if (normalized === "delivered") {
+      return {
+        label: "Delivered",
+        note: "This item has been delivered.",
+        dotClass: "bg-emerald-500",
+        textClass: "text-emerald-700",
+      };
+    }
+
+    return {
+      label: normalized ? normalized.toUpperCase() : "CREATED",
+      note: "Order is waiting for payment confirmation.",
+      dotClass: "bg-blue-500",
+      textClass: "text-blue-700",
+    };
+  };
 
   return (
     <>
@@ -331,7 +382,7 @@ export default function PurchaseHistoryPage() {
                     </button>
                   </div>
 
-                  {/* ORDER TOTAL + ICON giống hình */}
+                  {/* ORDER TOTAL + ICON giá»‘ng hÃ¬nh */}
                   <div className="flex flex-col gap-1 font-semibold">
                     <span>US ${row.totalAmount?.toFixed(2)}</span>
                     {row.discountAmount > 0 && (
@@ -355,9 +406,13 @@ export default function PurchaseHistoryPage() {
 
                 <Separator />
 
-                {/* HÀNG CHÍNH: ảnh + title + Delivered + nút bên phải */}
+                {/* HÃ€NG CHÃNH: áº£nh + title + Delivered + nÃºt bÃªn pháº£i */}
                 <div className="mt-2 flex flex-wrap items-start justify-between gap-4">
-                  {/* LEFT: ảnh sản phẩm */}
+                  {(() => {
+                    const statusMeta = getStatusMeta(row.status);
+                    return (
+                      <>
+                  {/* LEFT: áº£nh sáº£n pháº©m */}
                   <div className="flex gap-3">
                     <div className="flex h-24 w-24 items-center justify-center rounded border bg-muted overflow-hidden">
                       {row.productId &&
@@ -385,7 +440,7 @@ export default function PurchaseHistoryPage() {
                     </div>
                   </div>
 
-                  {/* MIDDLE: title + Delivered on ...  (cùng hàng với ảnh) */}
+                  {/* MIDDLE: title + Delivered on ...  (cÃ¹ng hÃ ng vá»›i áº£nh) */}
                   <div className="flex-1 space-y-2 text-sm">
                     <div className="font-medium leading-snug">
                       {row.productTitle}
@@ -403,29 +458,29 @@ export default function PurchaseHistoryPage() {
                           .join(", ")}
                       </div>
                     ) : null}
-                    {/* có thể thêm item ID nếu muốn */}
+                    {/* cÃ³ thá»ƒ thÃªm item ID náº¿u muá»‘n */}
                     {/* <div className="text-xs text-muted-foreground">
                         (item ID ...)
                       </div> */}
 
                     {/* Delivered on ... */}
                     <div className="flex items-start gap-2 text-xs">
-                      <span className="mt-1 inline-block h-3 w-3 rounded-full bg-emerald-500" />
+                      <span className={`mt-1 inline-block h-3 w-3 rounded-full ${statusMeta.dotClass}`} />
                       <div>
-                        <div className="font-medium text-emerald-700">
-                          Delivered on {formatDate(row.orderDate)}
+                        <div className={`font-medium ${statusMeta.textClass}`}>
+                          {statusMeta.label} on {formatDate(row.orderDate)}
                         </div>
                         <div className="text-muted-foreground">
-                          Tracking number: —
+                          Tracking number: -
                         </div>
                         <div className="text-muted-foreground">
-                          This item has been delivered.
+                          {statusMeta.note}
                         </div>
                       </div>
                     </div>
                   </div>
 
-                  {/* RIGHT: cột nút y như eBay */}
+                  {/* RIGHT: cá»™t nÃºt y nhÆ° eBay */}
                   <div className="flex flex-col items-end gap-2 text-sm">
                     <Button
                       size="sm"
@@ -476,7 +531,7 @@ export default function PurchaseHistoryPage() {
                           className="w-40 rounded-none border-blue-600 text-blue-600 hover:bg-blue-50"
                           type="button"
                         >
-                          More actions ▾
+                          More actions
                         </Button>
                       </DropdownMenuTrigger>
                       <DropdownMenuContent align="end" className="w-52 text-xs">
@@ -551,6 +606,9 @@ export default function PurchaseHistoryPage() {
                       Add note
                     </button>
                   </div>
+                      </>
+                    );
+                  })()}
                 </div>
               </CardContent>
             </Card>
@@ -592,3 +650,4 @@ export default function PurchaseHistoryPage() {
     </>
   );
 }
+

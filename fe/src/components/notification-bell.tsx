@@ -12,27 +12,42 @@ import { useNotifications, type AppNotification } from "@/hooks/use-notification
 import { cn } from "@/lib/utils";
 
 const TYPE_ICONS: Record<string, string> = {
-    seller_application_approved: "✅",
-    seller_application_rejected: "❌",
-    new_message: "💬",
-    order_placed: "📦",
-    order_status_changed: "🚚",
-    new_review: "⭐",
-    user_banned: "🔒",
-    user_unbanned: "🔓",
-    product_created: "🏷️",
-    admin_broadcast: "📢",
+    seller_application_approved: "\u2705",
+    seller_application_rejected: "\u274C",
+    new_message: "\uD83D\uDCAC",
+    order_placed: "\uD83D\uDCE6",
+    order_status_changed: "\uD83D\uDE9A",
+    new_review: "\u2B50",
+    user_banned: "\uD83D\uDD12",
+    user_unbanned: "\uD83D\uDD13",
+    product_created: "\uD83C\uDFF7\uFE0F",
+    product_warning: "\u26A0\uFE0F",
+    admin_broadcast: "\uD83D\uDCE2",
+    cart_item_out_of_stock: "\uD83D\uDEAB",
 };
 
 function timeAgo(dateStr: string): string {
     const diff = Date.now() - new Date(dateStr).getTime();
     const m = Math.floor(diff / 60000);
-    if (m < 1) return "Vua xong";
-    if (m < 60) return `${m} phut truoc`;
+    if (m < 1) return "Just now";
+    if (m < 60) return `${m}m ago`;
     const h = Math.floor(m / 60);
-    if (h < 24) return `${h} gio truoc`;
+    if (h < 24) return `${h}h ago`;
     const d = Math.floor(h / 24);
-    return `${d} ngay truoc`;
+    return `${d}d ago`;
+}
+
+function getNotificationDisplayContent(notif: AppNotification) {
+    if (notif.type === "cart_item_out_of_stock") {
+        return {
+            title: "A cart item is out of stock",
+            body: "A product in your cart is out of stock",
+        };
+    }
+    return {
+        title: notif.title,
+        body: notif.body,
+    };
 }
 
 interface NotificationBellProps {
@@ -52,6 +67,10 @@ export default function NotificationBell({ socket }: NotificationBellProps) {
 
     const handleClick = (notif: AppNotification) => {
         if (!notif.isRead) markAsRead(notif._id);
+        if (notif.type === "cart_item_out_of_stock") {
+            navigate("/cart");
+            return;
+        }
         if (notif.link) navigate(notif.link);
     };
 
@@ -61,7 +80,7 @@ export default function NotificationBell({ socket }: NotificationBellProps) {
                 <button
                     id="notification-bell-btn"
                     className="relative hover:opacity-70 cursor-pointer"
-                    aria-label="Thong bao"
+                    aria-label="Notifications"
                 >
                     <Bell className="size-4" />
                     {unreadCount > 0 && (
@@ -76,10 +95,10 @@ export default function NotificationBell({ socket }: NotificationBellProps) {
                 {/* Header */}
                 <div className="flex items-center justify-between px-4 py-3">
                     <div className="flex items-center gap-2">
-                        <span className="font-semibold text-sm">Thong bao</span>
+                        <span className="font-semibold text-sm">Notifications</span>
                         {unreadCount > 0 && (
                             <Badge variant="secondary" className="text-xs h-5 px-1.5">
-                                {unreadCount} moi
+                                {unreadCount} new
                             </Badge>
                         )}
                     </div>
@@ -91,7 +110,7 @@ export default function NotificationBell({ socket }: NotificationBellProps) {
                             onClick={markAllAsRead}
                         >
                             <CheckCheck className="h-3 w-3" />
-                            Doc tat ca
+                            Mark all as read
                         </Button>
                     )}
                 </div>
@@ -102,16 +121,17 @@ export default function NotificationBell({ socket }: NotificationBellProps) {
                 <div className="overflow-y-auto flex-1">
                     {loading && notifications.length === 0 ? (
                         <div className="px-4 py-8 text-center text-sm text-muted-foreground">
-                            Dang tai...
+                            Loading...
                         </div>
                     ) : notifications.length === 0 ? (
                         <div className="px-4 py-8 text-center">
                             <Bell className="h-8 w-8 text-muted-foreground/40 mx-auto mb-2" />
-                            <p className="text-sm text-muted-foreground">Chua co thong bao nao</p>
+                            <p className="text-sm text-muted-foreground">No notifications yet</p>
                         </div>
                     ) : (
                         notifications.map((notif) => {
                             const isBroadcast = notif.type === "admin_broadcast";
+                            const display = getNotificationDisplayContent(notif);
                             return (
                                 <div
                                     key={notif._id}
@@ -129,7 +149,7 @@ export default function NotificationBell({ socket }: NotificationBellProps) {
                                 >
                                     {/* Icon */}
                                     <div className="text-lg flex-shrink-0 mt-0.5">
-                                        {TYPE_ICONS[notif.type] || "🔔"}
+                                        {TYPE_ICONS[notif.type] || "\uD83D\uDD14"}
                                     </div>
 
                                     {/* Content */}
@@ -141,7 +161,7 @@ export default function NotificationBell({ socket }: NotificationBellProps) {
                                                     notif.isRead ? "font-normal text-foreground" : "font-semibold text-foreground"
                                                 )}
                                             >
-                                                {notif.title}
+                                                {display.title}
                                             </p>
                                             {isBroadcast && (
                                                 <span className="text-[10px] font-bold px-1.5 py-0.5 rounded bg-primary text-primary-foreground leading-none flex-shrink-0">
@@ -150,7 +170,7 @@ export default function NotificationBell({ socket }: NotificationBellProps) {
                                             )}
                                         </div>
                                         <p className="text-xs text-muted-foreground line-clamp-2 leading-relaxed">
-                                            {notif.body}
+                                            {display.body}
                                         </p>
                                         <p className="text-[11px] text-muted-foreground/70 mt-1">
                                             {timeAgo(notif.createdAt)}
@@ -166,7 +186,7 @@ export default function NotificationBell({ socket }: NotificationBellProps) {
                                                     markAsRead(notif._id);
                                                 }}
                                                 className="p-1 rounded hover:bg-muted cursor-pointer"
-                                                title="Danh dau da doc"
+                                                title="Mark as read"
                                             >
                                                 <Check className="h-3 w-3 text-muted-foreground" />
                                             </button>
@@ -177,7 +197,7 @@ export default function NotificationBell({ socket }: NotificationBellProps) {
                                                 deleteNotification(notif._id);
                                             }}
                                             className="p-1 rounded hover:bg-muted cursor-pointer"
-                                            title="Xoa"
+                                            title="Delete"
                                         >
                                             <Trash2 className="h-3 w-3 text-muted-foreground" />
                                         </button>

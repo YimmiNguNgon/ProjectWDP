@@ -2,11 +2,24 @@ const Cart = require("../models/Cart.js");
 const CartItem = require("../models/CartItem.js");
 const Product = require("../models/Product.js");
 const recalculateCart = require("../utils/cart.js");
+const notificationService = require("../services/notificationService");
 const {
   buildVariantKey,
   findVariantOption,
   normalizeSelectedVariants,
 } = require("../utils/productInventory");
+
+const applyLatestVariantSnapshot = (
+  item,
+  normalizedVariants,
+  variantKey,
+  variantCheck,
+) => {
+  item.selectedVariants = normalizedVariants;
+  item.variantKey = variantKey;
+  item.variantSku = variantCheck.optionSku || "";
+  item.priceSnapShot = Number(variantCheck.optionPrice || 0);
+};
 
 exports.getMyCart = async (req, res, next) => {
   try {
@@ -23,17 +36,86 @@ exports.getMyCart = async (req, res, next) => {
       .populate("seller", "name")
       .lean();
 
-    const mappedItems = items.map((item) => {
-      const variantCheck = findVariantOption(item.product, item.selectedVariants || []);
-      const availableStock = variantCheck.ok
-        ? variantCheck.optionQuantity
-        : Number(item.product.quantity || item.product.stock || 0);
+    const mappedItems = [];
+    const sideEffects = [];
 
-      return {
+    for (const item of items) {
+      const variantCheck = findVariantOption(item.product, item.selectedVariants || []);
+      const availableStock = Number(
+        variantCheck.ok
+          ? variantCheck.optionQuantity
+          : Number(item.product.quantity || item.product.stock || 0),
+      );
+      const title = String(item?.product?.title || "Product");
+      const isOutOfStock = availableStock <= 0;
+      const hasInsufficientStock =
+        !isOutOfStock && Number(item.quantity || 0) > availableStock;
+      let availabilityStatus = "ok";
+      let availabilityMessage = "";
+
+      if (isOutOfStock) {
+        availabilityStatus = "out_of_stock";
+        availabilityMessage = `Product ${title} is out of stock`;
+
+        // Notify once per cart item while it remains out of stock.
+        sideEffects.push(
+          (async () => {
+            const markResult = await CartItem.updateOne(
+              { _id: item._id, stockAlertSent: { $ne: true } },
+              { $set: { stockAlertSent: true } },
+            );
+            if (markResult.modifiedCount > 0) {
+              await notificationService.sendNotification({
+                recipientId: userId,
+                type: "cart_item_out_of_stock",
+                title: "A cart item is out of stock",
+                body: `Product ${title} is out of stock`,
+                link: "/cart",
+                metadata: {
+                  cartItemId: String(item._id),
+                  productId: String(item.product?._id || ""),
+                  variantKey: item.variantKey || "",
+                },
+              });
+            }
+          })(),
+        );
+      } else if (hasInsufficientStock) {
+        availabilityStatus = "insufficient_stock";
+        availabilityMessage = `Product ${title} only has ${availableStock} left`;
+
+        sideEffects.push(
+          CartItem.updateOne(
+            { _id: item._id, stockAlertSent: true },
+            { $set: { stockAlertSent: false } },
+          ),
+        );
+      } else {
+        sideEffects.push(
+          CartItem.updateOne(
+            { _id: item._id, stockAlertSent: true },
+            { $set: { stockAlertSent: false } },
+          ),
+        );
+      }
+
+      mappedItems.push({
         ...item,
         availableStock,
-      };
-    });
+        isOutOfStock,
+        availabilityStatus,
+        availabilityMessage,
+      });
+    }
+
+    if (sideEffects.length > 0) {
+      const sideEffectResults = await Promise.allSettled(sideEffects);
+      for (const result of sideEffectResults) {
+        if (result.status === "rejected") {
+          console.error("Cart side-effect failed:", result.reason);
+        }
+      }
+    }
 
     return res
       .status(200)
@@ -47,7 +129,7 @@ exports.addToCart = async (req, res, next) => {
   try {
     const userId = req.user._id;
     const { productId, quantity, selectedVariants } = req.body;
-    const parsedQty = parseInt(quantity) || 1;
+    const parsedQty = parseInt(quantity, 10) || 1;
     if (parsedQty <= 0) {
       return res.status(400).json({ message: "Invalid quantity" });
     }
@@ -94,24 +176,59 @@ exports.addToCart = async (req, res, next) => {
           .json({ message: "Product stock is not enough to add." });
       }
       item.quantity += parsedQty;
+      applyLatestVariantSnapshot(item, normalizedVariants, variantKey, variantCheck);
       await item.save();
     } else {
-      await CartItem.create({
-        cart: cart._id,
-        product: product._id,
-        seller: product.sellerId,
-        quantity: parsedQty,
-        priceSnapShot: variantCheck.optionPrice,
-        selectedVariants: normalizedVariants,
-        variantKey,
-        variantSku: variantCheck.optionSku,
-      });
+      try {
+        await CartItem.create({
+          cart: cart._id,
+          product: product._id,
+          seller: product.sellerId,
+          quantity: parsedQty,
+          priceSnapShot: variantCheck.optionPrice,
+          selectedVariants: normalizedVariants,
+          variantKey,
+          variantSku: variantCheck.optionSku,
+          stockAlertSent: false,
+        });
+      } catch (createErr) {
+        // Handle race condition when the same variant is added concurrently.
+        if (createErr?.code !== 11000) {
+          throw createErr;
+        }
+
+        const existingItem = await CartItem.findOne({
+          cart: cart._id,
+          product: product._id,
+          variantKey,
+        });
+
+        if (!existingItem) {
+          throw createErr;
+        }
+
+        if (variantCheck.optionQuantity < existingItem.quantity + parsedQty) {
+          return res
+            .status(400)
+            .json({ message: "Product stock is not enough to add." });
+        }
+
+        existingItem.quantity += parsedQty;
+        existingItem.stockAlertSent = false;
+        applyLatestVariantSnapshot(
+          existingItem,
+          normalizedVariants,
+          variantKey,
+          variantCheck,
+        );
+        await existingItem.save();
+      }
     }
 
-    const items = await CartItem.find({ cart: cart._id });
+    const currentItems = await CartItem.find({ cart: cart._id });
 
-    cart.totalItems = items.reduce((sum, i) => sum + i.quantity, 0);
-    cart.totalPrice = items.reduce(
+    cart.totalItems = currentItems.reduce((sum, i) => sum + i.quantity, 0);
+    cart.totalPrice = currentItems.reduce(
       (sum, i) => sum + i.quantity * i.priceSnapShot,
       0,
     );
@@ -152,7 +269,11 @@ exports.updateCartItemQuantity = async (req, res, next) => {
     if (!product) {
       return res.status(404).json({ message: "Product not found" });
     }
-    const variantCheck = findVariantOption(product, item.selectedVariants || []);
+    const normalizedVariants = normalizeSelectedVariants(
+      item.selectedVariants || [],
+    );
+    const variantKey = buildVariantKey(normalizedVariants);
+    const variantCheck = findVariantOption(product, normalizedVariants);
     if (!variantCheck.ok) {
       return res.status(400).json({
         message: variantCheck.message,
@@ -162,7 +283,7 @@ exports.updateCartItemQuantity = async (req, res, next) => {
     let newQuantity = item.quantity;
 
     if (quantity !== undefined) {
-      const parsedQty = parseInt(quantity);
+      const parsedQty = parseInt(quantity, 10);
 
       if (isNaN(parsedQty) || parsedQty < 0) {
         return res.status(400).json({
@@ -195,6 +316,8 @@ exports.updateCartItemQuantity = async (req, res, next) => {
     }
 
     item.quantity = newQuantity;
+    item.stockAlertSent = false;
+    applyLatestVariantSnapshot(item, normalizedVariants, variantKey, variantCheck);
     await item.save();
 
     await recalculateCart(cart._id);

@@ -1,4 +1,4 @@
-import { useMessage, type Conversation } from '@/hooks/use-message';
+﻿import { useMessage, type Conversation } from '@/hooks/use-message';
 import api from '@/lib/axios';
 import React from 'react';
 import { Checkbox } from '@/components/ui/checkbox';
@@ -143,7 +143,7 @@ export default function ConversationList() {
       console.log('[ConversationList] Conversations deleted successfully');
     } catch (error) {
       console.error('[ConversationList] Failed to delete conversations:', error);
-      alert('Không thể xóa cuộc trò chuyện. Vui lòng thử lại.');
+      alert('Unable to delete conversation. Please try again.');
     }
   };
 
@@ -161,7 +161,7 @@ export default function ConversationList() {
       setSelected([]);
     } catch (error) {
       console.error('Failed to mark conversations as read:', error);
-      alert('Không thể đánh dấu đã đọc. Vui lòng thử lại.');
+      alert('Unable to mark as read. Please try again.');
     }
   };
 
@@ -179,7 +179,7 @@ export default function ConversationList() {
       setSelected([]);
     } catch (error) {
       console.error('Failed to move conversations to inbox:', error);
-      alert('Không thể thêm vào inbox. Vui lòng thử lại.');
+      alert('Unable to move to inbox. Please try again.');
     }
   };
 
@@ -201,7 +201,7 @@ export default function ConversationList() {
       setSelected([]);
     } catch (error) {
       console.error('Failed to archive conversations:', error);
-      alert('Không thể lưu trữ cuộc trò chuyện. Vui lòng thử lại.');
+      alert('Unable to archive conversation. Please try again.');
     }
   };
 
@@ -308,13 +308,13 @@ export default function ConversationList() {
             >
               <ItemTitle className='text-end'>
                 {new Date(conversation.lastMessageAt).toLocaleDateString(
-                  'vi-VN'
+                  'en-US'
                 )}
               </ItemTitle>
               <ItemDescription className='text-end flex items-center justify-end gap-2'>
                 <span>
                   {new Date(conversation.lastMessageAt).toLocaleTimeString(
-                    'vi-VN',
+                    'en-US',
                     { hour: '2-digit', minute: '2-digit', hour12: false }
                   )}
                 </span>
@@ -332,3 +332,4 @@ export default function ConversationList() {
     </>
   );
 }
+

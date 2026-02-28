@@ -13,12 +13,12 @@ import { cn } from "@/lib/utils";
 import { useAuth } from "@/hooks/use-auth";
 
 const navigation = [
-  { name: "Tong quan", href: "/seller", icon: LayoutDashboard },
-  { name: "Quan ly san pham", href: "/seller/products", icon: Package },
-  { name: "Quan ly don hang", href: "/seller/orders", icon: ShoppingBag },
-  { name: "Quan ly doanh thu", href: "/seller/revenue", icon: DollarSign },
-  { name: "Phan hoi khach hang", href: "/seller/reviews", icon: Star },
-  { name: "Quan ly Feedback", href: "/seller/feedback", icon: MessageSquare },
+  { name: "Overview", href: "/seller", icon: LayoutDashboard },
+  { name: "Product Management", href: "/seller/products", icon: Package },
+  { name: "Order Management", href: "/seller/orders", icon: ShoppingBag },
+  { name: "Revenue Management", href: "/seller/revenue", icon: DollarSign },
+  { name: "Customer Reviews", href: "/seller/reviews", icon: Star },
+  { name: "Feedback Management", href: "/seller/feedback", icon: MessageSquare },
   { name: "Voucher", href: "/seller/vouchers", icon: TicketPercent },
 ];
 
@@ -82,7 +82,7 @@ export default function SellerLayout() {
               className="flex items-center gap-3 px-3 py-3 rounded-lg text-sm font-medium text-gray-700 hover:bg-gray-100 transition-colors"
             >
               <Home className="h-5 w-5 text-gray-400" />
-              <span>Ve trang chu</span>
+              <span>Back to Home</span>
             </Link>
           </div>
         </div>
@@ -97,7 +97,7 @@ export default function SellerLayout() {
                       (nav) =>
                         nav.href === location.pathname ||
                         (nav.href !== "/seller" && location.pathname.startsWith(nav.href)),
-                    )?.name || "Tong quan"}
+                    )?.name || "Overview"}
                   </h2>
                 </div>
               </div>

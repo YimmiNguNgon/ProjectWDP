@@ -43,6 +43,10 @@ const cartItemSchema = new mongoose.Schema(
       type: String,
       default: "",
     },
+    stockAlertSent: {
+      type: Boolean,
+      default: false,
+    },
   },
   { timestamps: true },
 );

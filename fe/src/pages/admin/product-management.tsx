@@ -1,4 +1,4 @@
-// src/pages/admin/product-management.tsx
+﻿// src/pages/admin/product-management.tsx
 import { useState, useEffect } from 'react';
 import { getAllProducts, type Product, type GetProductsParams } from '../../api/admin-products';
 import { Button } from '../../components/ui/button';
@@ -27,12 +27,12 @@ import { toast } from 'sonner';
 import api from '../../lib/axios';
 
 const REPORT_REASONS = [
-    'Sản phẩm vi phạm chính sách',
-    'Hình ảnh không phù hợp',
-    'Thông tin sai lệch / gian lận',
-    'Sản phẩm bị cấm kinh doanh',
-    'Giá bán bất thường',
-    'Khác',
+    'Product violates policy',
+    'Inappropriate images',
+    'Misleading or fraudulent information',
+    'Restricted product',
+    'Abnormal pricing',
+    'Other',
 ];
 
 export default function ProductManagement() {
@@ -64,7 +64,7 @@ export default function ProductManagement() {
             setTotalPages(response.pagination.totalPages);
             setTotal(response.pagination.total);
         } catch (error: any) {
-            toast.error(error.response?.data?.message || 'Lỗi khi tải danh sách sản phẩm');
+            toast.error(error.response?.data?.message || 'Failed to load products');
         } finally {
             setLoading(false);
         }
@@ -94,10 +94,10 @@ export default function ProductManagement() {
                 reason: reportReason,
                 message: reportMessage.trim(),
             });
-            toast.success(`Đã gửi cảnh báo tới seller "${reportProduct.sellerId?.username}"`);
+            toast.success(`Warning sent to seller "${reportProduct.sellerId?.username}"`);
             setIsReportOpen(false);
         } catch (error: any) {
-            toast.error(error.response?.data?.message || 'Lỗi khi gửi báo cáo');
+            toast.error(error.response?.data?.message || 'Failed to send report');
         } finally {
             setReportLoading(false);
         }
@@ -107,8 +107,8 @@ export default function ProductManagement() {
         <div className="container mx-auto py-8">
             <div className="flex justify-between items-center mb-6">
                 <div>
-                    <h1 className="text-3xl font-bold">Quản lý Sản Phẩm</h1>
-                    <p className="text-gray-500 mt-1">Tổng cộng {total} sản phẩm</p>
+                    <h1 className="text-3xl font-bold">Product Management</h1>
+                    <p className="text-gray-500 mt-1">Total products: {total}</p>
                 </div>
             </div>
 
@@ -116,13 +116,13 @@ export default function ProductManagement() {
             <div className="flex gap-4 mb-6">
                 <div className="flex-1">
                     <Input
-                        placeholder="Tìm kiếm theo tên sản phẩm..."
+                        placeholder="Search by product name..."
                         value={search}
                         onChange={(e) => setSearch(e.target.value)}
                         onKeyDown={(e) => e.key === 'Enter' && handleSearch()}
                     />
                 </div>
-                <Button onClick={handleSearch}>Tìm kiếm</Button>
+                <Button onClick={handleSearch}>Search</Button>
             </div>
 
             {/* Table */}
@@ -130,27 +130,27 @@ export default function ProductManagement() {
                 <Table>
                     <TableHeader>
                         <TableRow>
-                            <TableHead>Hình ảnh</TableHead>
-                            <TableHead>Tên sản phẩm</TableHead>
-                            <TableHead>Người bán</TableHead>
-                            <TableHead>Danh mục</TableHead>
-                            <TableHead>Giá</TableHead>
-                            <TableHead>Kho</TableHead>
-                            <TableHead>Đặc điểm</TableHead>
-                            <TableHead>Trạng thái</TableHead>
-                            <TableHead>Đánh giá</TableHead>
-                            <TableHead>Ngày tạo</TableHead>
-                            <TableHead className="text-right">Hành động</TableHead>
+                            <TableHead>Image</TableHead>
+                            <TableHead>Product Name</TableHead>
+                            <TableHead>Seller</TableHead>
+                            <TableHead>Category</TableHead>
+                            <TableHead>Price</TableHead>
+                            <TableHead>Stock</TableHead>
+                            <TableHead>Variants</TableHead>
+                            <TableHead>Status</TableHead>
+                            <TableHead>Rating</TableHead>
+                            <TableHead>Created At</TableHead>
+                            <TableHead className="text-right">Actions</TableHead>
                         </TableRow>
                     </TableHeader>
                     <TableBody>
                         {loading ? (
                             <TableRow>
-                                <TableCell colSpan={11} className="text-center py-8">Đang tải...</TableCell>
+                                <TableCell colSpan={11} className="text-center py-8">Loading...</TableCell>
                             </TableRow>
                         ) : products.length === 0 ? (
                             <TableRow>
-                                <TableCell colSpan={11} className="text-center py-8">Không tìm thấy sản phẩm</TableCell>
+                                <TableCell colSpan={11} className="text-center py-8">No products found</TableCell>
                             </TableRow>
                         ) : (
                             products.map((product) => (
@@ -178,7 +178,7 @@ export default function ProductManagement() {
                                         {(product as any).variants?.length > 0 ? (
                                             <Badge variant="outline" className="flex items-center gap-1 w-fit">
                                                 <Layers className="h-3 w-3" />
-                                                {(product as any).variants.length} đặc điểm
+                                                {(product as any).variants.length} variants
                                             </Badge>
                                         ) : (
                                             <span className="text-gray-400 text-sm">—</span>
@@ -199,12 +199,12 @@ export default function ProductManagement() {
                                             <span className="text-gray-400 text-sm">({product.ratingCount || 0})</span>
                                         </div>
                                     </TableCell>
-                                    <TableCell>{new Date(product.createdAt).toLocaleDateString('vi-VN')}</TableCell>
+                                    <TableCell>{new Date(product.createdAt).toLocaleDateString('en-US')}</TableCell>
                                     <TableCell className="text-right">
                                         <div className="flex gap-2 justify-end">
                                             <Button size="sm" variant="outline" onClick={() => handleViewClick(product)}>
                                                 <Eye className="h-3 w-3 mr-1" />
-                                                Xem
+                                                View
                                             </Button>
                                             <Button size="sm" variant="destructive" onClick={() => handleReportClick(product)}>
                                                 <Flag className="h-3 w-3 mr-1" />
@@ -222,11 +222,11 @@ export default function ProductManagement() {
             {/* Pagination */}
             <div className="flex justify-center gap-2 mt-6">
                 <Button variant="outline" onClick={() => setPage(p => Math.max(1, p - 1))} disabled={page === 1}>
-                    Trang trước
+                    Previous
                 </Button>
-                <span className="flex items-center px-4">Trang {page} / {totalPages}</span>
+                <span className="flex items-center px-4">Page {page} / {totalPages}</span>
                 <Button variant="outline" onClick={() => setPage(p => Math.min(totalPages, p + 1))} disabled={page === totalPages}>
-                    Trang sau
+                    Next
                 </Button>
             </div>
 
@@ -234,8 +234,8 @@ export default function ProductManagement() {
             <Dialog open={isViewOpen} onOpenChange={setIsViewOpen}>
                 <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
                     <DialogHeader>
-                        <DialogTitle>Chi tiết sản phẩm</DialogTitle>
-                        <DialogDescription>Thông tin đầy đủ của sản phẩm</DialogDescription>
+                        <DialogTitle>Product Details</DialogTitle>
+                        <DialogDescription>Complete product information</DialogDescription>
                     </DialogHeader>
                     {viewProduct && (
                         <div className="space-y-5 py-2">
@@ -260,23 +260,23 @@ export default function ProductManagement() {
 
                             {/* Basic Info */}
                             <div className="grid grid-cols-2 gap-4 text-sm">
-                                <div><span className="text-gray-500">Người bán:</span><span className="ml-2 font-medium">{viewProduct.sellerId?.username || '—'}</span></div>
-                                <div><span className="text-gray-500">Danh mục:</span><span className="ml-2">{viewProduct.categoryId?.name || '—'}</span></div>
-                                <div><span className="text-gray-500">Giá:</span><span className="ml-2 font-semibold">${viewProduct.price.toFixed(2)}</span></div>
-                                <div><span className="text-gray-500">Tồn kho:</span><span className="ml-2 font-semibold">{viewProduct.quantity ?? 0}</span></div>
-                                <div><span className="text-gray-500">Tình trạng:</span><span className="ml-2">{viewProduct.condition || '—'}</span></div>
+                                <div><span className="text-gray-500">Seller:</span><span className="ml-2 font-medium">{viewProduct.sellerId?.username || '—'}</span></div>
+                                <div><span className="text-gray-500">Category:</span><span className="ml-2">{viewProduct.categoryId?.name || '—'}</span></div>
+                                <div><span className="text-gray-500">Price:</span><span className="ml-2 font-semibold">${viewProduct.price.toFixed(2)}</span></div>
+                                <div><span className="text-gray-500">Stock:</span><span className="ml-2 font-semibold">{viewProduct.quantity ?? 0}</span></div>
+                                <div><span className="text-gray-500">Condition:</span><span className="ml-2">{viewProduct.condition || '—'}</span></div>
                                 <div>
-                                    <span className="text-gray-500">Trạng thái:</span>
+                                    <span className="text-gray-500">Status:</span>
                                     <span className={`ml-2 px-2 py-0.5 rounded text-xs ${viewProduct.status === 'available' ? 'bg-green-100 text-green-800' :
                                             viewProduct.status === 'sold' ? 'bg-gray-100 text-gray-800' :
                                                 'bg-yellow-100 text-yellow-800'
                                         }`}>{viewProduct.status}</span>
                                 </div>
                                 <div>
-                                    <span className="text-gray-500">Đánh giá:</span>
-                                    <span className="ml-2">★ {(viewProduct.averageRating || 0).toFixed(1)} ({viewProduct.ratingCount || 0} lượt)</span>
+                                    <span className="text-gray-500">Rating:</span>
+                                    <span className="ml-2">★ {(viewProduct.averageRating || 0).toFixed(1)} ({viewProduct.ratingCount || 0} reviews)</span>
                                 </div>
-                                <div><span className="text-gray-500">Ngày tạo:</span><span className="ml-2">{new Date(viewProduct.createdAt).toLocaleDateString('vi-VN')}</span></div>
+                                <div><span className="text-gray-500">Created At:</span><span className="ml-2">{new Date(viewProduct.createdAt).toLocaleDateString('en-US')}</span></div>
                             </div>
 
                             {/* Variants */}
@@ -284,7 +284,7 @@ export default function ProductManagement() {
                                 <div>
                                     <h4 className="font-semibold mb-3 flex items-center gap-2">
                                         <Layers className="h-4 w-4" />
-                                        Đặc điểm sản phẩm
+                                        Product Variants
                                     </h4>
                                     <div className="space-y-4">
                                         {(viewProduct as any).variants.map((variant: any) => (
@@ -310,7 +310,7 @@ export default function ProductManagement() {
                             )}
                             {(viewProduct as any).variantCombinations?.length > 0 && (
                                 <div>
-                                    <h4 className="font-semibold mb-3">Tồn kho theo tổ hợp</h4>
+                                    <h4 className="font-semibold mb-3">Combination Inventory</h4>
                                     <div className="space-y-2">
                                         {(viewProduct as any).variantCombinations.map((combo: any) => (
                                             <div
@@ -318,7 +318,9 @@ export default function ProductManagement() {
                                                 className="flex items-center justify-between border rounded-md px-3 py-2 text-sm"
                                             >
                                                 <span>{(combo.selections || []).map((s: any) => s.value).join(' / ')}</span>
-                                                <span className="font-semibold">Kho: {combo.quantity || 0}</span>
+                                                <span className="font-semibold">
+                                                    Price: ${Number(combo.price ?? (viewProduct as any).price ?? 0).toFixed(2)} | Stock: {combo.quantity || 0}
+                                                </span>
                                             </div>
                                         ))}
                                     </div>
@@ -327,10 +329,10 @@ export default function ProductManagement() {
                         </div>
                     )}
                     <DialogFooter>
-                        <Button variant="outline" onClick={() => setIsViewOpen(false)}>Đóng</Button>
+                        <Button variant="outline" onClick={() => setIsViewOpen(false)}>Close</Button>
                         <Button variant="destructive" onClick={() => { setIsViewOpen(false); if (viewProduct) handleReportClick(viewProduct); }}>
                             <Flag className="h-4 w-4 mr-1" />
-                            Report sản phẩm này
+                            Report this product
                         </Button>
                     </DialogFooter>
                 </DialogContent>
@@ -342,10 +344,10 @@ export default function ProductManagement() {
                     <DialogHeader>
                         <DialogTitle className="flex items-center gap-2">
                             <Flag className="h-5 w-5 text-red-500" />
-                            Báo cáo sản phẩm
+                            Report Product
                         </DialogTitle>
                         <DialogDescription>
-                            Sẽ gửi cảnh báo trực tiếp tới seller qua hệ thống thông báo
+                            A warning will be sent directly to the seller via system notifications
                         </DialogDescription>
                     </DialogHeader>
 
@@ -357,7 +359,7 @@ export default function ProductManagement() {
                             </div>
 
                             <div className="grid gap-2">
-                                <Label>Lý do báo cáo *</Label>
+                                <Label>Reason *</Label>
                                 <select
                                     className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
                                     value={reportReason}
@@ -370,10 +372,10 @@ export default function ProductManagement() {
                             </div>
 
                             <div className="grid gap-2">
-                                <Label>Nội dung chi tiết (tùy chọn)</Label>
+                                <Label>Details (optional)</Label>
                                 <Textarea
                                     rows={4}
-                                    placeholder="Mô tả cụ thể vi phạm của sản phẩm..."
+                                    placeholder="Describe the product violation in detail..."
                                     value={reportMessage}
                                     onChange={(e) => setReportMessage(e.target.value)}
                                 />
@@ -382,9 +384,9 @@ export default function ProductManagement() {
                     )}
 
                     <DialogFooter>
-                        <Button variant="outline" onClick={() => setIsReportOpen(false)}>Hủy</Button>
+                        <Button variant="outline" onClick={() => setIsReportOpen(false)}>Cancel</Button>
                         <Button variant="destructive" onClick={handleSubmitReport} disabled={reportLoading}>
-                            {reportLoading ? 'Đang gửi...' : 'Gửi cảnh báo tới Seller'}
+                            {reportLoading ? 'Sending...' : 'Send warning to seller'}
                         </Button>
                     </DialogFooter>
                 </DialogContent>
@@ -392,4 +394,6 @@ export default function ProductManagement() {
         </div>
     );
 }
+
+
 
