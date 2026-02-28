@@ -22,6 +22,9 @@ const reviewRoutes = require("./routes/reviewRoutes");
 const adminRoutes = require("./routes/adminRoutes");
 const orderRoutes = require("./routes/orders");
 const searchRoutes = require("./routes/search");
+const addressRoutes = require("./routes/addressRoute");
+const watchlistRoutes = require("./routes/watchlistRoute");
+const cartRoutes = require("./routes/cartRoute");
 const User = require("./models/User");
 
 // Passport config (sau khi dotenv.config())
@@ -66,6 +69,19 @@ app.use("/api/reviews", reviewRoutes);
 app.use("/api/admin", adminRoutes);
 app.use("/api/orders", orderRoutes);
 app.use("/api/search", searchRoutes);
+app.use("/api/addresses", addressRoutes);
+app.use("/api/watchlist", watchlistRoutes);
+app.use("/api/cart", cartRoutes);
+const sellerApplicationRoutes = require("./routes/sellerApplicationRoutes");
+app.use("/api/seller-applications", sellerApplicationRoutes);
+const notificationRoutes = require("./routes/notificationRoutes");
+app.use("/api/notifications", notificationRoutes);
+
+// Saved searches and sellers routes
+const savedSearchRoutes = require("./routes/savedSearchRoutes");
+const savedSellerRoutes = require("./routes/savedSellerRoutes");
+app.use("/api/saved-searches", savedSearchRoutes);
+app.use("/api/saved-sellers", savedSellerRoutes);
 
 // Chat routes
 const chatRoutes = require("./routes/chats");
@@ -80,6 +96,10 @@ app.use("/api/promotions", promotionRoutes);
 // Upload routes
 const uploadRoutes = require("./routes/uploadRoutes");
 app.use("/api/upload", uploadRoutes);
+
+// Voucher routes
+const voucherRoutes = require("./routes/vouchers");
+app.use("/api/vouchers", voucherRoutes);
 
 // Feedback Revision routes
 const feedbackRevisionRoutes = require("./routes/feedbackRevision");
@@ -127,30 +147,141 @@ async function createDefaultAdmin() {
   }
 }
 
+async function createDefaultSeller() {
+  try {
+    const existingSeller = await User.findOne({ username: "seller" });
+
+    if (!existingSeller) {
+      const salt = await bcrypt.genSalt(10);
+      const passwordHash = await bcrypt.hash("seller", salt);
+
+      const sellerUser = new User({
+        username: "seller",
+        email: "seller@seller.com",
+        passwordHash: passwordHash,
+        role: "seller",
+        isEmailVerified: true,
+        status: "active",
+      });
+
+      await sellerUser.save();
+      console.log(
+        "✅ Tài khoản seller mặc định đã được tạo (username: seller, password: seller)",
+      );
+    } else {
+      console.log("ℹ️ Tài khoản seller đã tồn tại");
+    }
+  } catch (error) {
+    console.error("❌ Lỗi khi tạo tài khoản seller mặc định:", error);
+  }
+}
+
+async function ensureCartItemVariantIndex() {
+  const CartItem = require("./models/CartItem");
+  const {
+    buildVariantKey,
+    normalizeSelectedVariants,
+  } = require("./utils/productInventory");
+
+  const legacyItems = await CartItem.find({
+    $or: [{ variantKey: { $exists: false } }, { variantKey: "" }],
+    "selectedVariants.0": { $exists: true },
+  })
+    .select("_id selectedVariants")
+    .lean();
+
+  if (legacyItems.length > 0) {
+    const updates = legacyItems
+      .map((item) => {
+        const normalized = normalizeSelectedVariants(item.selectedVariants || []);
+        const key = buildVariantKey(normalized);
+        if (!key) return null;
+        return {
+          updateOne: {
+            filter: { _id: item._id },
+            update: { $set: { selectedVariants: normalized, variantKey: key } },
+          },
+        };
+      })
+      .filter(Boolean);
+
+    if (updates.length > 0) {
+      await CartItem.bulkWrite(updates, { ordered: false });
+      console.log(
+        `Updated ${updates.length} legacy cart item(s) with missing variant key`,
+      );
+    }
+  }
+
+  const indexes = await CartItem.collection.indexes();
+  const legacyUniqueIndex = indexes.find(
+    (idx) =>
+      idx.unique === true &&
+      idx.key &&
+      idx.key.cart === 1 &&
+      idx.key.product === 1 &&
+      idx.key.variantKey === undefined,
+  );
+
+  if (legacyUniqueIndex) {
+    await CartItem.collection.dropIndex(legacyUniqueIndex.name);
+    console.log(`Dropped legacy cart index "${legacyUniqueIndex.name}"`);
+  }
+
+  const variantIndex = indexes.find(
+    (idx) =>
+      idx.key &&
+      idx.key.cart === 1 &&
+      idx.key.product === 1 &&
+      idx.key.variantKey === 1,
+  );
+
+  if (variantIndex && variantIndex.unique !== true) {
+    await CartItem.collection.dropIndex(variantIndex.name);
+  }
+
+  if (!variantIndex || variantIndex.unique !== true) {
+    await CartItem.collection.createIndex(
+      { cart: 1, product: 1, variantKey: 1 },
+      { unique: true, name: "cart_1_product_1_variantKey_1" },
+    );
+  }
+}
+
 async function start() {
   await connectDB(process.env.MONGO_URI);
+  await ensureCartItemVariantIndex();
   await createDefaultAdmin();
+  await createDefaultSeller();
 
   // Initialize deal expiration cron job
-  const { initDealExpirationJob } = require('./jobs/dealExpirationJob');
+  const { initDealExpirationJob } = require("./jobs/dealExpirationJob");
   initDealExpirationJob();
 
+  // Initialize seller stage cron job
+  const { initSellerStageJob } = require("./jobs/sellerStageJob");
+  initSellerStageJob();
+
   // Create HTTP server from Express app
-  const http = require('http');
+  const http = require("http");
   const server = http.createServer(app);
 
   // Setup Socket.IO
-  const { Server } = require('socket.io');
+  const { Server } = require("socket.io");
   const io = new Server(server, {
     cors: {
-      origin: '*', // Allow all origins in dev
-      methods: ['GET', 'POST']
-    }
+      origin: "*", // Allow all origins in dev
+      methods: ["GET", "POST"],
+    },
   });
 
   // Initialize Socket.IO handlers
-  const initSocket = require('./socket');
+  const initSocket = require("./socket");
   initSocket(io);
+
+  // Pass io to notificationService
+  const notificationService = require("./services/notificationService");
+  notificationService.setIO(io);
 
   server.listen(PORT, () => {
     console.log(`✅ Server is running on port ${PORT}`);

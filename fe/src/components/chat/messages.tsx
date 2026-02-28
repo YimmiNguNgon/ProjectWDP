@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useState, type ComponentProps } from 'react';
+﻿import React, { useEffect, useRef, useState, type ComponentProps } from 'react';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -26,6 +26,7 @@ import {
 import { Link } from 'react-router-dom';
 import { ChatGuidelines } from './chat-guidelines';
 import { Alert, AlertDescription } from '@/components/ui/alert';
+import { toast } from 'sonner';
 
 export function Messages({
   className,
@@ -56,7 +57,7 @@ export function Messages({
   const viewportRef = useRef<HTMLDivElement>(null);
   const typingTimeout = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  // Scroll xuống khi có tin nhắn mới
+  // Scroll xuá»‘ng khi cÃ³ tin nháº¯n má»›i
   useEffect(() => {
     if (!viewportRef.current) return;
     const viewport = viewportRef.current.querySelector(
@@ -71,12 +72,36 @@ export function Messages({
 
   // Fetch or create conversation when participants change
   useEffect(() => {
-    if (!participants || participants.length < 2) return;
-    if (conversation) return; // Already have conversation
-    if (loading) return; // Already fetching
+    console.log('[Messages] useEffect triggered:', {
+      participants,
+      hasConversation: !!conversation,
+      loading,
+      userId: payload?.userId
+    });
+
+    if (!participants || participants.length < 2) {
+      console.log('[Messages] No participants or insufficient participants');
+      return;
+    }
+    if (conversation) {
+      console.log('[Messages] Conversation already exists');
+      return; // Already have conversation
+    }
+    if (loading) {
+      console.log('[Messages] Already loading');
+      return; // Already fetching
+    }
+
+    // Check if user is authenticated
+    if (!payload?.userId) {
+      console.error('[Messages] User not authenticated');
+      setModerationError('Please sign in to use chat');
+      return;
+    }
 
     const fetchOrCreateConversation = async () => {
       try {
+        console.log('[Messages] Starting to fetch/create conversation...');
         setLoading(true);
 
         // Create or get existing conversation
@@ -84,36 +109,52 @@ export function Messages({
           participants: participants
         });
 
+        console.log('[Messages] Conversation response:', response.data);
         setConversation(response.data.data);
 
         // Fetch messages for this conversation
         const messagesRes = await api.get(
           `/api/chats/conversations/${response.data.data._id}/messages`
         );
+        console.log('[Messages] Messages response:', messagesRes.data);
         setMessages(messagesRes.data.data);
-      } catch (error) {
-        console.error('Failed to create/fetch conversation:', error);
-        setModerationError('Không thể tạo cuộc trò chuyện. Vui lòng thử lại.');
-        setTimeout(() => setModerationError(null), 3000);
+
+        // Mark all messages as read when conversation is opened
+        try {
+          await api.post(`/api/chats/conversations/${response.data.data._id}/read`);
+          console.log('[Messages] Marked conversation as read');
+        } catch (readError) {
+          console.error('[Messages] Failed to mark as read:', readError);
+        }
+      } catch (error: any) {
+        console.error('[Messages] Failed to create/fetch conversation:', error);
+
+        if (error.response?.status === 401) {
+          setModerationError('Session expired. Please sign in again.');
+        } else {
+          setModerationError('Unable to create conversation. Please try again.');
+        }
+
+        setTimeout(() => setModerationError(null), 5000);
       } finally {
         setLoading(false);
       }
     };
 
     fetchOrCreateConversation();
-  }, [participants, conversation, loading, setConversation, setMessages]);
+  }, [participants, conversation, loading, setConversation, setMessages, payload]);
 
-  // Lắng nghe socket events
+  // Láº¯ng nghe socket events
   useEffect(() => {
     if (!payload?.userId || !conversation?._id) return;
 
     const { userId } = payload;
     const conversationId = conversation._id;
 
-    // --- Kết nối socket ---
+    // --- Káº¿t ná»‘i socket ---
     if (!socket.connected) socket.connect();
 
-    // Gửi auth ngay khi connect
+    // Gá»­i auth ngay khi connect
     const handleConnect = () => {
       socket.emit('auth', { userId });
       socket.emit(
@@ -128,15 +169,27 @@ export function Messages({
     socket.on('connect', handleConnect);
     if (socket.connected) handleConnect(); // reconnect case
 
-    // --- Nhận tin nhắn mới ---
+    // --- Nháº­n tin nháº¯n má»›i ---
     const handleNewMessage = (msg: Message) => {
       if (msg.conversationId !== conversationId) return;
       setMessages((prev) => [msg, ...prev!]);
+
+      // Show notification if message is from another user
+      if (msg.sender !== userId) {
+        // Get sender name from conversation participants
+        const sender = conversation.participants?.find((p: any) => p._id === msg.sender);
+        const senderName = sender?.username || 'Someone';
+
+        toast.info(`New message from ${senderName}`, {
+          description: msg.text || 'Sent a file',
+          duration: 3000,
+        });
+      }
     };
 
     socket.on('new_message', handleNewMessage);
 
-    // --- Khi user khác đang gõ ---
+    // --- Khi user khÃ¡c Ä‘ang gÃµ ---
     const handleTyping = (data: { conversationId: string; userId: string }) => {
       if (data.conversationId !== conversationId || data.userId === userId)
         return;
@@ -159,7 +212,7 @@ export function Messages({
       }
     );
 
-    // --- Khi tin nhắn bị chặn ---
+    // --- Khi tin nháº¯n bá»‹ cháº·n ---
     const handleMessageBlocked = (data: { violations: string[]; reason: string }) => {
       setModerationError(data.reason);
       // Auto-hide error after 8 seconds
@@ -168,16 +221,16 @@ export function Messages({
 
     socket.on('message_blocked', handleMessageBlocked);
 
-    // --- Khi có enforcement action (eBay-style) ---
+    // --- Khi cÃ³ enforcement action (eBay-style) ---
     const handleEnforcementAction = (data: {
       action: string;
       message: string;
       violationCount: number
     }) => {
       // Show enforcement notification
-      const icon = data.action === 'warning' ? '⚠️' :
-        data.action === 'restriction' ? '🔒' :
-          data.action === 'suspension' ? '🚫' : '🔨';
+      const icon = data.action === 'warning' ? '[warning]' :
+        data.action === 'restriction' ? '[restricted]' :
+          data.action === 'suspension' ? '[suspended]' : '[action]';
 
       setModerationError(`${icon} ${data.message}`);
 
@@ -205,14 +258,14 @@ export function Messages({
 
     // Validate file type
     if (!file.type.startsWith('image/')) {
-      setModerationError('Chỉ chấp nhận file ảnh');
+      setModerationError('Only image files are allowed');
       setTimeout(() => setModerationError(null), 3000);
       return;
     }
 
     // Validate file size (max 5MB)
     if (file.size > 5 * 1024 * 1024) {
-      setModerationError('Kích thước ảnh tối đa 5MB');
+      setModerationError('Maximum image size is 5MB');
       setTimeout(() => setModerationError(null), 3000);
       return;
     }
@@ -235,7 +288,7 @@ export function Messages({
     try {
       const token = localStorage.getItem('token');
       const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:8080';
-      const response = await fetch(`${apiUrl}/uploads/chat-files`, {
+      const response = await fetch(`${apiUrl}/api/upload/chat-file`, {
         method: 'POST',
         headers: {
           Authorization: `Bearer ${token}`,
@@ -249,13 +302,13 @@ export function Messages({
       return data.url;
     } catch (error) {
       console.error('Image upload error:', error);
-      setModerationError('Không thể upload ảnh. Vui lòng thử lại.');
+      setModerationError('Unable to upload image. Please try again.');
       setTimeout(() => setModerationError(null), 3000);
       return null;
     }
   };
 
-  // Gửi tin nhắn
+  // Gá»­i tin nháº¯n
   const handleSendMessage = async () => {
     const text = input.trim();
     if ((!text && !selectedImage) || !payload?.userId || !conversation?._id) return;
@@ -279,7 +332,7 @@ export function Messages({
         conversationId: conversation._id,
         sender: payload.userId,
         text: text || '',
-        attachments: imageUrl ? [{ url: `${import.meta.env.VITE_API_URL || 'http://localhost:8080'}${imageUrl}`, type: 'image' }] : [],
+        attachments: imageUrl ? [{ url: imageUrl, type: 'image' }] : [],
         productRef,
       };
 
@@ -294,26 +347,26 @@ export function Messages({
           if (fileInputRef.current) fileInputRef.current.value = '';
         } else if (ack?.error === 'user_restricted') {
           // User is banned/suspended/restricted
-          setModerationError(`🚫 ${ack.reason || 'Your account has been restricted'}`);
+          setModerationError(`[restricted] ${ack.reason || 'Your account has been restricted'}`);
           setTimeout(() => setModerationError(null), 15000);
         } else if (ack?.error === 'content_violation') {
           // Content moderation violation
-          setModerationError(ack.reason || 'Tin nhắn chứa nội dung không được phép');
+          setModerationError(ack.reason || 'Message contains disallowed content');
           setTimeout(() => setModerationError(null), 8000);
         } else {
           // Other errors
-          setModerationError('Không thể gửi tin nhắn. Vui lòng thử lại.');
+          setModerationError('Unable to send message. Please try again.');
           setTimeout(() => setModerationError(null), 5000);
         }
       });
     } catch (error) {
       setUploading(false);
-      setModerationError('Đã xảy ra lỗi. Vui lòng thử lại.');
+      setModerationError('An error occurred. Please try again.');
       setTimeout(() => setModerationError(null), 3000);
     }
   };
 
-  // Gửi sự kiện typing
+  // Gá»­i sá»± kiá»‡n typing
   const handleTyping = () => {
     if (!conversation?._id || !payload?.userId) return;
 
@@ -324,17 +377,18 @@ export function Messages({
 
     if (typingTimeout.current) clearTimeout(typingTimeout.current);
     typingTimeout.current = setTimeout(() => {
-      // stop typing logic nếu cần
+      // stop typing logic náº¿u cáº§n
     }, 1000);
   };
 
-  // Show loading while fetching conversation
-  if (loading) {
+
+  // Show loading while fetching conversation (only if authenticated)
+  if (loading && payload?.userId) {
     return (
       <div className="flex items-center justify-center h-full p-8">
         <div className="flex flex-col items-center gap-4">
           <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
-          <p className="text-sm text-muted-foreground">Đang tải cuộc trò chuyện...</p>
+          <p className="text-sm text-muted-foreground">Loading conversation...</p>
         </div>
       </div>
     );
@@ -345,13 +399,18 @@ export function Messages({
     return <EmptyMessage />;
   }
 
+  // If we have participants but user is not authenticated, show empty with error
+  if (participants && participants.length >= 2 && !payload?.userId) {
+    return <EmptyMessage />;
+  }
+
   // If we have participants but no conversation yet, show loading
   if (!conversation) {
     return (
       <div className="flex items-center justify-center h-full p-8">
         <div className="flex flex-col items-center gap-4">
           <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
-          <p className="text-sm text-muted-foreground">Đang khởi tạo cuộc trò chuyện...</p>
+          <p className="text-sm text-muted-foreground">Starting conversation...</p>
         </div>
       </div>
     );
@@ -431,52 +490,68 @@ export function Messages({
                       </Item>
                     )}
                     <div
-                      className={`flex ${isMe ? 'justify-end' : 'justify-start'
-                        } `}
+                      className={`flex flex-col ${isMe ? 'items-end' : 'items-start'} gap-2`}
                     >
-                      <div
-                        className={`max-w-90 px-4 py-2 rounded-lg ${isMe
-                          ? 'bg-primary text-primary-foreground rounded-br-none'
-                          : 'bg-muted text-foreground rounded-bl-none'
-                          }`}
-                      >
-                        {/* Display image attachments */}
-                        {message.attachments && message.attachments.length > 0 && (
-                          <div className='mb-2'>
-                            {message.attachments.map((att: any, idx: number) => (
+                      {/* Display image attachments - OUTSIDE bubble */}
+                      {message.attachments && message.attachments.length > 0 && (
+                        <div className='space-y-2'>
+                          {message.attachments.map((att: any, idx: number) => (
+                            <div key={idx} className="relative group">
                               <img
-                                key={idx}
                                 src={att.url}
                                 alt='Attachment'
-                                className='max-w-full rounded-md max-h-60 object-cover cursor-pointer hover:opacity-90 transition-opacity'
+                                className='w-full max-w-sm rounded-lg shadow-md object-cover cursor-pointer hover:shadow-lg transition-all duration-200'
+                                style={{ maxHeight: '300px' }}
                                 onClick={() => setViewerImage(att.url)}
                                 onError={(e) => {
                                   (e.target as HTMLImageElement).style.display = 'none';
                                 }}
                               />
-                            ))}
-                          </div>
-                        )}
-                        {message.text && (
-                          <p className='text-sm whitespace-pre-wrap wrap-break-word'>
-                            {message.text}
-                          </p>
-                        )}
-                        <p
-                          className={`text-xs mt-1 ${isMe
-                            ? 'text-primary-foreground/80'
-                            : 'text-muted-foreground'
+                              {/* Zoom icon overlay on hover */}
+                              <div className="absolute inset-0 bg-black/0 group-hover:bg-black/10 transition-all duration-200 rounded-lg flex items-center justify-center">
+                                <svg
+                                  className="w-8 h-8 text-white opacity-0 group-hover:opacity-100 transition-opacity duration-200"
+                                  fill="none"
+                                  stroke="currentColor"
+                                  viewBox="0 0 24 24"
+                                >
+                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0zM10 7v6m3-3H7" />
+                                </svg>
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      )}
+
+                      {/* Text and timestamp in bubble */}
+                      {(message.text || !message.attachments || message.attachments.length === 0) && (
+                        <div
+                          className={`max-w-90 px-4 py-2 rounded-lg ${isMe
+                            ? 'bg-primary text-primary-foreground rounded-br-none'
+                            : 'bg-muted text-foreground rounded-bl-none'
                             }`}
                         >
-                          {new Date(message.createdAt).toLocaleTimeString(
-                            'vi-VN',
-                            {
-                              hour: '2-digit',
-                              minute: '2-digit',
-                            }
+                          {message.text && (
+                            <p className='text-sm whitespace-pre-wrap wrap-break-word'>
+                              {message.text}
+                            </p>
                           )}
-                        </p>
-                      </div>
+                          <p
+                            className={`text-xs mt-1 ${isMe
+                              ? 'text-primary-foreground/80'
+                              : 'text-muted-foreground'
+                              }`}
+                          >
+                            {new Date(message.createdAt).toLocaleTimeString(
+                              'vi-VN',
+                              {
+                                hour: '2-digit',
+                                minute: '2-digit',
+                              }
+                            )}
+                          </p>
+                        </div>
+                      )}
                     </div>
                   </React.Fragment>
                 );
@@ -577,7 +652,7 @@ export function Messages({
             size='icon-lg'
             onClick={() => fileInputRef.current?.click()}
             disabled={uploading}
-            title='Upload ảnh'
+            title='Upload image'
           >
             {uploading ? (
               <Loader2 className='h-5 w-5 animate-spin' />
@@ -587,7 +662,7 @@ export function Messages({
           </Button>
 
           <Input
-            placeholder='Nhập tin nhắn...'
+            placeholder='Type a message...'
             value={input}
             onChange={(e) => {
               setInput(e.target.value);
@@ -660,3 +735,4 @@ export function EmptyMessage() {
     </Empty>
   );
 }
+

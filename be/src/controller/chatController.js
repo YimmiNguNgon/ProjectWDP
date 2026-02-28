@@ -30,7 +30,23 @@ exports.listConversations = async (req, res, next) => {
       .limit(limit)
       .lean();
 
-    return res.json({ data: convs });
+    // Calculate unread count for each conversation
+    const convsWithUnread = await Promise.all(
+      convs.map(async (conv) => {
+        const unreadCount = await Message.countDocuments({
+          conversation: conv._id,
+          sender: { $ne: userId }, // Not sent by current user
+          readBy: { $nin: [userId] } // Not read by current user
+        });
+
+        return {
+          ...conv,
+          unreadCount
+        };
+      })
+    );
+
+    return res.json({ data: convsWithUnread });
   } catch (err) {
     next(err);
   }
@@ -57,26 +73,35 @@ exports.getConversation = async (req, res, next) => {
 exports.deleteConversation = async (req, res, next) => {
   try {
     const id = req.params.id;
+    console.log('[Chat] Delete conversation request:', id, 'by user:', req.user._id);
+
     if (!id || !mongoose.isValidObjectId(id))
       return res.status(400).json({ message: 'Invalid conversation id' });
 
     const conv = await Conversation.findById(id);
-    if (!conv) return res.status(404).json({ message: 'Conversation not found' });
+    if (!conv) {
+      console.log('[Chat] Conversation not found:', id);
+      return res.status(404).json({ message: 'Conversation not found' });
+    }
 
     // Check if user is participant
     const userId = req.user._id.toString();
     if (!conv.participants.some(p => p.toString() === userId)) {
+      console.log('[Chat] User not authorized to delete:', userId);
       return res.status(403).json({ message: 'You are not a participant in this conversation' });
     }
 
     // Delete all messages in conversation
-    await Message.deleteMany({ conversation: id });
+    const deletedMessages = await Message.deleteMany({ conversation: id });
+    console.log('[Chat] Deleted messages:', deletedMessages.deletedCount);
 
     // Delete conversation
     await Conversation.findByIdAndDelete(id);
+    console.log('[Chat] Conversation deleted successfully:', id);
 
     return res.json({ message: 'Conversation deleted successfully' });
   } catch (err) {
+    console.error('[Chat] Error deleting conversation:', err);
     next(err);
   }
 };
@@ -141,22 +166,38 @@ exports.createConversation = async (req, res, next) => {
         .json({ message: 'Participants required (2 users).' });
     }
 
-    participants = participants.map((p) => p.toString()).sort();
+    // Normalize participants: convert to ObjectId strings and sort
+    participants = participants
+      .map((p) => {
+        // Handle both ObjectId and string formats
+        const id = typeof p === 'object' && p._id ? p._id.toString() : p.toString();
+        return id;
+      })
+      .sort();
 
+    console.log('[Chat] Looking for conversation with participants:', participants);
+
+    // Find existing conversation with these exact participants
     const existing = await Conversation.findOne({
       participants: { $all: participants, $size: participants.length },
-    })
-      .populate('participants', 'username')
-      .lean();
+    }).populate('participants', 'username');
 
-    if (existing)
+    if (existing) {
+      console.log('[Chat] Found existing conversation:', existing._id);
       return res
         .status(200)
         .json({ data: existing, message: 'Conversation already exists.' });
+    }
 
+    console.log('[Chat] Creating new conversation');
     const conv = await Conversation.create({ participants });
-    return res.status(201).json({ data: conv });
+
+    // Populate before returning
+    const populated = await Conversation.findById(conv._id).populate('participants', 'username');
+
+    return res.status(201).json({ data: populated });
   } catch (err) {
+    console.error('[Chat] Error in createConversation:', err);
     next(err);
   }
 };

@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+﻿import { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import api from "@/lib/axios";
 import { Button } from "@/components/ui/button";
@@ -11,13 +11,13 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import {
-  Dialog,
-  DialogContent,
-  DialogTitle,
-} from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
 import { Messages } from "@/components/chat/messages";
-import { MessageContext, type Conversation, type Message } from "@/hooks/use-message";
+import {
+  MessageContext,
+  type Conversation,
+  type Message,
+} from "@/hooks/use-message";
 import { useAuth } from "@/hooks/use-auth";
 import { toast } from "sonner";
 import { DollarSign, Truck, Package, ThumbsUp } from "lucide-react";
@@ -27,19 +27,20 @@ import {
   saveSeller as saveSellerApi,
   unsaveSeller as unsaveSellerApi,
   getSavedSellers,
-  hideOrder as hideOrderApi
+  hideOrder as hideOrderApi,
 } from "@/api/orders";
 
 type OrderItem = {
   productId: {
     _id: string;
     title: string;
-    price: number;
+    price?: number;
     imageUrl?: string;
   };
   title: string;
-  price: number;
+  unitPrice: number;
   quantity: number;
+  selectedVariants?: { name: string; value: string }[];
 };
 
 type Order = {
@@ -47,6 +48,12 @@ type Order = {
   buyer: { _id: string; username: string };
   seller: { _id: string; username: string };
   items: OrderItem[];
+  subtotalAmount?: number;
+  discountAmount?: number;
+  voucher?: {
+    code?: string;
+    discountAmount?: number;
+  } | null;
   totalAmount: number;
   status: string;
   createdAt: string;
@@ -56,6 +63,8 @@ type PurchaseRow = {
   orderId: string;
   orderDate: string;
   totalAmount: number;
+  discountAmount: number;
+  voucherCode: string;
   sellerId: string;
   sellerName: string;
   productId: string;
@@ -72,7 +81,9 @@ export default function PurchaseHistoryPage() {
   const [selectedOrder, setSelectedOrder] = useState<Order | null>(null);
   const [showOrderDetails, setShowOrderDetails] = useState(false);
   const [savedSellers, setSavedSellers] = useState<Set<string>>(new Set());
-  const [processingActions, setProcessingActions] = useState<Set<string>>(new Set());
+  const [processingActions, setProcessingActions] = useState<Set<string>>(
+    new Set(),
+  );
 
   // Chat dialog states
   const [chatOpen, setChatOpen] = useState(false);
@@ -110,7 +121,7 @@ export default function PurchaseHistoryPage() {
     const fetchSavedSellers = async () => {
       try {
         const res = await getSavedSellers();
-        const sellerIds = new Set(res.data.map(seller => seller._id));
+        const sellerIds = new Set(res.data.map((seller) => seller._id));
         setSavedSellers(sellerIds);
       } catch (err) {
         console.error("Failed to load saved sellers", err);
@@ -133,16 +144,19 @@ export default function PurchaseHistoryPage() {
   };
 
   // Handler: Save/Unsave seller
-  const handleToggleSaveSeller = async (sellerId: string, sellerName: string) => {
+  const handleToggleSaveSeller = async (
+    sellerId: string,
+    sellerName: string,
+  ) => {
     const actionKey = `save-${sellerId}`;
     if (processingActions.has(actionKey)) return;
 
     try {
-      setProcessingActions(prev => new Set(prev).add(actionKey));
+      setProcessingActions((prev) => new Set(prev).add(actionKey));
 
       if (savedSellers.has(sellerId)) {
         await unsaveSellerApi(sellerId);
-        setSavedSellers(prev => {
+        setSavedSellers((prev) => {
           const newSet = new Set(prev);
           newSet.delete(sellerId);
           return newSet;
@@ -150,14 +164,16 @@ export default function PurchaseHistoryPage() {
         toast.success(`Unsaved seller: ${sellerName}`);
       } else {
         await saveSellerApi(sellerId);
-        setSavedSellers(prev => new Set(prev).add(sellerId));
+        setSavedSellers((prev) => new Set(prev).add(sellerId));
         toast.success(`Saved seller: ${sellerName}`);
       }
     } catch (err: any) {
       console.error("Failed to save/unsave seller", err);
-      toast.error(err.response?.data?.message || "Failed to update saved seller");
+      toast.error(
+        err.response?.data?.message || "Failed to update saved seller",
+      );
     } finally {
-      setProcessingActions(prev => {
+      setProcessingActions((prev) => {
         const newSet = new Set(prev);
         newSet.delete(actionKey);
         return newSet;
@@ -171,11 +187,11 @@ export default function PurchaseHistoryPage() {
     if (processingActions.has(actionKey)) return;
 
     try {
-      setProcessingActions(prev => new Set(prev).add(actionKey));
+      setProcessingActions((prev) => new Set(prev).add(actionKey));
       await hideOrderApi(orderId);
 
       // Remove order from UI
-      setOrders(prev => prev.filter(order => order._id !== orderId));
+      setOrders((prev) => prev.filter((order) => order._id !== orderId));
 
       toast.success("Order hidden from list", {
         action: {
@@ -190,7 +206,7 @@ export default function PurchaseHistoryPage() {
       console.error("Failed to hide order", err);
       toast.error(err.response?.data?.message || "Failed to hide order");
     } finally {
-      setProcessingActions(prev => {
+      setProcessingActions((prev) => {
         const newSet = new Set(prev);
         newSet.delete(actionKey);
         return newSet;
@@ -202,14 +218,14 @@ export default function PurchaseHistoryPage() {
   const handleContactSeller = (sellerId: string, productId: string) => {
     const sender = payload?.userId;
     if (!sender) {
-      toast.error('Vui lòng đăng nhập để chat với seller');
+      toast.error("Please sign in to chat with the seller");
       return;
     }
 
     // Find product from orders
     const product = orders
-      .flatMap(o => o.items)
-      .find(item => item.productId?._id === productId);
+      .flatMap((o) => o.items)
+      .find((item) => item.productId?._id === productId);
 
     setParticipantsState([sender, sellerId]);
     setProductRef(productId);
@@ -225,11 +241,13 @@ export default function PurchaseHistoryPage() {
           orderId: order._id,
           orderDate: order.createdAt,
           totalAmount: order.totalAmount,
-          sellerId: order.seller._id,
-          sellerName: order.seller.username,
+          discountAmount: order.discountAmount || order.voucher?.discountAmount || 0,
+          voucherCode: order.voucher?.code || "",
+          sellerId: order.seller?._id,
+          sellerName: order.seller?.username,
           productId: item.productId?._id || "",
           productTitle: item.productId?.title || item.title,
-          productPrice: item.price,
+          productPrice: item.unitPrice || 0,
           quantity: item.quantity,
           status: order.status,
         });
@@ -238,12 +256,12 @@ export default function PurchaseHistoryPage() {
 
     return list.sort(
       (a, b) =>
-        new Date(b.orderDate).getTime() - new Date(a.orderDate).getTime()
+        new Date(b.orderDate).getTime() - new Date(a.orderDate).getTime(),
     );
   }, [orders]);
 
   const filteredRows = rows.filter((row) =>
-    row.productTitle.toLowerCase().includes(search.toLowerCase())
+    row.productTitle.toLowerCase().includes(search.toLowerCase()),
   );
 
   const formatDate = (iso: string) =>
@@ -257,290 +275,346 @@ export default function PurchaseHistoryPage() {
   const shortOrderNumber = (id: string) =>
     id.length > 10 ? id.slice(0, 2) + "-" + id.slice(-8) : id;
 
+  const getStatusMeta = (status: string) => {
+    const normalized = String(status || "").toLowerCase();
+    if (normalized === "paid") {
+      return {
+        label: "Paid",
+        note: "Payment completed. Seller will process this order.",
+        dotClass: "bg-emerald-500",
+        textClass: "text-emerald-700",
+      };
+    }
+    if (normalized === "failed") {
+      return {
+        label: "Payment failed",
+        note: "Payment failed. This order was marked as failed.",
+        dotClass: "bg-red-500",
+        textClass: "text-red-700",
+      };
+    }
+    if (normalized === "cancelled") {
+      return {
+        label: "Cancelled",
+        note: "This order was cancelled.",
+        dotClass: "bg-red-500",
+        textClass: "text-red-700",
+      };
+    }
+    if (normalized === "shipped") {
+      return {
+        label: "Shipped",
+        note: "This order is on the way.",
+        dotClass: "bg-amber-500",
+        textClass: "text-amber-700",
+      };
+    }
+    if (normalized === "delivered") {
+      return {
+        label: "Delivered",
+        note: "This item has been delivered.",
+        dotClass: "bg-emerald-500",
+        textClass: "text-emerald-700",
+      };
+    }
+
+    return {
+      label: normalized ? normalized.toUpperCase() : "CREATED",
+      note: "Order is waiting for payment confirmation.",
+      dotClass: "bg-blue-500",
+      textClass: "text-blue-700",
+    };
+  };
+
   return (
-    <div className="flex gap-8 px-8 py-6">
-      {/* LEFT: sidebar My eBay */}
-      <aside className="w-56 text-sm">
-        <h2 className="mb-4 text-lg font-semibold">My EFPT</h2>
-
-        <div className="mb-4 flex gap-4 text-xs">
-          <button className="border-b-2 border-black pb-1 font-medium">
-            Activity
-          </button>
-          {/* <button className="pb-1 text-muted-foreground">Messages</button>
-          <button className="pb-1 text-muted-foreground">Account</button> */}
+    <>
+      <div className="mb-4 flex items-center justify-between">
+        <h1 className="text-2xl font-semibold">Orders</h1>
+        <div className="flex items-center gap-2">
+          <Input
+            placeholder="Search your orders"
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            className="w-64"
+          />
+          <Button variant="default">Search</Button>
         </div>
+      </div>
 
-        <nav className="space-y-1">
-          <div className="font-medium text-muted-foreground">Activity</div>
-          <button
-            className="w-full rounded px-2 py-1 text-left hover:bg-muted"
-            onClick={() => toast.info('Summary feature coming soon!')}
-          >
-            Summary
-          </button>
-          <button
-            className="w-full rounded px-2 py-1 text-left hover:bg-muted"
-            onClick={() => toast.info('Recently viewed feature coming soon!')}
-          >
-            Recently viewed
-          </button>
-          <button
-            className="w-full rounded px-2 py-1 text-left hover:bg-muted"
-            onClick={() => toast.info('Bids & offers feature coming soon!')}
-          >
-            Bids &amp; offers
-          </button>
-          <button className="w-full rounded bg-muted px-2 py-1 text-left font-semibold">
-            Purchases
-          </button>
-          <button
-            className="w-full rounded px-2 py-1 text-left hover:bg-muted"
-            onClick={() => navigate('/messages')}
-          >
-            Messages
-          </button>
-          <button
-            className="w-full rounded px-2 py-1 text-left hover:bg-muted"
-            onClick={() => navigate('/complaints')}
-          >
-            Returns &amp; complaints
-          </button>
-          <button
-            className="w-full rounded px-2 py-1 text-left hover:bg-muted"
-            onClick={() => toast.info('Watchlist feature coming soon!')}
-          >
-            Watchlist
-          </button>
-          <button
-            className="w-full rounded px-2 py-1 text-left hover:bg-muted"
-            onClick={() => toast.info('Saved searches feature coming soon!')}
-          >
-            Saved searches
-          </button>
-          <button
-            className="w-full rounded px-2 py-1 text-left hover:bg-muted"
-            onClick={() => toast.info('Saved sellers feature coming soon!')}
-          >
-            Saved sellers
-          </button>
-        </nav>
-      </aside>
-
-      {/* RIGHT: purchases list */}
-      <main className="flex-1">
-        <div className="mb-4 flex items-center justify-between">
-          <h1 className="text-2xl font-semibold">Orders</h1>
-          <div className="flex items-center gap-2">
-            <Input
-              placeholder="Search your orders"
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-              className="w-64"
-            />
-            <Button variant="default">Search</Button>
-          </div>
+      <div className="mb-4 flex flex-wrap items-center gap-6 text-xs text-muted-foreground">
+        <div>
+          See orders from: <button className="underline">Last 60 days</button>
         </div>
-
-        <div className="mb-4 flex flex-wrap items-center gap-6 text-xs text-muted-foreground">
-          <div>
-            See orders from: <button className="underline">Last 60 days</button>
-          </div>
-          <div>
-            Filter by: <button className="underline">All</button>
-          </div>
+        <div>
+          Filter by: <button className="underline">All</button>
         </div>
+      </div>
 
-        <Separator className="mb-4" />
+      <Separator className="mb-4" />
 
-        {loading ? (
-          <p className="text-sm text-muted-foreground">
-            Loading your orders...
-          </p>
-        ) : filteredRows.length === 0 ? (
-          <p className="text-sm text-muted-foreground">
-            You don&apos;t have any purchases yet.
-          </p>
-        ) : (
-          <div className="space-y-4">
-            {filteredRows.map((row) => (
-              <Card key={`${row.orderId}-${row.productId}`}>
-                <CardContent className="space-y-3 p-4">
-                  {/* HEADER: ORDER DATE | ORDER NUMBER | SOLD BY | ORDER TOTAL | ITEM PRICE */}
-                  <div className="grid grid-cols-[1.2fr_1.1fr_1.1fr_1.1fr_0.8fr] gap-6 text-[11px] font-semibold uppercase text-muted-foreground">
-                    <div>Order date</div>
-                    <div>Order number</div>
-                    <div>Sold by</div>
-                    <div>Order total</div>
-                    <div>Item price</div>
+      {loading ? (
+        <p className="text-sm text-muted-foreground">Loading your orders...</p>
+      ) : filteredRows.length === 0 ? (
+        <p className="text-sm text-muted-foreground">
+          You don&apos;t have any purchases yet.
+        </p>
+      ) : (
+        <div className="space-y-4">
+          {filteredRows.map((row) => (
+            <Card key={`${row.orderId}-${row.productId}`}>
+              <CardContent className="space-y-3 p-4">
+                {/* HEADER: ORDER DATE | ORDER NUMBER | SOLD BY | ORDER TOTAL | ITEM PRICE */}
+                <div className="grid grid-cols-[1.2fr_1.1fr_1.1fr_1.1fr_0.8fr] gap-6 text-[11px] font-semibold uppercase text-muted-foreground">
+                  <div>Order date</div>
+                  <div>Order number</div>
+                  <div>Sold by</div>
+                  <div>Order total</div>
+                  <div>Item price</div>
+                </div>
+
+                {/* VALUE ROW (ngang) */}
+                <div className="grid grid-cols-[1.2fr_1.1fr_1.1fr_1.1fr_0.8fr] gap-6 text-xs">
+                  <div>{formatDate(row.orderDate)}</div>
+                  <div>{shortOrderNumber(row.orderId)}</div>
+                  <div>
+                    <button className="text-blue-600 underline">
+                      {row.sellerName}
+                    </button>
                   </div>
 
-                  {/* VALUE ROW (ngang) */}
-                  <div className="grid grid-cols-[1.2fr_1.1fr_1.1fr_1.1fr_0.8fr] gap-6 text-xs">
-                    <div>{formatDate(row.orderDate)}</div>
-                    <div>{shortOrderNumber(row.orderId)}</div>
-                    <div>
-                      <button className="text-blue-600 underline">
-                        {row.sellerName}
-                      </button>
-                    </div>
-
-                    {/* ORDER TOTAL + ICON giống hình */}
-                    <div className="flex flex-col gap-1 font-semibold">
-                      <span>US ${row.totalAmount.toFixed(2)}</span>
-                      <div className="flex items-center gap-1 text-muted-foreground">
-                        <DollarSign className="h-3 w-3" />
-                        <Package className="h-3 w-3" />
-                        <Truck className="h-3 w-3" />
-                        <ThumbsUp className="h-3 w-3" />
-                      </div>
-                    </div>
-
-                    {/* ITEM PRICE */}
-                    <div className="font-semibold">
-                      US ${row.productPrice.toFixed(2)}
+                  {/* ORDER TOTAL + ICON giá»‘ng hÃ¬nh */}
+                  <div className="flex flex-col gap-1 font-semibold">
+                    <span>US ${row.totalAmount?.toFixed(2)}</span>
+                    {row.discountAmount > 0 && (
+                      <span className="text-xs text-green-700 font-medium">
+                        Voucher {row.voucherCode ? `(${row.voucherCode})` : ""}: -US ${row.discountAmount.toFixed(2)}
+                      </span>
+                    )}
+                    <div className="flex items-center gap-1 text-muted-foreground">
+                      <DollarSign className="h-3 w-3" />
+                      <Package className="h-3 w-3" />
+                      <Truck className="h-3 w-3" />
+                      <ThumbsUp className="h-3 w-3" />
                     </div>
                   </div>
 
-                  <Separator />
+                  {/* ITEM PRICE */}
+                  <div className="font-semibold">
+                    US ${(row.productPrice || 0).toFixed(2)}
+                  </div>
+                </div>
 
-                  {/* HÀNG CHÍNH: ảnh + title + Delivered + nút bên phải */}
-                  <div className="mt-2 flex flex-wrap items-start justify-between gap-4">
-                    {/* LEFT: ảnh sản phẩm */}
-                    <div className="flex gap-3">
-                      <div className="flex h-24 w-24 items-center justify-center rounded border bg-muted overflow-hidden">
-                        {row.productId && orders.find(o => o._id === row.orderId)?.items.find(item => item.productId?._id === row.productId)?.productId?.imageUrl ? (
-                          <img
-                            src={orders.find(o => o._id === row.orderId)?.items.find(item => item.productId?._id === row.productId)?.productId?.imageUrl}
-                            alt={row.productTitle}
-                            className="h-full w-full object-cover"
-                          />
-                        ) : (
-                          <span className="text-xs text-muted-foreground text-center px-2">No image</span>
-                        )}
-                      </div>
+                <Separator />
+
+                {/* HÃ€NG CHÃNH: áº£nh + title + Delivered + nÃºt bÃªn pháº£i */}
+                <div className="mt-2 flex flex-wrap items-start justify-between gap-4">
+                  {(() => {
+                    const statusMeta = getStatusMeta(row.status);
+                    return (
+                      <>
+                  {/* LEFT: áº£nh sáº£n pháº©m */}
+                  <div className="flex gap-3">
+                    <div className="flex h-24 w-24 items-center justify-center rounded border bg-muted overflow-hidden">
+                      {row.productId &&
+                        orders
+                          .find((o) => o._id === row.orderId)
+                          ?.items.find(
+                            (item) => item.productId?._id === row.productId,
+                          )?.productId?.imageUrl ? (
+                        <img
+                          src={
+                            orders
+                              .find((o) => o._id === row.orderId)
+                              ?.items.find(
+                                (item) => item.productId?._id === row.productId,
+                              )?.productId?.imageUrl
+                          }
+                          alt={row.productTitle}
+                          className="h-full w-full object-cover"
+                        />
+                      ) : (
+                        <span className="text-xs text-muted-foreground text-center px-2">
+                          No image
+                        </span>
+                      )}
                     </div>
+                  </div>
 
-                    {/* MIDDLE: title + Delivered on ...  (cùng hàng với ảnh) */}
-                    <div className="flex-1 space-y-2 text-sm">
-                      <div className="font-medium leading-snug">
-                        {row.productTitle}
+                  {/* MIDDLE: title + Delivered on ...  (cÃ¹ng hÃ ng vá»›i áº£nh) */}
+                  <div className="flex-1 space-y-2 text-sm">
+                    <div className="font-medium leading-snug">
+                      {row.productTitle}
+                    </div>
+                    {orders
+                      .find((o) => o._id === row.orderId)
+                      ?.items.find((item) => item.productId?._id === row.productId)
+                      ?.selectedVariants?.length ? (
+                      <div className="text-xs text-muted-foreground">
+                        Variant:{" "}
+                        {orders
+                          .find((o) => o._id === row.orderId)
+                          ?.items.find((item) => item.productId?._id === row.productId)
+                          ?.selectedVariants?.map((variant) => `${variant.name}: ${variant.value}`)
+                          .join(", ")}
                       </div>
-                      {/* có thể thêm item ID nếu muốn */}
-                      {/* <div className="text-xs text-muted-foreground">
+                    ) : null}
+                    {/* cÃ³ thá»ƒ thÃªm item ID náº¿u muá»‘n */}
+                    {/* <div className="text-xs text-muted-foreground">
                         (item ID ...)
                       </div> */}
 
-                      {/* Delivered on ... */}
-                      <div className="flex items-start gap-2 text-xs">
-                        <span className="mt-1 inline-block h-3 w-3 rounded-full bg-emerald-500" />
-                        <div>
-                          <div className="font-medium text-emerald-700">
-                            Delivered on {formatDate(row.orderDate)}
-                          </div>
-                          <div className="text-muted-foreground">
-                            Tracking number: —
-                          </div>
-                          <div className="text-muted-foreground">
-                            This item has been delivered.
-                          </div>
+                    {/* Delivered on ... */}
+                    <div className="flex items-start gap-2 text-xs">
+                      <span className={`mt-1 inline-block h-3 w-3 rounded-full ${statusMeta.dotClass}`} />
+                      <div>
+                        <div className={`font-medium ${statusMeta.textClass}`}>
+                          {statusMeta.label} on {formatDate(row.orderDate)}
+                        </div>
+                        <div className="text-muted-foreground">
+                          Tracking number: -
+                        </div>
+                        <div className="text-muted-foreground">
+                          {statusMeta.note}
                         </div>
                       </div>
                     </div>
-
-                    {/* RIGHT: cột nút y như eBay */}
-                    <div className="flex flex-col items-end gap-2 text-sm">
-                      <Button
-                        size="sm"
-                        className="w-40 rounded-none bg-blue-600 text-white hover:bg-blue-700"
-                        type="button"
-                        onClick={() => navigate(`/purchases/${row.orderId}/return/${row.productId}`)}
-                      >
-                        Return this item
-                      </Button>
-
-                      <Button
-                        size="sm"
-                        variant="outline"
-                        className="w-40 rounded-none border-blue-600 text-blue-600 hover:bg-blue-50"
-                        type="button"
-                        onClick={() => navigate(`/products?search=${encodeURIComponent(row.productTitle)}`)}
-                      >
-                        View similar items
-                      </Button>
-
-                      <Button
-                        size="sm"
-                        variant="outline"
-                        className="w-40 rounded-none border-blue-600 text-blue-600 hover:bg-blue-50"
-                        type="button"
-                        onClick={() =>
-                          navigate(
-                            `/purchases/${row.orderId}/feedback/${row.productId}`
-                          )
-                        }
-                      >
-                        Leave feedback
-                      </Button>
-
-                      <DropdownMenu>
-                        <DropdownMenuTrigger asChild>
-                          <Button
-                            size="sm"
-                            variant="outline"
-                            className="w-40 rounded-none border-blue-600 text-blue-600 hover:bg-blue-50"
-                            type="button"
-                          >
-                            More actions ▾
-                          </Button>
-                        </DropdownMenuTrigger>
-                        <DropdownMenuContent
-                          align="end"
-                          className="w-52 text-xs"
-                        >
-                          <DropdownMenuItem onClick={() => handleViewOrderDetails(row.orderId)}>
-                            View order details
-                          </DropdownMenuItem>
-                          <DropdownMenuItem onClick={() => handleContactSeller(row.sellerId, row.productId)}>Contact seller</DropdownMenuItem>
-                          <DropdownMenuItem onClick={() => navigate(`/purchases/${row.orderId}/complaint/${row.productId}?reason=not_received`)}>
-                            I didn&apos;t receive it
-                          </DropdownMenuItem>
-                          <DropdownMenuItem onClick={() => navigate(`/products?seller=${row.sellerId}`)}>
-                            View seller&apos;s other items
-                          </DropdownMenuItem>
-                          <DropdownMenuItem onClick={() => navigate('/sell/create', { state: { prefillData: { title: row.productTitle } } })}>
-                            Sell this item
-                          </DropdownMenuItem>
-                          <DropdownMenuItem
-                            onClick={() => handleToggleSaveSeller(row.sellerId, row.sellerName)}
-                            disabled={processingActions.has(`save-${row.sellerId}`)}
-                          >
-                            {savedSellers.has(row.sellerId) ? 'Unsave this seller' : 'Save this seller'}
-                          </DropdownMenuItem>
-                          <DropdownMenuItem
-                            onClick={() => handleHideOrder(row.orderId)}
-                            disabled={processingActions.has(`hide-${row.orderId}`)}
-                          >
-                            Hide order
-                          </DropdownMenuItem>
-                        </DropdownMenuContent>
-                      </DropdownMenu>
-
-                      <button
-                        className="mt-1 text-xs text-blue-600 underline"
-                        onClick={() => toast.info('Add note feature coming soon!')}
-                      >
-                        Add note
-                      </button>
-                    </div>
                   </div>
-                </CardContent>
-              </Card>
-            ))}
-          </div>
-        )}
-      </main>
 
+                  {/* RIGHT: cá»™t nÃºt y nhÆ° eBay */}
+                  <div className="flex flex-col items-end gap-2 text-sm">
+                    <Button
+                      size="sm"
+                      className="w-40 rounded-none bg-blue-600 text-white hover:bg-blue-700"
+                      type="button"
+                      onClick={() =>
+                        navigate(
+                          `/purchases/${row.orderId}/return/${row.productId}`,
+                        )
+                      }
+                    >
+                      Return this item
+                    </Button>
+
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      className="w-40 rounded-none border-blue-600 text-blue-600 hover:bg-blue-50"
+                      type="button"
+                      onClick={() =>
+                        navigate(
+                          `/products?search=${encodeURIComponent(row.productTitle)}`,
+                        )
+                      }
+                    >
+                      View similar items
+                    </Button>
+
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      className="w-40 rounded-none border-blue-600 text-blue-600 hover:bg-blue-50"
+                      type="button"
+                      onClick={() =>
+                        navigate(
+                          `/purchases/${row.orderId}/feedback/${row.productId}`,
+                        )
+                      }
+                    >
+                      Leave feedback
+                    </Button>
+
+                    <DropdownMenu>
+                      <DropdownMenuTrigger asChild>
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          className="w-40 rounded-none border-blue-600 text-blue-600 hover:bg-blue-50"
+                          type="button"
+                        >
+                          More actions
+                        </Button>
+                      </DropdownMenuTrigger>
+                      <DropdownMenuContent align="end" className="w-52 text-xs">
+                        <DropdownMenuItem
+                          onClick={() => handleViewOrderDetails(row.orderId)}
+                        >
+                          View order details
+                        </DropdownMenuItem>
+                        <DropdownMenuItem
+                          onClick={() =>
+                            handleContactSeller(row.sellerId, row.productId)
+                          }
+                        >
+                          Contact seller
+                        </DropdownMenuItem>
+                        <DropdownMenuItem
+                          onClick={() =>
+                            navigate(
+                              `/purchases/${row.orderId}/complaint/${row.productId}?reason=not_received`,
+                            )
+                          }
+                        >
+                          I didn&apos;t receive it
+                        </DropdownMenuItem>
+                        <DropdownMenuItem
+                          onClick={() =>
+                            navigate(`/products?seller=${row.sellerId}`)
+                          }
+                        >
+                          View seller&apos;s other items
+                        </DropdownMenuItem>
+                        <DropdownMenuItem
+                          onClick={() =>
+                            navigate("/sell/create", {
+                              state: {
+                                prefillData: { title: row.productTitle },
+                              },
+                            })
+                          }
+                        >
+                          Sell this item
+                        </DropdownMenuItem>
+                        <DropdownMenuItem
+                          onClick={() =>
+                            handleToggleSaveSeller(row.sellerId, row.sellerName)
+                          }
+                          disabled={processingActions.has(
+                            `save-${row.sellerId}`,
+                          )}
+                        >
+                          {savedSellers.has(row.sellerId)
+                            ? "Unsave this seller"
+                            : "Save this seller"}
+                        </DropdownMenuItem>
+                        <DropdownMenuItem
+                          onClick={() => handleHideOrder(row.orderId)}
+                          disabled={processingActions.has(
+                            `hide-${row.orderId}`,
+                          )}
+                        >
+                          Hide order
+                        </DropdownMenuItem>
+                      </DropdownMenuContent>
+                    </DropdownMenu>
+
+                    <button
+                      className="mt-1 text-xs text-blue-600 underline"
+                      onClick={() =>
+                        toast.info("Add note feature coming soon!")
+                      }
+                    >
+                      Add note
+                    </button>
+                  </div>
+                      </>
+                    );
+                  })()}
+                </div>
+              </CardContent>
+            </Card>
+          ))}
+        </div>
+      )}
       {/* Order Details Dialog */}
       <OrderDetailsDialog
         open={showOrderDetails}
@@ -573,6 +647,7 @@ export default function PurchaseHistoryPage() {
           </MessageContext.Provider>
         </DialogContent>
       </Dialog>
-    </div>
+    </>
   );
 }
+

@@ -1,10 +1,110 @@
 const Product = require("../models/Product");
+const Category = require("../models/Category");
 const mongoose = require("mongoose");
+const {
+    normalizeVariantCombinations,
+    syncProductStockFromVariants,
+} = require("../utils/productInventory");
+
+// ─── Hằng số giới hạn PROBATION ────────────────────────────────────────────────
+const PROBATION_LIMITS = {
+    MAX_PRODUCTS_PER_DAY: 5,
+};
+
+// ─── Helper: đếm sản phẩm seller tạo trong ngày hôm nay ──────────────────────
+async function countProductsCreatedToday(sellerId) {
+    const startOfDay = new Date();
+    startOfDay.setHours(0, 0, 0, 0);
+    const endOfDay = new Date();
+    endOfDay.setHours(23, 59, 59, 999);
+
+    return Product.countDocuments({
+        sellerId,
+        createdAt: { $gte: startOfDay, $lte: endOfDay },
+        listingStatus: { $ne: "deleted" },
+    });
+}
+
+/**
+ * Create product — có kiểm tra PROBATION limits
+ * POST /api/products  (hoặc tuỳ route)
+ */
+exports.createProduct = async (req, res, next) => {
+    try {
+        const seller = req.user;
+        const sellerId = seller._id;
+
+        // ── Kiểm tra giới hạn PROBATION ─────────────────────────────────────
+        if (seller.sellerStage === "PROBATION") {
+            // Giới hạn số sản phẩm/ngày
+            const todayCount = await countProductsCreatedToday(sellerId);
+            if (todayCount >= PROBATION_LIMITS.MAX_PRODUCTS_PER_DAY) {
+                return res.status(429).json({
+                    message: `Tài khoản PROBATION chỉ được đăng tối đa ${PROBATION_LIMITS.MAX_PRODUCTS_PER_DAY} sản phẩm/ngày. Bạn đã đăng ${todayCount} sản phẩm hôm nay.`,
+                    probationLimit: true,
+                    limit: PROBATION_LIMITS.MAX_PRODUCTS_PER_DAY,
+                    todayCount,
+                });
+            }
+
+            // Kiểm tra danh mục high-risk
+            if (req.body.categoryId) {
+                const category = await Category.findById(req.body.categoryId).lean();
+                if (category?.isHighRisk) {
+                    return res.status(403).json({
+                        message: `Tài khoản PROBATION không được đăng sản phẩm thuộc danh mục "${category.name}" (rủi ro cao). Nâng cấp lên NORMAL để đăng.`,
+                        probationLimit: true,
+                        highRiskCategory: true,
+                    });
+                }
+            }
+        }
+
+        // ── Tạo sản phẩm (logic giữ nguyên) ─────────────────────────────────
+        const {
+            title,
+            description,
+            price,
+            quantity,
+            condition,
+            categoryId,
+            image,
+            images,
+            variants,
+            variantCombinations,
+        } = req.body;
+
+        if (!title || price == null) {
+            return res.status(400).json({ message: "title and price required" });
+        }
+
+        const normalizedCombinations = normalizeVariantCombinations(variantCombinations);
+        const p = new Product({
+            sellerId,
+            title,
+            description,
+            price,
+            quantity: quantity || 0,
+            stock: quantity || 0,
+            condition: condition || "",
+            categoryId,
+            image: image || "",
+            images: images || [],
+            variants: variants || [],
+            variantCombinations: normalizedCombinations,
+        });
+        syncProductStockFromVariants(p);
+        await p.save();
+
+        return res.status(201).json({ data: p });
+    } catch (err) {
+        next(err);
+    }
+};
 
 /**
  * Get seller's own products/listings
  * GET /api/products/seller/my-listings
- * Query params: status (active, paused, ended, deleted), search, page, limit
  */
 exports.getMyListings = async (req, res, next) => {
     try {
@@ -13,15 +113,10 @@ exports.getMyListings = async (req, res, next) => {
 
         const filter = { sellerId };
 
-        // Filter by listing status
         if (status && status !== "all") {
             filter.listingStatus = status;
         }
 
-        // Exclude hard-deleted items (if we ever add that)
-        // For now, deleted items have listingStatus: "deleted"
-
-        // Search filter
         if (search) {
             filter.$or = [
                 { title: { $regex: search, $options: "i" } },
@@ -36,14 +131,23 @@ exports.getMyListings = async (req, res, next) => {
             .sort({ createdAt: -1 })
             .skip(skip)
             .limit(parseInt(limit))
-            .populate("categoryId", "name slug")
+            .populate("categoryId", "name slug isHighRisk")
             .lean();
+
+        // Thêm thông tin PROBATION nếu cần
+        const seller = req.user;
+        const probationInfo = seller.sellerStage === "PROBATION" ? {
+            isProbation: true,
+            todayCount: await countProductsCreatedToday(sellerId),
+            dailyLimit: PROBATION_LIMITS.MAX_PRODUCTS_PER_DAY,
+        } : null;
 
         return res.json({
             page: parseInt(page),
             limit: parseInt(limit),
             total,
             data: products,
+            probationInfo,
         });
     } catch (err) {
         next(err);
@@ -64,27 +168,26 @@ exports.updateProduct = async (req, res, next) => {
         }
 
         const product = await Product.findById(productId);
-        if (!product) {
-            return res.status(404).json({ message: "Product not found" });
-        }
+        if (!product) return res.status(404).json({ message: "Product not found" });
 
-        // Verify ownership
         if (product.sellerId.toString() !== sellerId.toString()) {
             return res.status(403).json({ message: "Not authorized to edit this product" });
         }
 
-        // Update allowed fields
+        // PROBATION: kiểm tra nếu đổi sang category high-risk
+        if (req.user.sellerStage === "PROBATION" && req.body.categoryId) {
+            const category = await Category.findById(req.body.categoryId).lean();
+            if (category?.isHighRisk) {
+                return res.status(403).json({
+                    message: `Tài khoản PROBATION không được chuyển sản phẩm sang danh mục "${category.name}" (rủi ro cao).`,
+                    probationLimit: true,
+                });
+            }
+        }
+
         const {
-            title,
-            description,
-            price,
-            quantity,
-            condition,
-            categoryId,
-            image,
-            images,
-            variants,
-            lowStockThreshold,
+            title, description, price, quantity, condition,
+            categoryId, image, images, variants, variantCombinations, lowStockThreshold,
         } = req.body;
 
         if (title !== undefined) product.title = title;
@@ -96,13 +199,22 @@ exports.updateProduct = async (req, res, next) => {
         if (image !== undefined) product.image = image;
         if (images !== undefined) product.images = images;
         if (variants !== undefined) product.variants = variants;
+        if (variantCombinations !== undefined) {
+            product.variantCombinations = normalizeVariantCombinations(variantCombinations);
+            syncProductStockFromVariants(product);
+        }
         if (lowStockThreshold !== undefined) product.lowStockThreshold = lowStockThreshold;
+
+        if (quantity !== undefined && variantCombinations === undefined) {
+            product.quantity = Number(quantity) || 0;
+            product.stock = Number(quantity) || 0;
+        }
 
         product.updatedAt = new Date();
         await product.save();
 
         const updated = await Product.findById(productId)
-            .populate("categoryId", "name slug")
+            .populate("categoryId", "name slug isHighRisk")
             .lean();
 
         return res.json({ data: updated });
@@ -112,9 +224,8 @@ exports.updateProduct = async (req, res, next) => {
 };
 
 /**
- * Update listing status (active, paused, ended)
+ * Update listing status
  * PATCH /api/products/:productId/status
- * Body: { listingStatus: "active" | "paused" | "ended" }
  */
 exports.updateListingStatus = async (req, res, next) => {
     try {
@@ -134,16 +245,12 @@ exports.updateListingStatus = async (req, res, next) => {
         }
 
         const product = await Product.findById(productId);
-        if (!product) {
-            return res.status(404).json({ message: "Product not found" });
-        }
+        if (!product) return res.status(404).json({ message: "Product not found" });
 
-        // Verify ownership
         if (product.sellerId.toString() !== sellerId.toString()) {
             return res.status(403).json({ message: "Not authorized to modify this product" });
         }
 
-        // Prevent changing status of deleted listings
         if (product.listingStatus === "deleted") {
             return res.status(400).json({ message: "Cannot modify deleted listings" });
         }
@@ -175,16 +282,12 @@ exports.deleteProduct = async (req, res, next) => {
         }
 
         const product = await Product.findById(productId);
-        if (!product) {
-            return res.status(404).json({ message: "Product not found" });
-        }
+        if (!product) return res.status(404).json({ message: "Product not found" });
 
-        // Verify ownership
         if (product.sellerId.toString() !== sellerId.toString()) {
             return res.status(403).json({ message: "Not authorized to delete this product" });
         }
 
-        // Soft delete
         product.listingStatus = "deleted";
         product.deletedAt = new Date();
         product.updatedAt = new Date();
@@ -197,14 +300,13 @@ exports.deleteProduct = async (req, res, next) => {
 };
 
 /**
- * Get inventory summary for seller
+ * Get inventory summary
  * GET /api/products/seller/inventory
  */
 exports.getInventorySummary = async (req, res, next) => {
     try {
         const sellerId = req.user._id;
 
-        // Count products by status
         const totalProducts = await Product.countDocuments({
             sellerId,
             listingStatus: { $ne: "deleted" },
@@ -215,14 +317,12 @@ exports.getInventorySummary = async (req, res, next) => {
             listingStatus: "active",
         });
 
-        // Low stock products (quantity < lowStockThreshold)
         const lowStockProducts = await Product.find({
             sellerId,
             listingStatus: { $ne: "deleted" },
             $expr: { $lt: ["$quantity", "$lowStockThreshold"] },
         }).select("title quantity lowStockThreshold").lean();
 
-        // Out of stock products
         const outOfStock = await Product.countDocuments({
             sellerId,
             listingStatus: { $ne: "deleted" },
@@ -257,7 +357,7 @@ exports.getLowStockProducts = async (req, res, next) => {
             $expr: { $lt: ["$quantity", "$lowStockThreshold"] },
         })
             .sort({ quantity: 1 })
-            .populate("categoryId", "name slug")
+            .populate("categoryId", "name slug isHighRisk")
             .lean();
 
         return res.json({ data: lowStockProducts });

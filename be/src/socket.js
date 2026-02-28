@@ -11,7 +11,11 @@ function initSocket(io) {
     // client may send auth info to associate userId with socket (simple demo)
     socket.on('auth', (payload) => {
       // payload: { userId }
-      if (payload && payload.userId) socket.data.userId = payload.userId;
+      if (payload && payload.userId) {
+        socket.data.userId = payload.userId;
+        // Join personal room de nhan notification realtime
+        socket.join(`user_${payload.userId}`);
+      }
     });
 
     // join a conversation room
@@ -40,12 +44,15 @@ function initSocket(io) {
       try {
         const { conversationId, sender, text, attachments, productRef } =
           payload || {};
+        console.log('[send_message] received:', { conversationId, sender, textLen: text?.length });
         if (!conversationId || !mongoose.isValidObjectId(conversationId)) {
+          console.log('[send_message] invalid conversationId:', conversationId);
           if (typeof ack === 'function')
             return ack({ ok: false, error: 'invalid_conversation_id' });
           return;
         }
         if (!sender || !mongoose.isValidObjectId(sender)) {
+          console.log('[send_message] invalid sender:', sender);
           if (typeof ack === 'function')
             return ack({ ok: false, error: 'invalid_sender' });
           return;
@@ -212,6 +219,31 @@ function initSocket(io) {
         };
 
         io.to(conversationId).emit('new_message', emitPayload);
+
+        // Gửi notification tới participants khác (không phải người gửi)
+        try {
+          const notificationService = require('./services/notificationService');
+          const convData = await Conversation.findById(conversationId).populate('participants', '_id username');
+          if (convData) {
+            const otherParticipants = convData.participants.filter(
+              p => p._id.toString() !== sender.toString()
+            );
+            const senderUser = convData.participants.find(p => p._id.toString() === sender.toString());
+            const senderName = senderUser ? senderUser.username : 'Nguoi dung';
+            for (const participant of otherParticipants) {
+              await notificationService.sendNotification({
+                recipientId: participant._id,
+                type: 'new_message',
+                title: 'Tin nhan moi',
+                body: `${senderName}: ${text ? text.substring(0, 60) + (text.length > 60 ? '...' : '') : '[Dinh kem]'}`,
+                link: '/my-ebay/messages',
+                metadata: { conversationId, senderId: sender },
+              });
+            }
+          }
+        } catch (notifErr) {
+          console.error('Notification send error:', notifErr.message);
+        }
 
         // 🆕 Auto-reply logic
         try {

@@ -1,4 +1,4 @@
-// src/components/RoleGuard.tsx
+﻿// src/components/RoleGuard.tsx
 import type { ReactNode } from 'react';
 import { Navigate } from 'react-router-dom';
 import { useAuth } from '../hooks/use-auth';
@@ -25,7 +25,7 @@ export const RoleGuard = ({
             <div className="min-h-screen flex items-center justify-center">
                 <div className="text-center">
                     <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
-                    <p className="text-gray-600">Đang kiểm tra quyền truy cập...</p>
+                    <p className="text-gray-600">Checking access permissions...</p>
                 </div>
             </div>
         );
@@ -62,3 +62,4 @@ export const useHasAnyRole = (roles: UserRole[]): boolean => {
     const { user } = useAuth();
     return user ? roles.includes(user.role as UserRole) : false;
 };
+

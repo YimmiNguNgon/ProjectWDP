@@ -6,60 +6,65 @@ import { toast } from 'sonner';
 export default function GoogleAuthSuccessPage() {
     const navigate = useNavigate();
     const [searchParams] = useSearchParams();
-    const { setUser, setToken } = useAuth();
+    const { setUser, setToken, fetchMe } = useAuth();
     const hasProcessed = useRef(false);
 
     useEffect(() => {
-        // Ngăn chặn chạy lại nếu đã xử lý rồi
-        if (hasProcessed.current) {
-            return;
-        }
+        const process = async () => {
+            // Ngăn chặn chạy lại nếu đã xử lý rồi
+            if (hasProcessed.current) {
+                return;
+            }
 
-        const token = searchParams.get('token');
-        const userStr = searchParams.get('user');
-        const error = searchParams.get('error');
+            const token = searchParams.get('token');
+            const userStr = searchParams.get('user');
+            const error = searchParams.get('error');
 
-        if (error) {
-            hasProcessed.current = true;
-            toast.error('Google authentication failed', {
-                position: 'top-center',
-                closeButton: true,
-            });
-            navigate('/auth/sign-in');
-            return;
-        }
-
-        if (token && userStr) {
-            try {
-                const user = JSON.parse(decodeURIComponent(userStr));
+            if (error) {
                 hasProcessed.current = true;
-                setToken(token);
-                setUser(user);
-
-                toast.success('Signed in successfully with Google', {
+                toast.error('Google authentication failed', {
                     position: 'top-center',
                     closeButton: true,
                 });
+                navigate('/auth/sign-in');
+                return;
+            }
 
-                navigate('/');
-            } catch (error) {
+            if (token && userStr) {
+                try {
+                    const user = JSON.parse(decodeURIComponent(userStr));
+                    hasProcessed.current = true;
+                    setToken(token);
+                    setUser(user);
+                    await fetchMe();
+
+                    toast.success('Signed in successfully with Google', {
+                        position: 'top-center',
+                        closeButton: true,
+                    });
+
+                    navigate('/');
+                } catch (error) {
+                    hasProcessed.current = true;
+                    console.error('Failed to parse user data:', error);
+                    toast.error('Authentication failed', {
+                        position: 'top-center',
+                        closeButton: true,
+                    });
+                    navigate('/auth/sign-in');
+                }
+            } else {
                 hasProcessed.current = true;
-                console.error('Failed to parse user data:', error);
-                toast.error('Authentication failed', {
+                toast.error('Missing authentication data', {
                     position: 'top-center',
                     closeButton: true,
                 });
                 navigate('/auth/sign-in');
             }
-        } else {
-            hasProcessed.current = true;
-            toast.error('Missing authentication data', {
-                position: 'top-center',
-                closeButton: true,
-            });
-            navigate('/auth/sign-in');
-        }
-    }, [searchParams, navigate, setUser, setToken]);
+        };
+
+        process();
+    }, [searchParams, navigate, setUser, setToken, fetchMe]);
 
     return (
         <div className='flex h-full w-full items-center justify-center'>

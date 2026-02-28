@@ -1,24 +1,48 @@
 const Category = require("../models/Category");
 const Product = require("../models/Product");
+const {
+  normalizeVariantCombinations,
+  syncProductStockFromVariants,
+} = require("../utils/productInventory");
 
 exports.createProduct = async (req, res, next) => {
   try {
-    const { title, description, price, stock, imageUrl, categoryId } = req.body;
-    const sellerId = req.user ? req.user._id : req.body.sellerId; // allow sellerId in body for tests if no auth
+    const {
+      title,
+      description,
+      price,
+      quantity,
+      condition,
+      categoryId,
+      image,
+      images,
+      variants,
+      variantCombinations,
+    } = req.body;
+    const sellerId = req.user ? req.user._id : req.body.sellerId;
     if (!sellerId)
       return res.status(400).json({ message: "sellerId required" });
     if (!title || price == null)
       return res.status(400).json({ message: "title and price required" });
 
+    const normalizedCombinations = normalizeVariantCombinations(
+      variantCombinations,
+    );
     const p = new Product({
       sellerId,
       title,
       description,
       price,
-      imageUrl: imageUrl || "",
-      stock: stock || 0,
+      quantity: quantity || 0,
+      stock: quantity || 0,
+      condition: condition || "",
       categoryId,
+      image: image || "",
+      images: images || [],
+      variants: variants || [],
+      variantCombinations: normalizedCombinations,
     });
+    syncProductStockFromVariants(p);
     await p.save();
     return res.status(201).json({ data: p });
   } catch (err) {
@@ -42,7 +66,7 @@ exports.listProducts = async (req, res, next) => {
     const limit = Math.min(parseInt(req.query.limit) || 20, 100);
     const skip = (page - 1) * limit;
 
-    const { categories, minPrice, maxPrice, search } = req.query;
+    const { categories, minPrice, maxPrice, search, sort } = req.query;
 
     const filter = {
       $or: [
@@ -90,9 +114,15 @@ exports.listProducts = async (req, res, next) => {
       }
     }
 
+    let sortOptions = { averageRating: -1, createdAt: -1 };
+    if (sort === "price_asc") sortOptions = { price: 1, createdAt: -1 };
+    else if (sort === "price_desc") sortOptions = { price: -1, createdAt: -1 };
+    else if (sort === "name_asc") sortOptions = { title: 1, createdAt: -1 };
+    else if (sort === "name_desc") sortOptions = { title: -1, createdAt: -1 };
+
     const total = await Product.countDocuments(filter);
     const products = await Product.find(filter)
-      .sort({ averageRating: -1, createdAt: -1 })
+      .sort(sortOptions)
       .skip(skip)
       .limit(limit)
       .populate("categoryId", "name slug")

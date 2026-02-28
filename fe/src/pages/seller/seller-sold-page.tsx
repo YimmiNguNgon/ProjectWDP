@@ -45,10 +45,13 @@ export default function SellerSoldPage() {
     const getStatusBadge = (status: string) => {
         const statusConfig: Record<string, { label: string; className: string }> = {
             created: { label: 'Created', className: 'text-blue-600 border-blue-200 bg-blue-50' },
+            paid: { label: 'Paid', className: 'text-emerald-600 border-emerald-200 bg-emerald-50' },
+            processing: { label: 'Processing', className: 'text-indigo-600 border-indigo-200 bg-indigo-50' },
             confirmed: { label: 'Confirmed', className: 'text-indigo-600 border-indigo-200 bg-indigo-50' },
             shipped: { label: 'Shipped', className: 'text-amber-600 border-amber-200 bg-amber-50' },
             delivered: { label: 'Delivered', className: 'text-green-600 border-green-200 bg-green-50' },
             cancelled: { label: 'Cancelled', className: 'text-red-600 border-red-200 bg-red-50' },
+            failed: { label: 'Failed', className: 'text-red-700 border-red-300 bg-red-50' },
         };
 
         const config = statusConfig[status] || { label: status, className: '' };

@@ -1,0 +1,163 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <meta charset="UTF-8" />
+    <title>Đơn đăng ký Seller đã được duyệt</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <style>
+        body {
+            margin: 0;
+            padding: 0;
+            background-color: #f2f6f8;
+            font-family: "Segoe UI", Arial, sans-serif;
+        }
+
+        .wrapper {
+            width: 100%;
+            padding: 30px 12px;
+            background-color: #f2f6f8;
+        }
+
+        .container {
+            max-width: 520px;
+            margin: 0 auto;
+            background: #ffffff;
+            border-radius: 10px;
+            overflow: hidden;
+            box-shadow: 0 4px 16px rgba(0, 0, 0, 0.06);
+        }
+
+        .header {
+            background: #16a34a;
+            padding: 20px;
+            text-align: center;
+            color: #ffffff;
+        }
+
+        .header h1 {
+            margin: 0;
+            font-size: 22px;
+            font-weight: 600;
+        }
+
+        .content {
+            padding: 28px 24px;
+            color: #333333;
+            line-height: 1.6;
+        }
+
+        .content h2 {
+            margin-top: 0;
+            font-size: 20px;
+            color: #1f2937;
+        }
+
+        .content p {
+            margin: 10px 0;
+            font-size: 15px;
+        }
+
+        .highlight-box {
+            background: #f0fdf4;
+            border: 1px solid #86efac;
+            border-radius: 8px;
+            padding: 16px;
+            margin: 20px 0;
+        }
+
+        .highlight-box p {
+            margin: 4px 0;
+            color: #15803d;
+            font-weight: 500;
+        }
+
+        .note-box {
+            background: #f8fafc;
+            border-left: 4px solid #16a34a;
+            padding: 12px 16px;
+            border-radius: 4px;
+            margin: 16px 0;
+        }
+
+        .btn-wrapper {
+            text-align: center;
+            margin: 24px 0;
+        }
+
+        .btn {
+            display: inline-block;
+            padding: 12px 28px;
+            background: #16a34a;
+            color: #ffffff !important;
+            text-decoration: none;
+            border-radius: 6px;
+            font-size: 15px;
+            font-weight: 600;
+        }
+
+        .footer {
+            padding: 16px 24px;
+            background: #f8fafc;
+            text-align: center;
+            font-size: 12px;
+            color: #6b7280;
+        }
+
+        .footer p {
+            margin: 4px 0;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="wrapper">
+        <div class="container">
+            <div class="header">
+                <h1>CHUC MUNG! DON DANG KY SELLER DA DUOC DUYET</h1>
+            </div>
+            <div class="content">
+                <h2>Xin chao <%= username %>
+                </h2>
+                <p>Chung toi rat vui thong bao rang don dang ky tro thanh Seller cua ban da duoc <strong>phe duyet thanh
+                        cong</strong>!</p>
+
+                <div class="highlight-box">
+                    <p>Ten shop: <strong>
+                            <%= shopName %>
+                        </strong></p>
+                    <p>Trang thai: DA DUOC DUYET</p>
+                </div>
+
+                <p>Tu bay gio, tai khoan cua ban da duoc cap quyen <strong>Seller</strong>. Ban co the bat dau:</p>
+                <ul style="color: #374151; font-size: 15px; line-height: 2;">
+                    <li>Dang ban san pham len san thuong mai</li>
+                    <li>Quan ly don hang cua ban</li>
+                    <li>Theo doi doanh thu va danh gia</li>
+                </ul>
+
+                <% if (adminNote) { %>
+                    <div class="note-box">
+                        <p style="margin: 0; font-size: 14px; color: #374151;"><strong>Ghi chu tu Admin:</strong>
+                            <%= adminNote %>
+                        </p>
+                    </div>
+                    <% } %>
+
+                        <div class="btn-wrapper">
+                            <a href="<%= process.env.CLIENT_URL || 'http://localhost:5173' %>/seller" class="btn">Di den
+                                Seller Panel</a>
+                        </div>
+
+                        <p style="color: #6b7280; font-size: 13px;">Neu ban co bat ky thac mac nao, vui long lien he voi
+                            chung toi qua muc Ho tro.</p>
+            </div>
+            <div class="footer">
+                <p>&copy; <%= new Date().getFullYear() %> Ebay. All rights reserved.</p>
+                <p>Email nay duoc gui tu dong, vui long khong tra loi.</p>
+            </div>
+        </div>
+    </div>
+</body>
+
+</html>

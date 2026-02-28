@@ -1,4 +1,4 @@
-// src/pages/admin/feedback-management.tsx
+﻿// src/pages/admin/feedback-management.tsx
 import { useState, useEffect } from 'react';
 import { getAllFeedbackRequests, getFlaggedFeedbackRequests, reviewFeedbackRequest, type FeedbackRevisionRequest } from '../../api/feedback-revision';
 import { Button } from '../../components/ui/button';
@@ -42,7 +42,7 @@ export default function FeedbackManagement() {
                 : await getAllFeedbackRequests({ limit: 100 });
             setRequests(response.data);
         } catch (error: any) {
-            toast.error(error.response?.data?.message || 'Lỗi khi tải danh sách feedback');
+            toast.error(error.response?.data?.message || 'Failed to load feedback requests');
         } finally {
             setLoading(false);
         }
@@ -70,11 +70,11 @@ export default function FeedbackManagement() {
                 notes: adminNotes,
             });
 
-            toast.success(`Đã ${selectedAction === 'approved' ? 'phê duyệt' : selectedAction === 'rejected' ? 'từ chối' : 'xử lý'} yêu cầu`);
+            toast.success(`Request ${selectedAction === 'approved' ? 'approved' : selectedAction === 'rejected' ? 'rejected' : 'processed'}`);
             setIsDialogOpen(false);
             fetchRequests();
         } catch (error: any) {
-            toast.error(error.response?.data?.message || 'Lỗi khi xử lý yêu cầu');
+            toast.error(error.response?.data?.message || 'Failed to process request');
         }
     };
 
@@ -93,11 +93,11 @@ export default function FeedbackManagement() {
     // Get reason label
     const getReasonLabel = (reason: string) => {
         const labels: Record<string, string> = {
-            'refund': 'Hoàn tiền',
-            'replacement': 'Thay thế',
-            'resolved': 'Đã giải quyết',
-            'misunderstanding': 'Hiểu lầm',
-            'other': 'Khác',
+            'refund': 'Refund',
+            'replacement': 'Replacement',
+            'resolved': 'Resolved',
+            'misunderstanding': 'Misunderstanding',
+            'other': 'Other',
         };
         return labels[reason] || reason;
     };
@@ -105,19 +105,19 @@ export default function FeedbackManagement() {
     return (
         <div className="container mx-auto py-8">
             <div className="flex justify-between items-center mb-6">
-                <h1 className="text-3xl font-bold">Quản lý Feedback Revision</h1>
+                <h1 className="text-3xl font-bold">Feedback Revision Management</h1>
                 <div className="flex gap-2">
                     <Button
                         variant={!showFlaggedOnly ? 'default' : 'outline'}
                         onClick={() => setShowFlaggedOnly(false)}
                     >
-                        Tất cả
+                        All
                     </Button>
                     <Button
                         variant={showFlaggedOnly ? 'default' : 'outline'}
                         onClick={() => setShowFlaggedOnly(true)}
                     >
-                        Đã gắn cờ
+                        Flagged
                     </Button>
                 </div>
             </div>
@@ -129,26 +129,26 @@ export default function FeedbackManagement() {
                         <TableRow>
                             <TableHead>Seller</TableHead>
                             <TableHead>Buyer</TableHead>
-                            <TableHead>Lý do</TableHead>
-                            <TableHead>Tin nhắn</TableHead>
-                            <TableHead>Trạng thái</TableHead>
-                            <TableHead>Gắn cờ</TableHead>
-                            <TableHead>Ngày tạo</TableHead>
-                            <TableHead>Hết hạn</TableHead>
-                            <TableHead className="text-right">Hành động</TableHead>
+                            <TableHead>Reason</TableHead>
+                            <TableHead>Message</TableHead>
+                            <TableHead>Status</TableHead>
+                            <TableHead>Flagged</TableHead>
+                            <TableHead>Created At</TableHead>
+                            <TableHead>Expires At</TableHead>
+                            <TableHead className="text-right">Action</TableHead>
                         </TableRow>
                     </TableHeader>
                     <TableBody>
                         {loading ? (
                             <TableRow>
                                 <TableCell colSpan={9} className="text-center py-8">
-                                    Đang tải...
+                                    Loading...
                                 </TableCell>
                             </TableRow>
                         ) : requests.length === 0 ? (
                             <TableRow>
                                 <TableCell colSpan={9} className="text-center py-8">
-                                    Không có yêu cầu nào
+                                    No requests found
                                 </TableCell>
                             </TableRow>
                         ) : (
@@ -177,7 +177,7 @@ export default function FeedbackManagement() {
                                         {request.flaggedForReview ? (
                                             <div className="flex flex-col gap-1">
                                                 <span className="px-2 py-1 rounded text-xs bg-red-100 text-red-800">
-                                                    Có
+                                                    Yes
                                                 </span>
                                                 {request.flagReason && (
                                                     <span className="text-xs text-gray-500">
@@ -186,24 +186,24 @@ export default function FeedbackManagement() {
                                                 )}
                                             </div>
                                         ) : (
-                                            <span className="text-gray-400">Không</span>
+                                            <span className="text-gray-400">No</span>
                                         )}
                                     </TableCell>
                                     <TableCell>
-                                        {new Date(request.createdAt).toLocaleDateString('vi-VN')}
+                                        {new Date(request.createdAt).toLocaleDateString('en-US')}
                                     </TableCell>
                                     <TableCell>
-                                        {new Date(request.expiresAt).toLocaleDateString('vi-VN')}
+                                        {new Date(request.expiresAt).toLocaleDateString('en-US')}
                                     </TableCell>
                                     <TableCell className="text-right">
                                         {request.adminAction ? (
                                             <div className="flex flex-col items-end gap-1">
                                                 <span className="text-xs text-gray-500">
-                                                    Đã xử lý: {request.adminAction}
+                                                    Processed: {request.adminAction}
                                                 </span>
                                                 {request.reviewedByAdmin && (
                                                     <span className="text-xs text-gray-400">
-                                                        Bởi: {request.reviewedByAdmin.username}
+                                                        By: {request.reviewedByAdmin.username}
                                                     </span>
                                                 )}
                                             </div>
@@ -212,7 +212,7 @@ export default function FeedbackManagement() {
                                                 size="sm"
                                                 onClick={() => handleReviewClick(request)}
                                             >
-                                                Xem xét
+                                                Review
                                             </Button>
                                         )}
                                     </TableCell>
@@ -227,9 +227,9 @@ export default function FeedbackManagement() {
             <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
                 <DialogContent className="max-w-2xl">
                     <DialogHeader>
-                        <DialogTitle>Xem xét yêu cầu Feedback Revision</DialogTitle>
+                        <DialogTitle>Review Feedback Revision Request</DialogTitle>
                         <DialogDescription>
-                            Quyết định phê duyệt hoặc từ chối yêu cầu của seller
+                            Approve or reject the seller's revision request
                         </DialogDescription>
                     </DialogHeader>
 
@@ -237,17 +237,17 @@ export default function FeedbackManagement() {
                         <div className="grid gap-4 py-4">
                             {/* Request details */}
                             <div className="grid gap-2">
-                                <Label>Thông tin yêu cầu</Label>
+                                <Label>Request Information</Label>
                                 <div className="p-4 bg-gray-50 rounded space-y-2">
                                     <p><strong>Seller:</strong> {selectedRequest.seller?.username}</p>
                                     <p><strong>Buyer:</strong> {selectedRequest.buyer?.username}</p>
-                                    <p><strong>Lý do:</strong> {getReasonLabel(selectedRequest.reason)}</p>
-                                    <p><strong>Tin nhắn:</strong> {selectedRequest.message}</p>
+                                    <p><strong>Reason:</strong> {getReasonLabel(selectedRequest.reason)}</p>
+                                    <p><strong>Message:</strong> {selectedRequest.message}</p>
                                     {selectedRequest.resolutionType && (
-                                        <p><strong>Giải pháp:</strong> {selectedRequest.resolutionType}</p>
+                                        <p><strong>Resolution:</strong> {selectedRequest.resolutionType}</p>
                                     )}
                                     {selectedRequest.resolutionProof && (
-                                        <p><strong>Bằng chứng:</strong> {selectedRequest.resolutionProof}</p>
+                                        <p><strong>Proof:</strong> {selectedRequest.resolutionProof}</p>
                                     )}
                                 </div>
                             </div>
@@ -255,11 +255,11 @@ export default function FeedbackManagement() {
                             {/* Flagged info */}
                             {selectedRequest.flaggedForReview && (
                                 <div className="grid gap-2">
-                                    <Label className="text-red-600">Cảnh báo</Label>
+                                    <Label className="text-red-600">Flag Information</Label>
                                     <div className="p-4 bg-red-50 rounded space-y-2">
-                                        <p><strong>Lý do gắn cờ:</strong> {selectedRequest.flagReason}</p>
+                                        <p><strong>Flag reason:</strong> {selectedRequest.flagReason}</p>
                                         {selectedRequest.violationKeywords && selectedRequest.violationKeywords.length > 0 && (
-                                            <p><strong>Từ khóa vi phạm:</strong> {selectedRequest.violationKeywords.join(', ')}</p>
+                                            <p><strong>Violation keywords:</strong> {selectedRequest.violationKeywords.join(', ')}</p>
                                         )}
                                     </div>
                                 </div>
@@ -267,29 +267,29 @@ export default function FeedbackManagement() {
 
                             {/* Action selection */}
                             <div className="grid gap-2">
-                                <Label htmlFor="action">Hành động</Label>
+                                <Label htmlFor="action">Action</Label>
                                 <select
                                     id="action"
                                     className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
                                     value={selectedAction}
                                     onChange={(e) => setSelectedAction(e.target.value as any)}
                                 >
-                                    <option value="approved">Phê duyệt</option>
-                                    <option value="rejected">Từ chối</option>
-                                    <option value="cancelled_feedback">Hủy feedback (vi phạm nghiêm trọng)</option>
-                                    <option value="warned_seller">Cảnh cáo seller</option>
+                                    <option value="approved">Approve</option>
+                                    <option value="rejected">Reject</option>
+                                    <option value="cancelled_feedback">Cancel feedback (serious violation)</option>
+                                    <option value="warned_seller">Warn seller</option>
                                 </select>
                             </div>
 
                             {/* Admin notes */}
                             <div className="grid gap-2">
-                                <Label htmlFor="notes">Ghi chú của admin</Label>
+                                <Label htmlFor="notes">Admin Notes</Label>
                                 <Textarea
                                     id="notes"
                                     value={adminNotes}
                                     onChange={(e) => setAdminNotes(e.target.value)}
                                     rows={4}
-                                    placeholder="Ghi chú về quyết định của bạn..."
+                                    placeholder="Add notes about your decision..."
                                 />
                             </div>
                         </div>
@@ -297,10 +297,10 @@ export default function FeedbackManagement() {
 
                     <DialogFooter>
                         <Button variant="outline" onClick={() => setIsDialogOpen(false)}>
-                            Hủy
+                            Cancel
                         </Button>
                         <Button onClick={handleSubmitReview}>
-                            Xác nhận
+                            Confirm
                         </Button>
                     </DialogFooter>
                 </DialogContent>
@@ -308,3 +308,4 @@ export default function FeedbackManagement() {
         </div>
     );
 }
+

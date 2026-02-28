@@ -1,4 +1,4 @@
-import React, { StrictMode, type PropsWithChildren } from "react";
+﻿import React, { StrictMode, type PropsWithChildren } from "react";
 import { createRoot } from "react-dom/client";
 import { BrowserRouter } from "react-router-dom";
 import { AppRouter } from "./routes/index.tsx";
@@ -13,14 +13,17 @@ import api, { setAuthToken } from "./lib/axios.ts";
 import { Toaster } from "./components/ui/sonner.tsx";
 import { jwtDecode } from "jwt-decode";
 import { toast } from "sonner";
+import { CartProvider } from "./contexts/cart-context";
 
 createRoot(document.getElementById("root")!).render(
   <StrictMode>
     <AuthProvider>
-      <BrowserRouter>
-        <AppRouter />
-      </BrowserRouter>
-      <Toaster />
+      <CartProvider>
+        <BrowserRouter>
+          <AppRouter />
+        </BrowserRouter>
+        <Toaster position="bottom-right" />
+      </CartProvider>
     </AuthProvider>
   </StrictMode>,
 );
@@ -52,7 +55,7 @@ export function AuthProvider({ children }: PropsWithChildren) {
         console.error("Auth initialization failed:", error);
         // Silent sign out to avoid showing user-facing logout toast during
         // automatic auth initialization failures.
-        signOut(false);
+        signOut();
       }
     };
 
@@ -111,7 +114,7 @@ export function AuthProvider({ children }: PropsWithChildren) {
     try {
       setLoading(true);
       const res = await api.get("/api/users/me");
-      const { user } = res.data.data;
+      const { user } = res.data;
       setUser(user);
       setPayload({
         userId: user._id,
@@ -132,7 +135,6 @@ export function AuthProvider({ children }: PropsWithChildren) {
     }
   };
 
-
   const signOut = async () => {
     try {
       await api.post("/api/auth/logout");
@@ -141,10 +143,8 @@ export function AuthProvider({ children }: PropsWithChildren) {
       setPayload(undefined);
       setAccessToken(null);
       localStorage.removeItem("token");
-      if (showToast) toast.success("Log out successfully!");
     } catch (error) {
       console.error(error);
-      if (showToast) toast.error("Failed to log out!");
       setAuthToken(null);
       setUser(undefined);
       setPayload(undefined);
@@ -172,11 +172,11 @@ export function AuthProvider({ children }: PropsWithChildren) {
       const payload = jwtDecode<Payload>(accessToken);
       setPayload(payload);
 
-      toast.success("Làm mới token thành công!");
+      toast.success("Token refreshed successfully!");
     } catch (error) {
       console.error("Refresh token failed:", error);
       // Silent sign out when refresh fails as it is an automatic flow.
-      signOut(false);
+      signOut();
     } finally {
       setLoading(false);
     }
@@ -195,6 +195,8 @@ export function AuthProvider({ children }: PropsWithChildren) {
     setUser,
     setToken: (token: string) => {
       setAuthToken(token);
+      localStorage.setItem("token", token);
+      setAccessToken(token);
       const payload = jwtDecode<Payload>(token);
       setPayload(payload);
     },
@@ -202,3 +204,4 @@ export function AuthProvider({ children }: PropsWithChildren) {
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 }
+

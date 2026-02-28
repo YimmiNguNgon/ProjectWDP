@@ -8,8 +8,9 @@ const User = require("../models/User.js");
 const Session = require("../models/Session.js");
 const sendEmail = require("../utils/sendEmail.js");
 
-const ACCESS_TOKEN_TTL = "15m";
+const ACCESS_TOKEN_TTL = "24h";
 const REFRESH_TOKEN_TTL = 14 * 24 * 60 * 60 * 1000;
+const RESEND_COOLDOWN = 60 * 1000;
 
 exports.register = async (req, res, next) => {
   try {
@@ -19,6 +20,12 @@ exports.register = async (req, res, next) => {
       return res
         .status(400)
         .json({ message: "Email and password are required" });
+    }
+
+    const existingUsername = await User.findOne({ username });
+
+    if (existingUsername) {
+      return res.status(400).json({ message: "Username already in use" });
     }
 
     const existingUser = await User.findOne({ email });
@@ -44,12 +51,11 @@ exports.register = async (req, res, next) => {
       role: role || "buyer",
       isEmailVerified: false,
       emailVerificationToken: hashedToken,
-      emailVerificationExpires: Date.now() + 24 * 60 * 60 * 1000, // 24h
+      emailVerificationExpires: Date.now() + 5 * 60 * 1000,
     });
 
     await newUser.save();
 
-    // Gửi email xác thực (optional - sẽ bỏ qua nếu không có email config)
     try {
       const verifyUrl = `${process.env.CLIENT_URL}/verify-email?token=${verificationToken}`;
 
@@ -60,11 +66,14 @@ exports.register = async (req, res, next) => {
         data: {
           username,
           verifyUrl,
-          expiresIn: 24,
+          expiresIn: 5,
         },
       });
     } catch (emailError) {
-      console.log("Email sending failed (skipped in dev):", emailError.message);
+      console.error(
+        "⚠️ Email sending failed (user still created):",
+        emailError.message,
+      );
     }
 
     return res.sendStatus(204);
@@ -232,23 +241,127 @@ exports.verifyEmail = async (req, res, next) => {
   }
 };
 
-// Forgot password (placeholder)
+// Forgot password
 exports.forgotPassword = async (req, res, next) => {
   try {
+    console.log("🔐 Forgot password request received");
     const { email } = req.body;
-    // TODO: Implement forgot password logic (send reset email)
-    res.json({ message: "Password reset email sent (not implemented yet)" });
+    console.log("  - Email:", email);
+
+    if (!email) {
+      console.log("❌ Email is missing");
+      return res.status(400).json({ message: "Email is required" });
+    }
+
+    const user = await User.findOne({ email });
+
+    // Không tiết lộ thông tin user có tồn tại hay không (security best practice)
+    if (!user) {
+      console.log("⚠️ User not found for email:", email);
+      return res.status(200).json({
+        message: "If the email exists, a password reset link will be sent",
+      });
+    }
+
+    console.log("✓ User found:", user.username);
+
+    // Tạo reset token
+    const resetToken = crypto.randomBytes(32).toString("hex");
+    const hashedToken = crypto
+      .createHash("sha256")
+      .update(resetToken)
+      .digest("hex");
+
+    console.log("✓ Reset token generated");
+
+    // Lưu token vào user
+    user.passwordResetToken = hashedToken;
+    user.passwordResetExpires = Date.now() + 30 * 60 * 1000; // 30 phút
+    await user.save();
+
+    console.log("✓ Token saved to database");
+
+    // Gửi email
+    try {
+      const resetUrl = `${process.env.CLIENT_URL}/auth/reset-password?token=${resetToken}`;
+      console.log("✓ Reset URL:", resetUrl);
+
+      await sendEmail({
+        to: email,
+        subject: "Reset mật khẩu của bạn",
+        template: "resetPassword.ejs",
+        data: {
+          username: user.username,
+          resetUrl,
+          expiresIn: 30,
+        },
+      });
+
+      console.log("✅ Password reset email sent successfully");
+      return res.status(200).json({
+        message: "Password reset email sent successfully",
+      });
+    } catch (emailError) {
+      // Nếu gửi email thất bại, xóa token
+      console.error("❌ Email sending failed:", emailError);
+      user.passwordResetToken = undefined;
+      user.passwordResetExpires = undefined;
+      await user.save();
+
+      return res.status(500).json({
+        message: "Failed to send reset email. Please try again later.",
+      });
+    }
   } catch (err) {
+    console.error("❌ Forgot password error:", err);
     next(err);
   }
 };
 
-// Reset password (placeholder)
+// Reset password
 exports.resetPassword = async (req, res, next) => {
   try {
     const { token, newPassword } = req.body;
-    // TODO: Implement password reset logic
-    res.json({ message: "Password reset not yet implemented" });
+
+    if (!token || !newPassword) {
+      return res.status(400).json({
+        message: "Token and new password are required",
+      });
+    }
+
+    if (newPassword.length < 6) {
+      return res.status(400).json({
+        message: "Password must be at least 6 characters",
+      });
+    }
+
+    // Hash token để tìm user
+    const hashedToken = crypto.createHash("sha256").update(token).digest("hex");
+
+    const user = await User.findOne({
+      passwordResetToken: hashedToken,
+      passwordResetExpires: { $gt: Date.now() },
+    });
+
+    if (!user) {
+      return res.status(400).json({
+        message: "Invalid or expired reset token",
+      });
+    }
+
+    // Hash password mới
+    const salt = await bcrypt.genSalt(10);
+    const hashPassword = await bcrypt.hash(newPassword, salt);
+
+    // Cập nhật password và xóa reset token
+    user.passwordHash = hashPassword;
+    user.passwordResetToken = undefined;
+    user.passwordResetExpires = undefined;
+    await user.save();
+
+    return res.status(200).json({
+      message: "Password reset successfully",
+    });
   } catch (err) {
     next(err);
   }
@@ -268,12 +381,76 @@ exports.googleCallback = async (req, res, next) => {
       role: user.role,
     };
 
-    const token = jwt.sign(payload, JWT_SECRET, { expiresIn: "7d" });
+    const token = jwt.sign(payload, process.env.ACCESS_TOKEN_SECRET, {
+      expiresIn: "7d",
+    });
 
-    // Redirect to frontend with token
+    const userData = {
+      username: user.username,
+      email: user.email,
+      role: user.role,
+    };
+
+    // Redirect to frontend with token and user data
     const clientUrl = process.env.CLIENT_URL || "http://localhost:5173";
-    res.redirect(`${clientUrl}/auth/google/success?token=${token}`);
+    const encodedUser = encodeURIComponent(JSON.stringify(userData));
+    res.redirect(
+      `${clientUrl}/auth/google/success?token=${token}&user=${encodedUser}`,
+    );
   } catch (err) {
     next(err);
+  }
+};
+
+exports.resendVerificationEmail = async (req, res, next) => {
+  try {
+    const { username, email } = req.body;
+
+    const user = await User.findOne({ email });
+
+    if (!user) {
+      return res.status(404).json({
+        message: "If the email exists, a verification email will be sent",
+      });
+    }
+
+    if (user.isEmailVerified) {
+      return res.status(400).json({ message: "Email already verified" });
+    }
+
+    if (
+      user.lastVerificationEmailSentAt &&
+      Date.now() - user.lastVerificationEmailSentAt.getTime() < RESEND_COOLDOWN
+    ) {
+      return res.status(429).json({
+        message: "Please wait before resending verification email",
+      });
+    }
+
+    const token = crypto.randomBytes(64).toString("hex");
+    const hashedToken = crypto.createHash("sha256").update(token).digest("hex");
+
+    user.emailVerificationToken = hashedToken;
+    user.emailVerificationExpires = Date.now() + 5 * 60 * 1000;
+    user.lastVerificationEmailSentAt = new Date();
+
+    await user.save();
+
+    const verifyUrl = `${process.env.CLIENT_URL}/verify-email?token=${token}`;
+
+    await sendEmail({
+      to: email,
+      subject: "Xác thực tài khoản của bạn",
+      template: "verifyEmail.ejs",
+      data: {
+        username,
+        verifyUrl,
+        expiresIn: 5,
+      },
+    });
+
+    return res.status(200).json({ message: "Verification email resent" });
+  } catch (error) {
+    next(error);
   }
 };

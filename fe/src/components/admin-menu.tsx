@@ -1,3 +1,11 @@
+import { Link } from "react-router-dom";
+import {
+    DropdownMenu,
+    DropdownMenuContent,
+    DropdownMenuItem,
+    DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+
 const ADMIN_MENU_ITEMS = [
     { label: "📊 Dashboard", to: "/admin" },
     { label: "👥 User Management", to: "/admin/users" },

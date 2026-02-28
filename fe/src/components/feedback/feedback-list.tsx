@@ -1,5 +1,4 @@
-// feedback-list.tsx
-import { RatingStars } from "./rating-stars";
+﻿import { RatingStars } from './rating-stars';
 
 export type FeedbackItem = {
   id: string;
@@ -15,11 +14,7 @@ type FeedbackListProps = {
 
 export function FeedbackList({ items }: FeedbackListProps) {
   if (!items.length) {
-    return (
-      <p className="text-sm text-muted-foreground mt-4">
-        Chưa có đánh giá nào cho sản phẩm này.
-      </p>
-    );
+    return <p className="text-sm text-muted-foreground mt-4">No reviews for this product yet.</p>;
   }
 
   return (
@@ -29,8 +24,7 @@ export function FeedbackList({ items }: FeedbackListProps) {
           <RatingStars value={item.rating} readOnly />
           <p className="mt-2 text-sm">{item.comment}</p>
           <div className="mt-1 text-xs text-muted-foreground">
-            Bởi <span className="font-medium">{item.author}</span> ·{" "}
-            {item.createdAt}
+            By <span className="font-medium">{item.author}</span> - {item.createdAt}
           </div>
         </div>
       ))}

@@ -5,13 +5,15 @@ export interface OrderItem {
   productId: {
     _id: string;
     title: string;
-    price: number;
-    image?: string;  // Main product image
-    images?: string[]; // Additional product images
+    price?: number;
+    image?: string;
+    images?: string[];
   };
   title: string;
-  price: number;
+  unitPrice: number;
   quantity: number;
+  selectedVariants?: { name: string; value: string }[];
+  variantSku?: string;
 }
 
 export interface Order {
@@ -19,6 +21,12 @@ export interface Order {
   buyer: { _id: string; username: string };
   seller: { _id: string; username: string };
   items: OrderItem[];
+  subtotalAmount?: number;
+  discountAmount?: number;
+  voucher?: {
+    code?: string;
+    discountAmount?: number;
+  } | null;
   totalAmount: number;
   status: string;
   createdAt: string;

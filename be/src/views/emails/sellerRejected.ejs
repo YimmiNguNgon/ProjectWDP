@@ -1,0 +1,116 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <meta charset="UTF-8" />
+    <title>Đơn đăng ký Seller chưa được duyệt</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <style>
+        body {
+            margin: 0;
+            padding: 0;
+            background-color: #f2f6f8;
+            font-family: "Segoe UI", Arial, sans-serif;
+        }
+
+        .wrapper {
+            width: 100%;
+            padding: 30px 12px;
+            background-color: #f2f6f8;
+        }
+
+        .container {
+            max-width: 520px;
+            margin: 0 auto;
+            background: #ffffff;
+            border-radius: 10px;
+            overflow: hidden;
+            box-shadow: 0 4px 16px rgba(0, 0, 0, 0.06);
+        }
+
+        .header {
+            background: #dc2626;
+            padding: 20px;
+            text-align: center;
+            color: #ffffff;
+        }
+
+        .header h1 {
+            margin: 0;
+            font-size: 22px;
+            font-weight: 600;
+        }
+
+        .content {
+            padding: 28px 24px;
+            color: #333333;
+            line-height: 1.6;
+        }
+
+        .content h2 {
+            margin-top: 0;
+            font-size: 20px;
+            color: #1f2937;
+        }
+
+        .content p {
+            margin: 10px 0;
+            font-size: 15px;
+        }
+
+        .note-box {
+            background: #fef2f2;
+            border-left: 4px solid #dc2626;
+            padding: 12px 16px;
+            border-radius: 4px;
+            margin: 16px 0;
+        }
+
+        .footer {
+            padding: 16px 24px;
+            background: #f8fafc;
+            text-align: center;
+            font-size: 12px;
+            color: #6b7280;
+        }
+
+        .footer p {
+            margin: 4px 0;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="wrapper">
+        <div class="container">
+            <div class="header">
+                <h1>DON DANG KY SELLER CHUA DUOC DUYET</h1>
+            </div>
+            <div class="content">
+                <h2>Xin chao <%= username %>
+                </h2>
+                <p>Chung toi da xem xet don dang ky tro thanh Seller cua ban voi ten shop <strong>
+                        <%= shopName %>
+                    </strong>.</p>
+                <p>Rat tiec, don cua ban hien chua duoc phe duyet tai thoi diem nay.</p>
+
+                <div class="note-box">
+                    <p style="margin: 0; font-size: 14px; color: #991b1b;"><strong>Ly do:</strong>
+                        <%= adminNote %>
+                    </p>
+                </div>
+
+                <p>Ban co the dieu chinh thong tin va gui lai don dang ky sau khi da cap nhat day du thong tin theo yeu
+                    cau.</p>
+                <p style="color: #6b7280; font-size: 13px;">Neu ban can ho tro them, vui long lien he voi doi ngu cham
+                    soc khach hang cua chung toi.</p>
+            </div>
+            <div class="footer">
+                <p>&copy; <%= new Date().getFullYear() %> Ebay. All rights reserved.</p>
+                <p>Email nay duoc gui tu dong, vui long khong tra loi.</p>
+            </div>
+        </div>
+    </div>
+</body>
+
+</html>

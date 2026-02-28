@@ -5,6 +5,16 @@ export interface User {
   email?: string | undefined;
   avatarUrl?: string;
   role: string;
+  isEmailVerified?: boolean;
+  sellerStage?: "PROBATION" | "NORMAL" | null;
+  sellerInfo?: {
+    shopName?: string;
+    registeredAt?: string;
+    successOrders?: number;
+    avgRating?: number;
+    refundRate?: number;
+    reportRate?: number;
+  };
 }
 
 export interface Payload {

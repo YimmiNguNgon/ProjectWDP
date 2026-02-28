@@ -27,6 +27,26 @@ import {
 } from "@/components/ui/select";
 import { Switch } from '@/components/ui/switch';
 import { toast } from 'sonner';
+import { createProduct } from '@/api/seller-products';
+import type { ProductVariant, ProductVariantCombination } from '@/api/seller-products';
+import ProductVariantsManager from '@/components/seller/product-variants-manager';
+import api from '@/lib/axios';
+
+interface Category {
+  _id: string;
+  name: string;
+  slug: string;
+}
+
+interface ImageFile {
+  file: File;
+  previewUrl: string;
+  uploading: boolean;
+  uploadedUrl?: string;
+  error?: string;
+}
+
+const MAX_IMAGES = 5;
 
 interface ProductFormData {
   title: string;

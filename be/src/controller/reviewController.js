@@ -571,4 +571,56 @@ exports.getAdminReviews = async (req, res, next) => {
     return next(err);
   }
 };
+// ----------------- SELLER: XEM REVIEWS CỦA MÌNH -----------------
+exports.getMySellerReviews = async (req, res, next) => {
+  try {
+    const sellerId = req.user._id;
+    const page = Math.max(1, parseInt(req.query.page) || 1);
+    const limit = Math.min(parseInt(req.query.limit) || 50, 200);
+    const skip = (page - 1) * limit;
 
+    const rows = await Review.find({ seller: sellerId, deletedAt: { $exists: false } })
+      .sort({ createdAt: -1 })
+      .skip(skip)
+      .limit(limit)
+      .populate('product', 'title image')
+      .populate('reviewer', 'username avatarUrl')
+      .lean();
+
+    const total = await Review.countDocuments({ seller: sellerId, deletedAt: { $exists: false } });
+
+    return res.json({ data: rows, total, page, limit });
+  } catch (err) {
+    return next(err);
+  }
+};
+
+// ----------------- SELLER: PHẢN HỒI REVIEW -----------------
+exports.addSellerResponse = async (req, res, next) => {
+  try {
+    const { reviewId } = req.params;
+    const { response } = req.body;
+    const sellerId = req.user._id;
+
+    if (!mongoose.isValidObjectId(reviewId)) {
+      return res.status(400).json({ message: 'Invalid review id' });
+    }
+    if (!response || !String(response).trim()) {
+      return res.status(400).json({ message: 'Response content is required' });
+    }
+
+    const review = await Review.findById(reviewId);
+    if (!review) return res.status(404).json({ message: 'Review not found' });
+    if (!review.seller || review.seller.toString() !== sellerId.toString()) {
+      return res.status(403).json({ message: 'Bạn không có quyền phản hồi review này' });
+    }
+
+    review.sellerResponse = String(response).trim();
+    review.sellerResponseAt = new Date();
+    await review.save();
+
+    return res.json({ message: 'Đã gửi phản hồi', data: review });
+  } catch (err) {
+    return next(err);
+  }
+};

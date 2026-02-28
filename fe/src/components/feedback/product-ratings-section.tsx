@@ -1,4 +1,4 @@
-// src/components/feedback/product-ratings-section.tsx
+﻿// src/components/feedback/product-ratings-section.tsx
 import { useEffect, useMemo, useState } from "react";
 import api from "@/lib/axios";
 import { RatingStars } from "./rating-stars";
@@ -22,7 +22,7 @@ type ReviewApi = {
   username?: string;
 };
 
-// 2 kiểu response backend có thể trả:
+// 2 kiá»ƒu response backend cÃ³ thá»ƒ tráº£:
 // 1) { data: ReviewApi[] }
 // 2) { data: { reviews: ReviewApi[] } }
 type ReviewsApiResponse =
@@ -38,7 +38,7 @@ type ProductRatingsSectionProps = {
   productId: string;
 };
 
-// map 1 review từ backend -> FeedbackItem dùng cho UI
+// map 1 review tá»« backend -> FeedbackItem dÃ¹ng cho UI
 function mapReviewToFeedbackItem(r: ReviewApi): FeedbackItem {
   return {
     id: r._id,
@@ -84,7 +84,7 @@ export function ProductRatingsSection({
 
         const mapped: FeedbackItem[] = raw.map(mapReviewToFeedbackItem);
 
-        // tính phân bố 1–5 sao
+        // tÃ­nh phÃ¢n bá»‘ 1â€“5 sao
         const base: Record<number, number> = { 1: 0, 2: 0, 3: 0, 4: 0, 5: 0 };
         mapped.forEach((r) => {
           const key = Math.min(5, Math.max(1, Math.round(r.rating))) as
@@ -137,7 +137,7 @@ export function ProductRatingsSection({
       </div>
 
       {loading ? (
-        <p className="text-sm text-muted-foreground">Đang tải đánh giá...</p>
+        <p className="text-sm text-muted-foreground">Loading ratings...</p>
       ) : (
         <>
           <div className="grid grid-cols-[220px,1fr,260px] gap-8 mb-6">
@@ -163,7 +163,7 @@ export function ProductRatingsSection({
                   key={row.stars}
                   className="flex items-center gap-2 text-xs"
                 >
-                  <span className="w-4">{row.stars}★</span>
+                  <span className="w-4">{row.stars}*</span>
                   <div className="flex-1 h-2 bg-muted rounded-full overflow-hidden">
                     <div
                       className="h-full bg-neutral-800 dark:bg-neutral-100"
@@ -177,7 +177,7 @@ export function ProductRatingsSection({
               ))}
             </div>
 
-            {/* 3 circle stats – tạm mock */}
+            {/* 3 circle stats â€“ táº¡m mock */}
             <div className="flex items-center justify-end gap-6">
               {[
                 { label: "Would recommend", value: 100 },
@@ -204,3 +204,4 @@ export function ProductRatingsSection({
     </section>
   );
 }
+

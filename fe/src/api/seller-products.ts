@@ -5,9 +5,17 @@ export interface ProductVariant {
   options: {
     value: string;
     price?: number;
-    quantity: number;
+    quantity?: number;
     sku?: string;
   }[];
+}
+
+export interface ProductVariantCombination {
+  key: string;
+  selections: { name: string; value: string }[];
+  quantity: number;
+  price?: number;
+  sku?: string;
 }
 
 export interface Product {
@@ -25,6 +33,7 @@ export interface Product {
   listingStatus: "active" | "paused" | "ended" | "deleted";
   lowStockThreshold: number;
   variants?: ProductVariant[];
+  variantCombinations?: ProductVariantCombination[];
   averageRating: number;
   ratingCount: number;
   createdAt: string;
@@ -37,6 +46,27 @@ export interface InventorySummary {
   lowStockCount: number;
   lowStockProducts: Product[];
   outOfStock: number;
+}
+
+export interface CreateProductPayload {
+  title: string;
+  description?: string;
+  price: number;
+  quantity: number;
+  condition?: string;
+  categoryId?: string;
+  image?: string;
+  images?: string[];
+  variants?: ProductVariant[];
+  variantCombinations?: ProductVariantCombination[];
+}
+
+/**
+ * Create new product
+ */
+export async function createProduct(data: CreateProductPayload) {
+  const response = await api.post("/api/products", data);
+  return response.data;
 }
 
 /**

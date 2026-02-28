@@ -1,65 +1,133 @@
-import { useState } from 'react';
-import { 
-  DollarSign, 
-  TrendingUp, 
-  TrendingDown, 
-  ShoppingBag, 
-  Users, 
+import { useEffect, useState } from 'react';
+import {
+  DollarSign,
+  TrendingUp,
+  ShoppingBag,
+  Users,
   Calendar,
-  Download,
-  Filter,
   BarChart3
 } from 'lucide-react';
-import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { toast } from 'sonner';
+import api from '@/lib/axios';
+
+interface MonthlyBucket { month: string; revenue: number; orders: number; }
+interface TopProduct { title: string; revenue: number; sales: number; }
+
+interface RevenueStats {
+  totalRevenue: number;
+  totalOrders: number;
+  avgOrderValue: number;
+  completedOrders: number;
+  cancelledOrders: number;
+  pendingOrders: number;
+  shippingOrders: number;
+  uniqueBuyers: number;
+}
+
+function getDaysBack(range: string): number {
+  switch (range) {
+    case '7days': return 7;
+    case '30days': return 30;
+    case '90days': return 90;
+    case 'year': return 365;
+    default: return 36500; // "all"
+  }
+}
 
 export default function SellerRevenue() {
   const [timeRange, setTimeRange] = useState('30days');
-  const [currency, setCurrency] = useState('USD');
+  const [loading, setLoading] = useState(true);
+  const [stats, setStats] = useState<RevenueStats>({
+    totalRevenue: 0, totalOrders: 0, avgOrderValue: 0,
+    completedOrders: 0, cancelledOrders: 0, pendingOrders: 0,
+    shippingOrders: 0, uniqueBuyers: 0,
+  });
+  const [monthlyData, setMonthlyData] = useState<MonthlyBucket[]>([]);
+  const [topProducts, setTopProducts] = useState<TopProduct[]>([]);
 
-  // Mock data
-  const stats = {
-    totalRevenue: 12560.75,
-    totalOrders: 156,
-    avgOrderValue: 80.52,
-    conversionRate: 3.2,
-    returningCustomers: 45,
-    newCustomers: 111,
-    todayRevenue: 245.50,
-    yesterdayRevenue: 218.25,
-  };
+  useEffect(() => {
+    const fetchData = async () => {
+      setLoading(true);
+      try {
+        const daysBack = getDaysBack(timeRange);
+        const startDate = new Date();
+        startDate.setDate(startDate.getDate() - daysBack);
 
-  const monthlyData = [
-    { month: 'Tháng 1', revenue: 3245, orders: 42 },
-    { month: 'Tháng 2', revenue: 2987, orders: 38 },
-    { month: 'Tháng 3', revenue: 3567, orders: 45 },
-    { month: 'Tháng 4', revenue: 4123, orders: 52 },
-    { month: 'Tháng 5', revenue: 3890, orders: 49 },
-    { month: 'Tháng 6', revenue: 4567, orders: 58 },
-    { month: 'Tháng 7', revenue: 4987, orders: 63 },
-    { month: 'Tháng 8', revenue: 5234, orders: 67 },
-    { month: 'Tháng 9', revenue: 4789, orders: 61 },
-    { month: 'Tháng 10', revenue: 5567, orders: 71 },
-    { month: 'Tháng 11', revenue: 6123, orders: 78 },
-    { month: 'Tháng 12', revenue: 6890, orders: 88 },
-  ];
+        const res = await api.get('/api/orders', {
+          params: {
+            role: 'seller',
+            limit: 1000,
+            startDate: timeRange === 'all' ? undefined : startDate.toISOString(),
+          },
+        });
 
-  const topProducts = [
-    { name: 'Áo thun cotton', revenue: 2456, sales: 89, growth: 12 },
-    { name: 'Tai nghe Bluetooth', revenue: 1890, sales: 42, growth: 8 },
-    { name: 'Sách lập trình', revenue: 1678, sales: 56, growth: 15 },
-    { name: 'Bình nước thể thao', revenue: 1234, sales: 34, growth: 5 },
-    { name: 'Đèn ngủ LED', revenue: 987, sales: 23, growth: -2 },
-  ];
+        const orders: any[] = res.data?.data ?? [];
 
-  const calculateGrowth = (current: number, previous: number) => {
-    if (previous === 0) return 100;
-    return ((current - previous) / previous) * 100;
-  };
+        // ── Tính stats ──────────────────────────────────────────────────────
+        const delivered = orders.filter(o => o.status === 'delivered');
+        const cancelled = orders.filter(o => o.status === 'cancelled');
+        const pending = orders.filter(o => ['created', 'paid', 'processing'].includes(o.status));
+        const shipping = orders.filter(o => o.status === 'shipped');
+        const totalRevenue = delivered.reduce((s: number, o: any) => s + (o.totalAmount ?? 0), 0);
+        const uniqueBuyers = new Set(orders.map((o: any) => o.buyer?._id ?? o.buyer)).size;
 
-  const revenueGrowth = calculateGrowth(stats.todayRevenue, stats.yesterdayRevenue);
+        setStats({
+          totalRevenue,
+          totalOrders: orders.length,
+          avgOrderValue: delivered.length > 0 ? totalRevenue / delivered.length : 0,
+          completedOrders: delivered.length,
+          cancelledOrders: cancelled.length,
+          pendingOrders: pending.length,
+          shippingOrders: shipping.length,
+          uniqueBuyers,
+        });
+
+        // ── Nhóm theo tháng ─────────────────────────────────────────────────
+        const buckets: Record<string, { revenue: number; orders: number }> = {};
+        delivered.forEach((o: any) => {
+          const d = new Date(o.createdAt);
+          const key = `Tháng ${d.getMonth() + 1}/${d.getFullYear()}`;
+          if (!buckets[key]) buckets[key] = { revenue: 0, orders: 0 };
+          buckets[key].revenue += o.totalAmount ?? 0;
+          buckets[key].orders += 1;
+        });
+        const monthly = Object.entries(buckets)
+          .map(([month, v]) => ({ month, ...v }))
+          .sort((a, b) => {
+            const [am, ay] = a.month.replace('Tháng ', '').split('/').map(Number);
+            const [bm, by] = b.month.replace('Tháng ', '').split('/').map(Number);
+            return ay !== by ? ay - by : am - bm;
+          })
+          .slice(-12);
+        setMonthlyData(monthly);
+
+        // ── Top sản phẩm theo doanh thu ──────────────────────────────────────
+        const productMap: Record<string, { title: string; revenue: number; sales: number }> = {};
+        delivered.forEach((o: any) => {
+          (o.items ?? []).forEach((item: any) => {
+            const id = item.productId?._id ?? item.productId ?? 'unknown';
+            const title = item.productId?.title ?? item.title ?? 'Sản phẩm';
+            if (!productMap[id]) productMap[id] = { title, revenue: 0, sales: 0 };
+            productMap[id].revenue += (item.unitPrice ?? 0) * (item.quantity ?? 1);
+            productMap[id].sales += item.quantity ?? 1;
+          });
+        });
+        const top = Object.values(productMap)
+          .sort((a, b) => b.revenue - a.revenue)
+          .slice(0, 5);
+        setTopProducts(top);
+      } catch (err) {
+        console.error('[Revenue] Fetch error:', err);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchData();
+  }, [timeRange]);
+
+  const maxMonthRevenue = Math.max(...monthlyData.map(m => m.revenue), 1);
 
   return (
     <div className="p-6 space-y-6">
@@ -69,67 +137,56 @@ export default function SellerRevenue() {
           <h1 className="text-2xl font-bold text-gray-900">Quản lý doanh thu</h1>
           <p className="text-gray-600">Theo dõi và phân tích doanh thu của bạn</p>
         </div>
-        <div className="flex gap-2">
-          <Select value={timeRange} onValueChange={setTimeRange}>
-            <SelectTrigger className="w-[180px]">
-              <Calendar className="h-4 w-4 mr-2" />
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="7days">7 ngày qua</SelectItem>
-              <SelectItem value="30days">30 ngày qua</SelectItem>
-              <SelectItem value="90days">90 ngày qua</SelectItem>
-              <SelectItem value="year">Năm nay</SelectItem>
-              <SelectItem value="all">Tất cả</SelectItem>
-            </SelectContent>
-          </Select>
-        </div>
+        <Select value={timeRange} onValueChange={setTimeRange}>
+          <SelectTrigger className="w-[180px]">
+            <Calendar className="h-4 w-4 mr-2" />
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="7days">7 ngày qua</SelectItem>
+            <SelectItem value="30days">30 ngày qua</SelectItem>
+            <SelectItem value="90days">90 ngày qua</SelectItem>
+            <SelectItem value="year">Năm nay</SelectItem>
+            <SelectItem value="all">Tất cả</SelectItem>
+          </SelectContent>
+        </Select>
       </div>
 
       {/* Revenue Overview */}
       <Card>
         <CardContent className="p-6">
-          <div className="flex flex-col lg:flex-row items-center justify-between gap-6">
-            <div className="text-center lg:text-left">
-              <div className="text-3xl font-bold">
-                ${stats.totalRevenue.toFixed(2)}
-              </div>
-              <div className="text-gray-600 mb-2">Tổng doanh thu</div>
-              <div className={`flex items-center ${revenueGrowth >= 0 ? 'text-green-600' : 'text-red-600'}`}>
-                {revenueGrowth >= 0 ? (
-                  <TrendingUp className="h-4 w-4 mr-1" />
-                ) : (
-                  <TrendingDown className="h-4 w-4 mr-1" />
+          {loading ? (
+            <div className="h-20 bg-muted animate-pulse rounded" />
+          ) : (
+            <div className="flex flex-col lg:flex-row items-center justify-between gap-6">
+              <div className="text-center lg:text-left">
+                <div className="text-3xl font-bold">${stats.totalRevenue.toFixed(2)}</div>
+                <div className="text-gray-600 mb-1">Tổng doanh thu</div>
+                {stats.totalRevenue === 0 && (
+                  <p className="text-xs text-muted-foreground">Chưa có đơn hoàn thành trong khoảng thời gian này</p>
                 )}
-                {Math.abs(revenueGrowth).toFixed(1)}% so với hôm qua
+              </div>
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
+                {[
+                  { label: 'Tổng đơn hàng', value: stats.totalOrders },
+                  { label: 'Trung bình/đơn', value: `$${stats.avgOrderValue.toFixed(2)}` },
+                  { label: 'Đơn hoàn thành', value: stats.completedOrders },
+                  { label: 'Khách hàng', value: stats.uniqueBuyers },
+                ].map(item => (
+                  <div key={item.label} className="text-center">
+                    <div className="text-lg font-bold">{item.value}</div>
+                    <div className="text-sm text-gray-600">{item.label}</div>
+                  </div>
+                ))}
               </div>
             </div>
-            
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-              <div className="text-center">
-                <div className="text-lg font-bold">{stats.totalOrders}</div>
-                <div className="text-sm text-gray-600">Tổng đơn hàng</div>
-              </div>
-              <div className="text-center">
-                <div className="text-lg font-bold">${stats.avgOrderValue.toFixed(2)}</div>
-                <div className="text-sm text-gray-600">Trung bình/đơn</div>
-              </div>
-              <div className="text-center">
-                <div className="text-lg font-bold">{stats.conversionRate}%</div>
-                <div className="text-sm text-gray-600">Tỷ lệ chuyển đổi</div>
-              </div>
-              <div className="text-center">
-                <div className="text-lg font-bold">{stats.returningCustomers}</div>
-                <div className="text-sm text-gray-600">Khách quay lại</div>
-              </div>
-            </div>
-          </div>
+          )}
         </CardContent>
       </Card>
 
-      {/* Charts and Detailed Stats */}
+      {/* Charts */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        {/* Revenue Chart */}
+        {/* Monthly Revenue */}
         <Card>
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
@@ -138,25 +195,38 @@ export default function SellerRevenue() {
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="space-y-4">
-              {monthlyData.map((month) => (
-                <div key={month.month} className="flex items-center justify-between">
-                  <div className="text-sm font-medium">{month.month}</div>
-                  <div className="flex items-center gap-4">
-                    <div className="text-right">
-                      <div className="font-semibold">${month.revenue.toFixed(2)}</div>
-                      <div className="text-xs text-gray-500">{month.orders} đơn hàng</div>
+            {loading ? (
+              <div className="space-y-3">
+                {[...Array(6)].map((_, i) => (
+                  <div key={i} className="h-8 bg-muted animate-pulse rounded" />
+                ))}
+              </div>
+            ) : monthlyData.length === 0 ? (
+              <div className="text-center py-10 text-muted-foreground">
+                <BarChart3 className="h-10 w-10 mx-auto mb-2 opacity-30" />
+                <p className="text-sm">Chưa có dữ liệu doanh thu</p>
+              </div>
+            ) : (
+              <div className="space-y-3">
+                {monthlyData.map(month => (
+                  <div key={month.month} className="flex items-center gap-3">
+                    <div className="text-sm font-medium w-28 flex-shrink-0">{month.month}</div>
+                    <div className="flex-1">
+                      <div className="w-full bg-muted rounded-full h-2">
+                        <div
+                          className="bg-primary h-2 rounded-full transition-all"
+                          style={{ width: `${(month.revenue / maxMonthRevenue) * 100}%` }}
+                        />
+                      </div>
                     </div>
-                    <div className="w-32 bg-gray-200 rounded-full h-2">
-                      <div 
-                        className="bg-green-600 h-2 rounded-full"
-                        style={{ width: `${(month.revenue / 7000) * 100}%` }}
-                      ></div>
+                    <div className="text-right w-28 flex-shrink-0">
+                      <div className="font-semibold text-sm">${month.revenue.toFixed(0)}</div>
+                      <div className="text-xs text-muted-foreground">{month.orders} đơn</div>
                     </div>
                   </div>
-                </div>
-              ))}
-            </div>
+                ))}
+              </div>
+            )}
           </CardContent>
         </Card>
 
@@ -166,54 +236,56 @@ export default function SellerRevenue() {
             <CardTitle>Sản phẩm bán chạy</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="space-y-4">
-              {topProducts.map((product) => (
-                <div key={product.name} className="flex items-center justify-between p-3 border rounded-lg">
-                  <div>
-                    <div className="font-medium">{product.name}</div>
-                    <div className="text-sm text-gray-500">{product.sales} sản phẩm đã bán</div>
-                  </div>
-                  <div className="text-right">
-                    <div className="font-semibold">${product.revenue.toFixed(2)}</div>
-                    <div className={`text-xs ${product.growth >= 0 ? 'text-green-600' : 'text-red-600'}`}>
-                      {product.growth >= 0 ? '+' : ''}{product.growth}%
+            {loading ? (
+              <div className="space-y-3">
+                {[...Array(4)].map((_, i) => (
+                  <div key={i} className="h-14 bg-muted animate-pulse rounded" />
+                ))}
+              </div>
+            ) : topProducts.length === 0 ? (
+              <div className="text-center py-10 text-muted-foreground">
+                <ShoppingBag className="h-10 w-10 mx-auto mb-2 opacity-30" />
+                <p className="text-sm">Chưa có sản phẩm nào được bán</p>
+              </div>
+            ) : (
+              <div className="space-y-3">
+                {topProducts.map((product, idx) => (
+                  <div key={idx} className="flex items-center justify-between p-3 border rounded-lg">
+                    <div>
+                      <div className="font-medium text-sm">{product.title}</div>
+                      <div className="text-xs text-muted-foreground">{product.sales} sản phẩm đã bán</div>
                     </div>
+                    <div className="font-semibold text-sm">${product.revenue.toFixed(2)}</div>
                   </div>
-                </div>
-              ))}
-            </div>
+                ))}
+              </div>
+            )}
           </CardContent>
         </Card>
       </div>
 
-      {/* Detailed Statistics */}
+      {/* Order Status Breakdown */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
         <Card>
           <CardHeader>
             <CardTitle className="text-lg flex items-center gap-2">
               <DollarSign className="h-5 w-5 text-green-600" />
-              Doanh thu theo ngày
+              Tổng doanh thu
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="space-y-3">
-              <div className="flex justify-between items-center">
-                <span className="text-gray-600">Hôm nay</span>
-                <div className="font-semibold">${stats.todayRevenue.toFixed(2)}</div>
+            {loading ? <div className="h-20 bg-muted animate-pulse rounded" /> : (
+              <div className="space-y-3">
+                <div className="flex justify-between">
+                  <span className="text-muted-foreground text-sm">Từ đơn hoàn thành</span>
+                  <span className="font-semibold">${stats.totalRevenue.toFixed(2)}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-muted-foreground text-sm">Trung bình / đơn</span>
+                  <span className="font-semibold">${stats.avgOrderValue.toFixed(2)}</span>
+                </div>
               </div>
-              <div className="flex justify-between items-center">
-                <span className="text-gray-600">Hôm qua</span>
-                <div className="font-semibold">${stats.yesterdayRevenue.toFixed(2)}</div>
-              </div>
-              <div className="flex justify-between items-center">
-                <span className="text-gray-600">Tuần này</span>
-                <div className="font-semibold">$1,567.89</div>
-              </div>
-              <div className="flex justify-between items-center">
-                <span className="text-gray-600">Tháng này</span>
-                <div className="font-semibold">${stats.totalRevenue.toFixed(2)}</div>
-              </div>
-            </div>
+            )}
           </CardContent>
         </Card>
 
@@ -225,24 +297,21 @@ export default function SellerRevenue() {
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="space-y-3">
-              <div className="flex justify-between items-center">
-                <span className="text-gray-600">Đang chờ xử lý</span>
-                <div className="font-semibold">3</div>
+            {loading ? <div className="h-20 bg-muted animate-pulse rounded" /> : (
+              <div className="space-y-2 text-sm">
+                {[
+                  { label: 'Đang xử lý', value: stats.pendingOrders, color: 'text-amber-600' },
+                  { label: 'Đang giao', value: stats.shippingOrders, color: 'text-blue-600' },
+                  { label: 'Hoàn thành', value: stats.completedOrders, color: 'text-green-600' },
+                  { label: 'Đã huỷ', value: stats.cancelledOrders, color: 'text-red-600' },
+                ].map(item => (
+                  <div key={item.label} className="flex justify-between">
+                    <span className="text-muted-foreground">{item.label}</span>
+                    <span className={`font-semibold ${item.color}`}>{item.value}</span>
+                  </div>
+                ))}
               </div>
-              <div className="flex justify-between items-center">
-                <span className="text-gray-600">Đang giao hàng</span>
-                <div className="font-semibold">7</div>
-              </div>
-              <div className="flex justify-between items-center">
-                <span className="text-gray-600">Đã hoàn thành</span>
-                <div className="font-semibold">142</div>
-              </div>
-              <div className="flex justify-between items-center">
-                <span className="text-gray-600">Đã hủy</span>
-                <div className="font-semibold">4</div>
-              </div>
-            </div>
+            )}
           </CardContent>
         </Card>
 
@@ -254,74 +323,21 @@ export default function SellerRevenue() {
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="space-y-3">
-              <div className="flex justify-between items-center">
-                <span className="text-gray-600">Tổng khách hàng</span>
-                <div className="font-semibold">{stats.returningCustomers + stats.newCustomers}</div>
-              </div>
-              <div className="flex justify-between items-center">
-                <span className="text-gray-600">Khách mới</span>
-                <div className="font-semibold">{stats.newCustomers}</div>
-              </div>
-              <div className="flex justify-between items-center">
-                <span className="text-gray-600">Khách quay lại</span>
-                <div className="font-semibold">{stats.returningCustomers}</div>
-              </div>
-              <div className="flex justify-between items-center">
-                <span className="text-gray-600">Tỷ lệ quay lại</span>
-                <div className="font-semibold">
-                  {((stats.returningCustomers / (stats.returningCustomers + stats.newCustomers)) * 100).toFixed(1)}%
+            {loading ? <div className="h-20 bg-muted animate-pulse rounded" /> : (
+              <div className="space-y-2 text-sm">
+                <div className="flex justify-between">
+                  <span className="text-muted-foreground">Khách hàng duy nhất</span>
+                  <span className="font-semibold">{stats.uniqueBuyers}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-muted-foreground">Tổng đơn</span>
+                  <span className="font-semibold">{stats.totalOrders}</span>
                 </div>
               </div>
-            </div>
+            )}
           </CardContent>
         </Card>
       </div>
-
-      {/* Insights */}
-      <Card>
-        <CardHeader>
-          <CardTitle>Thông tin chi tiết</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            <div className="space-y-4">
-              <h4 className="font-semibold text-gray-900">Điểm nổi bật</h4>
-              <ul className="space-y-2 text-sm text-gray-600">
-                <li className="flex items-start gap-2">
-                  <div className="w-2 h-2 bg-green-500 rounded-full mt-1.5"></div>
-                  Doanh thu tháng 12 tăng 15% so với tháng 11
-                </li>
-                <li className="flex items-start gap-2">
-                  <div className="w-2 h-2 bg-blue-500 rounded-full mt-1.5"></div>
-                  Sản phẩm "Áo thun cotton" chiếm 19.6% tổng doanh thu
-                </li>
-                <li className="flex items-start gap-2">
-                  <div className="w-2 h-2 bg-yellow-500 rounded-full mt-1.5"></div>
-                  Tỷ lệ chuyển đổi cao nhất vào thứ 3 và thứ 4
-                </li>
-              </ul>
-            </div>
-            <div className="space-y-4">
-              <h4 className="font-semibold text-gray-900">Khuyến nghị</h4>
-              <ul className="space-y-2 text-sm text-gray-600">
-                <li className="flex items-start gap-2">
-                  <div className="w-2 h-2 bg-red-500 rounded-full mt-1.5"></div>
-                  Tăng quảng cáo cho sản phẩm "Đèn ngủ LED" đang giảm doanh thu
-                </li>
-                <li className="flex items-start gap-2">
-                  <div className="w-2 h-2 bg-purple-500 rounded-full mt-1.5"></div>
-                  Tạo chương trình khuyến mãi cho khách hàng quay lại
-                </li>
-                <li className="flex items-start gap-2">
-                  <div className="w-2 h-2 bg-indigo-500 rounded-full mt-1.5"></div>
-                  Bổ sung thêm sản phẩm tương tự "Sách lập trình" đang bán chạy
-                </li>
-              </ul>
-            </div>
-          </div>
-        </CardContent>
-      </Card>
     </div>
   );
 }
