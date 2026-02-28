@@ -73,6 +73,26 @@ const userSchema = new mongoose.Schema(
         ref: "Order",
       },
     ],
+
+    // ─── Seller stage system ───────────────────────────────────────────────
+    // Chỉ có giá trị khi role === "seller"
+    sellerStage: {
+      type: String,
+      enum: ["PROBATION", "NORMAL"],
+      default: null,
+      index: true,
+    },
+    sellerInfo: {
+      shopName: { type: String, default: "" },
+      productDescription: { type: String, default: "" },
+      registeredAt: { type: Date },         // Ngày trở thành seller
+      lastStageChangedAt: { type: Date },   // Lần nâng/hạ cấp gần nhất
+      // Cached metrics – cập nhật bởi cron job hàng ngày
+      successOrders: { type: Number, default: 0 },
+      avgRating: { type: Number, default: 0 },
+      refundRate: { type: Number, default: 0 }, // 0-100 (%)
+      reportRate: { type: Number, default: 0 }, // 0-100 (%)
+    },
   },
   { timestamps: true },
 );

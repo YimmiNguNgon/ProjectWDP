@@ -49,18 +49,18 @@ const BENEFITS = [
 const STEPS = [
     {
         step: "01",
-        title: "Dang ky tai khoan",
-        desc: "Dien thong tin shop va tai khoan ngan hang cua ban.",
+        title: "Điền thông tin shop",
+        desc: "Chỉ cần tên shop và mô tả sản phẩm. Không cần số điện thoại hay tài khoản ngân hàng.",
     },
     {
         step: "02",
-        title: "Cho xet duyet",
-        desc: "Admin xem xet va phe duyet don dang ky trong vong 1-3 ngay lam viec.",
+        title: "Tự động phê duyệt",
+        desc: "Hệ thống tự động nâng cấp tài khoản ngay lập tức — không cần chờ admin xét duyệt.",
     },
     {
         step: "03",
-        title: "Bat dau ban hang",
-        desc: "Tai khoan duoc nang cap, dang san pham dau tien ngay!",
+        title: "Bắt đầu bán hàng",
+        desc: "Đăng sản phẩm đầu tiên ngay! Hệ thống tự động nâng cấp lên NORMAL khi đủ điều kiện.",
     },
 ];
 

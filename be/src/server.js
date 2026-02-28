@@ -185,6 +185,10 @@ async function start() {
   const { initDealExpirationJob } = require("./jobs/dealExpirationJob");
   initDealExpirationJob();
 
+  // Initialize seller stage cron job
+  const { initSellerStageJob } = require("./jobs/sellerStageJob");
+  initSellerStageJob();
+
   // Create HTTP server from Express app
   const http = require("http");
   const server = http.createServer(app);
