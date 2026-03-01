@@ -25,10 +25,12 @@ export const CartItem = ({ item, isSelected, onToggle }: CartItemProps) => {
 
   const price = item.priceSnapShot;
   const priceVND = price * 25400; // Approx rate
-  const availableStock = item.availableStock ?? item.product.quantity ?? item.product.stock;
+  const availableStock =
+    item.availableStock ?? item.product.quantity ?? item.product.stock;
   const isOutOfStock = Boolean(item.isOutOfStock);
   const isInsufficient = item.availabilityStatus === "insufficient_stock";
-  const isPurchasable = !isOutOfStock && !isInsufficient && quantity <= availableStock;
+  const isPurchasable =
+    !isOutOfStock && !isInsufficient && quantity <= availableStock;
   const availabilityMessage = item.availabilityMessage;
 
   const imageUrl = item.product.image || "";
@@ -77,20 +79,6 @@ export const CartItem = ({ item, isSelected, onToggle }: CartItemProps) => {
     >
       {/* Item body */}
       <div className="p-4 flex gap-4 items-start">
-        {/* Selection Checkbox */}
-        {/* <div className="flex items-center h-28">
-          <input
-            type="checkbox"
-            checked={isSelected}
-            onChange={(e) => {
-              e.stopPropagation();
-              onToggle?.();
-            }}
-            onClick={(e) => e.stopPropagation()}
-            className="w-5 h-5 rounded border-gray-300 text-blue-600 focus:ring-blue-500 cursor-pointer transition-all"
-          />
-        </div> */}
-
         {/* Product image */}
         <div className="flex-shrink-0 w-28 h-28 rounded-lg bg-gray-100 border border-gray-200 overflow-hidden flex items-center justify-center relative">
           {imageUrl ? (
@@ -201,7 +189,10 @@ export const CartItem = ({ item, isSelected, onToggle }: CartItemProps) => {
             )}
             {item.selectedVariants && item.selectedVariants.length > 0 && (
               <div className="text-sm text-muted-foreground">
-                Variant: {item.selectedVariants.map((v) => `${v.name}: ${v.value}`).join(", ")}
+                Variant:{" "}
+                {item.selectedVariants
+                  .map((v) => `${v.name}: ${v.value}`)
+                  .join(", ")}
               </div>
             )}
 
