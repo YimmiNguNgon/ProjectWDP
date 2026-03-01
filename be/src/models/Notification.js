@@ -23,6 +23,7 @@ const notificationSchema = new mongoose.Schema(
                 "product_warning",
                 "admin_broadcast",
                 "cart_item_out_of_stock",
+                "cart_item_price_changed",
             ],
             required: true,
         },

@@ -24,6 +24,7 @@ const TYPE_ICONS: Record<string, string> = {
     product_warning: "\u26A0\uFE0F",
     admin_broadcast: "\uD83D\uDCE2",
     cart_item_out_of_stock: "\uD83D\uDEAB",
+    cart_item_price_changed: "\uD83D\uDCB2",
 };
 
 function timeAgo(dateStr: string): string {
@@ -67,7 +68,10 @@ export default function NotificationBell({ socket }: NotificationBellProps) {
 
     const handleClick = (notif: AppNotification) => {
         if (!notif.isRead) markAsRead(notif._id);
-        if (notif.type === "cart_item_out_of_stock") {
+        if (
+            notif.type === "cart_item_out_of_stock" ||
+            notif.type === "cart_item_price_changed"
+        ) {
             navigate("/cart");
             return;
         }

@@ -58,6 +58,7 @@ export function useNotifications(
       product_warning: "\u26A0\uFE0F",
       admin_broadcast: "\uD83D\uDCE2",
       cart_item_out_of_stock: "\uD83D\uDEAB",
+      cart_item_price_changed: "\uD83D\uDCB2",
     };
 
     const handleNotification = (notif: AppNotification) => {
@@ -69,6 +70,11 @@ export function useNotifications(
               body: "A product in your cart is out of stock",
               link: "/cart",
             }
+          : notif.type === "cart_item_price_changed"
+            ? {
+                ...notif,
+                link: "/cart",
+              }
           : notif;
 
       setNotifications((prev) => [normalizedNotif, ...prev]);

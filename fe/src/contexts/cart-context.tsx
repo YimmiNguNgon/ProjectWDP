@@ -1,4 +1,11 @@
-import React, { createContext, useContext, useEffect, useRef, useState } from "react";
+import React, {
+  createContext,
+  useCallback,
+  useContext,
+  useEffect,
+  useRef,
+  useState,
+} from "react";
 import { cartService, type Cart } from "@/services/cart.service";
 import { useAuth } from "@/hooks/use-auth";
 import { toast } from "sonner";
@@ -27,15 +34,23 @@ export const CartProvider = ({ children }: { children: React.ReactNode }) => {
   const [loading, setLoading] = useState(false);
   const { user } = useAuth();
   const outOfStockNotifiedRef = useRef<Set<string>>(new Set());
+  const isFetchingRef = useRef(false);
 
-  const fetchCart = async () => {
+  const fetchCart = useCallback(async (options?: { silent?: boolean }) => {
     if (!user) {
       setCart(null);
       return;
     }
 
+    if (isFetchingRef.current) {
+      return;
+    }
+
     try {
-      setLoading(true);
+      isFetchingRef.current = true;
+      if (!options?.silent) {
+        setLoading(true);
+      }
       const cartData = await cartService.getMyCart();
       setCart(cartData);
 
@@ -61,13 +76,42 @@ export const CartProvider = ({ children }: { children: React.ReactNode }) => {
     } catch (error) {
       console.error("Failed to fetch cart:", error);
     } finally {
-      setLoading(false);
+      isFetchingRef.current = false;
+      if (!options?.silent) {
+        setLoading(false);
+      }
     }
-  };
+  }, [user]);
 
   useEffect(() => {
     fetchCart();
-  }, [user]);
+  }, [fetchCart]);
+
+  useEffect(() => {
+    if (!user || !(cart?.items?.length || 0)) return;
+
+    const pollId = window.setInterval(() => {
+      if (document.visibilityState !== "visible") return;
+      fetchCart({ silent: true });
+    }, 3000);
+
+    const handleFocusRefresh = () => {
+      fetchCart({ silent: true });
+    };
+    const handleVisibilityChange = () => {
+      if (document.visibilityState !== "visible") return;
+      fetchCart({ silent: true });
+    };
+
+    window.addEventListener("focus", handleFocusRefresh);
+    document.addEventListener("visibilitychange", handleVisibilityChange);
+
+    return () => {
+      window.clearInterval(pollId);
+      window.removeEventListener("focus", handleFocusRefresh);
+      document.removeEventListener("visibilitychange", handleVisibilityChange);
+    };
+  }, [user, cart?.items?.length, fetchCart]);
 
   const addToCart = async (
     productId: string,
@@ -119,7 +163,7 @@ export const CartProvider = ({ children }: { children: React.ReactNode }) => {
         addToCart,
         updateQuantity,
         removeFromCart,
-        refreshCart: fetchCart,
+        refreshCart: () => fetchCart(),
       }}
     >
       {children}

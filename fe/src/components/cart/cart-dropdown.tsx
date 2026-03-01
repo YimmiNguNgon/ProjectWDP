@@ -15,7 +15,7 @@ import { CartDropdownItem } from "./cart-dropdown-item";
 import { useAuth } from "@/hooks/use-auth";
 
 export const CartDropdown = ({ children }: PropsWithChildren) => {
-  const { cart } = useCart();
+  const { cart, refreshCart } = useCart();
   const { user } = useAuth();
   const location = useLocation();
   const navigate = useNavigate();
@@ -39,7 +39,13 @@ export const CartDropdown = ({ children }: PropsWithChildren) => {
     );
   }
   return (
-    <DropdownMenu>
+    <DropdownMenu
+      onOpenChange={(open) => {
+        if (open && user) {
+          void refreshCart();
+        }
+      }}
+    >
       <DropdownMenuTrigger asChild>
         <div className="relative">
           {children}

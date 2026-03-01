@@ -21,6 +21,8 @@ const applyLatestVariantSnapshot = (
   item.priceSnapShot = Number(variantCheck.optionPrice || 0);
 };
 
+const formatUsd = (value) => `$${Number(value || 0).toFixed(2)}`;
+
 exports.getMyCart = async (req, res, next) => {
   try {
     const userId = req.user._id;
@@ -40,7 +42,19 @@ exports.getMyCart = async (req, res, next) => {
     const sideEffects = [];
 
     for (const item of items) {
-      const variantCheck = findVariantOption(item.product, item.selectedVariants || []);
+      const normalizedVariants = normalizeSelectedVariants(
+        item.selectedVariants || [],
+      );
+      const variantKey = buildVariantKey(normalizedVariants);
+      const variantCheck = findVariantOption(item.product, normalizedVariants);
+      const latestSnapshotPrice = Number(
+        variantCheck.ok
+          ? variantCheck.optionPrice
+          : item.priceSnapShot || item.product?.price || 0,
+      );
+      const latestVariantSku = variantCheck.ok
+        ? variantCheck.optionSku || ""
+        : item.variantSku || "";
       const availableStock = Number(
         variantCheck.ok
           ? variantCheck.optionQuantity
@@ -52,6 +66,55 @@ exports.getMyCart = async (req, res, next) => {
         !isOutOfStock && Number(item.quantity || 0) > availableStock;
       let availabilityStatus = "ok";
       let availabilityMessage = "";
+
+      if (
+        item.priceSnapShot !== latestSnapshotPrice ||
+        item.variantKey !== variantKey ||
+        item.variantSku !== latestVariantSku
+      ) {
+        sideEffects.push(
+          (async () => {
+            const updateResult = await CartItem.updateOne(
+              {
+                _id: item._id,
+                $or: [
+                  { priceSnapShot: { $ne: latestSnapshotPrice } },
+                  { variantKey: { $ne: variantKey } },
+                  { variantSku: { $ne: latestVariantSku } },
+                ],
+              },
+              {
+                $set: {
+                  priceSnapShot: latestSnapshotPrice,
+                  selectedVariants: normalizedVariants,
+                  variantKey,
+                  variantSku: latestVariantSku,
+                },
+              },
+            );
+
+            const hasPriceChanged = item.priceSnapShot !== latestSnapshotPrice;
+            if (updateResult.modifiedCount > 0 && hasPriceChanged) {
+              const oldPrice = Number(item.priceSnapShot || 0);
+              const newPrice = Number(latestSnapshotPrice || 0);
+              await notificationService.sendNotification({
+                recipientId: userId,
+                type: "cart_item_price_changed",
+                title: "Price changed in your cart",
+                body: `${title} has changed price ${formatUsd(oldPrice)} -> ${formatUsd(newPrice)}, check it now.`,
+                link: "/cart",
+                metadata: {
+                  cartItemId: String(item._id),
+                  productId: String(item.product?._id || ""),
+                  variantKey,
+                  oldPrice,
+                  newPrice,
+                },
+              });
+            }
+          })(),
+        );
+      }
 
       if (isOutOfStock) {
         availabilityStatus = "out_of_stock";
@@ -74,7 +137,7 @@ exports.getMyCart = async (req, res, next) => {
                 metadata: {
                   cartItemId: String(item._id),
                   productId: String(item.product?._id || ""),
-                  variantKey: item.variantKey || "",
+                  variantKey,
                 },
               });
             }
@@ -101,11 +164,42 @@ exports.getMyCart = async (req, res, next) => {
 
       mappedItems.push({
         ...item,
+        selectedVariants: normalizedVariants,
+        variantKey,
+        variantSku: latestVariantSku,
+        priceSnapShot: latestSnapshotPrice,
         availableStock,
         isOutOfStock,
         availabilityStatus,
         availabilityMessage,
       });
+    }
+
+    const computedTotalItems = mappedItems.reduce(
+      (sum, cartItem) => sum + Number(cartItem.quantity || 0),
+      0,
+    );
+    const computedTotalPrice = mappedItems.reduce(
+      (sum, cartItem) =>
+        sum + Number(cartItem.quantity || 0) * Number(cartItem.priceSnapShot || 0),
+      0,
+    );
+
+    if (
+      Number(cart.totalItems || 0) !== computedTotalItems ||
+      Number(cart.totalPrice || 0) !== computedTotalPrice
+    ) {
+      sideEffects.push(
+        Cart.updateOne(
+          { _id: cart._id },
+          {
+            $set: {
+              totalItems: computedTotalItems,
+              totalPrice: computedTotalPrice,
+            },
+          },
+        ),
+      );
     }
 
     if (sideEffects.length > 0) {
@@ -119,7 +213,15 @@ exports.getMyCart = async (req, res, next) => {
 
     return res
       .status(200)
-      .json({ message: "Get Cart", cart: { ...cart, items: mappedItems } });
+      .json({
+        message: "Get Cart",
+        cart: {
+          ...cart,
+          totalItems: computedTotalItems,
+          totalPrice: computedTotalPrice,
+          items: mappedItems,
+        },
+      });
   } catch (error) {
     next(error);
   }
