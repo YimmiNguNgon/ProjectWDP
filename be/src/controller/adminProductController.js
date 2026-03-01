@@ -2,6 +2,23 @@
 const mongoose = require("mongoose");
 const Product = require("../models/Product");
 
+const resolveProductQuantity = (product) => {
+    if (Array.isArray(product.variantCombinations) && product.variantCombinations.length > 0) {
+        return product.variantCombinations.reduce(
+            (sum, combo) => sum + (Number(combo?.quantity) || 0),
+            0,
+        );
+    }
+
+    const quantity = Number(product.quantity);
+    if (Number.isFinite(quantity)) return quantity;
+
+    const stock = Number(product.stock);
+    if (Number.isFinite(stock)) return stock;
+
+    return 0;
+};
+
 /**
  * @desc Lấy tất cả sản phẩm với phân trang và lọc
  * @route GET /api/admin/products
@@ -46,20 +63,8 @@ exports.getAllProducts = async (req, res, next) => {
             .limit(limit)
             .lean();
 
-        // Get inventories for all products
-        const productIds = products.map(p => p._id);
-        const Inventory = mongoose.connection.db.collection("inventories");
-        const inventories = await Inventory.find({
-            productId: { $in: productIds }
-        }).toArray();
-
-        // Create inventory map for quick lookup
-        const inventoryMap = {};
-        inventories.forEach(inv => {
-            inventoryMap[inv.productId.toString()] = inv.quantity;
-        });
-
         // Get reviews and calculate ratings for all products
+        const productIds = products.map((p) => p._id);
         const Reviews = mongoose.connection.db.collection("reviews");
         const reviews = await Reviews.find({
             productId: { $in: productIds },
@@ -86,7 +91,7 @@ exports.getAllProducts = async (req, res, next) => {
 
             return {
                 ...product,
-                quantity: inventoryMap[productId] ?? 0, // Stock from inventories
+                quantity: resolveProductQuantity(product),
                 averageRating: averageRating,
                 ratingCount: ratingCount,
                 status: product.status || "available",
@@ -133,9 +138,15 @@ exports.getProductDetail = async (req, res, next) => {
             return res.status(404).json({ message: "Product not found" });
         }
 
+        const normalizedProduct = {
+            ...product,
+            quantity: resolveProductQuantity(product),
+            images: product.images || (product.image ? [product.image] : []),
+        };
+
         return res.json({
             success: true,
-            data: product,
+            data: normalizedProduct,
         });
     } catch (err) {
         return next(err);
@@ -222,6 +233,7 @@ exports.updateProduct = async (req, res, next) => {
 
         if (newQuantity !== null) {
             product.quantity = newQuantity;
+            product.stock = newQuantity;
 
             // Update inventory collection
             const Inventory = mongoose.connection.db.collection("inventories");
@@ -298,6 +310,7 @@ exports.createProduct = async (req, res, next) => {
             description,
             price,
             quantity: quantity || 0,
+            stock: quantity || 0,
             categoryId,
             sellerId,
             condition: condition || "new",
