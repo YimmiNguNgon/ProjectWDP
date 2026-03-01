@@ -1,9 +1,13 @@
 const Category = require("../models/Category");
 const Product = require("../models/Product");
+const mongoose = require("mongoose");
 const {
   normalizeVariantCombinations,
   syncProductStockFromVariants,
 } = require("../utils/productInventory");
+
+const escapeRegex = (value = "") =>
+  String(value).replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 
 exports.createProduct = async (req, res, next) => {
   try {
@@ -22,8 +26,11 @@ exports.createProduct = async (req, res, next) => {
     const sellerId = req.user ? req.user._id : req.body.sellerId;
     if (!sellerId)
       return res.status(400).json({ message: "sellerId required" });
-    if (!title || price == null)
-      return res.status(400).json({ message: "title and price required" });
+    if (!title || price == null || !categoryId) {
+      return res
+        .status(400)
+        .json({ message: "title, price and categoryId required" });
+    }
 
     const normalizedCombinations = normalizeVariantCombinations(
       variantCombinations,
@@ -67,50 +74,76 @@ exports.listProducts = async (req, res, next) => {
     const skip = (page - 1) * limit;
 
     const { categories, minPrice, maxPrice, search, sort } = req.query;
-
-    const filter = {
-      $or: [
-        { listingStatus: "active" }, // Show active listings
-        { listingStatus: { $exists: false } }, // Show products without listingStatus field (legacy)
-      ],
-      $and: [
-        { $or: [{ deletedAt: null }, { deletedAt: { $exists: false } }] }, // Exclude soft-deleted
-      ],
-    };
+    const seller = String(req.query.seller || "").trim();
+    const minRating = req.query.minRating;
+    const andConditions = [
+      {
+        $or: [
+          { listingStatus: "active" }, // Show active listings
+          { listingStatus: { $exists: false } }, // Show products without listingStatus field (legacy)
+        ],
+      },
+      { $or: [{ deletedAt: null }, { deletedAt: { $exists: false } }] }, // Exclude soft-deleted
+    ];
 
     // Search filter - search in title and description
     if (search) {
-      filter.$or = [
-        { title: { $regex: search, $options: "i" } },
-        { description: { $regex: search, $options: "i" } },
-      ];
+      const safeSearch = escapeRegex(search);
+      andConditions.push({
+        $or: [
+          { title: { $regex: safeSearch, $options: "i" } },
+          { description: { $regex: safeSearch, $options: "i" } },
+        ],
+      });
     }
 
     if (categories) {
-      const categorySlugs = categories.split(",");
+      const categorySlugs = String(categories)
+        .split(",")
+        .map((slug) => slug.trim())
+        .filter(Boolean);
 
-      const categoryDocs = await Category.find({
-        slug: { $in: categorySlugs },
-      }).select("_id");
+      if (categorySlugs.length > 0) {
+        const categoryDocs = await Category.find({
+          slug: { $in: categorySlugs },
+        }).select("_id");
 
-      if (categoryDocs.length > 0) {
-        filter.categoryId = {
-          $in: categoryDocs.map((c) => c._id),
-        };
-      } else {
-        // If categories specified but found none, match nothing
-        filter.categoryId = { $in: [] };
+        if (categoryDocs.length > 0) {
+          andConditions.push({
+            categoryId: {
+              $in: categoryDocs.map((c) => c._id),
+            },
+          });
+        } else {
+          // If categories specified but found none, match nothing
+          andConditions.push({ categoryId: { $in: [] } });
+        }
       }
     }
 
     // Price filter
     if (minPrice !== undefined || maxPrice !== undefined) {
-      filter.price = {};
+      const priceFilter = {};
       if (minPrice !== undefined) {
-        filter.price.$gte = parseFloat(minPrice);
+        priceFilter.$gte = parseFloat(minPrice);
       }
       if (maxPrice !== undefined) {
-        filter.price.$lte = parseFloat(maxPrice);
+        priceFilter.$lte = parseFloat(maxPrice);
+      }
+      andConditions.push({ price: priceFilter });
+    }
+
+    // Rating filter
+    if (minRating !== undefined) {
+      andConditions.push({ averageRating: { $gte: parseFloat(minRating) } });
+    }
+
+    // Seller filter
+    if (seller) {
+      if (!mongoose.isValidObjectId(seller)) {
+        andConditions.push({ _id: { $in: [] } });
+      } else {
+        andConditions.push({ sellerId: seller });
       }
     }
 
@@ -119,6 +152,9 @@ exports.listProducts = async (req, res, next) => {
     else if (sort === "price_desc") sortOptions = { price: -1, createdAt: -1 };
     else if (sort === "name_asc") sortOptions = { title: 1, createdAt: -1 };
     else if (sort === "name_desc") sortOptions = { title: -1, createdAt: -1 };
+    else if (sort === "newest") sortOptions = { createdAt: -1 };
+
+    const filter = andConditions.length ? { $and: andConditions } : {};
 
     const total = await Product.countDocuments(filter);
     const products = await Product.find(filter)

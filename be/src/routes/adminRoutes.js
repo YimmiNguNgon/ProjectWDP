@@ -4,6 +4,7 @@ const router = express.Router();
 const adminUserController = require("../controller/adminUserController");
 const adminDashboardController = require("../controller/adminDashboardController");
 const adminProductController = require("../controller/adminProductController");
+const adminCategoryController = require("../controller/adminCategoryController");
 const sellerApplicationController = require("../controller/sellerApplicationController");
 const notificationService = require("../services/notificationService");
 const User = require("../models/User");
@@ -38,6 +39,13 @@ router.post("/products", adminProductController.createProduct);
 router.get("/products/:id", adminProductController.getProductDetail);
 router.put("/products/:id", adminProductController.updateProduct);
 router.delete("/products/:id", adminProductController.deleteProduct);
+
+// Category management routes
+router.get("/categories", adminCategoryController.getAllCategories);
+router.post("/categories", adminCategoryController.createCategory);
+router.get("/categories/:id", adminCategoryController.getCategoryDetail);
+router.put("/categories/:id", adminCategoryController.updateCategory);
+router.delete("/categories/:id", adminCategoryController.deleteCategory);
 
 // Report product - gửi cảnh báo tới seller
 router.post("/products/:id/report", async (req, res, next) => {

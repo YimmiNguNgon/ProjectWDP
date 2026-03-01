@@ -1,5 +1,5 @@
 ﻿import { Link, Outlet, useLocation } from 'react-router-dom';
-import { LayoutDashboard, Users, ShoppingBag, MessageCircle, Home, ClipboardList, TicketPercent } from 'lucide-react';
+import { LayoutDashboard, Users, ShoppingBag, MessageCircle, Home, ClipboardList, TicketPercent, Tags } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import AdminBroadcast from '@/components/admin-broadcast';
 
@@ -7,6 +7,7 @@ const navigation = [
   { name: 'Dashboard', href: '/admin', icon: LayoutDashboard },
   { name: 'User Management', href: '/admin/users', icon: Users },
   { name: 'Product Management', href: '/admin/products', icon: ShoppingBag },
+  { name: 'Category Management', href: '/admin/categories', icon: Tags },
   { name: 'Feedback Revision', href: '/admin/feedback', icon: MessageCircle },
   { name: 'Seller Applications', href: '/admin/seller-applications', icon: ClipboardList },
   { name: 'Voucher Requests', href: '/admin/voucher-requests', icon: TicketPercent },

@@ -9,6 +9,7 @@ export const ROLE_PERMISSIONS: Record<UserRole, Permission[]> = {
   admin: [
     { resource: 'users', actions: ['create', 'read', 'update', 'delete', 'ban', 'unban'] },
     { resource: 'products', actions: ['create', 'read', 'update', 'delete'] },
+    { resource: 'categories', actions: ['create', 'read', 'update', 'delete'] },
     { resource: 'orders', actions: ['read', 'update', 'delete'] },
     { resource: 'reviews', actions: ['read', 'delete', 'flag'] },
     { resource: 'feedback-revision', actions: ['read', 'approve', 'reject', 'cancel'] },
@@ -65,6 +66,7 @@ export const getAllowedRoutes = (userRole: UserRole): string[] => {
       '/admin',
       '/admin/users',
       '/admin/products',
+      '/admin/categories',
       '/admin/feedback',
       '/admin/complaints',
       '/admin/reviews',

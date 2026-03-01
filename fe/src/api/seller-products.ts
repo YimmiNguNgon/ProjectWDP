@@ -54,7 +54,7 @@ export interface CreateProductPayload {
   price: number;
   quantity: number;
   condition?: string;
-  categoryId?: string;
+  categoryId: string;
   image?: string;
   images?: string[];
   variants?: ProductVariant[];

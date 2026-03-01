@@ -54,7 +54,7 @@ export default function SavedSellersPage() {
         try {
             const response = await axios.delete(`/api/saved-sellers/${sellerId}`);
             if (response.data.success) {
-                setSavedSellers(savedSellers.filter((s) => s._id !== sellerId));
+                setSavedSellers((prev) => prev.filter((s) => s._id !== sellerId));
                 toast.success("Seller removed from saved list");
             }
         } catch (error) {

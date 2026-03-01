@@ -330,6 +330,9 @@ exports.saveSeller = async (req, res, next) => {
     if (!seller) {
       return res.status(404).json({ message: "Seller not found" });
     }
+    if (seller.role !== "seller") {
+      return res.status(400).json({ message: "Only seller accounts can be saved" });
+    }
 
     // Cannot save yourself
     if (sellerId === userId.toString()) {
@@ -342,7 +345,10 @@ exports.saveSeller = async (req, res, next) => {
     }
 
     // Check if already saved
-    if (user.savedSellers.includes(sellerId)) {
+    const isAlreadySaved = user.savedSellers.some(
+      (id) => String(id) === String(sellerId),
+    );
+    if (isAlreadySaved) {
       return res.status(400).json({ message: "Seller already saved" });
     }
 

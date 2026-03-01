@@ -73,6 +73,12 @@ const addSavedSeller = async (req, res) => {
                 message: "Seller ID is required",
             });
         }
+        if (String(sellerId) === String(userId)) {
+            return res.status(400).json({
+                success: false,
+                message: "Cannot save yourself as a seller",
+            });
+        }
 
         // Check if seller exists
         const seller = await User.findById(sellerId);
@@ -81,6 +87,12 @@ const addSavedSeller = async (req, res) => {
             return res.status(404).json({
                 success: false,
                 message: "Seller not found",
+            });
+        }
+        if (seller.role !== "seller") {
+            return res.status(400).json({
+                success: false,
+                message: "Only seller accounts can be saved",
             });
         }
 
@@ -99,7 +111,10 @@ const addSavedSeller = async (req, res) => {
             user.savedSellers = [];
         }
 
-        if (user.savedSellers.includes(sellerId)) {
+        const isAlreadySaved = user.savedSellers.some(
+            (id) => String(id) === String(sellerId)
+        );
+        if (isAlreadySaved) {
             return res.status(400).json({
                 success: false,
                 message: "Seller already saved",

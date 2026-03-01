@@ -14,6 +14,7 @@ import AdminDashboard from "@/pages/admin/dashboard";
 import ProductManagement from "@/pages/admin/product-management";
 import FeedbackManagement from "@/pages/admin/feedback-management";
 import PermissionsPage from "@/pages/admin/permissions-page";
+import CategoryManagement from "@/pages/admin/category-management";
 
 import { MainLayout, SocketProvider } from "@/layouts/main";
 import AuthLayout from "@/layouts/auth";
@@ -193,6 +194,10 @@ export const AppRouter = () => {
         {
           path: "products",
           element: <ProductManagement />,
+        },
+        {
+          path: "categories",
+          element: <CategoryManagement />,
         },
         {
           path: "feedback",

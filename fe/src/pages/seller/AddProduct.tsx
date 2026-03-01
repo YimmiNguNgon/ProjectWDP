@@ -170,8 +170,8 @@ export default function AddProduct() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
-    if (!formData.title || !formData.price) {
-      toast.error('Vui lòng điền tên sản phẩm và giá bán');
+    if (!formData.title || !formData.price || !formData.categoryId) {
+      toast.error('Vui lòng điền tên sản phẩm, giá bán và danh mục');
       return;
     }
 
@@ -190,7 +190,7 @@ export default function AddProduct() {
         price: parseFloat(formData.price),
         quantity: parseInt(formData.quantity) || 0,
         condition: formData.condition,
-        categoryId: formData.categoryId || undefined,
+        categoryId: formData.categoryId,
         image: imageUrls[0] ?? '',
         images: imageUrls,
         variants,
@@ -447,13 +447,14 @@ export default function AddProduct() {
                   </div>
 
                   <div className="space-y-2">
-                    <Label htmlFor="categoryId">Danh mục</Label>
+                    <Label htmlFor="categoryId">Danh mục *</Label>
                     <select
                       id="categoryId"
                       name="categoryId"
                       className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
                       value={formData.categoryId}
                       onChange={handleChange}
+                      required
                     >
                       <option value="">Chọn danh mục</option>
                       {categories.map(cat => (

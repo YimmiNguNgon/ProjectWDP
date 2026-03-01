@@ -58,24 +58,6 @@ export default function MyEbayLayout() {
           >
             Buying
           </TabsTrigger>
-          <TabsTrigger
-            value="selling"
-            className="border text-md border-b-2 cursor-pointer border-transparent data-[state=active]:text-black data-[state=active]:border-primary data-[state=active]:bg-transparent px-4 py-2"
-          >
-            Selling
-          </TabsTrigger>
-          <TabsTrigger
-            value="messages"
-            className="border text-md border-b-2 cursor-pointer border-transparent data-[state=active]:text-black data-[state=active]:border-primary data-[state=active]:bg-transparent px-4 py-2"
-          >
-            Messages
-          </TabsTrigger>
-          <TabsTrigger
-            value="account"
-            className="border text-md border-b-2 cursor-pointer border-transparent data-[state=active]:text-black data-[state=active]:border-primary data-[state=active]:bg-transparent px-4 py-2"
-          >
-            Account
-          </TabsTrigger>
         </TabsList>
         <TabsContent value="activity" className="m-0">
           <div className="flex gap-8 mt-6">
@@ -84,15 +66,6 @@ export default function MyEbayLayout() {
               <Outlet />
             </main>
           </div>
-        </TabsContent>
-        <TabsContent value="selling" className="m-0">
-          <Outlet />
-        </TabsContent>
-        <TabsContent value="messages" className="m-0">
-          <Outlet />
-        </TabsContent>
-        <TabsContent value="account" className="m-0">
-          <Outlet />
         </TabsContent>
       </Tabs>
     </div>

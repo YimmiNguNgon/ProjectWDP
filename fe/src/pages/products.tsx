@@ -28,7 +28,6 @@ import {
 } from "@/components/ui/sidebar";
 import { Slider } from "@/components/ui/slider";
 import { Pagination } from "@/components/pagination";
-import { useDebounce } from "@/hooks/use-debounce";
 import api from "@/lib/axios";
 import { cn } from "@/lib/utils";
 import { Heart, ShoppingCart, Star, Package, Bookmark } from "lucide-react";
@@ -54,6 +53,15 @@ interface Category {
 }
 
 const ratings = [1, 2, 3, 4, 5];
+
+const DEFAULT_MIN_PRICE = 0;
+const DEFAULT_MAX_PRICE = 10000;
+
+const parseCategorySlugs = (value: string | null): string[] =>
+  String(value || "")
+    .split(",")
+    .map((slug) => slug.trim())
+    .filter(Boolean);
 
 export interface Product {
   _id: string;
@@ -86,6 +94,7 @@ export interface Product {
 
 export default function ProductsPage() {
   const [searchParams, setSearchParams] = useSearchParams();
+  const searchParamsKey = searchParams.toString();
   const { accessToken } = useAuth();
   const navigate = useNavigate();
   const [products, setProducts] = React.useState<Product[]>([]);
@@ -96,62 +105,37 @@ export default function ProductsPage() {
   const [saveSearchDialogOpen, setSaveSearchDialogOpen] = React.useState(false);
 
   // Get search query from URL params (read-only)
-  const searchQuery = searchParams.get("search") || "";
+  const searchQuery = (searchParams.get("search") || "").trim();
+  const sellerQuery = (searchParams.get("seller") || "").trim();
 
   // Initialize state from URL params
   const [selectedCategories, setSelectedCategories] = React.useState<string[]>(
-    searchParams.get("categories")
-      ? searchParams.get("categories")!.split(",")
-      : [],
+    parseCategorySlugs(searchParams.get("categories")),
   );
   const [priceRange, setPriceRange] = React.useState<[number, number]>([
-    parseInt(searchParams.get("minPrice") || "0"),
-    parseInt(searchParams.get("maxPrice") || "10000"),
+    parseInt(searchParams.get("minPrice") || String(DEFAULT_MIN_PRICE), 10),
+    parseInt(searchParams.get("maxPrice") || String(DEFAULT_MAX_PRICE), 10),
   ]);
   const [selectedRating, setSelectedRating] = React.useState<number>(
-    parseInt(searchParams.get("rating") || "0"),
+    parseInt(searchParams.get("rating") || "0", 10),
   );
   const [selectedSort, setSelectedSort] = React.useState<string>(
     searchParams.get("sort") || "",
   );
   const [currentPage, setCurrentPage] = React.useState(
-    parseInt(searchParams.get("page") || "1"),
+    parseInt(searchParams.get("page") || "1", 10),
   );
+  const [appliedFilters, setAppliedFilters] = React.useState(() => ({
+    selectedCategories: parseCategorySlugs(searchParams.get("categories")),
+    priceRange: [
+      parseInt(searchParams.get("minPrice") || String(DEFAULT_MIN_PRICE), 10),
+      parseInt(searchParams.get("maxPrice") || String(DEFAULT_MAX_PRICE), 10),
+    ] as [number, number],
+    selectedRating: parseInt(searchParams.get("rating") || "0", 10),
+    selectedSort: searchParams.get("sort") || "",
+  }));
   const [totalPages, setTotalPages] = React.useState(1);
   const itemsPerPage = 10;
-
-  const debouncedPriceRange = useDebounce(priceRange, 300);
-
-  // Update URL when filters change
-  useEffect(() => {
-    const params = new URLSearchParams();
-    if (searchQuery) {
-      params.set("search", searchQuery);
-    }
-    if (selectedCategories.length > 0) {
-      params.set("categories", selectedCategories.join(","));
-    }
-    params.set("minPrice", priceRange[0].toString());
-    params.set("maxPrice", priceRange[1].toString());
-    if (selectedRating > 0) {
-      params.set("rating", selectedRating.toString());
-    }
-    if (currentPage > 1) {
-      params.set("page", currentPage.toString());
-    }
-    if (selectedSort) {
-      params.set("sort", selectedSort);
-    }
-    setSearchParams(params);
-  }, [
-    selectedCategories,
-    priceRange,
-    selectedRating,
-    currentPage,
-    selectedSort,
-    setSearchParams,
-    searchQuery,
-  ]);
 
   useEffect(() => {
     const fetchCategories = async () => {
@@ -164,6 +148,29 @@ export default function ProductsPage() {
     };
     fetchCategories();
   }, []);
+
+  useEffect(() => {
+    const nextCategories = parseCategorySlugs(searchParams.get("categories"));
+    const nextPriceRange: [number, number] = [
+      parseInt(searchParams.get("minPrice") || String(DEFAULT_MIN_PRICE), 10),
+      parseInt(searchParams.get("maxPrice") || String(DEFAULT_MAX_PRICE), 10),
+    ];
+    const nextRating = parseInt(searchParams.get("rating") || "0", 10);
+    const nextSort = searchParams.get("sort") || "";
+    const nextPage = parseInt(searchParams.get("page") || "1", 10);
+
+    setSelectedCategories(nextCategories);
+    setPriceRange(nextPriceRange);
+    setSelectedRating(nextRating);
+    setSelectedSort(nextSort);
+    setCurrentPage(nextPage);
+    setAppliedFilters({
+      selectedCategories: nextCategories,
+      priceRange: nextPriceRange,
+      selectedRating: nextRating,
+      selectedSort: nextSort,
+    });
+  }, [searchParamsKey]);
 
   // Fetch user's watchlist to set initial watched state
   useEffect(() => {
@@ -188,40 +195,32 @@ export default function ProductsPage() {
         params.append("page", currentPage.toString());
         params.append("limit", itemsPerPage.toString());
 
-        // If search query exists, use the search endpoint
-        if (searchQuery.trim()) {
-          const { searchProducts } = await import("@/api/search");
-          const result = await searchProducts(searchQuery, {
-            page: currentPage,
-            limit: itemsPerPage,
-            minPrice: debouncedPriceRange[0],
-            maxPrice: debouncedPriceRange[1],
-            sort: selectedSort || undefined,
-          });
-          let filteredData = result.data as unknown as Product[];
-          // Client-side rating filter for search results
-          if (selectedRating > 0) {
-            filteredData = filteredData.filter(
-              (p) => p.averageRating >= selectedRating,
-            );
-          }
-          setProducts(filteredData);
-          setTotalPages(Math.ceil((result.total || 0) / itemsPerPage));
-        } else {
-          // Use regular products endpoint for category/price filtering
-          params.append("categories", selectedCategories.join(","));
-          params.append("minPrice", debouncedPriceRange[0].toString());
-          params.append("maxPrice", debouncedPriceRange[1].toString());
-          if (selectedRating > 0) {
-            params.append("minRating", selectedRating.toString());
-          }
-          if (selectedSort) {
-            params.append("sort", selectedSort);
-          }
-          const res = await api.get(`/api/products?${params.toString()}`);
-          setProducts(res.data.data);
-          setTotalPages(Math.ceil((res.data.total || 0) / itemsPerPage));
+        if (searchQuery) {
+          params.append("search", searchQuery);
         }
+        if (sellerQuery) {
+          params.append("seller", sellerQuery);
+        }
+        if (appliedFilters.selectedCategories.length > 0) {
+          params.append(
+            "categories",
+            appliedFilters.selectedCategories.join(","),
+          );
+        }
+
+        params.append("minPrice", appliedFilters.priceRange[0].toString());
+        params.append("maxPrice", appliedFilters.priceRange[1].toString());
+
+        if (appliedFilters.selectedRating > 0) {
+          params.append("minRating", appliedFilters.selectedRating.toString());
+        }
+        if (appliedFilters.selectedSort) {
+          params.append("sort", appliedFilters.selectedSort);
+        }
+
+        const res = await api.get(`/api/products?${params.toString()}`);
+        setProducts(res.data.data || []);
+        setTotalPages(Math.ceil((res.data.total || 0) / itemsPerPage) || 1);
       } catch (error) {
         console.error("Failed to fetch products:", error);
       }
@@ -229,17 +228,78 @@ export default function ProductsPage() {
     fetchProducts();
   }, [
     searchQuery,
-    selectedCategories,
+    sellerQuery,
+    appliedFilters,
     currentPage,
-    debouncedPriceRange,
-    selectedRating,
-    selectedSort,
+    itemsPerPage,
   ]);
 
-  const handleCategoryChange = (categorySlug: string, checked: boolean) => {
+  const buildPageParams = (
+    page: number,
+    filters: {
+      selectedCategories: string[];
+      priceRange: [number, number];
+      selectedRating: number;
+      selectedSort: string;
+    },
+  ) => {
+    const params = new URLSearchParams();
+    if (searchQuery) params.set("search", searchQuery);
+    if (sellerQuery) params.set("seller", sellerQuery);
+    if (filters.selectedCategories.length > 0) {
+      params.set("categories", filters.selectedCategories.join(","));
+    }
+    params.set("minPrice", filters.priceRange[0].toString());
+    params.set("maxPrice", filters.priceRange[1].toString());
+    if (filters.selectedRating > 0) {
+      params.set("rating", filters.selectedRating.toString());
+    }
+    if (filters.selectedSort) {
+      params.set("sort", filters.selectedSort);
+    }
+    if (page > 1) {
+      params.set("page", page.toString());
+    }
+    return params;
+  };
+
+  const handleApplyFilters = () => {
+    const nextFilters = {
+      selectedCategories,
+      priceRange,
+      selectedRating,
+      selectedSort,
+    };
+    setAppliedFilters(nextFilters);
     setCurrentPage(1);
+    setSearchParams(buildPageParams(1, nextFilters));
+  };
+
+  const handleResetFilters = () => {
+    const resetFilters = {
+      selectedCategories: [] as string[],
+      priceRange: [DEFAULT_MIN_PRICE, DEFAULT_MAX_PRICE] as [number, number],
+      selectedRating: 0,
+      selectedSort: "",
+    };
+    setSelectedCategories(resetFilters.selectedCategories);
+    setPriceRange(resetFilters.priceRange);
+    setSelectedRating(resetFilters.selectedRating);
+    setSelectedSort(resetFilters.selectedSort);
+    setAppliedFilters(resetFilters);
+    setCurrentPage(1);
+    setSearchParams(buildPageParams(1, resetFilters));
+  };
+
+  const handlePageChange = (page: number) => {
+    setCurrentPage(page);
+    setSearchParams(buildPageParams(page, appliedFilters));
+  };
+
+  const handleCategoryChange = (categorySlug: string, checked: boolean) => {
     setSelectedCategories((prev) => {
       if (checked) {
+        if (prev.includes(categorySlug)) return prev;
         return [...prev, categorySlug];
       } else {
         return prev.filter((slug) => slug !== categorySlug);
@@ -248,7 +308,6 @@ export default function ProductsPage() {
   };
 
   const handlePriceChange = (value: number[]) => {
-    setCurrentPage(1);
     setPriceRange([value[0], value[1]]);
   };
 
@@ -369,11 +428,10 @@ export default function ProductsPage() {
                 <span>Rating</span>
               </button>
               <div className="mt-3 space-y-2">
-                {ratings.reverse().map((rating) => (
+                {[...ratings].reverse().map((rating) => (
                   <button
                     key={rating}
                     onClick={() => {
-                      setCurrentPage(1);
                       setSelectedRating(selectedRating === rating ? 0 : rating);
                     }}
                     className={`flex w-full items-center gap-2 rounded py-1 px-2 text-sm transition-colors hover:bg-muted ${
@@ -389,6 +447,15 @@ export default function ProductsPage() {
                     <span className="text-xs text-foreground/60">& up</span>
                   </button>
                 ))}
+              </div>
+            </SidebarGroup>
+            <Separator />
+            <SidebarGroup>
+              <div className="flex flex-col gap-2 mt-2">
+                <Button onClick={handleApplyFilters}>Search</Button>
+                <Button variant="outline" onClick={handleResetFilters}>
+                  Reset Filters
+                </Button>
               </div>
             </SidebarGroup>
             <Separator />
@@ -409,10 +476,7 @@ export default function ProductsPage() {
             <div className="flex items-center gap-2">
               <Select
                 value={selectedSort}
-                onValueChange={(val) => {
-                  setCurrentPage(1);
-                  setSelectedSort(val);
-                }}
+                onValueChange={(val) => setSelectedSort(val)}
               >
                 <SelectTrigger className="w-[180px] cursor-pointer">
                   <SelectValue placeholder="Sort by" />
@@ -587,7 +651,7 @@ export default function ProductsPage() {
                 <Pagination
                   currentPage={currentPage}
                   totalPages={totalPages}
-                  onPageChange={setCurrentPage}
+                  onPageChange={handlePageChange}
                 />
               )}
             </>
@@ -601,10 +665,10 @@ export default function ProductsPage() {
         onOpenChange={setSaveSearchDialogOpen}
         searchQuery={searchQuery}
         filters={{
-          categories: selectedCategories,
-          minPrice: priceRange[0],
-          maxPrice: priceRange[1],
-          rating: selectedRating,
+          categories: appliedFilters.selectedCategories,
+          minPrice: appliedFilters.priceRange[0],
+          maxPrice: appliedFilters.priceRange[1],
+          rating: appliedFilters.selectedRating,
         }}
       />
     </SidebarProvider>
