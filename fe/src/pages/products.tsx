@@ -87,6 +87,16 @@ export interface Product {
   dealEndDate?: string;
   dealQuantityLimit?: number;
   dealQuantitySold?: number;
+  variants?: {
+    name: string;
+    options: { value: string; price?: number; quantity: number }[];
+  }[];
+  variantCombinations?: {
+    key: string;
+    selections: { name: string; value: string }[];
+    price?: number;
+    quantity: number;
+  }[];
   createdAt: Date;
   updatedAt: Date;
   __v: number;
@@ -555,17 +565,17 @@ export default function ProductsPage() {
                           {product.title}
                         </Link>
                       </CardTitle>
-                      {(product as any).variants?.length > 0 && (
+                      {product.variants && product.variants.length > 0 && (
                         <div className="flex flex-wrap gap-1">
-                          {(product as any).variants
+                          {product.variants
                             .slice(0, 2)
-                            .map((v: any) => (
+                            .map((v) => (
                               <span
                                 key={v.name}
                                 className="text-xs bg-muted px-2 py-0.5 rounded-full text-muted-foreground"
                               >
                                 {v.name}:{" "}
-                                {v.options.map((o: any) => o.value).join(", ")}
+                                {v.options.map((o) => o.value).join(", ")}
                               </span>
                             ))}
                         </div>

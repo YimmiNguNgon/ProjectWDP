@@ -2,6 +2,14 @@ import { Badge } from '@/components/ui/badge';
 import { Package, Tag, Clock } from 'lucide-react';
 import { useEffect, useState } from 'react';
 
+export interface ProductVariantCombination {
+    key: string;
+    selections: { name: string; value: string }[];
+    quantity: number;
+    price?: number;
+    sku?: string;
+}
+
 export interface ProductProps {
     promotionType?: 'normal' | 'outlet' | 'daily_deal';
     originalPrice?: number;
@@ -10,6 +18,7 @@ export interface ProductProps {
     dealQuantityLimit?: number;
     dealQuantitySold?: number;
     price: number;
+    variantCombinations?: ProductVariantCombination[];
 }
 
 export function PromotionBadges({ product }: { product: ProductProps }) {
@@ -36,10 +45,29 @@ export function PromotionBadges({ product }: { product: ProductProps }) {
 }
 
 export function PromotionPricing({ product }: { product: ProductProps }) {
+    const combinationsPrices =
+        product.variantCombinations
+            ?.map((c) => c.price)
+            .filter((p): p is number => p !== undefined) || [];
+
+    const minPrice =
+        combinationsPrices.length > 0
+            ? Math.min(...combinationsPrices)
+            : product.price;
+    const maxPrice =
+        combinationsPrices.length > 0
+            ? Math.max(...combinationsPrices)
+            : product.price;
+
+    const isRange = combinationsPrices.length > 0 && minPrice !== maxPrice;
+    const displayPrice = isRange
+        ? `${minPrice.toFixed(2)} - ${maxPrice.toFixed(2)}`
+        : product.price.toFixed(2);
+
     if (!product.promotionType || product.promotionType === 'normal') {
         return (
             <p className="text-lg font-bold text-foreground">
-                ${product.price.toFixed(2)}
+                ${displayPrice}
             </p>
         );
     }
@@ -53,7 +81,7 @@ export function PromotionPricing({ product }: { product: ProductProps }) {
             )}
             <div className="flex items-center gap-2">
                 <p className="text-lg font-bold text-red-600">
-                    ${product.price.toFixed(2)}
+                    ${displayPrice}
                 </p>
                 {product.discountPercent && (
                     <Badge variant="destructive" className="text-xs">
