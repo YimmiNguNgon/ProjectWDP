@@ -91,7 +91,9 @@ export default function ProductDetailPage() {
   const [product, setProduct] = useState<ProductDetail>();
   const [quantity, setQuantity] = useState(1);
   const [voucherCode, setVoucherCode] = useState("");
-  const [selectedVariants, setSelectedVariants] = useState<Record<string, string>>({});
+  const [selectedVariants, setSelectedVariants] = useState<
+    Record<string, string>
+  >({});
   const [isWatched, setIsWatched] = useState(false);
   const [watchCount, setWatchCount] = useState(0);
   const [isFollowingSeller, setIsFollowingSeller] = useState(false);
@@ -109,6 +111,8 @@ export default function ProductDetailPage() {
   const [productContext, setProductContext] = useState<
     ProductDetail | undefined
   >();
+
+  console.log(product);
 
   useEffect(() => {
     api.get(`/api/products/${productId}`).then((res) => {
@@ -248,6 +252,21 @@ export default function ProductDetailPage() {
   const isExactVariantSelected =
     (product?.variants?.length || 0) > 0 &&
     selectedVariantPairs.length === (product?.variants?.length || 0);
+
+  const combinationsPrices =
+    product?.variantCombinations
+      ?.map((c) => c.price)
+      .filter((p): p is number => p !== undefined) || [];
+
+  const minPrice =
+    combinationsPrices.length > 0
+      ? Math.min(...combinationsPrices)
+      : product?.price || 0;
+  const maxPrice =
+    combinationsPrices.length > 0
+      ? Math.max(...combinationsPrices)
+      : product?.price || 0;
+
   const maxSelectableQty = isExactVariantSelected
     ? selectedStock
     : product?.quantity || 0;
@@ -280,7 +299,6 @@ export default function ProductDetailPage() {
     setProductContext(product);
   };
 
-
   const handleBuyNow = async () => {
     if (!product) {
       toast.error("Product not found");
@@ -293,7 +311,10 @@ export default function ProductDetailPage() {
       return;
     }
 
-    if ((product.variants?.length || 0) > 0 && selectedVariantPairs.length !== product.variants!.length) {
+    if (
+      (product.variants?.length || 0) > 0 &&
+      selectedVariantPairs.length !== product.variants!.length
+    ) {
       toast.error("Please select all product variants");
       return;
     }
@@ -319,7 +340,10 @@ export default function ProductDetailPage() {
       navigate("/auth/sign-in");
       return;
     }
-    if ((product.variants?.length || 0) > 0 && selectedVariantPairs.length !== product.variants!.length) {
+    if (
+      (product.variants?.length || 0) > 0 &&
+      selectedVariantPairs.length !== product.variants!.length
+    ) {
       toast.error("Please select all product variants");
       return;
     }
@@ -333,7 +357,9 @@ export default function ProductDetailPage() {
   const allImages: string[] = (() => {
     const arr: string[] = [];
     if (product?.images && product.images.length > 0) {
-      product.images.forEach(u => { if (u) arr.push(u); });
+      product.images.forEach((u) => {
+        if (u) arr.push(u);
+      });
     }
     if (product?.image && !arr.includes(product.image)) {
       arr.push(product.image);
@@ -355,14 +381,25 @@ export default function ProductDetailPage() {
               onError={(e) => {
                 const el = e.currentTarget;
                 el.onerror = null; // prevent loop
-                el.src = "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='400' height='400' fill='none' viewBox='0 0 24 24'%3E%3Crect width='24' height='24' fill='%23f3f4f6'/%3E%3Cpath stroke='%239ca3af' stroke-linecap='round' stroke-linejoin='round' stroke-width='1.5' d='M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2zm6-8a2 2 0 100-4 2 2 0 000 4z'/%3E%3C/svg%3E";
+                el.src =
+                  "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='400' height='400' fill='none' viewBox='0 0 24 24'%3E%3Crect width='24' height='24' fill='%23f3f4f6'/%3E%3Cpath stroke='%239ca3af' stroke-linecap='round' stroke-linejoin='round' stroke-width='1.5' d='M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2zm6-8a2 2 0 100-4 2 2 0 000 4z'/%3E%3C/svg%3E";
               }}
-              style={{ display: 'block' }}
+              style={{ display: "block" }}
             />
             {!displayImage && (
               <div className="absolute inset-0 flex flex-col items-center justify-center text-muted-foreground bg-muted/30 rounded-lg">
-                <svg className="h-16 w-16 mb-2 opacity-30" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2zm6-8a2 2 0 100-4 2 2 0 000 4z" />
+                <svg
+                  className="h-16 w-16 mb-2 opacity-30"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={1.5}
+                    d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2zm6-8a2 2 0 100-4 2 2 0 000 4z"
+                  />
                 </svg>
                 <p className="text-sm">Chưa có hình ảnh</p>
               </div>
@@ -395,10 +432,11 @@ export default function ProductDetailPage() {
                   key={idx}
                   type="button"
                   onClick={() => setSelectedImageIdx(idx)}
-                  className={`flex-shrink-0 w-16 h-16 rounded-md border-2 overflow-hidden transition-all ${idx === selectedImageIdx
-                    ? 'border-primary ring-2 ring-primary/30'
-                    : 'border-border hover:border-primary/50'
-                    }`}
+                  className={`flex-shrink-0 w-16 h-16 rounded-md border-2 overflow-hidden transition-all ${
+                    idx === selectedImageIdx
+                      ? "border-primary ring-2 ring-primary/30"
+                      : "border-border hover:border-primary/50"
+                  }`}
                 >
                   <img
                     src={url}
@@ -407,7 +445,7 @@ export default function ProductDetailPage() {
                     onError={(e) => {
                       const el = e.currentTarget;
                       el.onerror = null;
-                      el.parentElement!.style.display = 'none';
+                      el.parentElement!.style.display = "none";
                     }}
                   />
                 </button>
@@ -435,7 +473,8 @@ export default function ProductDetailPage() {
               <ItemDescription className="inline-flex flex-nowrap gap-2 items-center">
                 <span>Shop Desciption</span>
                 {/* Chỉ hiện Contact Seller khi KHÔNG phải sản phẩm của chính mình */}
-                {(!payload?.userId || String(payload.userId) !== String(product?.sellerId)) && (
+                {(!payload?.userId ||
+                  String(payload.userId) !== String(product?.sellerId)) && (
                   <Dialog open={open} onOpenChange={setOpen}>
                     <DialogTrigger asChild>
                       <Button
@@ -500,7 +539,18 @@ export default function ProductDetailPage() {
           <div className="flex flex-col gap-2">
             <h2 className="text-sm text-muted-foreground">Product Price</h2>
             <h1 className="text-3xl font-bold">
-              ${selectedPrice.toFixed(2)}
+              $
+              {isExactVariantSelected ? (
+                selectedPrice.toFixed(2)
+              ) : combinationsPrices.length > 0 ? (
+                minPrice === maxPrice ? (
+                  minPrice.toFixed(2)
+                ) : (
+                  `${minPrice.toFixed(2)} - ${maxPrice.toFixed(2)}`
+                )
+              ) : (
+                product?.price?.toFixed(2)
+              )}
             </h1>
           </div>
           <Separator />
@@ -519,7 +569,10 @@ export default function ProductDetailPage() {
                   </h3>
                   <div className="flex flex-wrap gap-2">
                     {variant.options.map((opt) => {
-                      const optionAvailable = getOptionAvailable(variant.name, opt.value);
+                      const optionAvailable = getOptionAvailable(
+                        variant.name,
+                        opt.value,
+                      );
                       return (
                         <button
                           key={opt.value}
@@ -527,13 +580,17 @@ export default function ProductDetailPage() {
                           onClick={() =>
                             setSelectedVariants((prev) => ({
                               ...prev,
-                              [variant.name]: prev[variant.name] === opt.value ? '' : opt.value,
+                              [variant.name]:
+                                prev[variant.name] === opt.value
+                                  ? ""
+                                  : opt.value,
                             }))
                           }
-                          className={`px-3 py-1.5 rounded-md border text-sm transition-all ${selectedVariants[variant.name] === opt.value
-                            ? "border-primary bg-primary text-primary-foreground"
-                            : "border-border hover:border-primary"
-                            } ${optionAvailable ? "cursor-pointer" : "opacity-40 cursor-not-allowed line-through"}`}
+                          className={`px-3 py-1.5 rounded-md border text-sm transition-all ${
+                            selectedVariants[variant.name] === opt.value
+                              ? "border-primary bg-primary text-primary-foreground"
+                              : "border-border hover:border-primary"
+                          } ${optionAvailable ? "cursor-pointer" : "opacity-40 cursor-not-allowed line-through"}`}
                           disabled={!optionAvailable}
                         >
                           {opt.value}
@@ -578,7 +635,10 @@ export default function ProductDetailPage() {
                   setQuantity(
                     Math.max(
                       1,
-                      Math.min(Math.max(1, maxSelectableQty), parseInt(e.target.value) || 1),
+                      Math.min(
+                        Math.max(1, maxSelectableQty),
+                        parseInt(e.target.value) || 1,
+                      ),
                     ),
                   )
                 }
@@ -598,7 +658,9 @@ export default function ProductDetailPage() {
             In stock: {Math.max(0, maxSelectableQty)}
           </p>
           {/* Hide purchase buttons when this is your own product */}
-          {product?.sellerId && payload?.userId && String(product.sellerId) === String(payload.userId) ? (
+          {product?.sellerId &&
+          payload?.userId &&
+          String(product.sellerId) === String(payload.userId) ? (
             <div className="w-full text-center py-3 bg-muted rounded-md text-sm text-muted-foreground">
               This is your product
             </div>
@@ -656,5 +718,3 @@ export default function ProductDetailPage() {
     </>
   );
 }
-
-
