@@ -195,37 +195,36 @@ export const CartItem = ({ item, isSelected, onToggle }: CartItemProps) => {
                   .join(", ")}
               </div>
             )}
-
-            {/* Action links */}
-            <div className="flex items-center gap-1 text-sm flex-wrap">
-              <button
-                onClick={(e) => {
-                  e.stopPropagation();
-                  handleBuyNow();
-                }}
-                disabled={!isPurchasable}
-                className="text-blue-600 cursor-pointer hover:text-blue-800 hover:underline font-medium transition-colors px-1 disabled:opacity-40 disabled:cursor-not-allowed"
-              >
-                Buy it now
-              </button>
-              <span className="text-gray-300">|</span>
-              <button
-                onClick={(e) => e.stopPropagation()}
-                className="text-blue-600 cursor-pointer hover:text-blue-800 hover:underline font-medium transition-colors px-1"
-              >
-                Save for later
-              </button>
-              <span className="text-gray-300">|</span>
-              <button
-                onClick={(e) => {
-                  e.stopPropagation();
-                  handleRemove();
-                }}
-                className="text-blue-600 cursor-pointer hover:text-blue-800 hover:underline font-medium transition-colors px-1"
-              >
-                Remove
-              </button>
-            </div>
+          </div>
+          {/* Action links */}
+          <div className="flex items-center justify-end gap-1 text-sm flex-wrap mt-2">
+            <button
+              onClick={(e) => {
+                e.stopPropagation();
+                handleBuyNow();
+              }}
+              disabled={!isPurchasable}
+              className="text-blue-600 cursor-pointer hover:text-blue-800 hover:underline font-medium transition-colors px-1 disabled:opacity-40 disabled:cursor-not-allowed"
+            >
+              Buy it now
+            </button>
+            <span className="text-gray-300">|</span>
+            <button
+              onClick={(e) => e.stopPropagation()}
+              className="text-blue-600 cursor-pointer hover:text-blue-800 hover:underline font-medium transition-colors px-1"
+            >
+              Save for later
+            </button>
+            <span className="text-gray-300">|</span>
+            <button
+              onClick={(e) => {
+                e.stopPropagation();
+                handleRemove();
+              }}
+              className="text-blue-600 cursor-pointer hover:text-blue-800 hover:underline font-medium transition-colors px-1"
+            >
+              Remove
+            </button>
           </div>
         </div>
       </div>
