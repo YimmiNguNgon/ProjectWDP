@@ -63,7 +63,12 @@ exports.getUserWatchlist = async (req, res, next) => {
     const list = await Watchlist.find({
       user: userId,
       isActive: true,
-    }).populate("product");
+    }).populate({
+      path: "product",
+      populate: {
+        path: "sellerId",
+      },
+    });
 
     return res
       .status(200)

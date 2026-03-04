@@ -30,7 +30,8 @@ async function sendNotification({ recipientId, type, title, body, link = "", met
 
         // Push realtime nếu IO sẵn sàng
         if (_io) {
-            _io.to(`user_${recipientId}`).emit("notification", {
+            const recipientStr = recipientId.toString();
+            _io.to(`user_${recipientStr}`).emit("notification", {
                 _id: notification._id,
                 type: notification.type,
                 title: notification.title,

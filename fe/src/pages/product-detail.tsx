@@ -112,8 +112,6 @@ export default function ProductDetailPage() {
     ProductDetail | undefined
   >();
 
-  console.log(product);
-
   useEffect(() => {
     api.get(`/api/products/${productId}`).then((res) => {
       setProduct(res.data.data);
@@ -540,17 +538,13 @@ export default function ProductDetailPage() {
             <h2 className="text-sm text-muted-foreground">Product Price</h2>
             <h1 className="text-3xl font-bold">
               $
-              {isExactVariantSelected ? (
-                selectedPrice.toFixed(2)
-              ) : combinationsPrices.length > 0 ? (
-                minPrice === maxPrice ? (
-                  minPrice.toFixed(2)
-                ) : (
-                  `${minPrice.toFixed(2)} - ${maxPrice.toFixed(2)}`
-                )
-              ) : (
-                product?.price?.toFixed(2)
-              )}
+              {isExactVariantSelected
+                ? selectedPrice.toFixed(2)
+                : combinationsPrices.length > 0
+                  ? minPrice === maxPrice
+                    ? minPrice.toFixed(2)
+                    : `${minPrice.toFixed(2)} - ${maxPrice.toFixed(2)}`
+                  : product?.price?.toFixed(2)}
             </h1>
           </div>
           <Separator />

@@ -5,6 +5,8 @@ const {
   normalizeVariantCombinations,
   syncProductStockFromVariants,
 } = require("../utils/productInventory");
+const Watchlist = require("../models/Watchlist");
+const notificationService = require("../services/notificationService");
 
 const PROBATION_LIMITS = {
   MAX_PRODUCTS_PER_DAY: 5,
@@ -190,6 +192,13 @@ exports.updateProduct = async (req, res, next) => {
       lowStockThreshold,
     } = req.body;
 
+    const hasImportantChanges =
+      (title !== undefined && title !== product.title) ||
+      (description !== undefined && description !== product.description) ||
+      (price !== undefined && price !== product.price);
+
+    const oldTitle = product.title;
+
     if (title !== undefined) product.title = title;
     if (description !== undefined) product.description = description;
     if (price !== undefined) product.price = price;
@@ -218,6 +227,33 @@ exports.updateProduct = async (req, res, next) => {
 
     product.updatedAt = new Date();
     await product.save();
+
+    // Send notifications to watchers if important fields changed
+    if (hasImportantChanges) {
+      try {
+        const watchers = await Watchlist.find({
+          product: productId,
+          isActive: true,
+        }).select("user");
+
+        if (watchers.length > 0) {
+          const recipientIds = watchers.map((w) => w.user.toString());
+          await notificationService.sendBroadcast({
+            recipientIds,
+            type: "watchlist_product_updated",
+            title: "Product Updated",
+            body: `An item you are watching "${oldTitle}" has been updated by the seller.`,
+            link: `/products/${productId}`,
+            metadata: { productId },
+          });
+        }
+      } catch (notifErr) {
+        console.error(
+          "Failed to send watchlist update notifications:",
+          notifErr,
+        );
+      }
+    }
 
     const updated = await Product.findById(productId)
       .populate("categoryId", "name slug")

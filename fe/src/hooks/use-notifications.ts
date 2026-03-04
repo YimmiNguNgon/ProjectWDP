@@ -59,6 +59,7 @@ export function useNotifications(
       admin_broadcast: "\uD83D\uDCE2",
       cart_item_out_of_stock: "\uD83D\uDEAB",
       cart_item_price_changed: "\uD83D\uDCB2",
+      watchlist_product_updated: "\uD83D\uDC41\uFE0F",
     };
 
     const handleNotification = (notif: AppNotification) => {
@@ -75,7 +76,12 @@ export function useNotifications(
                 ...notif,
                 link: "/cart",
               }
-          : notif;
+            : notif.type === "watchlist_product_updated"
+              ? {
+                  ...notif,
+                  link: notif.link || `/products/${notif.metadata?.productId}`,
+                }
+            : notif;
 
       setNotifications((prev) => [normalizedNotif, ...prev]);
       setUnreadCount((prev) => prev + 1);

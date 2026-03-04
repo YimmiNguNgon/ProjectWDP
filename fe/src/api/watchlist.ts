@@ -16,6 +16,13 @@ export type WatchlistItem = {
       username: string;
     };
     watchCount: number;
+    variantCombinations?: {
+      key: string;
+      selections: { name: string; value: string }[];
+      quantity: number;
+      price?: number;
+      sku?: string;
+    }[];
   };
   isActive: boolean;
   createdAt: string;

@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { Link } from "react-router-dom";
 import { getUserWatchlist, type WatchlistItem } from "@/api/watchlist";
 import {
@@ -10,6 +10,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { Skeleton } from "@/components/ui/skeleton";
 import { ArrowRight } from "lucide-react";
+import { formatProductPrice } from "@/lib/utils";
 
 export function WatchlistPreview() {
   const [items, setItems] = useState<WatchlistItem[]>([]);
@@ -80,7 +81,7 @@ export function WatchlistPreview() {
                       {item.product.title}
                     </span>
                     <span className="text-xs text-muted-foreground">
-                      US ${item.product.price.toFixed(2)}
+                      US {formatProductPrice(item.product as any)}
                     </span>
                   </div>
                 </Link>
