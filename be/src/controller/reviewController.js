@@ -319,7 +319,8 @@ exports.listReviewsByProduct = async (req, res, next) => {
 // Get review detail
 exports.getReviewDetail = async (req, res, next) => {
   try {
-    const id = req.params.id;
+    // Route là /:reviewId → phải dùng req.params.reviewId (không phải req.params.id)
+    const id = req.params.reviewId || req.params.id;
 
     if (!mongoose.isValidObjectId(id)) {
       return res.status(400).json({ message: "Invalid review id" });
@@ -451,7 +452,8 @@ exports.adminDeleteReview = async (req, res, next) => {
       return res.status(403).json({ message: "Forbidden: Admin only" });
     }
 
-    const { id } = req.params;
+    // Route /:reviewId nên cần dùng req.params.reviewId
+    const id = req.params.reviewId || req.params.id;
     if (!mongoose.isValidObjectId(id)) {
       return res.status(400).json({ message: "Invalid review id" });
     }
@@ -478,7 +480,8 @@ exports.adminDeleteReview = async (req, res, next) => {
 // ----------------- FLAG REVIEW -----------------
 exports.flagReview = async (req, res, next) => {
   try {
-    const { id } = req.params;
+    // Route /:reviewId nên cần dùng req.params.reviewId
+    const id = req.params.reviewId || req.params.id;
     const { reason } = req.body;
 
     if (!mongoose.isValidObjectId(id)) {

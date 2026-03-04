@@ -189,21 +189,9 @@ export function SellerFeedbackSection({
             </div>
           )}
 
-          {/* 3 nÃºt hÃ nh Ä‘á»™ng */}
+          {/* Action buttons */}
           <div className="mt-4 flex flex-col gap-2">
             <Button className="rounded-full">Visit store</Button>
-            <Button
-              variant="outline"
-              className="rounded-full border-blue-600 text-blue-600"
-            >
-              Contact
-            </Button>
-            <Button
-              variant="outline"
-              className="rounded-full border-blue-600 text-blue-600"
-            >
-              Save seller
-            </Button>
           </div>
 
           {/* ========== DETAILED SELLER RATINGS ========== */}
