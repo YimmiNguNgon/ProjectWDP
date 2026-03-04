@@ -55,7 +55,7 @@ export default function RequestDailyDealDialog({
                 quantityLimit: formData.quantityLimit,
             });
 
-            toast.success('Daily Deal request submitted successfully!');
+            toast.success('Sale Time request submitted successfully!');
             onSuccess();
             onClose();
         } catch (error: any) {
@@ -69,7 +69,7 @@ export default function RequestDailyDealDialog({
         <Dialog open={open} onOpenChange={onClose}>
             <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
                 <DialogHeader>
-                    <DialogTitle>Request Daily Deal Status</DialogTitle>
+                    <DialogTitle>Request Sale Time Status</DialogTitle>
                     <DialogDescription>
                         Create a time-limited deal with special pricing
                     </DialogDescription>
@@ -179,7 +179,7 @@ export default function RequestDailyDealDialog({
                     {/* Info Box */}
                     <div className="p-4 bg-blue-50 border border-blue-200 rounded-lg">
                         <h4 className="font-semibold text-sm text-blue-900 mb-2">
-                            ℹ️ Daily Deal Requirements
+                            ℹ️ Sale Time Requirements
                         </h4>
                         <ul className="text-sm text-blue-800 space-y-1">
                             <li>• Deal end date must be in the future</li>

@@ -5,6 +5,7 @@ const {
   normalizeVariantCombinations,
   syncProductStockFromVariants,
 } = require("../utils/productInventory");
+const { decorateProductPricing } = require("../utils/productPricing");
 
 const escapeRegex = (value = "") =>
   String(value).replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
@@ -61,7 +62,7 @@ exports.getProduct = async (req, res, next) => {
   try {
     const p = await Product.findById(req.params.productId).lean();
     if (!p) return res.status(404).json({ message: "Product not found" });
-    return res.json({ data: p });
+    return res.json({ data: decorateProductPricing(p) });
   } catch (err) {
     next(err);
   }
@@ -75,6 +76,8 @@ exports.listProducts = async (req, res, next) => {
 
     const { categories, minPrice, maxPrice, search, sort } = req.query;
     const seller = String(req.query.seller || "").trim();
+    const saleOnlyRaw = String(req.query.saleOnly || "").toLowerCase();
+    const saleOnly = ["1", "true", "yes"].includes(saleOnlyRaw);
     const minRating = req.query.minRating;
     const andConditions = [
       {
@@ -147,6 +150,16 @@ exports.listProducts = async (req, res, next) => {
       }
     }
 
+    if (saleOnly) {
+      const now = new Date();
+      andConditions.push({
+        promotionType: "daily_deal",
+        originalPrice: { $gt: 0 },
+        dealStartDate: { $lte: now },
+        dealEndDate: { $gte: now },
+      });
+    }
+
     let sortOptions = { averageRating: -1, createdAt: -1 };
     if (sort === "price_asc") sortOptions = { price: 1, createdAt: -1 };
     else if (sort === "price_desc") sortOptions = { price: -1, createdAt: -1 };
@@ -164,7 +177,12 @@ exports.listProducts = async (req, res, next) => {
       .populate("categoryId", "name slug")
       .populate("sellerId", "username avatarUrl")
       .lean();
-    return res.json({ page, limit, total, data: products });
+    return res.json({
+      page,
+      limit,
+      total,
+      data: products.map((product) => decorateProductPricing(product)),
+    });
   } catch (err) {
     next(err);
   }

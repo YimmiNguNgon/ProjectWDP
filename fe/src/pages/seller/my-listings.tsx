@@ -304,7 +304,7 @@ export default function MyListingsPage() {
                             <DropdownMenuItem
                               onClick={() => setDealRequestProduct(product)}
                             >
-                              Request Daily Deal
+                              Request Sale Time
                             </DropdownMenuItem>
                             <DropdownMenuItem
                               onClick={() => handleDelete(product._id)}
@@ -350,7 +350,7 @@ export default function MyListingsPage() {
         />
       )}
 
-      {/* Request Daily Deal Dialog */}
+      {/* Request Sale Time Dialog */}
       {dealRequestProduct && (
         <RequestDailyDealDialog
           product={dealRequestProduct}
@@ -358,7 +358,7 @@ export default function MyListingsPage() {
           onClose={() => setDealRequestProduct(null)}
           onSuccess={() => {
             setDealRequestProduct(null);
-            toast.success('Daily Deal request submitted! Check Promotion Requests page');
+            toast.success('Sale Time request submitted! Check Promotion Requests page');
           }}
         />
       )}

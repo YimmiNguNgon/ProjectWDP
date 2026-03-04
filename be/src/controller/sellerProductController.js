@@ -6,11 +6,87 @@ const {
   syncProductStockFromVariants,
 } = require("../utils/productInventory");
 const { decideModerationStatus } = require("../services/sellerTrustService");
+const { scanProductText } = require("../utils/productContentFilter");
+const {
+  calculateDiscountPercent,
+  decorateProductPricing,
+} = require("../utils/productPricing");
 const Watchlist = require("../models/Watchlist");
 const notificationService = require("../services/notificationService");
 
 const PROBATION_LIMITS = {
   MAX_PRODUCTS_PER_DAY: 5,
+};
+
+const toBooleanOrUndefined = (value) => {
+  if (value === true || value === false) return value;
+  const normalized = String(value || "").trim().toLowerCase();
+  if (!normalized) return undefined;
+  if (["1", "true", "yes", "on"].includes(normalized)) return true;
+  if (["0", "false", "no", "off"].includes(normalized)) return false;
+  return undefined;
+};
+
+const toValidDate = (value) => {
+  if (!value) return null;
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return null;
+  return date;
+};
+
+const applyTimedSale = ({
+  product,
+  basePrice,
+  salePrice,
+  saleStartDate,
+  saleEndDate,
+}) => {
+  const numericBasePrice = Number(basePrice);
+  const numericSalePrice = Number(salePrice);
+  const start = toValidDate(saleStartDate);
+  const end = toValidDate(saleEndDate);
+
+  if (!Number.isFinite(numericBasePrice) || numericBasePrice <= 0) {
+    return { ok: false, message: "Base price must be greater than 0" };
+  }
+  if (!Number.isFinite(numericSalePrice) || numericSalePrice <= 0) {
+    return { ok: false, message: "Sale price must be greater than 0" };
+  }
+  if (numericSalePrice >= numericBasePrice) {
+    return { ok: false, message: "Sale price must be lower than base price" };
+  }
+  if (!start || !end) {
+    return { ok: false, message: "Sale start and end date are required" };
+  }
+  if (start.getTime() >= end.getTime()) {
+    return { ok: false, message: "Sale start date must be before end date" };
+  }
+
+  const discountPercent = calculateDiscountPercent(
+    numericBasePrice,
+    numericSalePrice,
+  );
+
+  product.promotionType = "daily_deal";
+  product.originalPrice = Number(numericBasePrice.toFixed(2));
+  product.price = Number(numericSalePrice.toFixed(2));
+  product.discountPercent = discountPercent || null;
+  product.dealStartDate = start;
+  product.dealEndDate = end;
+
+  return { ok: true };
+};
+
+const clearTimedSale = ({ product, fallbackPrice }) => {
+  const restoredPrice = Number(fallbackPrice);
+  product.promotionType = "normal";
+  product.price = Number((Number.isFinite(restoredPrice) ? restoredPrice : 0).toFixed(2));
+  product.originalPrice = null;
+  product.discountPercent = null;
+  product.dealStartDate = null;
+  product.dealEndDate = null;
+  product.dealQuantityLimit = null;
+  product.dealQuantitySold = 0;
 };
 
 async function countProductsCreatedToday(sellerId) {
@@ -41,12 +117,35 @@ exports.createProduct = async (req, res, next) => {
       images,
       variants,
       variantCombinations,
+      saleEnabled,
+      salePrice,
+      saleStartDate,
+      saleEndDate,
     } = req.body;
+
+    if (
+      price !== undefined &&
+      (!Number.isFinite(Number(price)) || Number(price) <= 0)
+    ) {
+      return res.status(400).json({ message: "Price must be greater than 0" });
+    }
 
     if (!title || price == null || !categoryId) {
       return res
         .status(400)
         .json({ message: "title, price and categoryId required" });
+    }
+    if (!Number.isFinite(Number(price)) || Number(price) <= 0) {
+      return res.status(400).json({ message: "Price must be greater than 0" });
+    }
+
+    const moderationResult = scanProductText({ title, description });
+    if (moderationResult.isBlocked) {
+      return res.status(422).json({
+        message: moderationResult.reason,
+        code: "PRODUCT_CONTENT_BLOCKED",
+        matchedTerms: moderationResult.matchedTerms,
+      });
     }
 
     if (!mongoose.isValidObjectId(categoryId)) {
@@ -104,7 +203,7 @@ exports.createProduct = async (req, res, next) => {
       sellerId,
       title,
       description,
-      price,
+      price: Number(price),
       quantity: quantity || 0,
       stock: quantity || 0,
       condition: condition || "",
@@ -116,11 +215,25 @@ exports.createProduct = async (req, res, next) => {
       listingStatus: initialListingStatus,
     });
 
+    const shouldEnableSale = toBooleanOrUndefined(saleEnabled) === true;
+    if (shouldEnableSale) {
+      const saleResult = applyTimedSale({
+        product,
+        basePrice: Number(price),
+        salePrice,
+        saleStartDate,
+        saleEndDate,
+      });
+      if (!saleResult.ok) {
+        return res.status(400).json({ message: saleResult.message });
+      }
+    }
+
     syncProductStockFromVariants(product);
     await product.save();
 
     return res.status(201).json({
-      data: product,
+      data: decorateProductPricing(product.toObject()),
       moderation: moderationInfo ? {
         mode: moderationInfo.mode,
         tier: moderationInfo.tier,
@@ -180,7 +293,7 @@ exports.getMyListings = async (req, res, next) => {
       page: parsedPage,
       limit: parsedLimit,
       total,
-      data: products,
+      data: products.map((product) => decorateProductPricing(product)),
       probationInfo,
     });
   } catch (err) {
@@ -229,7 +342,35 @@ exports.updateProduct = async (req, res, next) => {
       variants,
       variantCombinations,
       lowStockThreshold,
+      saleEnabled,
+      salePrice,
+      saleStartDate,
+      saleEndDate,
     } = req.body;
+
+    const nextTitle = title !== undefined ? title : product.title;
+    const nextDescription =
+      description !== undefined ? description : product.description;
+    const shouldScanContent =
+      (title !== undefined &&
+        String(title) !== String(product.title || "")) ||
+      (description !== undefined &&
+        String(description) !== String(product.description || ""));
+
+    if (shouldScanContent) {
+      const moderationResult = scanProductText({
+        title: nextTitle,
+        description: nextDescription,
+      });
+
+      if (moderationResult.isBlocked) {
+        return res.status(422).json({
+          message: moderationResult.reason,
+          code: "PRODUCT_CONTENT_BLOCKED",
+          matchedTerms: moderationResult.matchedTerms,
+        });
+      }
+    }
 
     const hasImportantChanges =
       (title !== undefined && title !== product.title) ||
@@ -237,16 +378,58 @@ exports.updateProduct = async (req, res, next) => {
       (price !== undefined && price !== product.price);
 
     const oldTitle = product.title;
+    const requestedBasePrice =
+      price !== undefined
+        ? Number(price)
+        : Number(product.originalPrice || product.price || 0);
+    const parsedSaleEnabled = toBooleanOrUndefined(saleEnabled);
+    const hasExistingTimedSale =
+      product.promotionType === "daily_deal" &&
+      product.originalPrice &&
+      product.dealStartDate &&
+      product.dealEndDate;
 
     if (title !== undefined) product.title = title;
     if (description !== undefined) product.description = description;
-    if (price !== undefined) product.price = price;
     if (quantity !== undefined) product.quantity = quantity;
     if (condition !== undefined) product.condition = condition;
     if (categoryId !== undefined) product.categoryId = categoryId;
     if (image !== undefined) product.image = image;
     if (images !== undefined) product.images = images;
     if (variants !== undefined) product.variants = variants;
+
+    if (parsedSaleEnabled === true) {
+      const saleResult = applyTimedSale({
+        product,
+        basePrice: requestedBasePrice,
+        salePrice: salePrice !== undefined ? salePrice : product.price,
+        saleStartDate:
+          saleStartDate !== undefined ? saleStartDate : product.dealStartDate,
+        saleEndDate: saleEndDate !== undefined ? saleEndDate : product.dealEndDate,
+      });
+      if (!saleResult.ok) {
+        return res.status(400).json({ message: saleResult.message });
+      }
+    } else if (parsedSaleEnabled === false) {
+      clearTimedSale({ product, fallbackPrice: requestedBasePrice });
+    } else if (price !== undefined) {
+      if (hasExistingTimedSale) {
+        const currentDiscountPercent = Number(product.discountPercent || 0);
+        product.originalPrice = Number(requestedBasePrice.toFixed(2));
+        if (currentDiscountPercent > 0 && currentDiscountPercent < 100) {
+          product.price = Number(
+            (
+              requestedBasePrice *
+              (1 - currentDiscountPercent / 100)
+            ).toFixed(2),
+          );
+        } else {
+          product.price = Number(requestedBasePrice.toFixed(2));
+        }
+      } else {
+        product.price = Number(requestedBasePrice.toFixed(2));
+      }
+    }
 
     if (variantCombinations !== undefined) {
       product.variantCombinations = normalizeVariantCombinations(
@@ -298,7 +481,7 @@ exports.updateProduct = async (req, res, next) => {
       .populate("categoryId", "name slug")
       .lean();
 
-    return res.json({ data: updated });
+    return res.json({ data: decorateProductPricing(updated) });
   } catch (err) {
     next(err);
   }

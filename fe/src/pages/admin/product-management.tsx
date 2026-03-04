@@ -22,7 +22,7 @@ import {
     DialogTitle,
 } from '../../components/ui/dialog';
 import { Badge } from '../../components/ui/badge';
-import { Eye, Flag, Layers } from 'lucide-react';
+import { Clock3, Eye, Flag, Flame, Layers } from 'lucide-react';
 import { toast } from 'sonner';
 import api from '../../lib/axios';
 
@@ -34,6 +34,108 @@ const REPORT_REASONS = [
     'Abnormal pricing',
     'Other',
 ];
+
+type SaleState = 'none' | 'upcoming' | 'active' | 'expired';
+
+interface SaleInfo {
+    state: SaleState;
+    basePrice: number;
+    salePrice: number | null;
+    startDate: Date | null;
+    endDate: Date | null;
+    discountPercent: number;
+    countdown: string;
+}
+
+const toValidDate = (value?: string | Date | null) => {
+    if (!value) return null;
+    const date = new Date(value);
+    return Number.isNaN(date.getTime()) ? null : date;
+};
+
+const formatCountdown = (target: Date) => {
+    const diffMs = target.getTime() - Date.now();
+    if (diffMs <= 0) return 'Ending soon';
+    const totalMinutes = Math.floor(diffMs / (1000 * 60));
+    const days = Math.floor(totalMinutes / (60 * 24));
+    const hours = Math.floor((totalMinutes % (60 * 24)) / 60);
+    const mins = totalMinutes % 60;
+    if (days > 0) return `${days}d ${hours}h left`;
+    if (hours > 0) return `${hours}h ${mins}m left`;
+    return `${Math.max(1, mins)}m left`;
+};
+
+const resolveSaleInfo = (product: Product): SaleInfo => {
+    const currentPrice = Number(product.price ?? 0);
+    const baseCandidate = Number(product.basePrice ?? product.originalPrice ?? currentPrice);
+    const basePrice =
+        Number.isFinite(baseCandidate) && baseCandidate > 0
+            ? baseCandidate
+            : currentPrice;
+    const saleCandidate = Number(product.salePrice ?? product.price ?? 0);
+    const salePrice =
+        Number.isFinite(saleCandidate) && saleCandidate > 0 && saleCandidate < basePrice
+            ? saleCandidate
+            : null;
+
+    const startDate = toValidDate(product.saleStartDate ?? product.dealStartDate ?? null);
+    const endDate = toValidDate(product.saleEndDate ?? product.dealEndDate ?? null);
+    const isTimedSale = Boolean(
+        product.isTimedSale ||
+        product.promotionType === 'daily_deal' ||
+        startDate ||
+        endDate,
+    );
+
+    if (!salePrice || !isTimedSale) {
+        return {
+            state: 'none',
+            basePrice,
+            salePrice: null,
+            startDate,
+            endDate,
+            discountPercent: 0,
+            countdown: '',
+        };
+    }
+
+    const now = Date.now();
+    const discountPercent = Math.round(((basePrice - salePrice) / basePrice) * 100);
+
+    if (startDate && now < startDate.getTime()) {
+        return {
+            state: 'upcoming',
+            basePrice,
+            salePrice,
+            startDate,
+            endDate,
+            discountPercent,
+            countdown: `Starts ${startDate.toLocaleString('vi-VN')}`,
+        };
+    }
+
+    if (endDate && now > endDate.getTime()) {
+        return {
+            state: 'expired',
+            basePrice,
+            salePrice,
+            startDate,
+            endDate,
+            discountPercent,
+            countdown: `Ended ${endDate.toLocaleString('vi-VN')}`,
+        };
+    }
+
+    return {
+        state: 'active',
+        basePrice,
+        salePrice,
+        startDate,
+        endDate,
+        discountPercent,
+        countdown: endDate ? formatCountdown(endDate) : 'Sale live',
+    };
+};
 
 export default function ProductManagement() {
     const [products, setProducts] = useState<Product[]>([]);
@@ -53,6 +155,7 @@ export default function ProductManagement() {
     const [reportReason, setReportReason] = useState(REPORT_REASONS[0]);
     const [reportMessage, setReportMessage] = useState('');
     const [reportLoading, setReportLoading] = useState(false);
+    const viewingSaleInfo = viewProduct ? resolveSaleInfo(viewProduct) : null;
 
     const fetchProducts = async () => {
         setLoading(true);
@@ -135,6 +238,7 @@ export default function ProductManagement() {
                             <TableHead>Seller</TableHead>
                             <TableHead>Category</TableHead>
                             <TableHead>Price</TableHead>
+                            <TableHead>Sale Time</TableHead>
                             <TableHead>Stock</TableHead>
                             <TableHead>Variants</TableHead>
                             <TableHead>Status</TableHead>
@@ -146,33 +250,80 @@ export default function ProductManagement() {
                     <TableBody>
                         {loading ? (
                             <TableRow>
-                                <TableCell colSpan={11} className="text-center py-8">Loading...</TableCell>
+                                <TableCell colSpan={12} className="text-center py-8">Loading...</TableCell>
                             </TableRow>
                         ) : products.length === 0 ? (
                             <TableRow>
-                                <TableCell colSpan={11} className="text-center py-8">No products found</TableCell>
+                                <TableCell colSpan={12} className="text-center py-8">No products found</TableCell>
                             </TableRow>
                         ) : (
-                            products.map((product) => (
-                                <TableRow key={product._id}>
+                            products.map((product) => {
+                                const saleInfo = resolveSaleInfo(product);
+                                return (
+                                <TableRow key={product._id} className={saleInfo.state === 'active' ? 'bg-red-50/30 hover:bg-red-50/50' : ''}>
                                     <TableCell>
                                         {product.images?.[0] ? (
-                                            <img
-                                                src={product.images[0]}
-                                                alt={product.title}
-                                                className="w-16 h-16 object-cover rounded"
-                                                onError={(e) => { e.currentTarget.src = 'https://via.placeholder.com/64?text=No+Image'; }}
-                                            />
+                                            <div className="relative w-16 h-16">
+                                                {saleInfo.state === 'active' && (
+                                                    <span className="absolute left-0 top-0 z-10 rounded-br-md bg-gradient-to-r from-red-600 to-rose-500 px-1.5 py-0.5 text-[9px] font-extrabold tracking-wide text-white shadow">
+                                                        SALE
+                                                    </span>
+                                                )}
+                                                <img
+                                                    src={product.images[0]}
+                                                    alt={product.title}
+                                                    className="w-16 h-16 object-cover rounded"
+                                                    onError={(e) => { e.currentTarget.src = 'https://via.placeholder.com/64?text=No+Image'; }}
+                                                />
+                                            </div>
                                         ) : (
                                             <div className="w-16 h-16 bg-gray-200 rounded flex items-center justify-center text-xs text-gray-500">No Image</div>
                                         )}
                                     </TableCell>
                                     <TableCell className="font-medium max-w-[180px]">
-                                        <div className="truncate" title={product.title}>{product.title}</div>
+                                        <div className="truncate flex items-center gap-2" title={product.title}>
+                                            <span>{product.title}</span>
+                                            {saleInfo.state === 'active' && (
+                                                <Badge className="bg-red-600 hover:bg-red-600 text-white border-0">Sale</Badge>
+                                            )}
+                                        </div>
                                     </TableCell>
                                     <TableCell>{product.sellerId?.username || 'N/A'}</TableCell>
                                     <TableCell>{product.categoryId?.name || '—'}</TableCell>
-                                    <TableCell>${product.price.toFixed(2)}</TableCell>
+                                    <TableCell>
+                                        {saleInfo.state === 'active' && saleInfo.salePrice ? (
+                                            <div className="flex flex-col">
+                                                <span className="text-xs text-gray-400 line-through">${saleInfo.basePrice.toFixed(2)}</span>
+                                                <span className="font-semibold text-red-600">${saleInfo.salePrice.toFixed(2)}</span>
+                                            </div>
+                                        ) : (
+                                            <span>${saleInfo.basePrice.toFixed(2)}</span>
+                                        )}
+                                    </TableCell>
+                                    <TableCell>
+                                        {saleInfo.state === 'active' && (
+                                            <div className="space-y-1">
+                                                <Badge className="bg-red-100 text-red-700 hover:bg-red-100 border border-red-200">
+                                                    <Flame className="h-3 w-3 mr-1" />
+                                                    -{saleInfo.discountPercent}%
+                                                </Badge>
+                                                <div className="text-[11px] text-red-600 font-medium flex items-center gap-1">
+                                                    <Clock3 className="h-3 w-3" />
+                                                    {saleInfo.countdown}
+                                                </div>
+                                            </div>
+                                        )}
+                                        {saleInfo.state === 'upcoming' && (
+                                            <div className="space-y-1">
+                                                <Badge className="bg-amber-100 text-amber-700 hover:bg-amber-100 border border-amber-200">Upcoming</Badge>
+                                                <div className="text-[11px] text-amber-700 font-medium">{saleInfo.countdown}</div>
+                                            </div>
+                                        )}
+                                        {saleInfo.state === 'expired' && (
+                                            <Badge className="bg-gray-100 text-gray-600 hover:bg-gray-100 border border-gray-200">Expired</Badge>
+                                        )}
+                                        {saleInfo.state === 'none' && <span className="text-xs text-gray-400">-</span>}
+                                    </TableCell>
                                     <TableCell>{product.quantity ?? 0}</TableCell>
                                     <TableCell>
                                         {(product as any).variants?.length > 0 ? (
@@ -213,7 +364,7 @@ export default function ProductManagement() {
                                         </div>
                                     </TableCell>
                                 </TableRow>
-                            ))
+                            )})
                         )}
                     </TableBody>
                 </Table>
@@ -262,8 +413,52 @@ export default function ProductManagement() {
                             <div className="grid grid-cols-2 gap-4 text-sm">
                                 <div><span className="text-gray-500">Seller:</span><span className="ml-2 font-medium">{viewProduct.sellerId?.username || '—'}</span></div>
                                 <div><span className="text-gray-500">Category:</span><span className="ml-2">{viewProduct.categoryId?.name || '—'}</span></div>
-                                <div><span className="text-gray-500">Price:</span><span className="ml-2 font-semibold">${viewProduct.price.toFixed(2)}</span></div>
+                                <div>
+                                    <span className="text-gray-500">Price:</span>
+                                    {viewingSaleInfo?.state === 'active' && viewingSaleInfo.salePrice ? (
+                                        <span className="ml-2 inline-flex flex-col align-middle">
+                                            <span className="text-xs text-gray-400 line-through">${viewingSaleInfo.basePrice.toFixed(2)}</span>
+                                            <span className="font-semibold text-red-600">${viewingSaleInfo.salePrice.toFixed(2)}</span>
+                                        </span>
+                                    ) : (
+                                        <span className="ml-2 font-semibold">${viewingSaleInfo?.basePrice.toFixed(2) ?? viewProduct.price.toFixed(2)}</span>
+                                    )}
+                                </div>
                                 <div><span className="text-gray-500">Stock:</span><span className="ml-2 font-semibold">{viewProduct.quantity ?? 0}</span></div>
+                                <div>
+                                    <span className="text-gray-500">Sale:</span>
+                                    {viewingSaleInfo?.state === 'active' && (
+                                        <span className="ml-2 inline-flex items-center gap-1 rounded-full bg-red-100 px-2 py-0.5 text-xs font-semibold text-red-700">
+                                            <Flame className="h-3 w-3" />
+                                            Active -{viewingSaleInfo.discountPercent}%
+                                        </span>
+                                    )}
+                                    {viewingSaleInfo?.state === 'upcoming' && (
+                                        <span className="ml-2 inline-flex items-center rounded-full bg-amber-100 px-2 py-0.5 text-xs font-semibold text-amber-700">
+                                            Upcoming
+                                        </span>
+                                    )}
+                                    {viewingSaleInfo?.state === 'expired' && (
+                                        <span className="ml-2 inline-flex items-center rounded-full bg-gray-100 px-2 py-0.5 text-xs font-semibold text-gray-600">
+                                            Expired
+                                        </span>
+                                    )}
+                                    {viewingSaleInfo?.state === 'none' && <span className="ml-2 text-gray-400">-</span>}
+                                </div>
+                                <div>
+                                    <span className="text-gray-500">Sale Time:</span>
+                                    <span className={`ml-2 text-xs ${viewingSaleInfo?.state === 'active' ? 'text-red-600 font-semibold' : 'text-gray-500'}`}>
+                                        {viewingSaleInfo?.countdown || '-'}
+                                    </span>
+                                </div>
+                                <div>
+                                    <span className="text-gray-500">Sale Window:</span>
+                                    <span className="ml-2 text-xs text-gray-600">
+                                        {viewingSaleInfo?.startDate && viewingSaleInfo?.endDate
+                                            ? `${viewingSaleInfo.startDate.toLocaleString('vi-VN')} - ${viewingSaleInfo.endDate.toLocaleString('vi-VN')}`
+                                            : '-'}
+                                    </span>
+                                </div>
                                 <div><span className="text-gray-500">Condition:</span><span className="ml-2">{viewProduct.condition || '—'}</span></div>
                                 <div>
                                     <span className="text-gray-500">Status:</span>

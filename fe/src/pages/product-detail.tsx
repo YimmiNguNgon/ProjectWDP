@@ -81,6 +81,12 @@ export interface ProductDetail {
   createdAt: Date;
   updatedAt: Date;
   watchCount?: number;
+  promotionType?: "normal" | "outlet" | "daily_deal";
+  originalPrice?: number | null;
+  discountPercent?: number | null;
+  saleStartDate?: string | null;
+  saleEndDate?: string | null;
+  isOnSale?: boolean;
   __v: number;
 }
 
@@ -214,11 +220,15 @@ export default function ProductDetailPage() {
     return combo?.quantity || 0;
   };
 
-  const getSelectedCombinationPrice = () => {
-    if (!product?.variantCombinations?.length) return product?.price || 0;
-    if (!product?.variants?.length) return product?.price || 0;
+  const getSelectedCombinationBasePrice = () => {
+    const fallbackBase =
+      isOnSale && product?.originalPrice
+        ? Number(product.originalPrice)
+        : Number(product?.price || 0);
+    if (!product?.variantCombinations?.length) return fallbackBase;
+    if (!product?.variants?.length) return fallbackBase;
     if (selectedVariantPairs.length !== product.variants.length) {
-      return product?.price || 0;
+      return fallbackBase;
     }
 
     const key = [...selectedVariantPairs]
@@ -226,8 +236,18 @@ export default function ProductDetailPage() {
       .map((p) => `${p.name}:${p.value}`)
       .join("|");
     const combo = product.variantCombinations.find((c) => c.key === key);
-    if (!combo) return product?.price || 0;
-    return combo.price ?? product?.price ?? 0;
+    if (!combo) return fallbackBase;
+    return combo.price ?? fallbackBase;
+  };
+
+  const isOnSale = Boolean(product?.isOnSale);
+  const saleDiscountPercent = Number(product?.discountPercent || 0);
+  const applySaleDiscount = (amount: number) => {
+    if (!isOnSale) return amount;
+    if (saleDiscountPercent > 0 && saleDiscountPercent < 100) {
+      return Number((amount * (1 - saleDiscountPercent / 100)).toFixed(2));
+    }
+    return amount;
   };
 
   const getOptionAvailable = (variantName: string, optionValue: string) => {
@@ -246,7 +266,8 @@ export default function ProductDetailPage() {
   };
 
   const selectedStock = getSelectedCombinationStock();
-  const selectedPrice = getSelectedCombinationPrice();
+  const selectedBasePrice = getSelectedCombinationBasePrice();
+  const selectedPrice = applySaleDiscount(selectedBasePrice);
   const isExactVariantSelected =
     (product?.variants?.length || 0) > 0 &&
     selectedVariantPairs.length === (product?.variants?.length || 0);
@@ -256,14 +277,20 @@ export default function ProductDetailPage() {
       ?.map((c) => c.price)
       .filter((p): p is number => p !== undefined) || [];
 
-  const minPrice =
+  const minBasePrice =
     combinationsPrices.length > 0
       ? Math.min(...combinationsPrices)
-      : product?.price || 0;
-  const maxPrice =
+      : isOnSale && product?.originalPrice
+        ? Number(product.originalPrice)
+        : product?.price || 0;
+  const maxBasePrice =
     combinationsPrices.length > 0
       ? Math.max(...combinationsPrices)
-      : product?.price || 0;
+      : isOnSale && product?.originalPrice
+        ? Number(product.originalPrice)
+        : product?.price || 0;
+  const minPrice = applySaleDiscount(minBasePrice);
+  const maxPrice = applySaleDiscount(maxBasePrice);
 
   const maxSelectableQty = isExactVariantSelected
     ? selectedStock
@@ -372,6 +399,11 @@ export default function ProductDetailPage() {
         <div className="relative w-3/4 flex flex-col gap-3">
           {/* Main image */}
           <div className="relative">
+            {isOnSale && (
+              <div className="absolute left-0 top-0 z-20 rounded-br-lg bg-gradient-to-r from-red-600 to-rose-500 px-3 py-1 text-xs font-extrabold tracking-wide text-white shadow-md">
+                SALE
+              </div>
+            )}
             <img
               src={displayImage ?? ""}
               alt={product?.title}
@@ -536,16 +568,26 @@ export default function ProductDetailPage() {
 
           <div className="flex flex-col gap-2">
             <h2 className="text-sm text-muted-foreground">Product Price</h2>
-            <h1 className="text-3xl font-bold">
-              $
-              {isExactVariantSelected
-                ? selectedPrice.toFixed(2)
-                : combinationsPrices.length > 0
-                  ? minPrice === maxPrice
-                    ? minPrice.toFixed(2)
-                    : `${minPrice.toFixed(2)} - ${maxPrice.toFixed(2)}`
-                  : product?.price?.toFixed(2)}
-            </h1>
+            <div className="flex flex-col gap-1">
+              {isOnSale && (
+                <p className="text-sm text-gray-500 line-through">
+                  $
+                  {isExactVariantSelected
+                    ? selectedBasePrice.toFixed(2)
+                    : product?.originalPrice?.toFixed(2)}
+                </p>
+              )}
+              <h1 className={`text-3xl font-bold ${isOnSale ? "text-red-600" : ""}`}>
+                $
+                {isExactVariantSelected
+                  ? selectedPrice.toFixed(2)
+                  : combinationsPrices.length > 0
+                    ? minPrice === maxPrice
+                      ? minPrice.toFixed(2)
+                      : `${minPrice.toFixed(2)} - ${maxPrice.toFixed(2)}`
+                    : product?.price?.toFixed(2)}
+              </h1>
+            </div>
           </div>
           <Separator />
           {/* Product variants */}

@@ -26,10 +26,23 @@ export default function EditProductDialog({
     onClose,
     onSuccess,
 }: EditProductDialogProps) {
+    const toInputDateTime = (value?: string | null) => {
+        if (!value) return "";
+        const date = new Date(value);
+        if (Number.isNaN(date.getTime())) return "";
+        const offset = date.getTimezoneOffset();
+        const local = new Date(date.getTime() - offset * 60000);
+        return local.toISOString().slice(0, 16);
+    };
+
     const [formData, setFormData] = useState({
         title: product.title,
         description: product.description,
-        price: product.price,
+        price: product.basePrice ?? product.originalPrice ?? product.price,
+        saleEnabled: Boolean(product.promotionType === "daily_deal" || product.salePrice),
+        salePrice: product.salePrice ?? product.price,
+        saleStartDate: toInputDateTime(product.saleStartDate ?? product.dealStartDate),
+        saleEndDate: toInputDateTime(product.saleEndDate ?? product.dealEndDate),
         quantity: product.quantity,
         condition: product.condition,
         lowStockThreshold: product.lowStockThreshold || 5,
@@ -43,7 +56,11 @@ export default function EditProductDialog({
         setFormData({
             title: product.title,
             description: product.description,
-            price: product.price,
+            price: product.basePrice ?? product.originalPrice ?? product.price,
+            saleEnabled: Boolean(product.promotionType === "daily_deal" || product.salePrice),
+            salePrice: product.salePrice ?? product.price,
+            saleStartDate: toInputDateTime(product.saleStartDate ?? product.dealStartDate),
+            saleEndDate: toInputDateTime(product.saleEndDate ?? product.dealEndDate),
             quantity: product.quantity,
             condition: product.condition,
             lowStockThreshold: product.lowStockThreshold || 5,
@@ -54,6 +71,16 @@ export default function EditProductDialog({
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
+        if (formData.saleEnabled) {
+            if (!formData.salePrice || !formData.saleStartDate || !formData.saleEndDate) {
+                toast.error("Please fill sale price and sale time range");
+                return;
+            }
+            if (Number(formData.salePrice) >= Number(formData.price)) {
+                toast.error("Sale price must be lower than base price");
+                return;
+            }
+        }
         setLoading(true);
 
         try {
@@ -182,6 +209,58 @@ export default function EditProductDialog({
                                 setFormData({ ...formData, variantCombinations })
                             }
                         />
+                    </div>
+
+                    <div className="space-y-3 rounded-lg border border-dashed border-red-300 p-3 bg-red-50/40">
+                        <Label className="flex items-center justify-between">
+                            <span>Sale Time</span>
+                            <input
+                                type="checkbox"
+                                checked={formData.saleEnabled}
+                                onChange={(e) =>
+                                    setFormData({ ...formData, saleEnabled: e.target.checked })
+                                }
+                            />
+                        </Label>
+                        {formData.saleEnabled && (
+                            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                                <div>
+                                    <Label htmlFor="salePrice">Sale Price *</Label>
+                                    <Input
+                                        id="salePrice"
+                                        type="number"
+                                        step="0.01"
+                                        min="0"
+                                        value={formData.salePrice}
+                                        onChange={(e) =>
+                                            setFormData({ ...formData, salePrice: parseFloat(e.target.value) || 0 })
+                                        }
+                                    />
+                                </div>
+                                <div>
+                                    <Label htmlFor="saleStartDate">Start *</Label>
+                                    <Input
+                                        id="saleStartDate"
+                                        type="datetime-local"
+                                        value={formData.saleStartDate}
+                                        onChange={(e) =>
+                                            setFormData({ ...formData, saleStartDate: e.target.value })
+                                        }
+                                    />
+                                </div>
+                                <div>
+                                    <Label htmlFor="saleEndDate">End *</Label>
+                                    <Input
+                                        id="saleEndDate"
+                                        type="datetime-local"
+                                        value={formData.saleEndDate}
+                                        onChange={(e) =>
+                                            setFormData({ ...formData, saleEndDate: e.target.value })
+                                        }
+                                    />
+                                </div>
+                            </div>
+                        )}
                     </div>
 
                     <div className="flex justify-end gap-2 pt-4">

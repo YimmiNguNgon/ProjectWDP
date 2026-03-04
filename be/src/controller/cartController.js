@@ -8,6 +8,10 @@ const {
   findVariantOption,
   normalizeSelectedVariants,
 } = require("../utils/productInventory");
+const {
+  resolveProductPricing,
+  decorateProductPricing,
+} = require("../utils/productPricing");
 
 const applyLatestVariantSnapshot = (
   item,
@@ -42,11 +46,13 @@ exports.getMyCart = async (req, res, next) => {
     const sideEffects = [];
 
     for (const item of items) {
+      const pricedProduct = decorateProductPricing(item.product);
       const normalizedVariants = normalizeSelectedVariants(
         item.selectedVariants || [],
       );
       const variantKey = buildVariantKey(normalizedVariants);
       const variantCheck = findVariantOption(item.product, normalizedVariants);
+      const pricingMeta = resolveProductPricing(item.product);
       const latestSnapshotPrice = Number(
         variantCheck.ok
           ? variantCheck.optionPrice
@@ -164,10 +170,23 @@ exports.getMyCart = async (req, res, next) => {
 
       mappedItems.push({
         ...item,
+        product: pricedProduct,
         selectedVariants: normalizedVariants,
         variantKey,
         variantSku: latestVariantSku,
         priceSnapShot: latestSnapshotPrice,
+        originalPriceSnapShot:
+          pricingMeta.isOnSale &&
+          Number(pricingMeta.discountPercent || 0) > 0 &&
+          Number(pricingMeta.discountPercent || 0) < 100
+            ? Number(
+              (
+                latestSnapshotPrice /
+                (1 - Number(pricingMeta.discountPercent) / 100)
+              ).toFixed(2),
+            )
+            : null,
+        isOnSale: Boolean(pricingMeta.isOnSale),
         availableStock,
         isOutOfStock,
         availabilityStatus,

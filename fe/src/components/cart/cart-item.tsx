@@ -24,6 +24,11 @@ export const CartItem = ({ item, isSelected, onToggle }: CartItemProps) => {
   const description = item.product.description;
 
   const price = item.priceSnapShot;
+  const originalPrice =
+    item.originalPriceSnapShot && item.originalPriceSnapShot > price
+      ? item.originalPriceSnapShot
+      : null;
+  const isOnSale = Boolean(item.isOnSale && originalPrice);
   const priceVND = price * 25400; // Approx rate
   const availableStock =
     item.availableStock ?? item.product.quantity ?? item.product.stock;
@@ -81,6 +86,11 @@ export const CartItem = ({ item, isSelected, onToggle }: CartItemProps) => {
       <div className="p-4 flex gap-4 items-start">
         {/* Product image */}
         <div className="flex-shrink-0 w-28 h-28 rounded-lg bg-gray-100 border border-gray-200 overflow-hidden flex items-center justify-center relative">
+          {isOnSale && (
+            <div className="absolute left-0 top-0 bg-red-600 px-2 py-0.5 text-[10px] font-bold text-white shadow-sm z-10 rounded-br-md">
+              SALE
+            </div>
+          )}
           {imageUrl ? (
             <img
               src={imageUrl}
@@ -134,7 +144,12 @@ export const CartItem = ({ item, isSelected, onToggle }: CartItemProps) => {
           {/* Pricing */}
           <div className="space-y-0.5">
             <div>
-              <span className="text-xl font-bold text-gray-900">
+              {originalPrice && (
+                <span className="mr-2 text-sm text-gray-400 line-through">
+                  US ${originalPrice.toFixed(2)}
+                </span>
+              )}
+              <span className={`text-xl font-bold ${isOnSale ? "text-red-600" : "text-gray-900"}`}>
                 US ${price.toFixed(2)}
               </span>
               <span className="text-sm text-gray-400 ml-1">

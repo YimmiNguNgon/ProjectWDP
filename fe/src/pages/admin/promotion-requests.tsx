@@ -209,7 +209,7 @@ export default function AdminPromotionRequestsPage() {
                                             ) : (
                                                 <Badge className="bg-red-600">
                                                     <Tag className="w-3 h-3 mr-1" />
-                                                    Daily Deal
+                                                    Sale Time
                                                 </Badge>
                                             )}
                                         </TableCell>
@@ -267,7 +267,7 @@ export default function AdminPromotionRequestsPage() {
                         </DialogTitle>
                         <DialogDescription>
                             {selectedRequest &&
-                                `${selectedRequest.product.title} - ${selectedRequest.requestType === 'outlet' ? 'Brand Outlet' : 'Daily Deal'}`}
+                                `${selectedRequest.product.title} - ${selectedRequest.requestType === 'outlet' ? 'Brand Outlet' : 'Sale Time'}`}
                         </DialogDescription>
                     </DialogHeader>
 
@@ -310,7 +310,7 @@ export default function AdminPromotionRequestsPage() {
                                 </div>
                             </div>
 
-                            {/* Daily Deal Info */}
+                            {/* Sale Time Info */}
                             {selectedRequest.requestType === 'daily_deal' && (
                                 <div className="p-4 bg-blue-50 rounded-lg space-y-2">
                                     <h4 className="font-semibold text-sm">Deal Details:</h4>

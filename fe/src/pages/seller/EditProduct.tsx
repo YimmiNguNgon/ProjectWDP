@@ -20,6 +20,15 @@ interface Category {
     name: string;
 }
 
+const toInputDateTime = (value?: string | null) => {
+    if (!value) return "";
+    const date = new Date(value);
+    if (Number.isNaN(date.getTime())) return "";
+    const offset = date.getTimezoneOffset();
+    const local = new Date(date.getTime() - offset * 60000);
+    return local.toISOString().slice(0, 16);
+};
+
 export default function EditProduct() {
     const navigate = useNavigate();
     const { id } = useParams<{ id: string }>();
@@ -38,6 +47,10 @@ export default function EditProduct() {
         title: '',
         description: '',
         price: '',
+        saleEnabled: false,
+        salePrice: '',
+        saleStartDate: '',
+        saleEndDate: '',
         quantity: '',
         condition: 'new',
         categoryId: '',
@@ -57,7 +70,11 @@ export default function EditProduct() {
                 setFormData({
                     title: p.title ?? '',
                     description: p.description ?? '',
-                    price: String(p.price ?? ''),
+                    price: String(p.basePrice ?? p.originalPrice ?? p.price ?? ''),
+                    saleEnabled: Boolean(p.promotionType === 'daily_deal' || p.salePrice),
+                    salePrice: String(p.salePrice ?? p.price ?? ''),
+                    saleStartDate: toInputDateTime(p.saleStartDate ?? p.dealStartDate),
+                    saleEndDate: toInputDateTime(p.saleEndDate ?? p.dealEndDate),
                     quantity: String(p.quantity ?? ''),
                     condition: p.condition ?? 'new',
                     categoryId: p.categoryId?._id ?? p.categoryId ?? '',
@@ -108,12 +125,32 @@ export default function EditProduct() {
             toast.error('Please enter product name and selling price');
             return;
         }
+        if (formData.saleEnabled) {
+            const basePrice = parseFloat(formData.price);
+            const dealPrice = parseFloat(formData.salePrice);
+            if (!formData.salePrice || !formData.saleStartDate || !formData.saleEndDate) {
+                toast.error('Please fill sale price and time range');
+                return;
+            }
+            if (!Number.isFinite(dealPrice) || dealPrice <= 0 || dealPrice >= basePrice) {
+                toast.error('Sale price must be lower than base price');
+                return;
+            }
+            if (new Date(formData.saleStartDate) >= new Date(formData.saleEndDate)) {
+                toast.error('Sale start time must be before end time');
+                return;
+            }
+        }
         setSaving(true);
         try {
             await updateProduct(id!, {
                 title: formData.title,
                 description: formData.description,
                 price: parseFloat(formData.price),
+                saleEnabled: formData.saleEnabled,
+                salePrice: formData.saleEnabled ? parseFloat(formData.salePrice) : undefined,
+                saleStartDate: formData.saleEnabled ? formData.saleStartDate : undefined,
+                saleEndDate: formData.saleEnabled ? formData.saleEndDate : undefined,
                 quantity: parseInt(formData.quantity) || 0,
                 condition: formData.condition,
                 categoryId: formData.categoryId || undefined,
@@ -249,6 +286,48 @@ export default function EditProduct() {
                                                 className="pl-8" value={formData.price} onChange={handleChange} required
                                             />
                                         </div>
+                                    </div>
+                                    <div className="space-y-3 rounded-lg border border-dashed border-red-300 p-3 bg-red-50/40">
+                                        <Label className="flex items-center justify-between">
+                                            <span>Sale Time</span>
+                                            <input
+                                                type="checkbox"
+                                                checked={formData.saleEnabled}
+                                                onChange={(e) =>
+                                                    setFormData((prev) => ({ ...prev, saleEnabled: e.target.checked }))
+                                                }
+                                            />
+                                        </Label>
+                                        {formData.saleEnabled && (
+                                            <div className="space-y-2">
+                                                <Label htmlFor="salePrice">Sale Price *</Label>
+                                                <Input
+                                                    id="salePrice"
+                                                    name="salePrice"
+                                                    type="number"
+                                                    min="0"
+                                                    step="0.01"
+                                                    value={formData.salePrice}
+                                                    onChange={handleChange}
+                                                />
+                                                <Label htmlFor="saleStartDate">Start Time *</Label>
+                                                <Input
+                                                    id="saleStartDate"
+                                                    name="saleStartDate"
+                                                    type="datetime-local"
+                                                    value={formData.saleStartDate}
+                                                    onChange={handleChange}
+                                                />
+                                                <Label htmlFor="saleEndDate">End Time *</Label>
+                                                <Input
+                                                    id="saleEndDate"
+                                                    name="saleEndDate"
+                                                    type="datetime-local"
+                                                    value={formData.saleEndDate}
+                                                    onChange={handleChange}
+                                                />
+                                            </div>
+                                        )}
                                     </div>
                                     <div className="space-y-2">
                                         <Label htmlFor="quantity">Stock Quantity</Label>

@@ -12,9 +12,10 @@ export interface ProductVariantCombination {
 
 export interface ProductProps {
     promotionType?: 'normal' | 'outlet' | 'daily_deal';
-    originalPrice?: number;
-    discountPercent?: number;
-    dealEndDate?: string;
+    isOnSale?: boolean;
+    originalPrice?: number | null;
+    discountPercent?: number | null;
+    dealEndDate?: string | null;
     dealQuantityLimit?: number;
     dealQuantitySold?: number;
     price: number;
@@ -35,9 +36,9 @@ export function PromotionBadges({ product }: { product: ProductProps }) {
                 </Badge>
             )}
             {product.promotionType === 'daily_deal' && (
-                <Badge className="bg-red-600 text-white shadow-lg">
+                <Badge className="bg-gradient-to-r from-rose-600 to-red-500 text-white shadow-lg border-0">
                     <Tag className="w-3 h-3 mr-1" />
-                    Daily Deal
+                    SALE
                 </Badge>
             )}
         </div>
@@ -45,24 +46,36 @@ export function PromotionBadges({ product }: { product: ProductProps }) {
 }
 
 export function PromotionPricing({ product }: { product: ProductProps }) {
+    const discountPercent = Number(product.discountPercent || 0);
+    const isOnSale =
+        product.promotionType &&
+        product.promotionType !== "normal" &&
+        Number(product.originalPrice || 0) > Number(product.price || 0);
+    const applyDiscount = (amount: number) => {
+        if (!isOnSale || discountPercent <= 0 || discountPercent >= 100) return amount;
+        return Number((amount * (1 - discountPercent / 100)).toFixed(2));
+    };
+
     const combinationsPrices =
         product.variantCombinations
             ?.map((c) => c.price)
             .filter((p): p is number => p !== undefined) || [];
 
-    const minPrice =
+    const minBasePrice =
         combinationsPrices.length > 0
             ? Math.min(...combinationsPrices)
             : product.price;
-    const maxPrice =
+    const maxBasePrice =
         combinationsPrices.length > 0
             ? Math.max(...combinationsPrices)
             : product.price;
+    const minPrice = applyDiscount(minBasePrice);
+    const maxPrice = applyDiscount(maxBasePrice);
 
     const isRange = combinationsPrices.length > 0 && minPrice !== maxPrice;
     const displayPrice = isRange
         ? `${minPrice.toFixed(2)} - ${maxPrice.toFixed(2)}`
-        : product.price.toFixed(2);
+        : (combinationsPrices.length > 0 ? minPrice : product.price).toFixed(2);
 
     if (!product.promotionType || product.promotionType === 'normal') {
         return (
@@ -133,7 +146,7 @@ export function DealCountdown({ endDate }: { endDate?: string }) {
     return (
         <div className="flex items-center gap-1 text-xs text-orange-600 font-semibold">
             <Clock className="w-3 h-3" />
-            <span>Ends in {timeLeft}</span>
+            <span>Sale ends in {timeLeft}</span>
         </div>
     );
 }

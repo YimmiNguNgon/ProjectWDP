@@ -1,4 +1,9 @@
-﻿const normalizeSelectedVariants = (selectedVariants) => {
+﻿const {
+  resolveProductPricing,
+  applyPercentDiscount,
+} = require("./productPricing");
+
+const normalizeSelectedVariants = (selectedVariants) => {
   if (!selectedVariants) return [];
 
   if (Array.isArray(selectedVariants)) {
@@ -87,6 +92,11 @@ const syncProductStockFromVariants = (product) => {
 const findVariantOption = (product, selectedVariants) => {
   const normalized = normalizeSelectedVariants(selectedVariants);
   const hasVariants = Array.isArray(product.variants) && product.variants.length > 0;
+  const pricing = resolveProductPricing(product);
+  const activeDiscountPercent =
+    pricing.isOnSale && Number(pricing.discountPercent || 0) > 0
+      ? Number(pricing.discountPercent)
+      : 0;
 
   if (!hasVariants) {
     return {
@@ -97,7 +107,7 @@ const findVariantOption = (product, selectedVariants) => {
           : "",
       normalized: [],
       optionRef: null,
-      optionPrice: Number(product.price) || 0,
+      optionPrice: Number(pricing.effectivePrice) || 0,
       optionQuantity: Number(product.quantity || product.stock || 0),
       optionSku: "",
     };
@@ -159,7 +169,7 @@ const findVariantOption = (product, selectedVariants) => {
       message: "",
       normalized,
       optionRef: normalized,
-      optionPrice: Number(product.price) || 0,
+      optionPrice: Number(pricing.effectivePrice) || 0,
       optionQuantity: Number(product.quantity || product.stock || 0),
       optionSku: optionSkus.join("|"),
       combinationKey,
@@ -186,10 +196,17 @@ const findVariantOption = (product, selectedVariants) => {
     message: "",
     normalized,
     optionRef: matchedCombination,
-    optionPrice:
-      matchedCombination.price === undefined || Number.isNaN(matchedCombination.price)
-        ? Number(product.price) || 0
-        : Number(matchedCombination.price),
+    optionPrice: (() => {
+      const baseOptionPrice =
+        matchedCombination.price === undefined || Number.isNaN(matchedCombination.price)
+          ? Number(pricing.effectivePrice) || 0
+          : Number(matchedCombination.price);
+
+      if (activeDiscountPercent > 0 && matchedCombination.price !== undefined) {
+        return applyPercentDiscount(baseOptionPrice, activeDiscountPercent);
+      }
+      return baseOptionPrice;
+    })(),
     optionQuantity: Number(matchedCombination.quantity || 0),
     optionSku: matchedCombination.sku || optionSkus.join("|"),
     combinationKey,

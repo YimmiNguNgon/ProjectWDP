@@ -20,11 +20,21 @@ async function expireDeals() {
         // Find deals that are sold out
         const expiredByQuantity = await Product.find({
             promotionType: 'daily_deal',
-            $expr: { $gte: ['$dealQuantitySold', '$dealQuantityLimit'] }
+            dealQuantityLimit: { $gt: 0 },
+            $expr: {
+                $gte: [
+                    { $ifNull: ['$dealQuantitySold', 0] },
+                    '$dealQuantityLimit',
+                ],
+            },
         });
 
-        // Combine both arrays and remove duplicates
-        const allExpired = [...new Set([...expiredByDate, ...expiredByQuantity])];
+        // Combine both arrays and remove duplicates by product id
+        const expiredMap = new Map();
+        [...expiredByDate, ...expiredByQuantity].forEach((product) => {
+            expiredMap.set(String(product._id), product);
+        });
+        const allExpired = Array.from(expiredMap.values());
 
         if (allExpired.length === 0) {
             console.log('[Deal Expiration Job] No expired deals found');

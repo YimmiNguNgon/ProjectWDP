@@ -21,7 +21,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog';
-import { Plus, Package, Layers, Eye } from 'lucide-react';
+import { Plus, Package, Layers, Eye, Flame, Clock3 } from 'lucide-react';
 import { toast } from 'sonner';
 import {
   getMyListings,
@@ -40,10 +40,23 @@ interface Category {
   name: string;
 }
 
+const toInputDateTime = (value?: string | null) => {
+  if (!value) return '';
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return '';
+  const offset = date.getTimezoneOffset();
+  const local = new Date(date.getTime() - offset * 60000);
+  return local.toISOString().slice(0, 16);
+};
+
 interface EditFormData {
   title: string;
   description: string;
   price: number;
+  saleEnabled: boolean;
+  salePrice: number;
+  saleStartDate: string;
+  saleEndDate: string;
   quantity: number;
   condition: string;
   categoryId: string;
@@ -64,6 +77,86 @@ const listingStatusColor: Record<string, string> = {
   paused: 'bg-yellow-100 text-yellow-800',
   ended: 'bg-gray-100 text-gray-800',
   deleted: 'bg-red-100 text-red-800',
+};
+
+type SaleState = 'none' | 'upcoming' | 'active' | 'expired';
+
+interface SaleInfo {
+  state: SaleState;
+  basePrice: number;
+  salePrice: number | null;
+  startDate: Date | null;
+  endDate: Date | null;
+  countdown: string;
+}
+
+const toValidDate = (value?: string | null) => {
+  if (!value) return null;
+  const date = new Date(value);
+  return Number.isNaN(date.getTime()) ? null : date;
+};
+
+const formatCountdown = (target: Date) => {
+  const diffMs = target.getTime() - Date.now();
+  if (diffMs <= 0) return 'Ending soon';
+  const totalMinutes = Math.floor(diffMs / (1000 * 60));
+  const days = Math.floor(totalMinutes / (60 * 24));
+  const hours = Math.floor((totalMinutes % (60 * 24)) / 60);
+  const mins = totalMinutes % 60;
+  if (days > 0) return `${days}d ${hours}h left`;
+  if (hours > 0) return `${hours}h ${mins}m left`;
+  return `${Math.max(1, mins)}m left`;
+};
+
+const resolveSaleInfo = (product: Product): SaleInfo => {
+  const basePrice = Number(product.basePrice ?? product.originalPrice ?? product.price ?? 0);
+  const salePriceRaw = Number(product.salePrice ?? product.price ?? 0);
+  const startDate = toValidDate(product.saleStartDate ?? product.dealStartDate ?? null);
+  const endDate = toValidDate(product.saleEndDate ?? product.dealEndDate ?? null);
+  const hasConfiguredSale = Number.isFinite(salePriceRaw) && salePriceRaw > 0 && salePriceRaw < basePrice;
+
+  if (!hasConfiguredSale) {
+    return {
+      state: 'none',
+      basePrice,
+      salePrice: null,
+      startDate: null,
+      endDate: null,
+      countdown: '',
+    };
+  }
+
+  const now = Date.now();
+  if (startDate && now < startDate.getTime()) {
+    return {
+      state: 'upcoming',
+      basePrice,
+      salePrice: salePriceRaw,
+      startDate,
+      endDate,
+      countdown: `Starts ${startDate.toLocaleString('vi-VN')}`,
+    };
+  }
+
+  if (endDate && now > endDate.getTime()) {
+    return {
+      state: 'expired',
+      basePrice,
+      salePrice: salePriceRaw,
+      startDate,
+      endDate,
+      countdown: `Ended ${endDate.toLocaleString('vi-VN')}`,
+    };
+  }
+
+  return {
+    state: 'active',
+    basePrice,
+    salePrice: salePriceRaw,
+    startDate,
+    endDate,
+    countdown: endDate ? formatCountdown(endDate) : 'Sale live',
+  };
 };
 
 export default function SellerProducts() {
@@ -87,6 +180,10 @@ export default function SellerProducts() {
     title: '',
     description: '',
     price: 0,
+    saleEnabled: false,
+    salePrice: 0,
+    saleStartDate: '',
+    saleEndDate: '',
     quantity: 0,
     condition: 'new',
     categoryId: '',
@@ -98,6 +195,7 @@ export default function SellerProducts() {
     (sum, combo) => sum + (Number(combo.quantity) || 0),
     0,
   );
+  const viewingSaleInfo = viewingProduct ? resolveSaleInfo(viewingProduct) : null;
 
   useEffect(() => {
     api.get('/api/categories').then((res) => {
@@ -137,7 +235,11 @@ export default function SellerProducts() {
     setFormData({
       title: product.title,
       description: product.description,
-      price: product.price,
+      price: product.basePrice ?? product.originalPrice ?? product.price,
+      saleEnabled: Boolean(product.promotionType === 'daily_deal' || product.salePrice),
+      salePrice: Number(product.salePrice ?? product.price ?? 0),
+      saleStartDate: toInputDateTime(product.saleStartDate ?? product.dealStartDate),
+      saleEndDate: toInputDateTime(product.saleEndDate ?? product.dealEndDate),
       quantity: product.quantity ?? 0,
       condition: product.condition || 'new',
       categoryId: typeof product.categoryId === 'object' ? product.categoryId?._id ?? '' : product.categoryId ?? '',
@@ -180,12 +282,30 @@ export default function SellerProducts() {
       toast.error('Please enter a valid product name and price');
       return;
     }
+    if (formData.saleEnabled) {
+      if (!formData.salePrice || !formData.saleStartDate || !formData.saleEndDate) {
+        toast.error('Please fill sale price and sale time range');
+        return;
+      }
+      if (formData.salePrice >= formData.price) {
+        toast.error('Sale price must be lower than base price');
+        return;
+      }
+      if (new Date(formData.saleStartDate) >= new Date(formData.saleEndDate)) {
+        toast.error('Sale start date must be before end date');
+        return;
+      }
+    }
     setSaving(true);
     try {
       await updateProduct(editingProduct._id, {
         title: formData.title,
         description: formData.description,
         price: formData.price,
+        saleEnabled: formData.saleEnabled,
+        salePrice: formData.saleEnabled ? formData.salePrice : undefined,
+        saleStartDate: formData.saleEnabled ? formData.saleStartDate : undefined,
+        saleEndDate: formData.saleEnabled ? formData.saleEndDate : undefined,
         quantity: formData.quantity,
         condition: formData.condition,
         categoryId: formData.categoryId || undefined,
@@ -274,6 +394,7 @@ export default function SellerProducts() {
               <TableHead>Product Name</TableHead>
               <TableHead>Category</TableHead>
               <TableHead>Price</TableHead>
+              <TableHead>Sale</TableHead>
               <TableHead>Stock</TableHead>
               <TableHead>Variants</TableHead>
               <TableHead>Status</TableHead>
@@ -284,11 +405,11 @@ export default function SellerProducts() {
           <TableBody>
             {loading ? (
               <TableRow>
-                <TableCell colSpan={9} className="text-center py-8">Loading...</TableCell>
+                <TableCell colSpan={10} className="text-center py-8">Loading...</TableCell>
               </TableRow>
             ) : products.length === 0 ? (
               <TableRow>
-                <TableCell colSpan={9} className="text-center py-12">
+                <TableCell colSpan={10} className="text-center py-12">
                   <Package className="h-10 w-10 text-gray-400 mx-auto mb-3" />
                   <p className="text-gray-500">No products found</p>
                   <Link to="/seller/products/new">
@@ -300,16 +421,28 @@ export default function SellerProducts() {
                 </TableCell>
               </TableRow>
             ) : (
-              products.map((product) => (
-                <TableRow key={product._id}>
+              products.map((product) => {
+                const saleInfo = resolveSaleInfo(product);
+                return (
+                <TableRow
+                  key={product._id}
+                  className={saleInfo.state === 'active' ? 'bg-red-50/30 hover:bg-red-50/50' : ''}
+                >
                   <TableCell>
                     {product.images && product.images[0] ? (
-                      <img
-                        src={product.images[0]}
-                        alt={product.title}
-                        className="w-16 h-16 object-cover rounded"
-                        onError={(e) => { e.currentTarget.src = 'https://via.placeholder.com/64?text=No+Image'; }}
-                      />
+                      <div className="relative w-16 h-16">
+                        {saleInfo.state === 'active' && (
+                          <span className="absolute left-0 top-0 z-10 rounded-br-md bg-gradient-to-r from-red-600 to-rose-500 px-1.5 py-0.5 text-[9px] font-extrabold tracking-wide text-white shadow">
+                            SALE
+                          </span>
+                        )}
+                        <img
+                          src={product.images[0]}
+                          alt={product.title}
+                          className="w-16 h-16 object-cover rounded"
+                          onError={(e) => { e.currentTarget.src = 'https://via.placeholder.com/64?text=No+Image'; }}
+                        />
+                      </div>
                     ) : (
                       <div className="w-16 h-16 bg-gray-200 rounded flex items-center justify-center text-xs text-gray-500">
                         No Image
@@ -317,12 +450,50 @@ export default function SellerProducts() {
                     )}
                   </TableCell>
                   <TableCell className="font-medium max-w-[200px]">
-                    <div className="truncate" title={product.title}>{product.title}</div>
+                    <div className="truncate flex items-center gap-2" title={product.title}>
+                      <span>{product.title}</span>
+                      {saleInfo.state === 'active' && (
+                        <Badge className="bg-red-600 hover:bg-red-600 text-white border-0">Sale</Badge>
+                      )}
+                    </div>
                   </TableCell>
                   <TableCell>
                     {typeof product.categoryId === 'object' ? product.categoryId?.name ?? '-' : '-'}
                   </TableCell>
-                  <TableCell>${product.price.toFixed(2)}</TableCell>
+                  <TableCell>
+                    {saleInfo.state === 'active' && saleInfo.salePrice ? (
+                      <div className="flex flex-col">
+                        <span className="text-xs text-gray-400 line-through">${saleInfo.basePrice.toFixed(2)}</span>
+                        <span className="font-semibold text-red-600">${saleInfo.salePrice.toFixed(2)}</span>
+                      </div>
+                    ) : (
+                      <span>${product.price.toFixed(2)}</span>
+                    )}
+                  </TableCell>
+                  <TableCell>
+                    {saleInfo.state === 'active' && (
+                      <div className="space-y-1">
+                        <Badge className="bg-red-100 text-red-700 hover:bg-red-100 border border-red-200">
+                          <Flame className="h-3 w-3 mr-1" />
+                          Active
+                        </Badge>
+                        <div className="text-[11px] text-red-600 font-medium flex items-center gap-1">
+                          <Clock3 className="h-3 w-3" />
+                          {saleInfo.countdown}
+                        </div>
+                      </div>
+                    )}
+                    {saleInfo.state === 'upcoming' && (
+                      <div className="space-y-1">
+                        <Badge className="bg-amber-100 text-amber-700 hover:bg-amber-100 border border-amber-200">Upcoming</Badge>
+                        <div className="text-[11px] text-amber-700 font-medium">{saleInfo.countdown}</div>
+                      </div>
+                    )}
+                    {saleInfo.state === 'expired' && (
+                      <Badge className="bg-gray-100 text-gray-600 hover:bg-gray-100 border border-gray-200">Expired</Badge>
+                    )}
+                    {saleInfo.state === 'none' && <span className="text-xs text-gray-400">-</span>}
+                  </TableCell>
                   <TableCell>{product.quantity ?? 0}</TableCell>
                   <TableCell>
                     {product.variants && product.variants.length > 0 ? (
@@ -364,7 +535,7 @@ export default function SellerProducts() {
                     </div>
                   </TableCell>
                 </TableRow>
-              ))
+              )})
             )}
           </TableBody>
         </Table>
@@ -413,11 +584,44 @@ export default function SellerProducts() {
               <div className="grid grid-cols-2 gap-4 text-sm">
                 <div>
                   <span className="text-gray-500">Price:</span>
-                  <span className="ml-2 font-semibold">${viewingProduct.price.toFixed(2)}</span>
+                  {viewingSaleInfo?.state === 'active' && viewingSaleInfo.salePrice ? (
+                    <span className="ml-2 inline-flex flex-col align-middle">
+                      <span className="text-xs text-gray-400 line-through">${viewingSaleInfo.basePrice.toFixed(2)}</span>
+                      <span className="font-semibold text-red-600">${viewingSaleInfo.salePrice.toFixed(2)}</span>
+                    </span>
+                  ) : (
+                    <span className="ml-2 font-semibold">${viewingProduct.price.toFixed(2)}</span>
+                  )}
                 </div>
                 <div>
                   <span className="text-gray-500">Stock:</span>
                   <span className="ml-2 font-semibold">{viewingProduct.quantity ?? 0}</span>
+                </div>
+                <div>
+                  <span className="text-gray-500">Sale:</span>
+                  {viewingSaleInfo?.state === 'active' && (
+                    <span className="ml-2 inline-flex items-center gap-1 rounded-full bg-red-100 px-2 py-0.5 text-xs font-semibold text-red-700">
+                      <Flame className="h-3 w-3" />
+                      Active
+                    </span>
+                  )}
+                  {viewingSaleInfo?.state === 'upcoming' && (
+                    <span className="ml-2 inline-flex items-center rounded-full bg-amber-100 px-2 py-0.5 text-xs font-semibold text-amber-700">
+                      Upcoming
+                    </span>
+                  )}
+                  {viewingSaleInfo?.state === 'expired' && (
+                    <span className="ml-2 inline-flex items-center rounded-full bg-gray-100 px-2 py-0.5 text-xs font-semibold text-gray-600">
+                      Expired
+                    </span>
+                  )}
+                  {viewingSaleInfo?.state === 'none' && <span className="ml-2 text-gray-400">-</span>}
+                </div>
+                <div>
+                  <span className="text-gray-500">Sale Time:</span>
+                  <span className={`ml-2 text-xs ${viewingSaleInfo?.state === 'active' ? 'text-red-600 font-semibold' : 'text-gray-500'}`}>
+                    {viewingSaleInfo?.countdown || '-'}
+                  </span>
                 </div>
                 <div>
                   <span className="text-gray-500">Category:</span>
@@ -541,6 +745,47 @@ export default function SellerProducts() {
                   disabled={formData.variantCombinations.length > 0}
                 />
               </div>
+            </div>
+
+            <div className="grid gap-2 rounded-md border border-dashed border-red-300 bg-red-50/40 p-3">
+              <Label className="flex items-center justify-between">
+                <span>Sale Time</span>
+                <input
+                  type="checkbox"
+                  checked={formData.saleEnabled}
+                  onChange={(e) => setFormData({ ...formData, saleEnabled: e.target.checked })}
+                />
+              </Label>
+              {formData.saleEnabled && (
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                  <div className="grid gap-2">
+                    <Label>Sale Price *</Label>
+                    <Input
+                      type="number"
+                      min="0"
+                      step="0.01"
+                      value={formData.salePrice}
+                      onChange={(e) => setFormData({ ...formData, salePrice: parseFloat(e.target.value) || 0 })}
+                    />
+                  </div>
+                  <div className="grid gap-2">
+                    <Label>Start Time *</Label>
+                    <Input
+                      type="datetime-local"
+                      value={formData.saleStartDate}
+                      onChange={(e) => setFormData({ ...formData, saleStartDate: e.target.value })}
+                    />
+                  </div>
+                  <div className="grid gap-2">
+                    <Label>End Time *</Label>
+                    <Input
+                      type="datetime-local"
+                      value={formData.saleEndDate}
+                      onChange={(e) => setFormData({ ...formData, saleEndDate: e.target.value })}
+                    />
+                  </div>
+                </div>
+              )}
             </div>
 
             <div className="grid grid-cols-2 gap-4">

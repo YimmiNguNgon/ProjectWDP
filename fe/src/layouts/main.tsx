@@ -23,7 +23,7 @@ import NotificationBell from "@/components/notification-bell";
 
 const LEFT_NAV_ITEMS = [
   { name: "Browse Products", to: "/products" },
-  { name: "Daily Deals", to: "/products" },
+  { name: "Sale Time", to: "/products?saleOnly=true" },
   { name: "Brand Outlet", to: "/products" },
   { name: "Gift Cards", to: "/products" },
   { name: "Help & Contact", to: "#" },

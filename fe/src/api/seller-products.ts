@@ -24,6 +24,11 @@ export interface Product {
   title: string;
   description: string;
   price: number;
+  basePrice?: number;
+  salePrice?: number | null;
+  saleStartDate?: string | null;
+  saleEndDate?: string | null;
+  isOnSale?: boolean;
   image?: string;
   images?: string[];
   categoryId?: any;
@@ -34,6 +39,11 @@ export interface Product {
   lowStockThreshold: number;
   variants?: ProductVariant[];
   variantCombinations?: ProductVariantCombination[];
+  promotionType?: "normal" | "outlet" | "daily_deal";
+  originalPrice?: number | null;
+  discountPercent?: number | null;
+  dealStartDate?: string | null;
+  dealEndDate?: string | null;
   averageRating: number;
   ratingCount: number;
   createdAt: string;
@@ -52,6 +62,10 @@ export interface CreateProductPayload {
   title: string;
   description?: string;
   price: number;
+  saleEnabled?: boolean;
+  salePrice?: number;
+  saleStartDate?: string;
+  saleEndDate?: string;
   quantity: number;
   condition?: string;
   categoryId: string;
@@ -59,6 +73,13 @@ export interface CreateProductPayload {
   images?: string[];
   variants?: ProductVariant[];
   variantCombinations?: ProductVariantCombination[];
+}
+
+export interface UpdateProductPayload extends Partial<Product> {
+  saleEnabled?: boolean;
+  salePrice?: number;
+  saleStartDate?: string;
+  saleEndDate?: string;
 }
 
 /**
@@ -85,7 +106,7 @@ export async function getMyListings(params?: {
 /**
  * Update product
  */
-export async function updateProduct(productId: string, data: Partial<Product>) {
+export async function updateProduct(productId: string, data: UpdateProductPayload) {
   const response = await api.put(`/api/products/${productId}`, data);
   return response.data;
 }

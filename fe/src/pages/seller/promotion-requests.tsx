@@ -90,7 +90,7 @@ export default function PromotionRequestsPage() {
         ) : (
             <Badge className="bg-red-600">
                 <Tag className="w-3 h-3 mr-1" />
-                Daily Deal
+                Sale Time
             </Badge>
         );
     };
@@ -109,7 +109,7 @@ export default function PromotionRequestsPage() {
                 <div>
                     <h1 className="text-3xl font-bold">Promotion Requests</h1>
                     <p className="text-gray-600 mt-1">
-                        Manage your Brand Outlet and Daily Deal requests
+                        Manage your Brand Outlet and Sale Time requests
                     </p>
                 </div>
                 <Link to="/seller/my-listings">
@@ -134,7 +134,7 @@ export default function PromotionRequestsPage() {
                         for 60+ days, with 30%+ discount, and verified seller.
                     </p>
                     <p>
-                        <strong>Daily Deal:</strong> Time-limited promotions with quantity
+                        <strong>Sale Time:</strong> Time-limited promotions with quantity
                         limits. Requires admin approval.
                     </p>
                     <p className="text-gray-600">

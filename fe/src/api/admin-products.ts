@@ -7,6 +7,17 @@ export interface Product {
     title: string;
     description: string;
     price: number;
+    basePrice?: number | null;
+    originalPrice?: number | null;
+    salePrice?: number | null;
+    discountPercent?: number | null;
+    promotionType?: string;
+    saleStartDate?: string | Date | null;
+    saleEndDate?: string | Date | null;
+    dealStartDate?: string | Date | null;
+    dealEndDate?: string | Date | null;
+    isOnSale?: boolean;
+    isTimedSale?: boolean;
     quantity: number;
     image?: string; // Main image from database
     images: string[]; // Additional images

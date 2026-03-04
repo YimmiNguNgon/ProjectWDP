@@ -15,6 +15,7 @@ import {
 } from "@/components/ui/item";
 import { CategoryShowcase } from "@/components/category-showcase";
 import { Banner } from "@/components/banner";
+import { SaleTimeShowcase } from "@/components/sale-time-showcase";
 
 export default function HomePage() {
   const banners = [
@@ -116,6 +117,8 @@ export default function HomePage() {
           </Button>
         </ItemActions>
       </Item>
+
+      <SaleTimeShowcase />
 
       <CategoryShowcase title="Trending on eBay" />
     </div>

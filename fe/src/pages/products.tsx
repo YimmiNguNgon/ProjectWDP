@@ -117,6 +117,8 @@ export default function ProductsPage() {
   // Get search query from URL params (read-only)
   const searchQuery = (searchParams.get("search") || "").trim();
   const sellerQuery = (searchParams.get("seller") || "").trim();
+  const saleOnlyQuery = (searchParams.get("saleOnly") || "").trim().toLowerCase();
+  const isSaleOnly = ["1", "true", "yes"].includes(saleOnlyQuery);
 
   // Initialize state from URL params
   const [selectedCategories, setSelectedCategories] = React.useState<string[]>(
@@ -211,6 +213,9 @@ export default function ProductsPage() {
         if (sellerQuery) {
           params.append("seller", sellerQuery);
         }
+        if (isSaleOnly) {
+          params.append("saleOnly", "true");
+        }
         if (appliedFilters.selectedCategories.length > 0) {
           params.append(
             "categories",
@@ -239,6 +244,7 @@ export default function ProductsPage() {
   }, [
     searchQuery,
     sellerQuery,
+    isSaleOnly,
     appliedFilters,
     currentPage,
     itemsPerPage,
@@ -256,6 +262,7 @@ export default function ProductsPage() {
     const params = new URLSearchParams();
     if (searchQuery) params.set("search", searchQuery);
     if (sellerQuery) params.set("seller", sellerQuery);
+    if (isSaleOnly) params.set("saleOnly", "true");
     if (filters.selectedCategories.length > 0) {
       params.set("categories", filters.selectedCategories.join(","));
     }
@@ -481,7 +488,11 @@ export default function ProductsPage() {
           {/* Header */}
           <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
             <h1 className="text-3xl font-bold text-foreground">
-              {searchQuery ? `Search Results for "${searchQuery}"` : "Products"}
+              {searchQuery
+                ? `Search Results for "${searchQuery}"`
+                : isSaleOnly
+                  ? "Sale Time"
+                  : "Products"}
             </h1>
             <div className="flex items-center gap-2">
               <Select

@@ -57,6 +57,10 @@ export default function AddProduct() {
     title: '',
     description: '',
     price: '',
+    saleEnabled: false,
+    salePrice: '',
+    saleStartDate: '',
+    saleEndDate: '',
     quantity: '',
     condition: 'new',
     categoryId: '',
@@ -174,6 +178,22 @@ export default function AddProduct() {
       toast.error('Vui lòng điền tên sản phẩm, giá bán và danh mục');
       return;
     }
+    if (formData.saleEnabled) {
+      const basePrice = parseFloat(formData.price);
+      const dealPrice = parseFloat(formData.salePrice);
+      if (!formData.salePrice || !formData.saleStartDate || !formData.saleEndDate) {
+        toast.error('Vui lòng nhập đầy đủ giá sale, thời gian bắt đầu và kết thúc');
+        return;
+      }
+      if (!Number.isFinite(dealPrice) || dealPrice <= 0 || dealPrice >= basePrice) {
+        toast.error('Giá sale phải lớn hơn 0 và nhỏ hơn giá gốc');
+        return;
+      }
+      if (new Date(formData.saleStartDate) >= new Date(formData.saleEndDate)) {
+        toast.error('Thời gian bắt đầu phải nhỏ hơn thời gian kết thúc');
+        return;
+      }
+    }
 
     setLoading(true);
     try {
@@ -188,6 +208,10 @@ export default function AddProduct() {
         title: formData.title,
         description: formData.description,
         price: parseFloat(formData.price),
+        saleEnabled: formData.saleEnabled,
+        salePrice: formData.saleEnabled ? parseFloat(formData.salePrice) : undefined,
+        saleStartDate: formData.saleEnabled ? formData.saleStartDate : undefined,
+        saleEndDate: formData.saleEnabled ? formData.saleEndDate : undefined,
         quantity: parseInt(formData.quantity) || 0,
         condition: formData.condition,
         categoryId: formData.categoryId,
@@ -426,6 +450,50 @@ export default function AddProduct() {
                         step="0.01"
                       />
                     </div>
+                  </div>
+
+                  <div className="space-y-3 rounded-lg border border-dashed border-red-300 p-3 bg-red-50/40">
+                    <Label className="flex items-center justify-between">
+                      <span>Sale Time</span>
+                      <input
+                        type="checkbox"
+                        checked={formData.saleEnabled}
+                        onChange={(e) =>
+                          setFormData((prev) => ({ ...prev, saleEnabled: e.target.checked }))
+                        }
+                      />
+                    </Label>
+                    {formData.saleEnabled && (
+                      <div className="space-y-2">
+                        <Label htmlFor="salePrice">Giá sale *</Label>
+                        <Input
+                          id="salePrice"
+                          name="salePrice"
+                          type="number"
+                          min="0"
+                          step="0.01"
+                          value={formData.salePrice}
+                          onChange={handleChange}
+                          placeholder="Giá trong thời gian sale"
+                        />
+                        <Label htmlFor="saleStartDate">Bắt đầu sale *</Label>
+                        <Input
+                          id="saleStartDate"
+                          name="saleStartDate"
+                          type="datetime-local"
+                          value={formData.saleStartDate}
+                          onChange={handleChange}
+                        />
+                        <Label htmlFor="saleEndDate">Kết thúc sale *</Label>
+                        <Input
+                          id="saleEndDate"
+                          name="saleEndDate"
+                          type="datetime-local"
+                          value={formData.saleEndDate}
+                          onChange={handleChange}
+                        />
+                      </div>
+                    )}
                   </div>
 
                   <div className="space-y-2">
