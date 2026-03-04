@@ -26,16 +26,17 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { MapPin, Truck, CreditCard, ChevronLeft, Pencil, Trash2, Plus, ChevronRight } from "lucide-react";
+import { MapPin, Truck, CreditCard, ChevronLeft, Pencil, Trash2, Plus, ChevronRight, Store } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Badge } from "@/components/ui/badge";
 import {
-  validateVoucher,
-  type VoucherValidationResponse,
+  getAvailableVouchers,
+  type Voucher,
 } from "@/api/vouchers";
 import AddressForm from "@/components/address-form";
 import { ConfirmDialog } from "@/components/confirm-dialog";
 import { createAddress, updateAddress, deleteAddress, setDefaultAddress } from "@/api/user";
+import VoucherTicket from "@/components/voucher/voucher-ticket";
 
 type CheckoutLocationState = {
   source?: "cart" | "buy_now";
@@ -85,11 +86,13 @@ export default function CheckoutPage() {
   const [shippingMethod, setShippingMethod] = useState<string>("standard");
   const [paymentMethod, setPaymentMethod] = useState<string>("cod");
   const [orderNote, setOrderNote] = useState<string>("");
-  const [voucherCode, setVoucherCode] = useState<string>("");
-
-  const [appliedVoucher, setAppliedVoucher] =
-    useState<VoucherValidationResponse | null>(null);
-  const [applyingVoucher, setApplyingVoucher] = useState(false);
+  const [globalVoucherInput, setGlobalVoucherInput] = useState("");
+  const [globalVoucherCode, setGlobalVoucherCode] = useState("");
+  const [sellerVoucherInputs, setSellerVoucherInputs] = useState<Record<string, string>>({});
+  const [sellerVoucherCodes, setSellerVoucherCodes] = useState<Record<string, string>>({});
+  const [globalVoucherOptions, setGlobalVoucherOptions] = useState<Voucher[]>([]);
+  const [sellerVoucherOptions, setSellerVoucherOptions] = useState<Record<string, Voucher[]>>({});
+  const [loadingVoucherOptions, setLoadingVoucherOptions] = useState(false);
 
   // Address CRUD state
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -100,13 +103,27 @@ export default function CheckoutPage() {
   const [pendingAddressId, setPendingAddressId] = useState<string | null>(null);
   const [isActionLoading, setIsActionLoading] = useState(false);
 
+  const sellerVoucherPayload = useMemo(
+    () =>
+      Object.entries(sellerVoucherCodes)
+        .filter(([, code]) => Boolean(code.trim()))
+        .map(([sellerId, code]) => ({ sellerId, code: code.trim().toUpperCase() })),
+    [sellerVoucherCodes],
+  );
+
+  const checkoutRequestBody = useMemo(
+    () => ({
+      ...payload,
+      globalVoucherCode: globalVoucherCode || undefined,
+      sellerVoucherCodes: sellerVoucherPayload,
+    }),
+    [payload, globalVoucherCode, sellerVoucherPayload],
+  );
+
   const loadPreview = async () => {
     try {
       setLoading(true);
-      const data = await previewCheckout({
-        ...payload,
-        voucherCode: voucherCode || undefined,
-      });
+      const data = await previewCheckout(checkoutRequestBody);
       setPreview(data);
     } catch (error: any) {
       toast.error(error.response?.data?.message || "Failed to load checkout");
@@ -128,13 +145,67 @@ export default function CheckoutPage() {
     }
   };
 
+  const loadVoucherOptions = async (previewData: CheckoutPreviewResponse) => {
+    if (!previewData?.groups?.length) {
+      setGlobalVoucherOptions([]);
+      setSellerVoucherOptions({});
+      return;
+    }
+
+    try {
+      setLoadingVoucherOptions(true);
+      const globalPromise = getAvailableVouchers({
+        scope: "global",
+        subtotal: previewData.totals.subtotalAmount,
+      });
+      const sellerPromises = previewData.groups.map((group) =>
+        getAvailableVouchers({
+          scope: "seller",
+          sellerId: group.sellerId,
+          subtotal: group.subtotalAmount,
+        }),
+      );
+
+      const [globalRes, ...sellerRes] = await Promise.all([
+        globalPromise,
+        ...sellerPromises,
+      ]);
+
+      const sellerMap: Record<string, Voucher[]> = {};
+      previewData.groups.forEach((group, index) => {
+        sellerMap[group.sellerId] = sellerRes[index]?.data || [];
+      });
+
+      setGlobalVoucherOptions(globalRes.data || []);
+      setSellerVoucherOptions(sellerMap);
+    } catch {
+      setGlobalVoucherOptions([]);
+      setSellerVoucherOptions({});
+    } finally {
+      setLoadingVoucherOptions(false);
+    }
+  };
+
   useEffect(() => {
     loadPreview();
-    loadAddresses();
   }, [
     payload.source,
     JSON.stringify(payload.cartItemIds || []),
     JSON.stringify(payload.items || []),
+    globalVoucherCode,
+    JSON.stringify(sellerVoucherPayload),
+  ]);
+
+  useEffect(() => {
+    loadAddresses();
+  }, []);
+
+  useEffect(() => {
+    if (!preview) return;
+    loadVoucherOptions(preview);
+  }, [
+    preview?.totals.subtotalAmount,
+    JSON.stringify(preview?.groups?.map((g) => [g.sellerId, g.subtotalAmount]) || []),
   ]);
 
   const shippingCosts: Record<string, number> = {
@@ -143,9 +214,8 @@ export default function CheckoutPage() {
   };
 
   const totalAmount =
-    (preview?.totals.totalAmount || 0) +
-    shippingCosts[shippingMethod] -
-    (appliedVoucher?.discountAmount || 0);
+    Number(preview?.totals.totalAmount || 0) +
+    Number(shippingCosts[shippingMethod] || 0);
 
   const handleConfirmPayment = async () => {
     if (!preview?.canProceed) return;
@@ -157,12 +227,9 @@ export default function CheckoutPage() {
     try {
       setProcessing(true);
       const requestBody: CheckoutConfirmPayload = {
-        ...payload,
-        paymentSimulation: "success", // Defaulting to success for now
-        voucherCode: appliedVoucher?.voucherCode || undefined, // Pass applied voucher code
-        // Note: The original API might need expansion for addressId, etc.
-        // For this UI task, we focus on the frontend logic.
-      } as any;
+        ...checkoutRequestBody,
+        paymentSimulation: "success",
+      };
       const result = await confirmCheckout(requestBody);
 
       if (result.paymentStatus === "paid") {
@@ -183,32 +250,38 @@ export default function CheckoutPage() {
     }
   };
 
-  const handleApplyVoucher = async () => {
-    if (!voucherCode.trim()) {
-      toast.error("Please enter a voucher code");
-      return;
-    }
+  const handleApplyGlobalVoucher = () => {
+    const code = globalVoucherInput.trim().toUpperCase();
+    setGlobalVoucherCode(code);
+  };
 
-    try {
-      setApplyingVoucher(true);
-      const res = await validateVoucher(
-        voucherCode,
-        preview?.totals.subtotalAmount || 0,
-      );
-      if (res.success) {
-        setAppliedVoucher(res.data);
-        await loadPreview(); // Reload preview to get backend-calculated totals
-        toast.success(res.message || "Voucher applied successfully");
-      } else {
-        setAppliedVoucher(null);
-        toast.error(res.message || "Invalid voucher");
-      }
-    } catch (err: any) {
-      setAppliedVoucher(null);
-      toast.error(err.response?.data?.message || "Failed to validate voucher");
-    } finally {
-      setApplyingVoucher(false);
-    }
+  const handleClearGlobalVoucher = () => {
+    setGlobalVoucherInput("");
+    setGlobalVoucherCode("");
+  };
+
+  const handleSelectGlobalVoucher = (voucher: Voucher) => {
+    setGlobalVoucherInput(voucher.code);
+    setGlobalVoucherCode(voucher.code);
+  };
+
+  const handleApplySellerVoucher = (sellerId: string) => {
+    const code = (sellerVoucherInputs[sellerId] || "").trim().toUpperCase();
+    setSellerVoucherCodes((prev) => ({ ...prev, [sellerId]: code }));
+  };
+
+  const handleClearSellerVoucher = (sellerId: string) => {
+    setSellerVoucherInputs((prev) => ({ ...prev, [sellerId]: "" }));
+    setSellerVoucherCodes((prev) => {
+      const next = { ...prev };
+      delete next[sellerId];
+      return next;
+    });
+  };
+
+  const handleSelectSellerVoucher = (sellerId: string, voucher: Voucher) => {
+    setSellerVoucherInputs((prev) => ({ ...prev, [sellerId]: voucher.code }));
+    setSellerVoucherCodes((prev) => ({ ...prev, [sellerId]: voucher.code }));
   };
 
   const handleOpenAddAddress = () => {
@@ -598,26 +671,166 @@ export default function CheckoutPage() {
             </RadioGroup>
           </section>
 
-          {/* Voucher Section */}
-          <section className="bg-white rounded-xl border p-6 shadow-sm">
-            <h3 className="font-bold mb-4">Discount Code</h3>
+          <section className="bg-white rounded-xl border p-6 shadow-sm space-y-4">
+            <h3 className="font-bold text-lg">Global Voucher (Whole Order)</h3>
             <div className="flex gap-2">
               <Input
-                placeholder="Enter voucher code"
-                value={voucherCode}
-                onChange={(e) => setVoucherCode(e.target.value)}
+                placeholder="Enter global voucher code"
+                value={globalVoucherInput}
+                onChange={(e) => setGlobalVoucherInput(e.target.value.toUpperCase())}
+                className="uppercase"
               />
-              <Button
-                className="cursor-pointer"
-                onClick={handleApplyVoucher}
-                disabled={applyingVoucher || !preview}
-              >
-                {applyingVoucher ? "Applying..." : "Apply"}
+              <Button className="cursor-pointer" onClick={handleApplyGlobalVoucher}>
+                Apply
               </Button>
+              {globalVoucherCode && (
+                <Button variant="outline" className="cursor-pointer" onClick={handleClearGlobalVoucher}>
+                  Remove
+                </Button>
+              )}
             </div>
-            <p className="mt-2 text-xs text-muted-foreground">
-              Hint: Use "SAVE10" or "SAVE20"
-            </p>
+            <select
+              value={globalVoucherCode}
+              onChange={(e) => {
+                const code = e.target.value;
+                setGlobalVoucherInput(code);
+                setGlobalVoucherCode(code);
+              }}
+              className="w-full h-10 rounded-md border border-input bg-background px-3 text-sm"
+              disabled={loadingVoucherOptions}
+            >
+              <option value="">Quick select global voucher</option>
+              {globalVoucherOptions.map((voucher) => (
+                <option key={voucher._id} value={voucher.code}>
+                  {voucher.code} - {voucher.type === "percentage" ? `${voucher.value}%` : `$${voucher.value}`}
+                </option>
+              ))}
+            </select>
+            <div className="space-y-2">
+              {globalVoucherOptions.map((voucher) => (
+                <VoucherTicket
+                  key={voucher._id}
+                  voucher={voucher}
+                  selected={globalVoucherCode === voucher.code}
+                  onSelect={handleSelectGlobalVoucher}
+                />
+              ))}
+              {!globalVoucherOptions.length && (
+                <p className="text-xs text-muted-foreground">No global vouchers available.</p>
+              )}
+            </div>
+          </section>
+
+          <section className="bg-white rounded-xl border p-6 shadow-sm space-y-5">
+            <h3 className="font-bold text-lg">Shop Vouchers</h3>
+            {preview.groups.map((group: CheckoutGroup) => (
+              <div key={group.sellerId} className="border rounded-xl p-4 space-y-4">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2 font-semibold">
+                    <Store className="h-4 w-4 text-primary" />
+                    <span>{group.sellerName || "Seller"}</span>
+                  </div>
+                  <Badge variant="outline">
+                    Subtotal ${group.subtotalAmount.toFixed(2)}
+                  </Badge>
+                </div>
+
+                <div className="space-y-2">
+                  {group.items.map((item: CheckoutGroupItem) => (
+                    <div
+                      key={`${group.sellerId}-${item.productId}-${item.cartItemId || ""}`}
+                      className="flex items-center justify-between text-sm"
+                    >
+                      <div>
+                        <p className="font-medium">{item.title}</p>
+                        {item.selectedVariants && item.selectedVariants.length > 0 && (
+                          <p className="text-xs text-muted-foreground">
+                            {item.selectedVariants
+                              .map((v: { name: string; value: string }) => `${v.name}: ${v.value}`)
+                              .join(" • ")}
+                          </p>
+                        )}
+                      </div>
+                      <div className="text-right">
+                        <p>${item.lineTotal.toFixed(2)}</p>
+                        <p className="text-xs text-muted-foreground">x{item.quantity}</p>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+
+                <Separator />
+                <div className="space-y-3">
+                  <Label className="font-semibold">Voucher For This Shop</Label>
+                  <div className="flex gap-2">
+                    <Input
+                      placeholder="Enter shop voucher code"
+                      value={sellerVoucherInputs[group.sellerId] || ""}
+                      onChange={(e) =>
+                        setSellerVoucherInputs((prev) => ({
+                          ...prev,
+                          [group.sellerId]: e.target.value.toUpperCase(),
+                        }))
+                      }
+                      className="uppercase"
+                    />
+                    <Button
+                      className="cursor-pointer"
+                      onClick={() => handleApplySellerVoucher(group.sellerId)}
+                    >
+                      Apply
+                    </Button>
+                    {sellerVoucherCodes[group.sellerId] && (
+                      <Button
+                        variant="outline"
+                        className="cursor-pointer"
+                        onClick={() => handleClearSellerVoucher(group.sellerId)}
+                      >
+                        Remove
+                      </Button>
+                    )}
+                  </div>
+
+                  <select
+                    value={sellerVoucherCodes[group.sellerId] || ""}
+                    onChange={(e) => {
+                      const code = e.target.value;
+                      setSellerVoucherInputs((prev) => ({
+                        ...prev,
+                        [group.sellerId]: code,
+                      }));
+                      setSellerVoucherCodes((prev) => ({
+                        ...prev,
+                        [group.sellerId]: code,
+                      }));
+                    }}
+                    className="w-full h-10 rounded-md border border-input bg-background px-3 text-sm"
+                    disabled={loadingVoucherOptions}
+                  >
+                    <option value="">Quick select shop voucher</option>
+                    {(sellerVoucherOptions[group.sellerId] || []).map((voucher) => (
+                      <option key={voucher._id} value={voucher.code}>
+                        {voucher.code} - {voucher.type === "percentage" ? `${voucher.value}%` : `$${voucher.value}`}
+                      </option>
+                    ))}
+                  </select>
+
+                  <div className="space-y-2">
+                    {(sellerVoucherOptions[group.sellerId] || []).map((voucher) => (
+                      <VoucherTicket
+                        key={voucher._id}
+                        voucher={voucher}
+                        selected={sellerVoucherCodes[group.sellerId] === voucher.code}
+                        onSelect={(v) => handleSelectSellerVoucher(group.sellerId, v)}
+                      />
+                    ))}
+                    {!(sellerVoucherOptions[group.sellerId] || []).length && (
+                      <p className="text-xs text-muted-foreground">No shop vouchers available for this seller.</p>
+                    )}
+                  </div>
+                </div>
+              </div>
+            ))}
           </section>
 
           {/* Note Section */}
@@ -683,39 +896,6 @@ export default function CheckoutPage() {
                   ))}
               </div>
 
-              {/* Voucher Input */}
-              <div className="mt-6 pt-6 border-t">
-                <div className="flex gap-2">
-                  <Input
-                    placeholder="Voucher Code"
-                    value={voucherCode}
-                    onChange={(e) => setVoucherCode(e.target.value.toUpperCase())}
-                    className="h-10 uppercase"
-                    disabled={applyingVoucher || !!appliedVoucher}
-                  />
-                  <Button 
-                    variant="outline"
-                    className="h-10 px-4 font-semibold hover:bg-primary/5 active:scale-95 transition-transform shrink-0"
-                    onClick={handleApplyVoucher}
-                    disabled={applyingVoucher || !!appliedVoucher || !voucherCode.trim()}
-                  >
-                    {applyingVoucher ? "..." : appliedVoucher ? "Applied" : "Apply"}
-                  </Button>
-                </div>
-                {appliedVoucher && (
-                  <button
-                    onClick={() => {
-                      setAppliedVoucher(null);
-                      setVoucherCode("");
-                      loadPreview();
-                    }}
-                    className="text-[10px] text-red-500 mt-1 hover:underline ml-1"
-                  >
-                    Remove voucher
-                  </button>
-                )}
-              </div>
-
               <div className="mt-6 pt-6 border-t space-y-3">
                 <div className="flex justify-between text-sm">
                   <span className="text-muted-foreground">Subtotal</span>
@@ -723,23 +903,24 @@ export default function CheckoutPage() {
                     ${preview.totals.subtotalAmount.toFixed(2)}
                   </span>
                 </div>
+                <div className="flex justify-between text-sm text-yellow-700">
+                  <span>Global Voucher</span>
+                  <span>-${(preview.totals.globalDiscountAmount || 0).toFixed(2)}</span>
+                </div>
+                <div className="flex justify-between text-sm text-blue-700">
+                  <span>Shop Vouchers</span>
+                  <span>-${(preview.totals.sellerDiscountAmount || 0).toFixed(2)}</span>
+                </div>
+                <div className="flex justify-between text-sm text-green-600 font-medium">
+                  <span>Total Discount</span>
+                  <span>-${(preview.totals.discountAmount || 0).toFixed(2)}</span>
+                </div>
                 <div className="flex justify-between text-sm">
                   <span className="text-muted-foreground">Shipping Fee</span>
                   <span className="font-medium">
                     ${shippingCosts[shippingMethod].toFixed(2)}
                   </span>
                 </div>
-                {appliedVoucher && (
-                  <div className="flex justify-between text-sm text-green-600 font-medium">
-                    <div className="flex flex-col">
-                      <span>Voucher Discount</span>
-                      <span className="text-[10px] text-green-500 uppercase">
-                        CODE: {appliedVoucher.voucherCode}
-                      </span>
-                    </div>
-                    <span>-${appliedVoucher.discountAmount.toFixed(2)}</span>
-                  </div>
-                )}
                 <Separator className="my-4" />
                 <div className="flex justify-between items-baseline">
                   <span className="font-bold text-lg">Total</span>
@@ -748,6 +929,19 @@ export default function CheckoutPage() {
                   </span>
                 </div>
               </div>
+
+              {preview.voucherErrors && preview.voucherErrors.length > 0 && (
+                <div className="mt-4 rounded-md border border-red-200 bg-red-50 p-3 space-y-1">
+                  {preview.voucherErrors.map((error, index) => (
+                    <p key={`${error.code}-${index}`} className="text-xs text-red-700">
+                      {error.scope === "seller" && error.sellerName
+                        ? `${error.sellerName}: `
+                        : ""}
+                      {error.code} - {error.message}
+                    </p>
+                  ))}
+                </div>
+              )}
 
               <div className="mt-8 space-y-3">
                 <Button
