@@ -13,13 +13,40 @@ export interface DashboardStats {
     };
     products: {
         total: number;
+        active?: number;
         newLast7Days: number;
     };
     orders: {
         total: number;
         byStatus: Record<string, number>;
         newLast7Days: number;
+        delivered?: number;
+        cancelled?: number;
+        deliveredRate?: number;
+        cancelledRate?: number;
     };
+    revenue?: {
+        total: number;
+    };
+    monthlyTrend?: Array<{
+        key: string;
+        label: string;
+        year: number;
+        month: number;
+        orders: number;
+        revenue: number;
+        newUsers: number;
+        newProducts: number;
+    }>;
+    topSellingProducts?: Array<{
+        rank: number;
+        productId?: string;
+        title: string;
+        image?: string;
+        unitsSold: number;
+        revenue: number;
+        orderCount: number;
+    }>;
 }
 
 export interface DashboardStatsResponse {

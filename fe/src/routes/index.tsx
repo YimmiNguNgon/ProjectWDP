@@ -10,6 +10,7 @@ import GoogleAuthSuccessPage from "@/pages/google-auth-success";
 import ForgotPasswordPage from "@/pages/forgot-password";
 import ResetPasswordPage from "@/pages/reset-password";
 import BanAppealPage from "@/pages/ban-appeal";
+import HelpContactPage from "@/pages/help-contact";
 import UserManagement from "@/pages/admin/user-management";
 import AdminDashboard from "@/pages/admin/dashboard";
 import ProductManagement from "@/pages/admin/product-management";
@@ -115,6 +116,10 @@ export const AppRouter = () => {
         {
           path: "products/:productId",
           element: <ProductDetailPage />,
+        },
+        {
+          path: "help-contact",
+          element: <HelpContactPage />,
         },
         {
           path: "my-ebay",

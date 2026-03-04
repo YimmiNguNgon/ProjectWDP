@@ -26,7 +26,7 @@ const LEFT_NAV_ITEMS = [
   { name: "Sale Time", to: "/products?saleOnly=true" },
   { name: "Brand Outlet", to: "/products" },
   { name: "Gift Cards", to: "/products" },
-  { name: "Help & Contact", to: "#" },
+  { name: "Help & Contact", to: "/help-contact" },
 ] as const;
 
 export function Protected() {
