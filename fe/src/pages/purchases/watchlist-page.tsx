@@ -8,13 +8,15 @@ import { toast } from "sonner";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { useNavigate } from "react-router-dom";
-import { formatUsd } from "@/lib/utils";
+import { formatProductPrice } from "@/lib/utils";
 import { Heart, Trash2 } from "lucide-react";
 
 export default function WatchlistPage() {
   const [watchlist, setWatchlist] = useState<WatchlistItem[]>([]);
   const [loading, setLoading] = useState(true);
   const navigate = useNavigate();
+
+  console.log(watchlist);
 
   const fetchWatchlist = async () => {
     try {
@@ -142,7 +144,7 @@ export default function WatchlistPage() {
                   {/* Price and Actions */}
                   <div className="flex flex-col items-end justify-between min-w-[150px]">
                     <div className="text-xl font-bold">
-                      {formatUsd(product.price)}
+                      {formatProductPrice(product as any)}
                     </div>
                     <Button
                       variant="ghost"
