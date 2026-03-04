@@ -29,11 +29,6 @@ const LEFT_NAV_ITEMS = [
   { name: "Help & Contact", to: "#" },
 ] as const;
 
-const RIGHT_NAV_ITEMS = [
-  { name: "Ship to", to: "#" },
-  { name: "Sell", to: "#" },
-];
-
 export function Protected() {
   const { user } = useAuth();
   const navigate = useNavigate();
@@ -87,17 +82,12 @@ export function MainLayout() {
               )}
             </div>
             <div className="flex gap-4 items-center">
-              {RIGHT_NAV_ITEMS.map((item) => (
-                <button
-                  key={item.name}
-                  onClick={() =>
-                    toast.info(`${item.name} feature coming soon!`)
-                  }
-                  className="font-medium text-sm hover:underline cursor-pointer"
-                >
-                  {item.name}
-                </button>
-              ))}
+              <Link
+                to="/my-ebay/messages"
+                className="font-medium text-sm hover:underline cursor-pointer"
+              >
+                Messages
+              </Link>
               {/* Watchlist Dropdown */}
               <WatchlistPreview />
               {/* My eBay dropdown */}

@@ -77,6 +77,37 @@ export interface UserDetailResponse {
     };
 }
 
+export interface BanAppeal {
+    _id: string;
+    userId: {
+        _id: string;
+        username: string;
+        email: string;
+        status: string;
+        banReason?: string;
+        bannedAt?: string | Date;
+    };
+    banReasonSnapshot?: string;
+    appealReason: string;
+    status: "pending" | "approved" | "rejected";
+    reviewNote?: string;
+    reviewedAt?: string | Date | null;
+    reviewedBy?: { _id: string; username: string } | null;
+    createdAt: string | Date;
+    updatedAt: string | Date;
+}
+
+export interface GetBanAppealsResponse {
+    success: boolean;
+    data: BanAppeal[];
+    pagination: {
+        page: number;
+        limit: number;
+        total: number;
+        totalPages: number;
+    };
+}
+
 // Get dashboard stats
 export const getDashboardStats = async (): Promise<DashboardStatsResponse> => {
     const response = await api.get('/api/admin/dashboard/stats');
@@ -119,5 +150,28 @@ export const banUser = async (userId: string, reason: string) => {
 // Unban user
 export const unbanUser = async (userId: string) => {
     const response = await api.post(`/api/admin/users/${userId}/unban`, {});
+    return response.data;
+};
+
+// Get ban appeals
+export const getBanAppeals = async (params: {
+    page?: number;
+    limit?: number;
+    status?: "pending" | "approved" | "rejected" | "all";
+} = {}): Promise<GetBanAppealsResponse> => {
+    const response = await api.get("/api/admin/users/ban-appeals", { params });
+    return response.data;
+};
+
+// Review ban appeal
+export const reviewBanAppeal = async (
+    appealId: string,
+    action: "approve" | "reject",
+    note?: string,
+) => {
+    const response = await api.post(`/api/admin/users/ban-appeals/${appealId}/review`, {
+        action,
+        note,
+    });
     return response.data;
 };

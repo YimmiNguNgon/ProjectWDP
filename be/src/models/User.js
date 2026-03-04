@@ -39,6 +39,8 @@ const userSchema = new mongoose.Schema(
     bannedAt: { type: Date },
     bannedBy: { type: mongoose.Schema.Types.ObjectId, ref: "User" },
     banReason: { type: String },
+    banAppealTokenHash: { type: String, index: true },
+    banAppealTokenExpires: { type: Date },
     suspendedUntil: { type: Date }, // Temporary suspension
 
     // Messaging restrictions (eBay-style)

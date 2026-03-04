@@ -1,6 +1,16 @@
 ﻿// src/pages/admin/user-management.tsx
 import { useState, useEffect } from 'react';
-import { getAllUsers, banUser, unbanUser, deleteUser, type User, type GetUsersParams } from '../../api/admin';
+import {
+    getAllUsers,
+    banUser,
+    unbanUser,
+    deleteUser,
+    getBanAppeals,
+    reviewBanAppeal,
+    type User,
+    type BanAppeal,
+    type GetUsersParams
+} from '../../api/admin';
 import { Button } from '../../components/ui/button';
 import { Input } from '../../components/ui/input';
 import {
@@ -43,6 +53,13 @@ export default function UserManagement() {
     const [banDialogOpen, setBanDialogOpen] = useState(false);
     const [selectedUser, setSelectedUser] = useState<User | null>(null);
     const [banReason, setBanReason] = useState('');
+    const [appeals, setAppeals] = useState<BanAppeal[]>([]);
+    const [appealsLoading, setAppealsLoading] = useState(false);
+    const [reviewDialogOpen, setReviewDialogOpen] = useState(false);
+    const [selectedAppeal, setSelectedAppeal] = useState<BanAppeal | null>(null);
+    const [reviewAction, setReviewAction] = useState<'approve' | 'reject'>('approve');
+    const [reviewNote, setReviewNote] = useState('');
+    const [actionLoading, setActionLoading] = useState(false);
 
     // Fetch users
     const fetchUsers = async () => {
@@ -73,6 +90,26 @@ export default function UserManagement() {
         fetchUsers();
     }, [page, roleFilter, statusFilter]);
 
+    const fetchAppeals = async () => {
+        setAppealsLoading(true);
+        try {
+            const response = await getBanAppeals({ status: 'pending', limit: 20 });
+            setAppeals(response.data);
+        } catch (error: any) {
+            toast.error(error.response?.data?.message || 'Failed to load ban appeals');
+        } finally {
+            setAppealsLoading(false);
+        }
+    };
+
+    useEffect(() => {
+        fetchAppeals();
+    }, []);
+
+    const refreshAdminData = async () => {
+        await Promise.all([fetchUsers(), fetchAppeals()]);
+    };
+
     // Handle search
     const handleSearch = () => {
         setPage(1);
@@ -87,25 +124,31 @@ export default function UserManagement() {
         }
 
         try {
+            setActionLoading(true);
             await banUser(selectedUser._id, banReason);
             toast.success('Account banned successfully');
             setBanDialogOpen(false);
             setBanReason('');
             setSelectedUser(null);
-            fetchUsers();
+            await refreshAdminData();
         } catch (error: any) {
             toast.error(error.response?.data?.message || 'Failed to ban account');
+        } finally {
+            setActionLoading(false);
         }
     };
 
     // Handle unban user
     const handleUnbanUser = async (user: User) => {
         try {
+            setActionLoading(true);
             await unbanUser(user._id);
             toast.success('Account unbanned successfully');
-            fetchUsers();
+            await refreshAdminData();
         } catch (error: any) {
             toast.error(error.response?.data?.message || 'Failed to unban account');
+        } finally {
+            setActionLoading(false);
         }
     };
 
@@ -116,11 +159,35 @@ export default function UserManagement() {
         }
 
         try {
+            setActionLoading(true);
             await deleteUser(user._id);
             toast.success('User deleted successfully');
-            fetchUsers();
+            await refreshAdminData();
         } catch (error: any) {
             toast.error(error.response?.data?.message || 'Failed to delete user');
+        } finally {
+            setActionLoading(false);
+        }
+    };
+
+    const handleReviewAppeal = async () => {
+        if (!selectedAppeal) return;
+        try {
+            setActionLoading(true);
+            await reviewBanAppeal(selectedAppeal._id, reviewAction, reviewNote.trim());
+            toast.success(
+                reviewAction === 'approve'
+                    ? 'Appeal approved. Account restored.'
+                    : 'Appeal rejected.'
+            );
+            setReviewDialogOpen(false);
+            setSelectedAppeal(null);
+            setReviewNote('');
+            await refreshAdminData();
+        } catch (error: any) {
+            toast.error(error.response?.data?.message || 'Failed to review appeal');
+        } finally {
+            setActionLoading(false);
         }
     };
 
@@ -228,6 +295,7 @@ export default function UserManagement() {
                                                     size="sm"
                                                     variant="outline"
                                                     onClick={() => handleUnbanUser(user)}
+                                                    disabled={actionLoading}
                                                 >
                                                     Unban
                                                 </Button>
@@ -239,6 +307,7 @@ export default function UserManagement() {
                                                         setSelectedUser(user);
                                                         setBanDialogOpen(true);
                                                     }}
+                                                    disabled={actionLoading}
                                                 >
                                                     Ban
                                                 </Button>
@@ -247,6 +316,7 @@ export default function UserManagement() {
                                                 size="sm"
                                                 variant="outline"
                                                 onClick={() => handleDeleteUser(user)}
+                                                disabled={actionLoading}
                                             >
                                                 Delete
                                             </Button>
@@ -280,6 +350,83 @@ export default function UserManagement() {
                 </Button>
             </div>
 
+            {/* Pending Appeals */}
+            <div className="mt-10">
+                <h2 className="text-2xl font-semibold mb-4">Pending Ban Appeals</h2>
+                <div className="border rounded-lg">
+                    <Table>
+                        <TableHeader>
+                            <TableRow>
+                                <TableHead>User</TableHead>
+                                <TableHead>Email</TableHead>
+                                <TableHead>Ban Reason</TableHead>
+                                <TableHead>Appeal Reason</TableHead>
+                                <TableHead>Submitted At</TableHead>
+                                <TableHead className="text-right">Actions</TableHead>
+                            </TableRow>
+                        </TableHeader>
+                        <TableBody>
+                            {appealsLoading ? (
+                                <TableRow>
+                                    <TableCell colSpan={6} className="text-center py-8">Loading...</TableCell>
+                                </TableRow>
+                            ) : appeals.length === 0 ? (
+                                <TableRow>
+                                    <TableCell colSpan={6} className="text-center py-8">No pending appeals</TableCell>
+                                </TableRow>
+                            ) : (
+                                appeals.map((appeal) => (
+                                    <TableRow key={appeal._id}>
+                                        <TableCell className="font-medium">{appeal.userId?.username || 'Unknown'}</TableCell>
+                                        <TableCell>{appeal.userId?.email || 'N/A'}</TableCell>
+                                        <TableCell className="max-w-[220px]">
+                                            <p className="line-clamp-2 text-sm text-gray-700">
+                                                {appeal.banReasonSnapshot || appeal.userId?.banReason || '-'}
+                                            </p>
+                                        </TableCell>
+                                        <TableCell className="max-w-[320px]">
+                                            <p className="line-clamp-3 text-sm">
+                                                {appeal.appealReason}
+                                            </p>
+                                        </TableCell>
+                                        <TableCell>{new Date(appeal.createdAt).toLocaleString('en-US')}</TableCell>
+                                        <TableCell className="text-right">
+                                            <div className="flex gap-2 justify-end">
+                                                <Button
+                                                    size="sm"
+                                                    onClick={() => {
+                                                        setSelectedAppeal(appeal);
+                                                        setReviewAction('approve');
+                                                        setReviewNote('');
+                                                        setReviewDialogOpen(true);
+                                                    }}
+                                                    disabled={actionLoading}
+                                                >
+                                                    Approve
+                                                </Button>
+                                                <Button
+                                                    size="sm"
+                                                    variant="destructive"
+                                                    onClick={() => {
+                                                        setSelectedAppeal(appeal);
+                                                        setReviewAction('reject');
+                                                        setReviewNote('');
+                                                        setReviewDialogOpen(true);
+                                                    }}
+                                                    disabled={actionLoading}
+                                                >
+                                                    Reject
+                                                </Button>
+                                            </div>
+                                        </TableCell>
+                                    </TableRow>
+                                ))
+                            )}
+                        </TableBody>
+                    </Table>
+                </div>
+            </div>
+
             {/* Ban Dialog */}
             <Dialog open={banDialogOpen} onOpenChange={setBanDialogOpen}>
                 <DialogContent>
@@ -301,8 +448,49 @@ export default function UserManagement() {
                         <Button variant="outline" onClick={() => setBanDialogOpen(false)}>
                             Cancel
                         </Button>
-                        <Button variant="destructive" onClick={handleBanUser}>
-                            Ban Account
+                        <Button variant="destructive" onClick={handleBanUser} disabled={actionLoading}>
+                            {actionLoading ? 'Processing...' : 'Ban Account'}
+                        </Button>
+                    </DialogFooter>
+                </DialogContent>
+            </Dialog>
+
+            {/* Review Appeal Dialog */}
+            <Dialog open={reviewDialogOpen} onOpenChange={setReviewDialogOpen}>
+                <DialogContent>
+                    <DialogHeader>
+                        <DialogTitle>
+                            {reviewAction === 'approve' ? 'Approve Appeal' : 'Reject Appeal'}
+                        </DialogTitle>
+                        <DialogDescription>
+                            User: <strong>{selectedAppeal?.userId?.username || 'N/A'}</strong>
+                        </DialogDescription>
+                    </DialogHeader>
+                    <div className="space-y-3 py-2">
+                        <p className="text-sm text-gray-600">
+                            Appeal reason: {selectedAppeal?.appealReason || '-'}
+                        </p>
+                        <Textarea
+                            placeholder="Admin note (optional)..."
+                            value={reviewNote}
+                            onChange={(e) => setReviewNote(e.target.value)}
+                            rows={4}
+                        />
+                    </div>
+                    <DialogFooter>
+                        <Button variant="outline" onClick={() => setReviewDialogOpen(false)}>
+                            Cancel
+                        </Button>
+                        <Button
+                            variant={reviewAction === 'approve' ? 'default' : 'destructive'}
+                            onClick={handleReviewAppeal}
+                            disabled={actionLoading}
+                        >
+                            {actionLoading
+                                ? 'Processing...'
+                                : reviewAction === 'approve'
+                                    ? 'Approve & Unban'
+                                    : 'Reject Appeal'}
                         </Button>
                     </DialogFooter>
                 </DialogContent>

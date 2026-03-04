@@ -1,7 +1,13 @@
 // src/controllers/adminUserController.js
 const mongoose = require("mongoose");
 const User = require("../models/User");
+const BanAppeal = require("../models/BanAppeal");
 const notificationService = require("../services/notificationService");
+const sendEmail = require("../utils/sendEmail");
+const { generateBanAppealToken } = require("../utils/banAppealToken");
+
+const canSendEmail = () =>
+    Boolean(process.env.EMAIL_USER && process.env.EMAIL_PASSWORD);
 
 /**
  * @desc Lấy tất cả người dùng với phân trang và lọc
@@ -54,7 +60,7 @@ exports.getAllUsers = async (req, res, next) => {
         console.log("MongoDB query:", JSON.stringify(query));
 
         const users = await User.find(query)
-            .select("-passwordHash")
+            .select("-passwordHash -banAppealTokenHash -banAppealTokenExpires")
             .sort({ createdAt: -1 })
             .skip(skip)
             .limit(limit)
@@ -95,7 +101,7 @@ exports.getUserDetail = async (req, res, next) => {
         }
 
         const user = await User.findById(id)
-            .select("-passwordHash")
+            .select("-passwordHash -banAppealTokenHash -banAppealTokenExpires")
             .populate("bannedBy", "username")
             .lean();
 
@@ -272,10 +278,16 @@ exports.banUser = async (req, res, next) => {
         }
 
         // Ban the user
+        const { rawToken, tokenHash, expiresAt } = generateBanAppealToken();
+        const clientUrl = process.env.CLIENT_URL || "http://localhost:5173";
+        const appealUrl = `${clientUrl}/ban-appeal?token=${rawToken}`;
+
         user.status = "banned";
         user.bannedAt = new Date();
         user.bannedBy = req.user._id;
         user.banReason = reason.trim();
+        user.banAppealTokenHash = tokenHash;
+        user.banAppealTokenExpires = expiresAt;
         await user.save();
 
         // Gui notification cho user bi ban
@@ -284,9 +296,30 @@ exports.banUser = async (req, res, next) => {
             type: "user_banned",
             title: "Tai khoan da bi khoa",
             body: `Tai khoan cua ban da bi khoa boi Admin. Ly do: ${reason.trim()}`,
-            link: "/",
-            metadata: { reason: reason.trim() },
+            link: "/ban-appeal",
+            metadata: {
+                reason: reason.trim(),
+                appealUrl,
+            },
         });
+
+        if (canSendEmail()) {
+            try {
+                await sendEmail({
+                    to: user.email,
+                    subject: "Account ban notice and appeal link",
+                    template: "banNotice.ejs",
+                    data: {
+                        username: user.username,
+                        reason: reason.trim(),
+                        appealUrl,
+                        expiresAt: expiresAt.toLocaleString("en-US"),
+                    },
+                });
+            } catch (error) {
+                console.error("[Admin][BanUser] Failed to send ban email:", error.message);
+            }
+        }
 
         return res.json({
             success: true,
@@ -297,6 +330,7 @@ exports.banUser = async (req, res, next) => {
                 status: user.status,
                 bannedAt: user.bannedAt,
                 banReason: user.banReason,
+                appealUrl,
             },
         });
     } catch (err) {
@@ -332,7 +366,21 @@ exports.unbanUser = async (req, res, next) => {
         user.bannedAt = null;
         user.bannedBy = null;
         user.banReason = null;
+        user.banAppealTokenHash = null;
+        user.banAppealTokenExpires = null;
         await user.save();
+
+        await BanAppeal.updateMany(
+            { userId: user._id, status: "pending" },
+            {
+                $set: {
+                    status: "approved",
+                    reviewedBy: req.user._id,
+                    reviewedAt: new Date(),
+                    reviewNote: "Approved via manual unban",
+                },
+            },
+        );
 
         // Gui notification cho user duoc unban
         await notificationService.sendNotification({

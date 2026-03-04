@@ -12,7 +12,6 @@ import {
 import api, { setAuthToken } from "./lib/axios.ts";
 import { Toaster } from "./components/ui/sonner.tsx";
 import { jwtDecode } from "jwt-decode";
-import { toast } from "sonner";
 import { CartProvider } from "./contexts/cart-context";
 
 createRoot(document.getElementById("root")!).render(
@@ -31,35 +30,49 @@ createRoot(document.getElementById("root")!).render(
 export function AuthProvider({ children }: PropsWithChildren) {
   const [user, setUser] = React.useState<User>();
   const [payload, setPayload] = React.useState<Payload>();
-  const [loading, setLoading] = React.useState<boolean>(false);
+  const [loading, setLoading] = React.useState<boolean>(true);
   const [accessToken, setAccessToken] = React.useState<string | null>(null);
 
   React.useEffect(() => {
+    let isMounted = true;
+
     const checkAuth = async () => {
+      if (!isMounted) return;
+      setLoading(true);
       const token = localStorage.getItem("token");
-      if (!token) return;
+      if (!token) {
+        if (isMounted) setLoading(false);
+        return;
+      }
 
       try {
-        const payload = jwtDecode<Payload>(token);
+        const decoded = jwtDecode<Payload>(token);
         const currentTime = Date.now() / 1000;
 
         setAccessToken(token);
-        if (payload.exp && payload.exp < currentTime) {
+        if (decoded.exp && decoded.exp < currentTime) {
           await refresh();
+          await fetchMe();
         } else {
-          setPayload(payload);
+          setPayload(decoded);
           setAuthToken(token);
-          fetchMe();
+          await fetchMe();
         }
       } catch (error) {
         console.error("Auth initialization failed:", error);
         // Silent sign out to avoid showing user-facing logout toast during
         // automatic auth initialization failures.
-        signOut();
+        await signOut();
+      } finally {
+        if (isMounted) setLoading(false);
       }
     };
 
     checkAuth();
+
+    return () => {
+      isMounted = false;
+    };
   }, []);
 
   const signUp = async (
@@ -155,7 +168,6 @@ export function AuthProvider({ children }: PropsWithChildren) {
 
   const refresh = async () => {
     try {
-      setLoading(true);
       const res = await api.post(
         "/api/auth/refresh",
         {},
@@ -171,14 +183,10 @@ export function AuthProvider({ children }: PropsWithChildren) {
 
       const payload = jwtDecode<Payload>(accessToken);
       setPayload(payload);
-
-      toast.success("Token refreshed successfully!");
     } catch (error) {
       console.error("Refresh token failed:", error);
       // Silent sign out when refresh fails as it is an automatic flow.
       signOut();
-    } finally {
-      setLoading(false);
     }
   };
 

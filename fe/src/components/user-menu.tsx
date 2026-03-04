@@ -8,7 +8,7 @@ import {
 } from "./ui/dropdown-menu";
 import { useAuth } from "@/hooks/use-auth";
 import { Button } from "./ui/button";
-import { LogOut, MessageCircle, User, ShoppingBag, Store } from "lucide-react";
+import { LogOut, User, ShoppingBag, Store } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { Avatar, AvatarFallback, AvatarImage } from "./ui/avatar";
 
@@ -79,16 +79,6 @@ export default function UserMenu() {
           <ShoppingBag className="mr-2 h-4 w-4" />
           <span>Purchases</span>
         </DropdownMenuItem>
-
-        <DropdownMenuItem
-          onClick={() => navigate("/messages")}
-          className="cursor-pointer"
-        >
-          <MessageCircle className="mr-2 h-4 w-4" />
-          <span>Messages</span>
-        </DropdownMenuItem>
-
-        <DropdownMenuSeparator />
 
         {/* Sell Your Product - chi hien thi cho buyer */}
         {user.role === "buyer" && (

@@ -7,6 +7,7 @@ const nodemailer = require("nodemailer");
 const User = require("../models/User.js");
 const Session = require("../models/Session.js");
 const sendEmail = require("../utils/sendEmail.js");
+const { generateBanAppealToken } = require("../utils/banAppealToken");
 
 const ACCESS_TOKEN_TTL = "24h";
 const REFRESH_TOKEN_TTL = 14 * 24 * 60 * 60 * 1000;
@@ -115,6 +116,22 @@ exports.login = async (req, res, next) => {
 
     if (!isMatch) {
       return res.status(401).json({ message: "Invalid email or password" });
+    }
+
+    if (user.status === "banned") {
+      const { rawToken, tokenHash, expiresAt } = generateBanAppealToken();
+      user.banAppealTokenHash = tokenHash;
+      user.banAppealTokenExpires = expiresAt;
+      await user.save();
+
+      const clientUrl = process.env.CLIENT_URL || "http://localhost:5173";
+      const appealUrl = `${clientUrl}/ban-appeal?token=${rawToken}`;
+
+      return res.status(403).json({
+        message: "Your account has been banned",
+        reason: user.banReason || "Violation of terms of service",
+        appealUrl,
+      });
     }
 
     // tạo access token

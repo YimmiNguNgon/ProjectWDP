@@ -67,7 +67,10 @@ export function SignInForm({
           },
         );
       } else if (error.response?.status === 403) {
-        toast.warning("Please verify your email first", {
+        const serverMessage =
+          error.response?.data?.message || "Access denied";
+        const reason = error.response?.data?.reason;
+        toast.warning(reason ? `${serverMessage}: ${reason}` : serverMessage, {
           position: "top-center",
           closeButton: true,
         });

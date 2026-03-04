@@ -8,17 +8,23 @@ import BuyingSidebar from "./BuyingSidebar";
 export default function MyEbayLayout() {
   const { pathname } = useLocation();
   const paths = pathname.split("/");
+  const isMessagesPage = pathname === "/my-ebay/messages";
+  const activitySubRoutes = new Set([
+    "activity",
+    "messages",
+    "feedback-requests",
+    "saved-searches",
+    "saved-sellers",
+  ]);
 
   // Map routes to tabs
-  // saved-searches and saved-sellers belong to 'activity' (Buying) tab
   const getTabFromPath = () => {
-    if (paths.includes("saved-searches") || paths.includes("saved-sellers")) {
+    if (!paths.includes("my-ebay")) return "activity";
+    const section = paths[paths.indexOf("my-ebay") + 1] || "activity";
+    if (activitySubRoutes.has(section)) {
       return "activity";
     }
-    // Handle case where path is just /my-ebay, defaulting to activity
-    return paths.length > 2 && paths.includes("my-ebay")
-      ? paths[paths.indexOf("my-ebay") + 1]
-      : "activity";
+    return "activity";
   };
 
   const [value, setValue] = React.useState(getTabFromPath());
@@ -46,6 +52,11 @@ export default function MyEbayLayout() {
       navigate(`/my-ebay/${newValue}`);
     }
   };
+
+  // Messages should use full workspace without surrounding My eBay tabs/sidebar.
+  if (isMessagesPage) {
+    return <Outlet />;
+  }
 
   return (
     <div className="flex flex-col gap-4">

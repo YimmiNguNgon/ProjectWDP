@@ -6,6 +6,7 @@ const adminDashboardController = require("../controller/adminDashboardController
 const adminProductController = require("../controller/adminProductController");
 const adminCategoryController = require("../controller/adminCategoryController");
 const sellerApplicationController = require("../controller/sellerApplicationController");
+const banAppealController = require("../controller/banAppealController");
 const notificationService = require("../services/notificationService");
 const User = require("../models/User");
 const { protectedRoute } = require("../middleware/authMiddleware");
@@ -27,6 +28,8 @@ router.get("/dashboard/stats", adminDashboardController.getDashboardStats);
 
 // User management routes
 router.get("/users", adminUserController.getAllUsers);
+router.get("/users/ban-appeals", banAppealController.getAllAppeals);
+router.post("/users/ban-appeals/:id/review", banAppealController.reviewAppeal);
 router.get("/users/:id", adminUserController.getUserDetail);
 router.put("/users/:id", adminUserController.updateUser);
 router.delete("/users/:id", adminUserController.deleteUser);

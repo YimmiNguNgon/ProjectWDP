@@ -20,6 +20,7 @@ const userRoutes = require("./routes/userRoutes");
 const categoryRoutes = require("./routes/categoryRoutes");
 const reviewRoutes = require("./routes/reviewRoutes");
 const adminRoutes = require("./routes/adminRoutes");
+const banAppealRoutes = require("./routes/banAppealRoutes");
 const orderRoutes = require("./routes/orders");
 const searchRoutes = require("./routes/search");
 const addressRoutes = require("./routes/addressRoute");
@@ -62,6 +63,7 @@ app.use(morgan("dev"));
 
 // Import routes
 app.use("/api/auth", authRoutes);
+app.use("/api/ban-appeals", banAppealRoutes);
 app.use("/api/products", productRoutes);
 app.use("/api/categories", categoryRoutes);
 app.use("/api/users", userRoutes);
