@@ -25,6 +25,7 @@ const TYPE_ICONS: Record<string, string> = {
     admin_broadcast: "\uD83D\uDCE2",
     cart_item_out_of_stock: "\uD83D\uDEAB",
     cart_item_price_changed: "\uD83D\uDCB2",
+    watchlist_product_updated: "\uD83D\uDC41\uFE0F",
 };
 
 function timeAgo(dateStr: string): string {
@@ -152,7 +153,7 @@ export default function NotificationBell({ socket }: NotificationBellProps) {
                                     onClick={() => handleClick(notif)}
                                 >
                                     {/* Icon */}
-                                    <div className="text-lg flex-shrink-0 mt-0.5">
+                                    <div className="text-lg shrink-0 mt-0.5">
                                         {TYPE_ICONS[notif.type] || "\uD83D\uDD14"}
                                     </div>
 
@@ -182,7 +183,7 @@ export default function NotificationBell({ socket }: NotificationBellProps) {
                                     </div>
 
                                     {/* Actions */}
-                                    <div className="flex flex-col gap-1 opacity-0 group-hover:opacity-100 transition-opacity flex-shrink-0">
+                                    <div className="flex flex-col gap-1 opacity-0 group-hover:opacity-100 transition-opacity shrink-0">
                                         {!notif.isRead && (
                                             <button
                                                 onClick={(e) => {
@@ -210,7 +211,7 @@ export default function NotificationBell({ socket }: NotificationBellProps) {
                                     {/* Unread dot */}
                                     {!notif.isRead && (
                                         <div className={cn(
-                                            "w-2 h-2 rounded-full flex-shrink-0 mt-1.5",
+                                            "w-2 h-2 rounded-full shrink-0 mt-1.5",
                                             isBroadcast ? "bg-primary" : "bg-primary"
                                         )} />
                                     )}

@@ -35,3 +35,24 @@ export const formatTime = (date: string) => {
 export const formatDateTime = (date: string) => {
   return `${formatDate(date)} ${formatTime(date)}`;
 };
+
+export function formatProductPrice(product: {
+  price: number;
+  variantCombinations?: { price?: number }[];
+}) {
+  const combinationsPrices =
+    product.variantCombinations
+      ?.map((c) => c.price)
+      .filter((p): p is number => p !== undefined) || [];
+
+  if (combinationsPrices.length > 0) {
+    const minPrice = Math.min(...combinationsPrices);
+    const maxPrice = Math.max(...combinationsPrices);
+    if (minPrice === maxPrice) {
+      return formatUsd(minPrice);
+    }
+    return `${formatUsd(minPrice)} - ${formatUsd(maxPrice)}`;
+  }
+
+  return formatUsd(product.price);
+}

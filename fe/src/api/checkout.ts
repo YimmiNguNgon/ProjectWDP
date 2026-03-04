@@ -10,6 +10,7 @@ export interface CheckoutPreviewPayload {
   source: "cart" | "buy_now";
   cartItemIds?: string[];
   items?: CheckoutRequestItem[];
+  voucherCode?: string;
 }
 
 export interface CheckoutGroupItem {
@@ -46,6 +47,7 @@ export interface CheckoutPreviewResponse {
   totals: {
     itemCount: number;
     subtotalAmount: number;
+    discountAmount: number;
     totalAmount: number;
   };
   payableItemCount: number;
@@ -85,4 +87,3 @@ export const confirmCheckout = async (payload: CheckoutConfirmPayload) => {
   );
   return response.data;
 };
-
