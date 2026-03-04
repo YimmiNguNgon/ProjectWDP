@@ -5,6 +5,7 @@ const {
   normalizeVariantCombinations,
   syncProductStockFromVariants,
 } = require("../utils/productInventory");
+const { decideModerationStatus } = require("../services/sellerTrustService");
 const Watchlist = require("../models/Watchlist");
 const notificationService = require("../services/notificationService");
 
@@ -73,6 +74,32 @@ exports.createProduct = async (req, res, next) => {
       variantCombinations,
     );
 
+    // ── Trust Score Moderation (non-breaking) ──────────────────────────────────
+    // Mặc định là active. Nếu service lỗi thì fallback về active, không bao giờ block luồng cũ.
+    let initialListingStatus = "active";
+    let moderationInfo = null;
+    try {
+      const mod = await decideModerationStatus(sellerId);
+      moderationInfo = mod;
+
+      if (mod.listingStatus === "blocked") {
+        // Chỉ block HIGH_RISK seller (score < 3.0) và có riskFlagged
+        return res.status(403).json({
+          message: "Tài khoản của bạn hiện bị khóa do điểm uy tín quá thấp. Vui lòng liên hệ hỗ trợ.",
+          tier: mod.tier,
+          finalScore: mod.finalScore,
+          blocked: true,
+        });
+      }
+
+      initialListingStatus = mod.listingStatus; // active | pending_review
+    } catch (modErr) {
+      // Trust Score service lỗi → fallback active, không ảnh hưởng luồng tạo sản phẩm
+      console.warn("[TrustScore] decideModerationStatus error (fallback active):", modErr.message);
+      initialListingStatus = "active";
+    }
+    // ──────────────────────────────────────────────────────────────────────────
+
     const product = new Product({
       sellerId,
       title,
@@ -86,12 +113,24 @@ exports.createProduct = async (req, res, next) => {
       images: images || [],
       variants: variants || [],
       variantCombinations: normalizedCombinations,
+      listingStatus: initialListingStatus,
     });
 
     syncProductStockFromVariants(product);
     await product.save();
 
-    return res.status(201).json({ data: product });
+    return res.status(201).json({
+      data: product,
+      moderation: moderationInfo ? {
+        mode: moderationInfo.mode,
+        tier: moderationInfo.tier,
+        score: moderationInfo.finalScore,
+        status: initialListingStatus,
+        message: initialListingStatus === "pending_review"
+          ? "Sản phẩm đang chờ admin duyệt do chính sách kiểm duyệt."
+          : "Sản phẩm được tự động duyệt.",
+      } : null,
+    });
   } catch (err) {
     next(err);
   }
@@ -131,10 +170,10 @@ exports.getMyListings = async (req, res, next) => {
     const probationInfo =
       seller.sellerStage === "PROBATION"
         ? {
-            isProbation: true,
-            todayCount: await countProductsCreatedToday(sellerId),
-            dailyLimit: PROBATION_LIMITS.MAX_PRODUCTS_PER_DAY,
-          }
+          isProbation: true,
+          todayCount: await countProductsCreatedToday(sellerId),
+          dailyLimit: PROBATION_LIMITS.MAX_PRODUCTS_PER_DAY,
+        }
         : null;
 
     return res.json({

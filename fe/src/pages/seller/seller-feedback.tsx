@@ -32,7 +32,7 @@ export default function SellerFeedbackPage() {
     const loadReviews = async () => {
         try {
             // Get all reviews where current user is the seller
-            const res = await api.get('/api/reviews/seller/received');
+            const res = await api.get('/api/reviews/seller/my-reviews');
             setReviews(res.data.data || []);
         } catch (err: any) {
             console.error(err);

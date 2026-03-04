@@ -430,11 +430,10 @@ export default function ProductDetailPage() {
                   key={idx}
                   type="button"
                   onClick={() => setSelectedImageIdx(idx)}
-                  className={`flex-shrink-0 w-16 h-16 rounded-md border-2 overflow-hidden transition-all ${
-                    idx === selectedImageIdx
-                      ? "border-primary ring-2 ring-primary/30"
-                      : "border-border hover:border-primary/50"
-                  }`}
+                  className={`flex-shrink-0 w-16 h-16 rounded-md border-2 overflow-hidden transition-all ${idx === selectedImageIdx
+                    ? "border-primary ring-2 ring-primary/30"
+                    : "border-border hover:border-primary/50"
+                    }`}
                 >
                   <img
                     src={url}
@@ -473,40 +472,40 @@ export default function ProductDetailPage() {
                 {/* Chỉ hiện Contact Seller khi KHÔNG phải sản phẩm của chính mình */}
                 {(!payload?.userId ||
                   String(payload.userId) !== String(product?.sellerId)) && (
-                  <Dialog open={open} onOpenChange={setOpen}>
-                    <DialogTrigger asChild>
-                      <Button
-                        variant="link"
-                        className="p-0 h-fit"
-                        onClick={handleJoinChat}
+                    <Dialog open={open} onOpenChange={setOpen}>
+                      <DialogTrigger asChild>
+                        <Button
+                          variant="link"
+                          className="p-0 h-fit"
+                          onClick={handleJoinChat}
+                        >
+                          Contact Seller
+                        </Button>
+                      </DialogTrigger>
+                      <DialogContent
+                        className="h-fit overflow-auto flex flex-col p-0 gap-0 left-[unset] right-0 top-[unset] bottom-0 translate-0 m-4"
+                        aria-describedby=""
+                        showCloseButton={false}
                       >
-                        Contact Seller
-                      </Button>
-                    </DialogTrigger>
-                    <DialogContent
-                      className="h-fit overflow-auto flex flex-col p-0 gap-0 left-[unset] right-0 top-[unset] bottom-0 translate-0 m-4"
-                      aria-describedby=""
-                      showCloseButton={false}
-                    >
-                      <DialogTitle hidden>Chat box</DialogTitle>
-                      <MessageContext.Provider
-                        value={{
-                          participants,
-                          setParticipants: setParticipantsState,
-                          conversation,
-                          setConversation,
-                          messages,
-                          setMessages,
-                          productRef,
-                          setProductRef,
-                          product: productContext,
-                        }}
-                      >
-                        <Messages onCloseDialog={() => setOpen(false)} />
-                      </MessageContext.Provider>
-                    </DialogContent>
-                  </Dialog>
-                )}
+                        <DialogTitle hidden>Chat box</DialogTitle>
+                        <MessageContext.Provider
+                          value={{
+                            participants,
+                            setParticipants: setParticipantsState,
+                            conversation,
+                            setConversation,
+                            messages,
+                            setMessages,
+                            productRef,
+                            setProductRef,
+                            product: productContext,
+                          }}
+                        >
+                          <Messages onCloseDialog={() => setOpen(false)} />
+                        </MessageContext.Provider>
+                      </DialogContent>
+                    </Dialog>
+                  )}
               </ItemDescription>
             </ItemContent>
             <ItemActions className="flex gap-2">
@@ -534,6 +533,7 @@ export default function ProductDetailPage() {
             </ItemActions>
           </Item>
           <Separator />
+
           <div className="flex flex-col gap-2">
             <h2 className="text-sm text-muted-foreground">Product Price</h2>
             <h1 className="text-3xl font-bold">
@@ -580,11 +580,10 @@ export default function ProductDetailPage() {
                                   : opt.value,
                             }))
                           }
-                          className={`px-3 py-1.5 rounded-md border text-sm transition-all ${
-                            selectedVariants[variant.name] === opt.value
-                              ? "border-primary bg-primary text-primary-foreground"
-                              : "border-border hover:border-primary"
-                          } ${optionAvailable ? "cursor-pointer" : "opacity-40 cursor-not-allowed line-through"}`}
+                          className={`px-3 py-1.5 rounded-md border text-sm transition-all ${selectedVariants[variant.name] === opt.value
+                            ? "border-primary bg-primary text-primary-foreground"
+                            : "border-border hover:border-primary"
+                            } ${optionAvailable ? "cursor-pointer" : "opacity-40 cursor-not-allowed line-through"}`}
                           disabled={!optionAvailable}
                         >
                           {opt.value}
@@ -653,8 +652,8 @@ export default function ProductDetailPage() {
           </p>
           {/* Hide purchase buttons when this is your own product */}
           {product?.sellerId &&
-          payload?.userId &&
-          String(product.sellerId) === String(payload.userId) ? (
+            payload?.userId &&
+            String(product.sellerId) === String(payload.userId) ? (
             <div className="w-full text-center py-3 bg-muted rounded-md text-sm text-muted-foreground">
               This is your product
             </div>
@@ -697,7 +696,7 @@ export default function ProductDetailPage() {
         </div>
       </div>
 
-      {/* BELOW: Seller feedback + Product ratings */}
+      {/* BELOW: Seller Trust Score full + Seller feedback */}
       {product && (
         <>
           <SellerFeedbackSection
@@ -705,7 +704,6 @@ export default function ProductDetailPage() {
             sellerName={sellerDisplayName}
             productId={product._id}
           />
-
           {/* <ProductRatingsSection productId={product._id} /> */}
         </>
       )}

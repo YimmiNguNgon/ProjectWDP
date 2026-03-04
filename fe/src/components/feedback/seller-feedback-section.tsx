@@ -2,6 +2,7 @@
 import api from "@/lib/axios";
 import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import { Star, CheckCircle, Zap, ShieldAlert, Clock } from "lucide-react";
 
 type SellerFeedbackSectionProps = {
   sellerId: string;
@@ -233,6 +234,10 @@ export function SellerFeedbackSection({
               </p>
             )}
           </div>
+
+          {/* ========== TRUST SCORE BADGE ========== */}
+          <TrustScoreBadge sellerId={sellerId} />
+
         </div>
 
         {/* ========== RIGHT: SELLER FEEDBACK (7/10) ========== */}
@@ -427,3 +432,138 @@ function TypeBadge({ type }: TypeBadgeProps) {
   return <div className={`${baseClass} bg-gray-400`} />;
 }
 
+// ====== TRUST SCORE BADGE (inline trong About this seller) ======
+type TrustData = {
+  finalScore: number;
+  tier: "TRUSTED" | "STANDARD" | "RISK" | "HIGH_RISK";
+  badge: string;
+  avgRating: number;
+  reviewCount: number;
+  completionRate: string;
+  responseRate: string;
+  disputeRate: string;
+  accountAgeMonths: number;
+  underMonitoring: boolean;
+};
+
+const TIER_STYLES: Record<string, { bg: string; text: string; border: string; icon: string }> = {
+  TRUSTED: { bg: "bg-emerald-50", text: "text-emerald-700", border: "border-emerald-300", icon: "🛡" },
+  STANDARD: { bg: "bg-blue-50", text: "text-blue-700", border: "border-blue-300", icon: "✓" },
+  RISK: { bg: "bg-amber-50", text: "text-amber-700", border: "border-amber-300", icon: "⚠" },
+  HIGH_RISK: { bg: "bg-red-50", text: "text-red-700", border: "border-red-300", icon: "✗" },
+};
+
+function TrustScoreBadge({ sellerId }: { sellerId: string }) {
+  const [trust, setTrust] = useState<TrustData | null>(null);
+  const [loadingTrust, setLoadingTrust] = useState(true);
+
+  useEffect(() => {
+    if (!sellerId) return;
+    api.get(`/api/trust-score/seller/${sellerId}`)
+      .then(res => setTrust(res.data.data))
+      .catch(() => { })
+      .finally(() => setLoadingTrust(false));
+  }, [sellerId]);
+
+  if (loadingTrust) {
+    return (
+      <div className="mt-6 border-t border-neutral-200 pt-4">
+        <div className="h-4 w-32 animate-pulse rounded bg-muted mb-2" />
+        <div className="h-16 animate-pulse rounded bg-muted/40" />
+      </div>
+    );
+  }
+
+  if (!trust) return null;
+
+  const style = TIER_STYLES[trust.tier] ?? TIER_STYLES.STANDARD;
+  const scoreBarWidth = Math.min((trust.finalScore / 5) * 100, 100);
+  const scoreColor =
+    trust.finalScore >= 4.5 ? "#10b981" :
+      trust.finalScore >= 4.0 ? "#3b82f6" :
+        trust.finalScore >= 3.0 ? "#f59e0b" : "#ef4444";
+
+  return (
+    <div className="mt-6 border-t border-neutral-200 pt-4">
+      <div className="flex items-center justify-between mb-3">
+        <h3 className="text-sm font-semibold">Trust Score</h3>
+        {/* Tier badge */}
+        <span className={`inline-flex items-center gap-1 rounded-full border px-2.5 py-0.5 text-[11px] font-semibold ${style.bg} ${style.text} ${style.border}`}>
+          {style.icon} {trust.underMonitoring ? "Under Monitoring" : trust.badge}
+        </span>
+      </div>
+
+      {/* Score row */}
+      <div className="flex items-center gap-3 mb-3">
+        <div
+          className="flex h-12 w-12 flex-shrink-0 flex-col items-center justify-center rounded-full border-2"
+          style={{ borderColor: scoreColor }}
+        >
+          <span className="text-base font-bold leading-none" style={{ color: scoreColor }}>
+            {trust.finalScore.toFixed(1)}
+          </span>
+          <span className="text-[9px] text-muted-foreground">/5</span>
+        </div>
+        <div className="flex-1">
+          {/* Stars */}
+          <div className="flex items-center gap-0.5 mb-1">
+            {[1, 2, 3, 4, 5].map(s => (
+              <Star
+                key={s}
+                className={`h-3 w-3 ${s <= Math.round(trust.avgRating) ? "fill-yellow-400 text-yellow-400" : "text-gray-200"}`}
+              />
+            ))}
+            <span className="ml-1 text-[11px] text-muted-foreground">
+              {trust.avgRating.toFixed(1)} ({trust.reviewCount})
+            </span>
+          </div>
+          {/* Bar */}
+          <div className="h-1.5 w-full rounded-full bg-gray-100 overflow-hidden">
+            <div
+              className="h-full rounded-full transition-all"
+              style={{ width: `${scoreBarWidth}%`, backgroundColor: scoreColor }}
+            />
+          </div>
+        </div>
+      </div>
+
+      {/* 4 stats grid */}
+      <div className="grid grid-cols-2 gap-x-3 gap-y-2">
+        <TrustStat icon={<CheckCircle className="h-3 w-3 text-emerald-500" />} label="Completion" value={`${trust.completionRate}%`} />
+        <TrustStat icon={<Zap className="h-3 w-3 text-blue-500" />} label="Response" value={`${trust.responseRate}%`} />
+        <TrustStat
+          icon={<ShieldAlert className="h-3 w-3 text-amber-500" />}
+          label="Dispute"
+          value={`${trust.disputeRate}%`}
+          warn={parseFloat(trust.disputeRate) > 5}
+        />
+        <TrustStat icon={<Clock className="h-3 w-3 text-purple-500" />} label="Tenure" value={`${Math.floor(trust.accountAgeMonths)}m`} />
+      </div>
+
+      {trust.underMonitoring && (
+        <div className="mt-2 flex items-center gap-1.5 rounded-md bg-amber-50 border border-amber-200 px-2 py-1.5 text-[10px] text-amber-700">
+          ⚠️ This seller is under quality monitoring
+        </div>
+      )}
+    </div>
+  );
+}
+
+function TrustStat({
+  icon, label, value, warn = false,
+}: {
+  icon: React.ReactNode;
+  label: string;
+  value: string;
+  warn?: boolean;
+}) {
+  return (
+    <div className="flex items-center gap-1.5">
+      {icon}
+      <div>
+        <span className="block text-[10px] text-muted-foreground">{label}</span>
+        <span className={`block text-xs font-semibold leading-tight ${warn ? "text-red-500" : ""}`}>{value}</span>
+      </div>
+    </div>
+  );
+}

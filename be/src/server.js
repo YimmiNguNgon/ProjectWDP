@@ -105,6 +105,10 @@ app.use("/api/vouchers", voucherRoutes);
 const feedbackRevisionRoutes = require("./routes/feedbackRevision");
 app.use("/api/feedback-revision", feedbackRevisionRoutes);
 
+// Trust Score routes (Seller Trust Score & Risk-based Moderation)
+const trustScoreRoutes = require("./routes/trustScore");
+app.use("/api/trust-score", trustScoreRoutes);
+
 // health check
 app.get("/health", (req, res) => res.json({ ok: true }));
 

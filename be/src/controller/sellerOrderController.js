@@ -1,6 +1,8 @@
 const Order = require("../models/Order");
 const Product = require("../models/Product");
 const mongoose = require("mongoose");
+// Trust Score trigger (non-blocking, fire-and-forget)
+const { evaluateSellerTrust } = require("../services/sellerTrustService");
 
 /**
  * Update order status
@@ -59,8 +61,14 @@ exports.updateOrderStatus = async (req, res, next) => {
 
         await order.save();
 
-        // TODO: Emit socket event to notify buyer
-        // io.to(order.buyer.toString()).emit("orderStatusUpdated", { orderId: id, status });
+        // ── Trigger Trust Score recalc (fire-and-forget, không block response) ──
+        if (status === "delivered" || status === "returned" || status === "cancelled") {
+            setImmediate(() => {
+                evaluateSellerTrust(order.seller,
+                    status === "delivered" ? "ORDER_DELIVERED" : "REFUND_CREATED"
+                ).catch(err => console.warn("[TrustScore] recalc warn:", err.message));
+            });
+        }
 
         const updated = await Order.findById(id)
             .populate("buyer", "username email")
