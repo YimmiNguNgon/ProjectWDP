@@ -16,18 +16,26 @@ import {
 } from "@/api/checkout";
 import { useCart } from "@/contexts/cart-context";
 import { getAddresses, type Address } from "@/api/user";
-import { useAuth } from "@/hooks/use-auth";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { MapPin, Truck, CreditCard, ChevronLeft } from "lucide-react";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import { MapPin, Truck, CreditCard, ChevronLeft, Pencil, Trash2, Plus, ChevronRight } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Badge } from "@/components/ui/badge";
 import {
   validateVoucher,
   type VoucherValidationResponse,
 } from "@/api/vouchers";
+import AddressForm from "@/components/address-form";
+import { ConfirmDialog } from "@/components/confirm-dialog";
+import { createAddress, updateAddress, deleteAddress, setDefaultAddress } from "@/api/user";
 
 type CheckoutLocationState = {
   source?: "cart" | "buy_now";
@@ -63,7 +71,6 @@ export default function CheckoutPage() {
   const location = useLocation();
   const navigate = useNavigate();
   const { refreshCart } = useCart();
-  const { user } = useAuth();
 
   const payload = useMemo(
     () => buildPayloadFromState(location.state as CheckoutLocationState),
@@ -83,6 +90,15 @@ export default function CheckoutPage() {
   const [appliedVoucher, setAppliedVoucher] =
     useState<VoucherValidationResponse | null>(null);
   const [applyingVoucher, setApplyingVoucher] = useState(false);
+
+  // Address CRUD state
+  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [isAddressListModalOpen, setIsAddressListModalOpen] = useState(false);
+  const [selectedAddressForEdit, setSelectedAddressForEdit] = useState<Address | null>(null);
+  const [confirmDialogOpen, setConfirmDialogOpen] = useState(false);
+  const [confirmDialogAction, setConfirmDialogAction] = useState<"setDefault" | "delete" | null>(null);
+  const [pendingAddressId, setPendingAddressId] = useState<string | null>(null);
+  const [isActionLoading, setIsActionLoading] = useState(false);
 
   const loadPreview = async () => {
     try {
@@ -195,6 +211,64 @@ export default function CheckoutPage() {
     }
   };
 
+  const handleOpenAddAddress = () => {
+    setSelectedAddressForEdit(null);
+    setIsModalOpen(true);
+  };
+
+  const handleOpenEditAddress = (e: React.MouseEvent, addr: Address) => {
+    e.stopPropagation();
+    setSelectedAddressForEdit(addr);
+    setIsModalOpen(true);
+  };
+
+  const handleAddressSubmit = async (payload: any) => {
+    try {
+      if (selectedAddressForEdit) {
+        await updateAddress(selectedAddressForEdit._id, payload);
+      } else {
+        await createAddress(payload);
+      }
+      await loadAddresses();
+      setIsModalOpen(false);
+    } catch (error) {
+      console.error("Failed to save address", error);
+      throw error; // Let AddressForm handle the error toast if it does, or catch here
+    }
+  };
+
+  const handleConfirmAction = async () => {
+    if (!pendingAddressId || !confirmDialogAction) return;
+    try {
+      setIsActionLoading(true);
+      if (confirmDialogAction === "delete") {
+        await deleteAddress(pendingAddressId);
+        toast.success("Address deleted successfully");
+        if (selectedAddressId === pendingAddressId) {
+          setSelectedAddressId("");
+        }
+      } else if (confirmDialogAction === "setDefault") {
+        await setDefaultAddress(pendingAddressId);
+        toast.success("Default address set successfully");
+      }
+      await loadAddresses();
+      setConfirmDialogOpen(false);
+    } catch (error) {
+      toast.error(`Failed to ${confirmDialogAction} address`);
+    } finally {
+      setIsActionLoading(false);
+      setPendingAddressId(null);
+      setConfirmDialogAction(null);
+    }
+  };
+
+  const openDeleteConfirm = (e: React.MouseEvent, id: string) => {
+    e.stopPropagation();
+    setPendingAddressId(id);
+    setConfirmDialogAction("delete");
+    setConfirmDialogOpen(true);
+  };
+
   const selectedAddress = addresses.find(
     (a: Address) => a._id === selectedAddressId,
   );
@@ -242,115 +316,202 @@ export default function CheckoutPage() {
         <div className="flex-1 space-y-6">
           {/* Shipping Address Section */}
           <section className="bg-white rounded-xl border p-6 shadow-sm">
-            <h2 className="text-xl font-semibold mb-4 flex items-center gap-2">
-              <MapPin className="h-5 w-5 text-primary" />
-              Recipient Information
-            </h2>
-            <div className="space-y-4">
-              <p className="text-sm font-medium text-muted-foreground">
-                Select delivery address
-              </p>
-              <RadioGroup
-                value={selectedAddressId}
-                onValueChange={setSelectedAddressId}
-              >
-                <div className="grid gap-3">
-                  {addresses.map((addr: Address) => (
-                    <div
-                      key={addr._id}
-                      onClick={() => {
-                        setSelectedAddressId(addr._id);
-                      }}
-                      className={cn(
-                        "relative flex flex-col p-4 rounded-lg border-2 cursor-pointer transition-all",
-                        selectedAddressId === addr._id
-                          ? "border-primary bg-primary/5"
-                          : "border-border hover:border-muted-foreground/30",
-                      )}
-                    >
-                      <div className="flex items-center justify-between mb-2">
-                        <div className="flex items-center gap-2">
-                          <span className="font-bold text-lg">
-                            {addr.fullName}
-                          </span>
-                          {addr.isDefault && (
-                            <Badge
-                              variant="outline"
-                              className="text-[12px] bg-blue-400/20 font-semibold text-blue-400 p-2 rounded-md"
-                            >
-                              Default
-                            </Badge>
-                          )}
-                        </div>
-                        <RadioGroupItem value={addr._id} />
-                      </div>
-                      <p className="text-sm text-muted-foreground">
-                        {addr.phone}
-                      </p>
-                      <p className="text-sm text-muted-foreground">
-                        {user?.email}
-                      </p>
-                      <p className="text-md  mt-1">
-                        {addr.detail ? `${addr.detail}, ` : ""}
-                        {addr.street ? `${addr.street}, ` : ""}
-                        {addr.ward ? `${addr.ward}, ` : ""}
-                        {addr.district ? `${addr.district}, ` : ""}
-                        {addr.city ? addr.city : ""}
-                      </p>
-                    </div>
-                  ))}
-                </div>
-              </RadioGroup>
-              {!addresses.length && (
-                <div className="text-center py-4 border-2 border-dashed rounded-lg">
-                  <p className="text-sm text-muted-foreground">
-                    No addresses found.
-                  </p>
-                  <Button
-                    variant="link"
-                    size="sm"
-                    onClick={() => navigate("/my-ebay/account/addresses")}
-                  >
-                    Add an address
-                  </Button>
-                </div>
-              )}
-
-              {selectedAddress && (
-                <div className="mt-6 pt-6 border-t space-y-3">
-                  <p className="text-sm font-semibold">Recipient Details</p>
-                  <div className="grid grid-cols-2 text-sm gap-y-2">
-                    <span className="text-muted-foreground">Name:</span>
-                    <span className="text-right font-medium">
-                      {selectedAddress.fullName}
-                    </span>
-                    <span className="text-muted-foreground">Phone:</span>
-                    <span className="text-right font-medium">
-                      {selectedAddress.phone}
-                    </span>
-                    <span className="text-muted-foreground">Email:</span>
-                    <span className="text-right font-medium">
-                      {user?.email}
-                    </span>
-                    <span className="text-muted-foreground">Address:</span>
-                    <span className="text-right font-medium leading-tight">
-                      {selectedAddress.detail
-                        ? `${selectedAddress.detail}, `
-                        : ""}
-                      {selectedAddress.street
-                        ? `${selectedAddress.street}, `
-                        : ""}
-                      {selectedAddress.ward ? `${selectedAddress.ward}, ` : ""}
-                      {selectedAddress.district
-                        ? `${selectedAddress.district}, `
-                        : ""}
-                      {selectedAddress.city}
-                    </span>
-                  </div>
-                </div>
+            <div className="flex items-center justify-between mb-4">
+              <h2 className="text-xl font-semibold flex items-center gap-2">
+                <MapPin className="h-5 w-5 text-primary" />
+                Delivery Address
+              </h2>
+              {addresses.length > 0 && (
+                <Button
+                  variant="outline"
+                  className="text-primary font-semibold hover:no-underline hover:bg-blue-400/30 hover:text-primary cursor-pointer p-2 rounded-md bg-blue-400/30 border-0 h-auto"
+                  onClick={() => setIsAddressListModalOpen(true)}
+                >
+                  Change
+                </Button>
               )}
             </div>
+
+            {selectedAddress ? (
+              <div 
+                className="group relative p-4 rounded-xl border-2 border-primary/20 bg-primary/5 hover:border-primary/40 transition-all cursor-pointer"
+                onClick={() => setIsAddressListModalOpen(true)}
+              >
+                <div className="flex items-start justify-between">
+                  <div className="space-y-1">
+                    <div className="flex items-center gap-3">
+                      <span className="font-bold text-lg text-foreground">
+                        {selectedAddress.fullName}
+                      </span>
+                      <span className="text-muted-foreground">|</span>
+                      <span className="text-sm font-medium text-muted-foreground">
+                        {selectedAddress.phone}
+                      </span>
+                      {selectedAddress.isDefault && (
+                        <Badge
+                          variant="outline"
+                          className="bg-primary/10 text-primary border-none text-[10px] px-2 py-0.5"
+                        >
+                          Default
+                        </Badge>
+                      )}
+                    </div>
+                    <p className="text-md text-foreground/80 leading-relaxed">
+                      {selectedAddress.detail ? `${selectedAddress.detail}, ` : ""}
+                      {selectedAddress.street ? `${selectedAddress.street}, ` : ""}
+                      {selectedAddress.ward ? `${selectedAddress.ward}, ` : ""}
+                      {selectedAddress.district ? `${selectedAddress.district}, ` : ""}
+                      {selectedAddress.city}
+                    </p>
+                  </div>
+                  <ChevronRight className="h-5 w-5 text-muted-foreground group-hover:text-primary transition-colors mt-1" />
+                </div>
+              </div>
+            ) : (
+              <div className="text-center py-8 border-2 border-dashed rounded-xl bg-muted/30">
+                <p className="text-sm text-muted-foreground mb-4">No address selected for delivery</p>
+                <Button
+                  variant="default"
+                  className="bg-[#AAED56] cursor-pointer text-[#324E0F] hover:bg-[#9CD845] border-none font-bold px-6"
+                  onClick={handleOpenAddAddress}
+                >
+                  <Plus className="h-4 w-4 mr-2" />
+                  Add New Address
+                </Button>
+              </div>
+            )}
           </section>
+
+          {/* Address Selection Modal */}
+          <Dialog open={isAddressListModalOpen} onOpenChange={setIsAddressListModalOpen}>
+            <DialogContent className="max-w-2xl max-h-[90vh] overflow-hidden flex flex-col p-0 border-none rounded-2xl shadow-2xl">
+              <DialogHeader className="px-6 py-8 border-b bg-white">
+                <div className="flex items-center justify-between">
+                  <DialogTitle className="text-2xl font-bold">Select Delivery Address</DialogTitle>
+                  <Button
+                    size="sm"
+                    className="bg-[#AAED56] cursor-pointer text-[#324E0F] hover:bg-[#9CD845] border-none font-bold rounded-full px-4 h-9 shadow-sm"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      handleOpenAddAddress();
+                    }}
+                  >
+                    <Plus className="h-4 w-4 mr-1.5" />
+                    New Address
+                  </Button>
+                </div>
+              </DialogHeader>
+
+              <div className="flex-1 overflow-y-auto p-6 scrollbar-thin">
+                <RadioGroup
+                  value={selectedAddressId}
+                  onValueChange={(val) => {
+                    setSelectedAddressId(val);
+                    setIsAddressListModalOpen(false);
+                  }}
+                >
+                  <div className="grid gap-4">
+                    {addresses.map((addr: Address) => (
+                      <div
+                        key={addr._id}
+                        className={cn(
+                          "group relative flex flex-col p-5 rounded-2xl border-2 transition-all cursor-pointer",
+                          selectedAddressId === addr._id
+                            ? "border-primary bg-primary/3 shadow-inner"
+                            : "border-border hover:border-primary/30 hover:bg-muted/30"
+                        )}
+                        onClick={() => {
+                          setSelectedAddressId(addr._id);
+                          setIsAddressListModalOpen(false);
+                        }}
+                      >
+                        <div className="flex items-start justify-between gap-4">
+                          <div className="flex-1 space-y-1.5">
+                            <div className="flex items-center gap-2 flex-wrap">
+                              <span className="font-bold text-lg text-foreground">
+                                {addr.fullName}
+                              </span>
+                              <span className="text-muted-foreground opacity-50">|</span>
+                              <span className="text-sm font-medium text-muted-foreground">
+                                {addr.phone}
+                              </span>
+                              {addr.isDefault && (
+                                <Badge
+                                  variant="outline"
+                                  className="bg-blue-500/10 text-blue-600 border-none text-[10px] font-bold px-2 py-0.5"
+                                >
+                                  Default
+                                </Badge>
+                              )}
+                            </div>
+                            <p className="text-sm text-foreground/70 leading-relaxed font-medium">
+                              {addr.detail ? `${addr.detail}, ` : ""}
+                              {addr.street ? `${addr.street}, ` : ""}
+                              {addr.ward ? `${addr.ward}, ` : ""}
+                              {addr.district ? `${addr.district}, ` : ""}
+                              {addr.city}
+                            </p>
+                          </div>
+
+                          <div className="flex items-center gap-1 shrink-0">
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              className="h-9 w-9 cursor-pointer rounded-full hover:bg-white hover:shadow-sm text-muted-foreground hover:text-primary transition-all"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                handleOpenEditAddress(e, addr);
+                              }}
+                            >
+                              <Pencil className="h-4 w-4" />
+                            </Button>
+                            {!addr.isDefault && (
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                className="h-9 w-9 cursor-pointer rounded-full hover:bg-white hover:shadow-sm text-muted-foreground hover:text-destructive transition-all"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  openDeleteConfirm(e, addr._id);
+                                }}
+                              >
+                                <Trash2 className="h-4 w-4" />
+                              </Button>
+                            )}
+                            <div className="ml-2">
+                              <RadioGroupItem 
+                                value={addr._id} 
+                                className="w-5 h-5 border-2 border-primary/30 text-primary"
+                              />
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </RadioGroup>
+
+                {addresses.length === 0 && (
+                  <div className="flex flex-col items-center justify-center py-12 text-center space-y-4">
+                    <div className="w-16 h-16 bg-muted rounded-full flex items-center justify-center">
+                      <MapPin className="h-8 w-8 text-muted-foreground" />
+                    </div>
+                    <div className="space-y-1">
+                      <p className="font-bold text-lg">No addresses found</p>
+                      <p className="text-sm text-muted-foreground">Add an address to continue with your checkout</p>
+                    </div>
+                    <Button
+                      className="bg-[#AAED56] text-[#324E0F] hover:bg-[#9CD845] font-bold px-6"
+                      onClick={handleOpenAddAddress}
+                    >
+                      <Plus className="h-4 w-4 mr-2" />
+                      Add Address
+                    </Button>
+                  </div>
+                )}
+              </div>
+            </DialogContent>
+          </Dialog>
 
           {/* Shipping Method Section */}
           <section className="bg-white rounded-xl border p-6 shadow-sm">
@@ -629,6 +790,27 @@ export default function CheckoutPage() {
           </div>
         </div>
       </div>
+      <AddressForm
+        open={isModalOpen}
+        onClose={() => setIsModalOpen(false)}
+        initialData={selectedAddressForEdit}
+        onSubmit={handleAddressSubmit}
+      />
+
+      <ConfirmDialog
+        open={confirmDialogOpen}
+        onOpenChange={setConfirmDialogOpen}
+        title={confirmDialogAction === "delete" ? "Delete Address" : "Set Default Address"}
+        description={
+          confirmDialogAction === "delete"
+            ? "Are you sure you want to delete this address? This action cannot be undone."
+            : "Are you sure you want to set this as your default address?"
+        }
+        confirmText={confirmDialogAction === "delete" ? "Delete" : "Set as Default"}
+        isDangerous={confirmDialogAction === "delete"}
+        loading={isActionLoading}
+        onConfirm={handleConfirmAction}
+      />
     </div>
   );
 }
