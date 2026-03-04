@@ -78,7 +78,7 @@ const userSchema = new mongoose.Schema(
     // Chỉ có giá trị khi role === "seller"
     sellerStage: {
       type: String,
-      enum: ["PROBATION", "NORMAL"],
+      enum: [null, "PROBATION", "NORMAL"],
       default: null,
       index: true,
     },
