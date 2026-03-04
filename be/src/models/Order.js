@@ -57,6 +57,41 @@ const orderSchema = new mongoose.Schema({
     value: { type: Number, default: 0 },
     discountAmount: { type: Number, default: 0 },
   },
+  voucherGlobal: {
+    voucherId: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "Voucher",
+      default: null,
+    },
+    code: { type: String, default: "" },
+    type: {
+      type: String,
+      enum: ["percentage", "fixed", ""],
+      default: "",
+    },
+    value: { type: Number, default: 0 },
+    discountAmount: { type: Number, default: 0 },
+  },
+  voucherSeller: {
+    voucherId: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "Voucher",
+      default: null,
+    },
+    code: { type: String, default: "" },
+    type: {
+      type: String,
+      enum: ["percentage", "fixed", ""],
+      default: "",
+    },
+    value: { type: Number, default: 0 },
+    discountAmount: { type: Number, default: 0 },
+  },
+  discountBreakdown: {
+    globalAllocated: { type: Number, default: 0 },
+    sellerDiscount: { type: Number, default: 0 },
+    totalDiscount: { type: Number, default: 0 },
+  },
   totalAmount: { type: Number, required: true },
   status: {
     type: String,

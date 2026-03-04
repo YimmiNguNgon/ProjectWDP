@@ -4,6 +4,14 @@ const VoucherRequest = require("../models/VoucherRequest");
 const getUserId = (req) => req.user?._id || req.user?.userId;
 const toUpperCode = (code = "") => String(code).trim().toUpperCase();
 
+const parseNullableNumber = (value) => {
+  if (value === null || value === undefined || value === "") return null;
+  const num = Number(value);
+  return Number.isNaN(num) ? null : num;
+};
+
+const normalizeVoucherScope = (voucher) => voucher?.scope || "seller";
+
 const calculateDiscount = (voucher, totalAmount) => {
   if (totalAmount <= 0) return 0;
 
@@ -23,11 +31,52 @@ const calculateDiscount = (voucher, totalAmount) => {
   return Number(discount.toFixed(2));
 };
 
-const validateVoucherForUser = (voucher, userId, totalAmount) => {
+const hasUserClaimedVoucher = (voucher, userId) =>
+  (voucher.claimedBy || []).some(
+    (claim) => claim.user?.toString() === userId?.toString(),
+  );
+
+const getUserUsageCount = (voucher, userId) =>
+  (voucher.usedBy || []).filter(
+    (usage) => usage.user?.toString() === userId?.toString(),
+  ).length;
+
+const validateVoucherForUser = (
+  voucher,
+  userId,
+  totalAmount,
+  options = {},
+) => {
   const now = new Date();
+  const scope = normalizeVoucherScope(voucher);
+  const {
+    sellerId,
+    scope: requestedScope,
+    ignoreMinOrder = false,
+    ignoreScope = false,
+  } = options;
 
   if (!voucher || !voucher.isActive) {
     return { ok: false, message: "Voucher is invalid or inactive" };
+  }
+
+  if (!ignoreScope && requestedScope && requestedScope !== scope) {
+    return { ok: false, message: "Voucher scope does not match" };
+  }
+
+  if (scope === "seller") {
+    if (!sellerId) {
+      return {
+        ok: false,
+        message: "Seller voucher requires sellerId",
+      };
+    }
+    if (voucher.seller?.toString() !== sellerId.toString()) {
+      return {
+        ok: false,
+        message: "Voucher does not belong to this seller",
+      };
+    }
   }
 
   if (voucher.startDate && now < voucher.startDate) {
@@ -42,23 +91,21 @@ const validateVoucherForUser = (voucher, userId, totalAmount) => {
     return { ok: false, message: "Voucher usage limit reached" };
   }
 
-  if (totalAmount < (voucher.minOrderValue || 0)) {
+  if (!ignoreMinOrder && totalAmount < (voucher.minOrderValue || 0)) {
     return {
       ok: false,
       message: `Minimum order value is ${voucher.minOrderValue}`,
     };
   }
 
-  const userUsageCount = voucher.usedBy.filter(
-    (usage) => usage.user.toString() === userId.toString(),
-  ).length;
+  const userUsageCount = getUserUsageCount(voucher, userId);
 
   if (voucher.perUserLimit && userUsageCount >= voucher.perUserLimit) {
     return { ok: false, message: "You have reached this voucher usage limit" };
   }
 
   const discountAmount = calculateDiscount(voucher, totalAmount);
-  return { ok: true, discountAmount };
+  return { ok: true, discountAmount, userUsageCount };
 };
 
 const markVoucherAsUsed = async (voucher, userId, orderId) => {
@@ -107,14 +154,52 @@ const mapVoucherFields = (payload) => ({
     payload.maxDiscountAmount !== null && payload.maxDiscountAmount !== undefined
       ? Number(payload.maxDiscountAmount)
       : null,
-  usageLimit:
-    payload.usageLimit !== null && payload.usageLimit !== undefined
-      ? Number(payload.usageLimit)
-      : null,
+  usageLimit: parseNullableNumber(payload.usageLimit),
   perUserLimit: Number(payload.perUserLimit) || 1,
   startDate: payload.startDate ? new Date(payload.startDate) : new Date(),
   endDate: new Date(payload.endDate),
 });
+
+const mapVoucherForResponse = (voucher, userId, totalAmount = null) => {
+  const userUsageCount = getUserUsageCount(voucher, userId);
+  const usageLimit = voucher.usageLimit ?? null;
+  const remainingUsage =
+    usageLimit === null ? null : Math.max(0, usageLimit - (voucher.usedCount || 0));
+  const remainingForUser = Math.max(
+    0,
+    Number(voucher.perUserLimit || 1) - Number(userUsageCount || 0),
+  );
+
+  const mapped = {
+    _id: voucher._id,
+    code: voucher.code,
+    scope: normalizeVoucherScope(voucher),
+    seller: voucher.seller ? voucher.seller._id || voucher.seller : null,
+    sellerName:
+      typeof voucher.seller === "object"
+        ? voucher.seller?.sellerInfo?.shopName || voucher.seller?.username || ""
+        : "",
+    type: voucher.type,
+    value: voucher.value,
+    minOrderValue: voucher.minOrderValue || 0,
+    maxDiscountAmount: voucher.maxDiscountAmount ?? null,
+    usageLimit,
+    usedCount: voucher.usedCount || 0,
+    perUserLimit: voucher.perUserLimit || 1,
+    remainingUsage,
+    remainingForUser,
+    startDate: voucher.startDate,
+    endDate: voucher.endDate,
+    isActive: voucher.isActive,
+    isClaimable: Boolean(voucher.isClaimable),
+  };
+
+  if (typeof totalAmount === "number" && totalAmount > 0) {
+    mapped.estimatedDiscount = calculateDiscount(voucher, totalAmount);
+  }
+
+  return mapped;
+};
 
 const requestVoucher = async (req, res) => {
   try {
@@ -290,6 +375,8 @@ const approveVoucherRequest = async (req, res) => {
 
     const voucher = await Voucher.create({
       seller: request.seller,
+      scope: "seller",
+      source: "seller_request",
       code: request.code,
       type: request.type,
       value: request.value,
@@ -300,6 +387,7 @@ const approveVoucherRequest = async (req, res) => {
       startDate: request.startDate,
       endDate: request.endDate,
       isActive: true,
+      isClaimable: false,
       createdBy: adminId,
       createdFromRequest: request._id,
     });
@@ -377,11 +465,14 @@ const getMyVouchers = async (req, res) => {
   try {
     const sellerId = getUserId(req);
     const { isActive } = req.query;
-    const filter = { seller: sellerId };
+    const filter = { seller: sellerId, scope: "seller" };
     if (isActive !== undefined) filter.isActive = isActive === "true";
 
     const vouchers = await Voucher.find(filter).sort({ createdAt: -1 });
-    return res.json({ success: true, data: vouchers });
+    return res.json({
+      success: true,
+      data: vouchers.map((voucher) => mapVoucherForResponse(voucher, sellerId)),
+    });
   } catch (error) {
     return res.status(500).json({
       success: false,
@@ -408,7 +499,10 @@ const setMyVoucherStatus = async (req, res) => {
       return res.status(404).json({ success: false, message: "Voucher not found" });
     }
 
-    if (voucher.seller.toString() !== sellerId.toString()) {
+    if (
+      normalizeVoucherScope(voucher) !== "seller" ||
+      voucher.seller?.toString() !== sellerId.toString()
+    ) {
       return res.status(403).json({ success: false, message: "Unauthorized" });
     }
 
@@ -418,7 +512,7 @@ const setMyVoucherStatus = async (req, res) => {
     return res.json({
       success: true,
       message: "Voucher status updated",
-      data: voucher,
+      data: mapVoucherForResponse(voucher, sellerId),
     });
   } catch (error) {
     return res.status(500).json({
@@ -429,9 +523,246 @@ const setMyVoucherStatus = async (req, res) => {
   }
 };
 
+const createAdminGlobalVoucher = async (req, res) => {
+  try {
+    const adminId = getUserId(req);
+    const validationMessage = validateVoucherPayload(req.body);
+    if (validationMessage) {
+      return res
+        .status(400)
+        .json({ success: false, message: validationMessage });
+    }
+
+    const code = toUpperCode(req.body.code);
+    const [existingVoucher, pendingRequest] = await Promise.all([
+      Voucher.findOne({ code }),
+      VoucherRequest.findOne({ code, status: "pending" }),
+    ]);
+
+    if (existingVoucher || pendingRequest) {
+      return res.status(409).json({
+        success: false,
+        message: "Voucher code already exists or is awaiting approval",
+      });
+    }
+
+    const voucher = await Voucher.create({
+      ...mapVoucherFields(req.body),
+      scope: "global",
+      seller: null,
+      source: "admin_created",
+      isClaimable: false,
+      isActive: true,
+      createdBy: adminId,
+      createdFromRequest: null,
+    });
+
+    return res.status(201).json({
+      success: true,
+      message: "Global voucher created",
+      data: mapVoucherForResponse(voucher, adminId),
+    });
+  } catch (error) {
+    return res.status(500).json({
+      success: false,
+      message: "Failed to create global voucher",
+      error: error.message,
+    });
+  }
+};
+
+const getAdminGlobalVouchers = async (req, res) => {
+  try {
+    const userId = getUserId(req);
+    const { isActive } = req.query;
+    const filter = { scope: "global" };
+    if (isActive !== undefined) filter.isActive = isActive === "true";
+
+    const vouchers = await Voucher.find(filter).sort({ createdAt: -1 });
+    return res.json({
+      success: true,
+      data: vouchers.map((voucher) => mapVoucherForResponse(voucher, userId)),
+    });
+  } catch (error) {
+    return res.status(500).json({
+      success: false,
+      message: "Failed to get global vouchers",
+      error: error.message,
+    });
+  }
+};
+
+const setAdminGlobalVoucherStatus = async (req, res) => {
+  try {
+    const userId = getUserId(req);
+    const { id } = req.params;
+    const { isActive } = req.body;
+
+    if (typeof isActive !== "boolean") {
+      return res
+        .status(400)
+        .json({ success: false, message: "isActive must be boolean" });
+    }
+
+    const voucher = await Voucher.findById(id);
+    if (!voucher || normalizeVoucherScope(voucher) !== "global") {
+      return res.status(404).json({ success: false, message: "Voucher not found" });
+    }
+
+    voucher.isActive = isActive;
+    await voucher.save();
+
+    return res.json({
+      success: true,
+      message: "Global voucher status updated",
+      data: mapVoucherForResponse(voucher, userId),
+    });
+  } catch (error) {
+    return res.status(500).json({
+      success: false,
+      message: "Failed to update global voucher status",
+      error: error.message,
+    });
+  }
+};
+
+const claimVoucher = async (req, res) => {
+  try {
+    const userId = getUserId(req);
+    const code = toUpperCode(req.body?.code);
+
+    if (!code) {
+      return res.status(400).json({
+        success: false,
+        message: "Voucher code is required",
+      });
+    }
+
+    const voucher = await Voucher.findOne({ code });
+    if (!voucher) {
+      return res.status(404).json({
+        success: false,
+        message: "Voucher not found",
+      });
+    }
+
+    const validation = validateVoucherForUser(voucher, userId, 1, {
+      ignoreMinOrder: true,
+      ignoreScope: true,
+      sellerId: voucher.seller?._id || voucher.seller || undefined,
+    });
+    if (!validation.ok) {
+      return res.status(400).json({
+        success: false,
+        message: validation.message,
+      });
+    }
+
+    const alreadyClaimed = hasUserClaimedVoucher(voucher, userId);
+    if (alreadyClaimed) {
+      return res.json({
+        success: true,
+        message: "Voucher is already in your wallet",
+        data: mapVoucherForResponse(voucher, userId),
+      });
+    }
+
+    voucher.claimedBy.push({ user: userId, claimedAt: new Date() });
+    await voucher.save();
+
+    return res.json({
+      success: true,
+      message: "Voucher claimed successfully",
+      data: mapVoucherForResponse(voucher, userId),
+    });
+  } catch (error) {
+    return res.status(500).json({
+      success: false,
+      message: "Failed to claim voucher",
+      error: error.message,
+    });
+  }
+};
+
+const getMyVoucherWallet = async (req, res) => {
+  try {
+    const userId = getUserId(req);
+    const vouchers = await Voucher.find({ "claimedBy.user": userId })
+      .populate("seller", "username sellerInfo.shopName")
+      .sort({ createdAt: -1 });
+
+    return res.json({
+      success: true,
+      data: vouchers.map((voucher) => mapVoucherForResponse(voucher, userId)),
+    });
+  } catch (error) {
+    return res.status(500).json({
+      success: false,
+      message: "Failed to get voucher wallet",
+      error: error.message,
+    });
+  }
+};
+
+const getAvailableVouchers = async (req, res) => {
+  try {
+    const userId = getUserId(req);
+    const scope = String(req.query.scope || "all").toLowerCase();
+    const sellerId = req.query.sellerId;
+    const subtotal = parseNullableNumber(req.query.subtotal);
+
+    const filter = { isActive: true };
+    if (["global", "seller"].includes(scope)) {
+      filter.scope = scope;
+    }
+    if (scope === "seller" && !sellerId) {
+      return res.status(400).json({
+        success: false,
+        message: "sellerId is required for seller voucher lookup",
+      });
+    }
+    if (sellerId) {
+      filter.seller = sellerId;
+    }
+
+    const vouchers = await Voucher.find(filter)
+      .populate("seller", "username sellerInfo.shopName")
+      .sort({ createdAt: -1 });
+
+    const amountToCheck = typeof subtotal === "number" && subtotal > 0 ? subtotal : 0;
+    const withEligibility = vouchers.map((voucher) => {
+      const voucherScope = normalizeVoucherScope(voucher);
+      const allowAnySellerInAllScope =
+        !sellerId && scope !== "seller" && voucherScope === "seller";
+      const validation = validateVoucherForUser(voucher, userId, amountToCheck, {
+        sellerId: allowAnySellerInAllScope
+          ? voucher.seller?._id || voucher.seller
+          : sellerId,
+        ignoreMinOrder: !(typeof subtotal === "number" && subtotal > 0),
+      });
+      return {
+        voucher,
+        validation,
+      };
+    });
+
+    const filtered = withEligibility
+      .filter(({ validation }) => validation.ok)
+      .map(({ voucher }) => mapVoucherForResponse(voucher, userId, amountToCheck || null));
+
+    return res.json({ success: true, data: filtered });
+  } catch (error) {
+    return res.status(500).json({
+      success: false,
+      message: "Failed to get available vouchers",
+      error: error.message,
+    });
+  }
+};
+
 const validateVoucher = async (req, res) => {
   try {
-    const { code, totalAmount, sellerId } = req.body;
+    const { code, totalAmount, sellerId, scope } = req.body;
     const userId = getUserId(req);
 
     if (!code) {
@@ -450,9 +781,13 @@ const validateVoucher = async (req, res) => {
     }
 
     const filter = { code: toUpperCode(code) };
-    if (sellerId) filter.seller = sellerId;
-
-    const voucher = await Voucher.findOne(filter);
+    if (["global", "seller"].includes(scope)) {
+      filter.scope = scope;
+    }
+    const voucher = await Voucher.findOne(filter).populate(
+      "seller",
+      "username sellerInfo.shopName",
+    );
     if (!voucher) {
       return res.status(404).json({
         success: false,
@@ -460,7 +795,10 @@ const validateVoucher = async (req, res) => {
       });
     }
 
-    const validation = validateVoucherForUser(voucher, userId, amount);
+    const validation = validateVoucherForUser(voucher, userId, amount, {
+      sellerId,
+      scope,
+    });
     if (!validation.ok) {
       return res.status(400).json({
         success: false,
@@ -474,10 +812,19 @@ const validateVoucher = async (req, res) => {
       message: "Voucher is valid",
       data: {
         voucherId: voucher._id,
-        sellerId: voucher.seller,
+        sellerId: voucher.seller?._id || voucher.seller || null,
+        sellerName:
+          voucher.seller?.sellerInfo?.shopName || voucher.seller?.username || "",
         voucherCode: voucher.code,
+        scope: normalizeVoucherScope(voucher),
         discountAmount: validation.discountAmount,
         finalAmount,
+        usageLimit: voucher.usageLimit ?? null,
+        usedCount: voucher.usedCount || 0,
+        remainingUsage:
+          voucher.usageLimit === null || voucher.usageLimit === undefined
+            ? null
+            : Math.max(0, voucher.usageLimit - (voucher.usedCount || 0)),
       },
     });
   } catch (error) {
@@ -498,7 +845,15 @@ module.exports = {
   rejectVoucherRequest,
   getMyVouchers,
   setMyVoucherStatus,
+  createAdminGlobalVoucher,
+  getAdminGlobalVouchers,
+  setAdminGlobalVoucherStatus,
+  claimVoucher,
+  getMyVoucherWallet,
+  getAvailableVouchers,
   validateVoucher,
   validateVoucherForUser,
   markVoucherAsUsed,
+  calculateDiscount,
+  mapVoucherForResponse,
 };

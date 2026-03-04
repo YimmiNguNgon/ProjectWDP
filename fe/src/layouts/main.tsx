@@ -16,7 +16,6 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { toast } from "sonner";
 import { WatchlistPreview } from "@/components/watchlist/watchlist-preview";
 import CartDropdown from "@/components/cart/cart-dropdown";
 import NotificationBell from "@/components/notification-bell";
@@ -25,7 +24,7 @@ const LEFT_NAV_ITEMS = [
   { name: "Browse Products", to: "/products" },
   { name: "Sale Time", to: "/products?saleOnly=true" },
   { name: "Brand Outlet", to: "/products" },
-  { name: "Gift Cards", to: "/products" },
+  { name: "Gift Cards", to: "/gift-cards" },
   { name: "Help & Contact", to: "/help-contact" },
 ] as const;
 
@@ -59,27 +58,15 @@ export function MainLayout() {
                   Sign In
                 </Link>
               )}
-              {LEFT_NAV_ITEMS.map((item) =>
-                item.to === "#" ? (
-                  <button
-                    key={item.name}
-                    onClick={() =>
-                      toast.info(`${item.name} feature coming soon!`)
-                    }
-                    className="font-medium text-sm hover:underline cursor-pointer"
-                  >
-                    {item.name}
-                  </button>
-                ) : (
-                  <Link
-                    key={item.name}
-                    to={item.to}
-                    className="font-medium text-sm hover:underline cursor-pointer"
-                  >
-                    {item.name}
-                  </Link>
-                ),
-              )}
+              {LEFT_NAV_ITEMS.map((item) => (
+                <Link
+                  key={item.name}
+                  to={item.to}
+                  className="font-medium text-sm hover:underline cursor-pointer"
+                >
+                  {item.name}
+                </Link>
+              ))}
             </div>
             <div className="flex gap-4 items-center">
               <Link

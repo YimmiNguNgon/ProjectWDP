@@ -96,7 +96,6 @@ export default function ProductDetailPage() {
 
   const [product, setProduct] = useState<ProductDetail>();
   const [quantity, setQuantity] = useState(1);
-  const [voucherCode, setVoucherCode] = useState("");
   const [selectedVariants, setSelectedVariants] = useState<
     Record<string, string>
   >({});
@@ -353,7 +352,6 @@ export default function ProductDetailPage() {
             selectedVariants: selectedVariantPairs,
           },
         ],
-        voucherCode: voucherCode.trim() || "",
       },
     });
   };
@@ -637,17 +635,6 @@ export default function ProductDetailPage() {
               ))}
             </div>
           )}
-          <Separator />
-          <div className="flex flex-col gap-2">
-            <Label className="font-bold text-lg">Voucher code:</Label>
-            <Input
-              type="text"
-              placeholder="Enter voucher code (optional)"
-              value={voucherCode}
-              onChange={(e) => setVoucherCode(e.target.value.toUpperCase())}
-              className="h-12"
-            />
-          </div>
           <Separator />
           <div className="flex gap-4 items-center">
             <Label className="font-bold text-lg">Quantity:</Label>

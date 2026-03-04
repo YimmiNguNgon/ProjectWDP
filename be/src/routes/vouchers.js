@@ -24,6 +24,9 @@ const sellerOnly = (req, res, next) => {
 };
 
 router.post("/validate", protectedRoute, voucherController.validateVoucher);
+router.get("/available", protectedRoute, voucherController.getAvailableVouchers);
+router.post("/claim", protectedRoute, voucherController.claimVoucher);
+router.get("/my-wallet", protectedRoute, voucherController.getMyVoucherWallet);
 router.get("/health", (req, res) => {
   return res.json({ ok: true, module: "vouchers" });
 });
@@ -64,6 +67,24 @@ router.get(
   protectedRoute,
   adminOnly,
   voucherController.getAdminVoucherRequests,
+);
+router.post(
+  "/admin/global",
+  protectedRoute,
+  adminOnly,
+  voucherController.createAdminGlobalVoucher,
+);
+router.get(
+  "/admin/global",
+  protectedRoute,
+  adminOnly,
+  voucherController.getAdminGlobalVouchers,
+);
+router.patch(
+  "/admin/global/:id/status",
+  protectedRoute,
+  adminOnly,
+  voucherController.setAdminGlobalVoucherStatus,
 );
 router.post(
   "/admin/requests/:id/approve",

@@ -6,11 +6,17 @@ export interface CheckoutRequestItem {
   selectedVariants?: { name: string; value: string }[];
 }
 
+export interface SellerVoucherCodeInput {
+  sellerId: string;
+  code: string;
+}
+
 export interface CheckoutPreviewPayload {
   source: "cart" | "buy_now";
   cartItemIds?: string[];
   items?: CheckoutRequestItem[];
-  voucherCode?: string;
+  globalVoucherCode?: string;
+  sellerVoucherCodes?: SellerVoucherCodeInput[] | Record<string, string>;
 }
 
 export interface CheckoutGroupItem {
@@ -27,6 +33,7 @@ export interface CheckoutGroupItem {
 
 export interface CheckoutGroup {
   sellerId: string;
+  sellerName: string;
   items: CheckoutGroupItem[];
   subtotalAmount: number;
 }
@@ -40,6 +47,20 @@ export interface CheckoutUnavailableItem {
   selectedVariants?: { name: string; value: string }[];
 }
 
+export interface AppliedVoucherSummary {
+  voucherId: string;
+  sellerId?: string;
+  sellerName?: string;
+  code: string;
+  scope: "global" | "seller";
+  type: "percentage" | "fixed";
+  value: number;
+  discountAmount: number;
+  usageLimit: number | null;
+  usedCount: number;
+  remainingUsage: number | null;
+}
+
 export interface CheckoutPreviewResponse {
   success: boolean;
   source: "cart" | "buy_now";
@@ -47,9 +68,22 @@ export interface CheckoutPreviewResponse {
   totals: {
     itemCount: number;
     subtotalAmount: number;
+    globalDiscountAmount: number;
+    sellerDiscountAmount: number;
     discountAmount: number;
     totalAmount: number;
   };
+  appliedVouchers?: {
+    global: AppliedVoucherSummary | null;
+    seller: AppliedVoucherSummary[];
+  };
+  voucherErrors?: Array<{
+    scope: "global" | "seller";
+    sellerId?: string;
+    sellerName?: string;
+    code: string;
+    message: string;
+  }>;
   payableItemCount: number;
   outOfStockItems: CheckoutUnavailableItem[];
   canProceed: boolean;
@@ -68,6 +102,10 @@ export interface CheckoutConfirmResponse {
     totalAmount: number;
     seller: string;
   }>;
+  appliedVouchers?: {
+    global: AppliedVoucherSummary | null;
+    seller: AppliedVoucherSummary[];
+  };
   outOfStockItems: CheckoutUnavailableItem[];
   redirectTo: string;
 }

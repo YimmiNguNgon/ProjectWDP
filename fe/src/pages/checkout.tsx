@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+﻿import { useEffect, useMemo, useState } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -16,26 +16,16 @@ import {
 } from "@/api/checkout";
 import { useCart } from "@/contexts/cart-context";
 import { getAddresses, type Address } from "@/api/user";
+import { useAuth } from "@/hooks/use-auth";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
-import { MapPin, Truck, CreditCard, ChevronLeft, Pencil, Trash2, Plus, ChevronRight } from "lucide-react";
+import { MapPin, Truck, CreditCard, ChevronLeft, Store } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Badge } from "@/components/ui/badge";
-import {
-  validateVoucher,
-  type VoucherValidationResponse,
-} from "@/api/vouchers";
-import AddressForm from "@/components/address-form";
-import { ConfirmDialog } from "@/components/confirm-dialog";
-import { createAddress, updateAddress, deleteAddress, setDefaultAddress } from "@/api/user";
+import { getAvailableVouchers, type Voucher } from "@/api/vouchers";
+import VoucherTicket from "@/components/voucher/voucher-ticket";
 
 type CheckoutLocationState = {
   source?: "cart" | "buy_now";
@@ -71,6 +61,7 @@ export default function CheckoutPage() {
   const location = useLocation();
   const navigate = useNavigate();
   const { refreshCart } = useCart();
+  const { user } = useAuth();
 
   const payload = useMemo(
     () => buildPayloadFromState(location.state as CheckoutLocationState),
@@ -85,28 +76,37 @@ export default function CheckoutPage() {
   const [shippingMethod, setShippingMethod] = useState<string>("standard");
   const [paymentMethod, setPaymentMethod] = useState<string>("cod");
   const [orderNote, setOrderNote] = useState<string>("");
-  const [voucherCode, setVoucherCode] = useState<string>("");
 
-  const [appliedVoucher, setAppliedVoucher] =
-    useState<VoucherValidationResponse | null>(null);
-  const [applyingVoucher, setApplyingVoucher] = useState(false);
+  const [globalVoucherInput, setGlobalVoucherInput] = useState("");
+  const [globalVoucherCode, setGlobalVoucherCode] = useState("");
+  const [sellerVoucherInputs, setSellerVoucherInputs] = useState<Record<string, string>>({});
+  const [sellerVoucherCodes, setSellerVoucherCodes] = useState<Record<string, string>>({});
 
-  // Address CRUD state
-  const [isModalOpen, setIsModalOpen] = useState(false);
-  const [isAddressListModalOpen, setIsAddressListModalOpen] = useState(false);
-  const [selectedAddressForEdit, setSelectedAddressForEdit] = useState<Address | null>(null);
-  const [confirmDialogOpen, setConfirmDialogOpen] = useState(false);
-  const [confirmDialogAction, setConfirmDialogAction] = useState<"setDefault" | "delete" | null>(null);
-  const [pendingAddressId, setPendingAddressId] = useState<string | null>(null);
-  const [isActionLoading, setIsActionLoading] = useState(false);
+  const [globalVoucherOptions, setGlobalVoucherOptions] = useState<Voucher[]>([]);
+  const [sellerVoucherOptions, setSellerVoucherOptions] = useState<Record<string, Voucher[]>>({});
+  const [loadingVoucherOptions, setLoadingVoucherOptions] = useState(false);
+
+  const sellerVoucherPayload = useMemo(
+    () =>
+      Object.entries(sellerVoucherCodes)
+        .filter(([, code]) => Boolean(code.trim()))
+        .map(([sellerId, code]) => ({ sellerId, code: code.trim().toUpperCase() })),
+    [sellerVoucherCodes],
+  );
+
+  const checkoutRequestBody = useMemo(
+    () => ({
+      ...payload,
+      globalVoucherCode: globalVoucherCode || undefined,
+      sellerVoucherCodes: sellerVoucherPayload,
+    }),
+    [payload, globalVoucherCode, sellerVoucherPayload],
+  );
 
   const loadPreview = async () => {
     try {
       setLoading(true);
-      const data = await previewCheckout({
-        ...payload,
-        voucherCode: voucherCode || undefined,
-      });
+      const data = await previewCheckout(checkoutRequestBody);
       setPreview(data);
     } catch (error: any) {
       toast.error(error.response?.data?.message || "Failed to load checkout");
@@ -128,13 +128,65 @@ export default function CheckoutPage() {
     }
   };
 
+  const loadVoucherOptions = async (previewData: CheckoutPreviewResponse) => {
+    if (!user || !previewData?.groups) return;
+
+    try {
+      setLoadingVoucherOptions(true);
+      const globalPromise = getAvailableVouchers({
+        scope: "global",
+        subtotal: previewData.totals.subtotalAmount,
+      });
+
+      const sellerPromises = previewData.groups.map((group) =>
+        getAvailableVouchers({
+          scope: "seller",
+          sellerId: group.sellerId,
+          subtotal: group.subtotalAmount,
+        }),
+      );
+
+      const [globalRes, ...sellerRes] = await Promise.all([
+        globalPromise,
+        ...sellerPromises,
+      ]);
+
+      const sellerMap: Record<string, Voucher[]> = {};
+      previewData.groups.forEach((group, index) => {
+        sellerMap[group.sellerId] = sellerRes[index]?.data || [];
+      });
+
+      setGlobalVoucherOptions(globalRes.data || []);
+      setSellerVoucherOptions(sellerMap);
+    } catch {
+      setGlobalVoucherOptions([]);
+      setSellerVoucherOptions({});
+    } finally {
+      setLoadingVoucherOptions(false);
+    }
+  };
+
+  useEffect(() => {
+    loadAddresses();
+  }, []);
+
   useEffect(() => {
     loadPreview();
-    loadAddresses();
   }, [
     payload.source,
     JSON.stringify(payload.cartItemIds || []),
     JSON.stringify(payload.items || []),
+    globalVoucherCode,
+    JSON.stringify(sellerVoucherPayload),
+  ]);
+
+  useEffect(() => {
+    if (!preview) return;
+    loadVoucherOptions(preview);
+  }, [
+    preview?.totals.subtotalAmount,
+    JSON.stringify(preview?.groups?.map((g) => [g.sellerId, g.subtotalAmount]) || []),
+    user?.username,
   ]);
 
   const shippingCosts: Record<string, number> = {
@@ -143,9 +195,7 @@ export default function CheckoutPage() {
   };
 
   const totalAmount =
-    (preview?.totals.totalAmount || 0) +
-    shippingCosts[shippingMethod] -
-    (appliedVoucher?.discountAmount || 0);
+    Number(preview?.totals.totalAmount || 0) + Number(shippingCosts[shippingMethod] || 0);
 
   const handleConfirmPayment = async () => {
     if (!preview?.canProceed) return;
@@ -157,12 +207,9 @@ export default function CheckoutPage() {
     try {
       setProcessing(true);
       const requestBody: CheckoutConfirmPayload = {
-        ...payload,
-        paymentSimulation: "success", // Defaulting to success for now
-        voucherCode: appliedVoucher?.voucherCode || undefined, // Pass applied voucher code
-        // Note: The original API might need expansion for addressId, etc.
-        // For this UI task, we focus on the frontend logic.
-      } as any;
+        ...checkoutRequestBody,
+        paymentSimulation: "success",
+      };
       const result = await confirmCheckout(requestBody);
 
       if (result.paymentStatus === "paid") {
@@ -183,90 +230,38 @@ export default function CheckoutPage() {
     }
   };
 
-  const handleApplyVoucher = async () => {
-    if (!voucherCode.trim()) {
-      toast.error("Please enter a voucher code");
-      return;
-    }
-
-    try {
-      setApplyingVoucher(true);
-      const res = await validateVoucher(
-        voucherCode,
-        preview?.totals.subtotalAmount || 0,
-      );
-      if (res.success) {
-        setAppliedVoucher(res.data);
-        await loadPreview(); // Reload preview to get backend-calculated totals
-        toast.success(res.message || "Voucher applied successfully");
-      } else {
-        setAppliedVoucher(null);
-        toast.error(res.message || "Invalid voucher");
-      }
-    } catch (err: any) {
-      setAppliedVoucher(null);
-      toast.error(err.response?.data?.message || "Failed to validate voucher");
-    } finally {
-      setApplyingVoucher(false);
-    }
+  const handleApplyGlobalVoucher = () => {
+    const code = globalVoucherInput.trim().toUpperCase();
+    setGlobalVoucherCode(code);
   };
 
-  const handleOpenAddAddress = () => {
-    setSelectedAddressForEdit(null);
-    setIsModalOpen(true);
+  const handleSelectGlobalVoucher = (voucher: Voucher) => {
+    setGlobalVoucherInput(voucher.code);
+    setGlobalVoucherCode(voucher.code);
   };
 
-  const handleOpenEditAddress = (e: React.MouseEvent, addr: Address) => {
-    e.stopPropagation();
-    setSelectedAddressForEdit(addr);
-    setIsModalOpen(true);
+  const handleClearGlobalVoucher = () => {
+    setGlobalVoucherInput("");
+    setGlobalVoucherCode("");
   };
 
-  const handleAddressSubmit = async (payload: any) => {
-    try {
-      if (selectedAddressForEdit) {
-        await updateAddress(selectedAddressForEdit._id, payload);
-      } else {
-        await createAddress(payload);
-      }
-      await loadAddresses();
-      setIsModalOpen(false);
-    } catch (error) {
-      console.error("Failed to save address", error);
-      throw error; // Let AddressForm handle the error toast if it does, or catch here
-    }
+  const handleApplySellerVoucher = (sellerId: string) => {
+    const code = (sellerVoucherInputs[sellerId] || "").trim().toUpperCase();
+    setSellerVoucherCodes((prev) => ({ ...prev, [sellerId]: code }));
   };
 
-  const handleConfirmAction = async () => {
-    if (!pendingAddressId || !confirmDialogAction) return;
-    try {
-      setIsActionLoading(true);
-      if (confirmDialogAction === "delete") {
-        await deleteAddress(pendingAddressId);
-        toast.success("Address deleted successfully");
-        if (selectedAddressId === pendingAddressId) {
-          setSelectedAddressId("");
-        }
-      } else if (confirmDialogAction === "setDefault") {
-        await setDefaultAddress(pendingAddressId);
-        toast.success("Default address set successfully");
-      }
-      await loadAddresses();
-      setConfirmDialogOpen(false);
-    } catch (error) {
-      toast.error(`Failed to ${confirmDialogAction} address`);
-    } finally {
-      setIsActionLoading(false);
-      setPendingAddressId(null);
-      setConfirmDialogAction(null);
-    }
+  const handleSelectSellerVoucher = (sellerId: string, voucher: Voucher) => {
+    setSellerVoucherInputs((prev) => ({ ...prev, [sellerId]: voucher.code }));
+    setSellerVoucherCodes((prev) => ({ ...prev, [sellerId]: voucher.code }));
   };
 
-  const openDeleteConfirm = (e: React.MouseEvent, id: string) => {
-    e.stopPropagation();
-    setPendingAddressId(id);
-    setConfirmDialogAction("delete");
-    setConfirmDialogOpen(true);
+  const handleClearSellerVoucher = (sellerId: string) => {
+    setSellerVoucherInputs((prev) => ({ ...prev, [sellerId]: "" }));
+    setSellerVoucherCodes((prev) => {
+      const next = { ...prev };
+      delete next[sellerId];
+      return next;
+    });
   };
 
   const selectedAddress = addresses.find(
@@ -312,208 +307,104 @@ export default function CheckoutPage() {
       </div>
 
       <div className="flex flex-col lg:flex-row gap-8">
-        {/* Left Column: Checkout Details */}
         <div className="flex-1 space-y-6">
-          {/* Shipping Address Section */}
           <section className="bg-white rounded-xl border p-6 shadow-sm">
-            <div className="flex items-center justify-between mb-4">
-              <h2 className="text-xl font-semibold flex items-center gap-2">
-                <MapPin className="h-5 w-5 text-primary" />
-                Delivery Address
-              </h2>
-              {addresses.length > 0 && (
-                <Button
-                  variant="outline"
-                  className="text-primary font-semibold hover:no-underline hover:bg-blue-400/30 hover:text-primary cursor-pointer p-2 rounded-md bg-blue-400/30 border-0 h-auto"
-                  onClick={() => setIsAddressListModalOpen(true)}
-                >
-                  Change
-                </Button>
-              )}
-            </div>
-
-            {selectedAddress ? (
-              <div 
-                className="group relative p-4 rounded-xl border-2 border-primary/20 bg-primary/5 hover:border-primary/40 transition-all cursor-pointer"
-                onClick={() => setIsAddressListModalOpen(true)}
+            <h2 className="text-xl font-semibold mb-4 flex items-center gap-2">
+              <MapPin className="h-5 w-5 text-primary" />
+              Recipient Information
+            </h2>
+            <div className="space-y-4">
+              <p className="text-sm font-medium text-muted-foreground">
+                Select delivery address
+              </p>
+              <RadioGroup
+                value={selectedAddressId}
+                onValueChange={setSelectedAddressId}
               >
-                <div className="flex items-start justify-between">
-                  <div className="space-y-1">
-                    <div className="flex items-center gap-3">
-                      <span className="font-bold text-lg text-foreground">
-                        {selectedAddress.fullName}
-                      </span>
-                      <span className="text-muted-foreground">|</span>
-                      <span className="text-sm font-medium text-muted-foreground">
-                        {selectedAddress.phone}
-                      </span>
-                      {selectedAddress.isDefault && (
-                        <Badge
-                          variant="outline"
-                          className="bg-primary/10 text-primary border-none text-[10px] px-2 py-0.5"
-                        >
-                          Default
-                        </Badge>
+                <div className="grid gap-3">
+                  {addresses.map((addr: Address) => (
+                    <div
+                      key={addr._id}
+                      onClick={() => {
+                        setSelectedAddressId(addr._id);
+                      }}
+                      className={cn(
+                        "relative flex flex-col p-4 rounded-lg border-2 cursor-pointer transition-all",
+                        selectedAddressId === addr._id
+                          ? "border-primary bg-primary/5"
+                          : "border-border hover:border-muted-foreground/30",
                       )}
+                    >
+                      <div className="flex items-center justify-between mb-2">
+                        <div className="flex items-center gap-2">
+                          <span className="font-bold text-lg">{addr.fullName}</span>
+                          {addr.isDefault && (
+                            <Badge
+                              variant="outline"
+                              className="text-[12px] bg-blue-400/20 font-semibold text-blue-400 p-2 rounded-md"
+                            >
+                              Default
+                            </Badge>
+                          )}
+                        </div>
+                        <RadioGroupItem value={addr._id} />
+                      </div>
+                      <p className="text-sm text-muted-foreground">{addr.phone}</p>
+                      <p className="text-sm text-muted-foreground">{user?.email}</p>
+                      <p className="text-md mt-1">
+                        {addr.detail ? `${addr.detail}, ` : ""}
+                        {addr.street ? `${addr.street}, ` : ""}
+                        {addr.ward ? `${addr.ward}, ` : ""}
+                        {addr.district ? `${addr.district}, ` : ""}
+                        {addr.city ? addr.city : ""}
+                      </p>
                     </div>
-                    <p className="text-md text-foreground/80 leading-relaxed">
-                      {selectedAddress.detail ? `${selectedAddress.detail}, ` : ""}
-                      {selectedAddress.street ? `${selectedAddress.street}, ` : ""}
-                      {selectedAddress.ward ? `${selectedAddress.ward}, ` : ""}
-                      {selectedAddress.district ? `${selectedAddress.district}, ` : ""}
-                      {selectedAddress.city}
-                    </p>
-                  </div>
-                  <ChevronRight className="h-5 w-5 text-muted-foreground group-hover:text-primary transition-colors mt-1" />
+                  ))}
                 </div>
-              </div>
-            ) : (
-              <div className="text-center py-8 border-2 border-dashed rounded-xl bg-muted/30">
-                <p className="text-sm text-muted-foreground mb-4">No address selected for delivery</p>
-                <Button
-                  variant="default"
-                  className="bg-[#AAED56] cursor-pointer text-[#324E0F] hover:bg-[#9CD845] border-none font-bold px-6"
-                  onClick={handleOpenAddAddress}
-                >
-                  <Plus className="h-4 w-4 mr-2" />
-                  Add New Address
-                </Button>
-              </div>
-            )}
-          </section>
-
-          {/* Address Selection Modal */}
-          <Dialog open={isAddressListModalOpen} onOpenChange={setIsAddressListModalOpen}>
-            <DialogContent className="max-w-2xl max-h-[90vh] overflow-hidden flex flex-col p-0 border-none rounded-2xl shadow-2xl">
-              <DialogHeader className="px-6 py-8 border-b bg-white">
-                <div className="flex items-center justify-between">
-                  <DialogTitle className="text-2xl font-bold">Select Delivery Address</DialogTitle>
+              </RadioGroup>
+              {!addresses.length && (
+                <div className="text-center py-4 border-2 border-dashed rounded-lg">
+                  <p className="text-sm text-muted-foreground">No addresses found.</p>
                   <Button
+                    variant="link"
                     size="sm"
-                    className="bg-[#AAED56] cursor-pointer text-[#324E0F] hover:bg-[#9CD845] border-none font-bold rounded-full px-4 h-9 shadow-sm"
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      handleOpenAddAddress();
-                    }}
+                    onClick={() => navigate("/my-ebay/account/addresses")}
                   >
-                    <Plus className="h-4 w-4 mr-1.5" />
-                    New Address
+                    Add an address
                   </Button>
                 </div>
-              </DialogHeader>
+              )}
 
-              <div className="flex-1 overflow-y-auto p-6 scrollbar-thin">
-                <RadioGroup
-                  value={selectedAddressId}
-                  onValueChange={(val) => {
-                    setSelectedAddressId(val);
-                    setIsAddressListModalOpen(false);
-                  }}
-                >
-                  <div className="grid gap-4">
-                    {addresses.map((addr: Address) => (
-                      <div
-                        key={addr._id}
-                        className={cn(
-                          "group relative flex flex-col p-5 rounded-2xl border-2 transition-all cursor-pointer",
-                          selectedAddressId === addr._id
-                            ? "border-primary bg-primary/3 shadow-inner"
-                            : "border-border hover:border-primary/30 hover:bg-muted/30"
-                        )}
-                        onClick={() => {
-                          setSelectedAddressId(addr._id);
-                          setIsAddressListModalOpen(false);
-                        }}
-                      >
-                        <div className="flex items-start justify-between gap-4">
-                          <div className="flex-1 space-y-1.5">
-                            <div className="flex items-center gap-2 flex-wrap">
-                              <span className="font-bold text-lg text-foreground">
-                                {addr.fullName}
-                              </span>
-                              <span className="text-muted-foreground opacity-50">|</span>
-                              <span className="text-sm font-medium text-muted-foreground">
-                                {addr.phone}
-                              </span>
-                              {addr.isDefault && (
-                                <Badge
-                                  variant="outline"
-                                  className="bg-blue-500/10 text-blue-600 border-none text-[10px] font-bold px-2 py-0.5"
-                                >
-                                  Default
-                                </Badge>
-                              )}
-                            </div>
-                            <p className="text-sm text-foreground/70 leading-relaxed font-medium">
-                              {addr.detail ? `${addr.detail}, ` : ""}
-                              {addr.street ? `${addr.street}, ` : ""}
-                              {addr.ward ? `${addr.ward}, ` : ""}
-                              {addr.district ? `${addr.district}, ` : ""}
-                              {addr.city}
-                            </p>
-                          </div>
-
-                          <div className="flex items-center gap-1 shrink-0">
-                            <Button
-                              variant="ghost"
-                              size="icon"
-                              className="h-9 w-9 cursor-pointer rounded-full hover:bg-white hover:shadow-sm text-muted-foreground hover:text-primary transition-all"
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                handleOpenEditAddress(e, addr);
-                              }}
-                            >
-                              <Pencil className="h-4 w-4" />
-                            </Button>
-                            {!addr.isDefault && (
-                              <Button
-                                variant="ghost"
-                                size="icon"
-                                className="h-9 w-9 cursor-pointer rounded-full hover:bg-white hover:shadow-sm text-muted-foreground hover:text-destructive transition-all"
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  openDeleteConfirm(e, addr._id);
-                                }}
-                              >
-                                <Trash2 className="h-4 w-4" />
-                              </Button>
-                            )}
-                            <div className="ml-2">
-                              <RadioGroupItem 
-                                value={addr._id} 
-                                className="w-5 h-5 border-2 border-primary/30 text-primary"
-                              />
-                            </div>
-                          </div>
-                        </div>
-                      </div>
-                    ))}
+              {selectedAddress && (
+                <div className="mt-6 pt-6 border-t space-y-3">
+                  <p className="text-sm font-semibold">Recipient Details</p>
+                  <div className="grid grid-cols-2 text-sm gap-y-2">
+                    <span className="text-muted-foreground">Name:</span>
+                    <span className="text-right font-medium">{selectedAddress.fullName}</span>
+                    <span className="text-muted-foreground">Phone:</span>
+                    <span className="text-right font-medium">{selectedAddress.phone}</span>
+                    <span className="text-muted-foreground">Email:</span>
+                    <span className="text-right font-medium">{user?.email}</span>
+                    <span className="text-muted-foreground">Address:</span>
+                    <span className="text-right font-medium leading-tight">
+                      {selectedAddress.detail
+                        ? `${selectedAddress.detail}, `
+                        : ""}
+                      {selectedAddress.street
+                        ? `${selectedAddress.street}, `
+                        : ""}
+                      {selectedAddress.ward ? `${selectedAddress.ward}, ` : ""}
+                      {selectedAddress.district
+                        ? `${selectedAddress.district}, `
+                        : ""}
+                      {selectedAddress.city}
+                    </span>
                   </div>
-                </RadioGroup>
+                </div>
+              )}
+            </div>
+          </section>
 
-                {addresses.length === 0 && (
-                  <div className="flex flex-col items-center justify-center py-12 text-center space-y-4">
-                    <div className="w-16 h-16 bg-muted rounded-full flex items-center justify-center">
-                      <MapPin className="h-8 w-8 text-muted-foreground" />
-                    </div>
-                    <div className="space-y-1">
-                      <p className="font-bold text-lg">No addresses found</p>
-                      <p className="text-sm text-muted-foreground">Add an address to continue with your checkout</p>
-                    </div>
-                    <Button
-                      className="bg-[#AAED56] text-[#324E0F] hover:bg-[#9CD845] font-bold px-6"
-                      onClick={handleOpenAddAddress}
-                    >
-                      <Plus className="h-4 w-4 mr-2" />
-                      Add Address
-                    </Button>
-                  </div>
-                )}
-              </div>
-            </DialogContent>
-          </Dialog>
-
-          {/* Shipping Method Section */}
           <section className="bg-white rounded-xl border p-6 shadow-sm">
             <h2 className="text-xl font-semibold mb-4 flex items-center gap-2">
               <Truck className="h-5 w-5 text-primary" />
@@ -536,9 +427,7 @@ export default function CheckoutPage() {
                     <RadioGroupItem value="standard" />
                     <div>
                       <p className="font-semibold text-sm">Standard Shipping</p>
-                      <p className="text-xs text-muted-foreground">
-                        Estimated delivery 5-7 days
-                      </p>
+                      <p className="text-xs text-muted-foreground">Estimated delivery 5-7 days</p>
                     </div>
                   </div>
                   <span className="font-semibold text-sm">+$5.00</span>
@@ -556,9 +445,7 @@ export default function CheckoutPage() {
                     <RadioGroupItem value="express" />
                     <div>
                       <p className="font-semibold text-sm">Express Shipping</p>
-                      <p className="text-xs text-muted-foreground">
-                        Estimated delivery 2-3 days
-                      </p>
+                      <p className="text-xs text-muted-foreground">Estimated delivery 2-3 days</p>
                     </div>
                   </div>
                   <span className="font-semibold text-sm">+$15.00</span>
@@ -567,7 +454,6 @@ export default function CheckoutPage() {
             </RadioGroup>
           </section>
 
-          {/* Payment Method Section */}
           <section className="bg-white rounded-xl border p-6 shadow-sm">
             <h2 className="text-xl font-semibold mb-4 flex items-center gap-2">
               <CreditCard className="h-5 w-5 text-primary" />
@@ -589,38 +475,166 @@ export default function CheckoutPage() {
                     )}
                   >
                     <RadioGroupItem value={method.id} />
-                    <span className="font-semibold text-sm">
-                      {method.label}
-                    </span>
+                    <span className="font-semibold text-sm">{method.label}</span>
                   </Label>
                 ))}
               </div>
             </RadioGroup>
           </section>
 
-          {/* Voucher Section */}
-          <section className="bg-white rounded-xl border p-6 shadow-sm">
-            <h3 className="font-bold mb-4">Discount Code</h3>
+          <section className="bg-white rounded-xl border p-6 shadow-sm space-y-4">
+            <h3 className="font-bold text-lg">Global Voucher (for total order)</h3>
             <div className="flex gap-2">
               <Input
-                placeholder="Enter voucher code"
-                value={voucherCode}
-                onChange={(e) => setVoucherCode(e.target.value)}
+                placeholder="Enter global voucher code"
+                value={globalVoucherInput}
+                onChange={(e) => setGlobalVoucherInput(e.target.value.toUpperCase())}
               />
-              <Button
-                className="cursor-pointer"
-                onClick={handleApplyVoucher}
-                disabled={applyingVoucher || !preview}
-              >
-                {applyingVoucher ? "Applying..." : "Apply"}
-              </Button>
+              <Button onClick={handleApplyGlobalVoucher}>Apply</Button>
+              {globalVoucherCode && (
+                <Button variant="outline" onClick={handleClearGlobalVoucher}>
+                  Remove
+                </Button>
+              )}
             </div>
-            <p className="mt-2 text-xs text-muted-foreground">
-              Hint: Use "SAVE10" or "SAVE20"
-            </p>
+
+            <select
+              value={globalVoucherCode}
+              onChange={(e) => {
+                const code = e.target.value;
+                setGlobalVoucherInput(code);
+                setGlobalVoucherCode(code);
+              }}
+              className="w-full h-10 rounded-md border border-input bg-background px-3 text-sm"
+              disabled={loadingVoucherOptions}
+            >
+              <option value="">Select global voucher quickly</option>
+              {globalVoucherOptions.map((voucher) => (
+                <option key={voucher._id} value={voucher.code}>
+                  {voucher.code} - {voucher.type === "percentage" ? `${voucher.value}%` : `$${voucher.value}`}
+                </option>
+              ))}
+            </select>
+
+            <div className="space-y-2">
+              {globalVoucherOptions.map((voucher) => (
+                <VoucherTicket
+                  key={voucher._id}
+                  voucher={voucher}
+                  selected={globalVoucherCode === voucher.code}
+                  onSelect={handleSelectGlobalVoucher}
+                />
+              ))}
+              {globalVoucherOptions.length === 0 && (
+                <p className="text-xs text-muted-foreground">No global vouchers available.</p>
+              )}
+            </div>
+
           </section>
 
-          {/* Note Section */}
+          <section className="bg-white rounded-xl border p-6 shadow-sm space-y-5">
+            <h3 className="font-bold text-lg">Items by Shop</h3>
+            {preview.groups.map((group: CheckoutGroup) => (
+              <div key={group.sellerId} className="border rounded-xl p-4 space-y-4">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2 font-semibold">
+                    <Store className="h-4 w-4 text-primary" />
+                    <span>{group.sellerName || "Seller"}</span>
+                  </div>
+                  <Badge variant="outline">Subtotal ${group.subtotalAmount.toFixed(2)}</Badge>
+                </div>
+
+                <div className="space-y-2">
+                  {group.items.map((item: CheckoutGroupItem) => (
+                    <div
+                      key={`${group.sellerId}-${item.productId}-${item.cartItemId || ""}`}
+                      className="flex items-center justify-between text-sm"
+                    >
+                      <div>
+                        <p className="font-medium">{item.title}</p>
+                        {item.selectedVariants && item.selectedVariants.length > 0 && (
+                          <p className="text-xs text-muted-foreground">
+                            {item.selectedVariants
+                              .map((v: { name: string; value: string }) => `${v.name}: ${v.value}`)
+                              .join(" • ")}
+                          </p>
+                        )}
+                      </div>
+                      <div className="text-right">
+                        <p>${item.lineTotal.toFixed(2)}</p>
+                        <p className="text-xs text-muted-foreground">x{item.quantity}</p>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+
+                <Separator />
+                <div className="space-y-3">
+                  <Label className="font-semibold">Shop Voucher</Label>
+                  <div className="flex gap-2">
+                    <Input
+                      placeholder="Enter shop voucher code"
+                      value={sellerVoucherInputs[group.sellerId] || ""}
+                      onChange={(e) =>
+                        setSellerVoucherInputs((prev) => ({
+                          ...prev,
+                          [group.sellerId]: e.target.value.toUpperCase(),
+                        }))
+                      }
+                    />
+                    <Button onClick={() => handleApplySellerVoucher(group.sellerId)}>Apply</Button>
+                    {sellerVoucherCodes[group.sellerId] && (
+                      <Button
+                        variant="outline"
+                        onClick={() => handleClearSellerVoucher(group.sellerId)}
+                      >
+                        Remove
+                      </Button>
+                    )}
+                  </div>
+
+                  <select
+                    value={sellerVoucherCodes[group.sellerId] || ""}
+                    onChange={(e) => {
+                      const code = e.target.value;
+                      setSellerVoucherInputs((prev) => ({
+                        ...prev,
+                        [group.sellerId]: code,
+                      }));
+                      setSellerVoucherCodes((prev) => ({
+                        ...prev,
+                        [group.sellerId]: code,
+                      }));
+                    }}
+                    className="w-full h-10 rounded-md border border-input bg-background px-3 text-sm"
+                    disabled={loadingVoucherOptions}
+                  >
+                    <option value="">Quick select shop voucher</option>
+                    {(sellerVoucherOptions[group.sellerId] || []).map((voucher) => (
+                      <option key={voucher._id} value={voucher.code}>
+                        {voucher.code} - {voucher.type === "percentage" ? `${voucher.value}%` : `$${voucher.value}`}
+                      </option>
+                    ))}
+                  </select>
+
+                  <div className="space-y-2">
+                    {(sellerVoucherOptions[group.sellerId] || []).map((voucher) => (
+                      <VoucherTicket
+                        key={voucher._id}
+                        voucher={voucher}
+                        selected={sellerVoucherCodes[group.sellerId] === voucher.code}
+                        onSelect={(v) => handleSelectSellerVoucher(group.sellerId, v)}
+                      />
+                    ))}
+                    {(sellerVoucherOptions[group.sellerId] || []).length === 0 && (
+                      <p className="text-xs text-muted-foreground">No shop vouchers available for this seller.</p>
+                    )}
+                  </div>
+                </div>
+              </div>
+            ))}
+          </section>
+
           <section className="bg-white rounded-xl border p-6 shadow-sm">
             <h3 className="font-bold mb-4">Order Note (optional)</h3>
             <Textarea
@@ -632,122 +646,73 @@ export default function CheckoutPage() {
           </section>
         </div>
 
-        {/* Right Column: Order Summary Sidebar */}
         <div className="w-full lg:w-[400px]">
           <div className="sticky top-8 space-y-6">
             <section className="bg-white rounded-xl border p-6 shadow-sm">
               <h2 className="text-xl font-semibold mb-6">
                 Order Summary ({preview.totals.itemCount} items)
               </h2>
-              <div className="space-y-6 max-h-[400px] overflow-y-auto pr-2 scrollbar-thin">
-                {preview.groups
-                  .flatMap((g: CheckoutGroup) => g.items)
-                  .map((item: CheckoutGroupItem) => (
-                    <div
-                      key={`${item.productId}-${item.cartItemId}`}
-                      className="flex gap-4"
-                    >
-                      <div className="w-20 h-20 bg-muted rounded-lg shrink-0 overflow-hidden">
-                        <img
-                          src={(item as any).image || "/placeholder.png"}
-                          alt={item.title}
-                          className="w-full h-full object-cover"
-                        />
-                      </div>
-                      <div className="flex-1 flex flex-col justify-between">
-                        <div>
-                          <div className="flex justify-between items-start">
-                            <p className="font-semibold text-sm line-clamp-1">
-                              {item.title}
-                            </p>
-                          </div>
-                          {item.selectedVariants &&
-                            item.selectedVariants.length > 0 && (
-                              <p className="text-[11px] text-muted-foreground uppercase tracking-wider">
-                                {item.selectedVariants
-                                  .map(
-                                    (v: { name: string; value: string }) =>
-                                      v.value,
-                                  )
-                                  .join(" / ")}
-                              </p>
-                            )}
-                        </div>
-                        <div className="flex justify-between items-end">
-                          <p className="font-bold text-sm">
-                            ${item.lineTotal.toFixed(2)}
-                          </p>
-                        </div>
-                      </div>
-                    </div>
-                  ))}
-              </div>
 
-              {/* Voucher Input */}
-              <div className="mt-6 pt-6 border-t">
-                <div className="flex gap-2">
-                  <Input
-                    placeholder="Voucher Code"
-                    value={voucherCode}
-                    onChange={(e) => setVoucherCode(e.target.value.toUpperCase())}
-                    className="h-10 uppercase"
-                    disabled={applyingVoucher || !!appliedVoucher}
-                  />
-                  <Button 
-                    variant="outline"
-                    className="h-10 px-4 font-semibold hover:bg-primary/5 active:scale-95 transition-transform shrink-0"
-                    onClick={handleApplyVoucher}
-                    disabled={applyingVoucher || !!appliedVoucher || !voucherCode.trim()}
-                  >
-                    {applyingVoucher ? "..." : appliedVoucher ? "Applied" : "Apply"}
-                  </Button>
-                </div>
-                {appliedVoucher && (
-                  <button
-                    onClick={() => {
-                      setAppliedVoucher(null);
-                      setVoucherCode("");
-                      loadPreview();
-                    }}
-                    className="text-[10px] text-red-500 mt-1 hover:underline ml-1"
-                  >
-                    Remove voucher
-                  </button>
-                )}
+              <div className="space-y-5 max-h-[420px] overflow-y-auto pr-2">
+                {preview.groups.map((group) => (
+                  <div key={group.sellerId} className="space-y-2">
+                    <p className="font-semibold text-sm">{group.sellerName}</p>
+                    {group.items.map((item) => (
+                      <div
+                        key={`${group.sellerId}-${item.productId}-${item.cartItemId || ""}`}
+                        className="flex justify-between text-sm"
+                      >
+                        <div className="pr-3">
+                          <p className="font-medium line-clamp-1">{item.title}</p>
+                          <p className="text-xs text-muted-foreground">Qty {item.quantity}</p>
+                        </div>
+                        <p className="font-semibold">${item.lineTotal.toFixed(2)}</p>
+                      </div>
+                    ))}
+                  </div>
+                ))}
               </div>
 
               <div className="mt-6 pt-6 border-t space-y-3">
                 <div className="flex justify-between text-sm">
                   <span className="text-muted-foreground">Subtotal</span>
-                  <span className="font-medium">
-                    ${preview.totals.subtotalAmount.toFixed(2)}
-                  </span>
+                  <span className="font-medium">${preview.totals.subtotalAmount.toFixed(2)}</span>
+                </div>
+                <div className="flex justify-between text-sm text-yellow-700">
+                  <span>Global Voucher</span>
+                  <span>- ${preview.totals.globalDiscountAmount.toFixed(2)}</span>
+                </div>
+                <div className="flex justify-between text-sm text-blue-700">
+                  <span>Shop Vouchers</span>
+                  <span>- ${preview.totals.sellerDiscountAmount.toFixed(2)}</span>
+                </div>
+                <div className="flex justify-between text-sm text-green-600 font-medium">
+                  <span>Total Discount</span>
+                  <span>- ${preview.totals.discountAmount.toFixed(2)}</span>
                 </div>
                 <div className="flex justify-between text-sm">
                   <span className="text-muted-foreground">Shipping Fee</span>
-                  <span className="font-medium">
-                    ${shippingCosts[shippingMethod].toFixed(2)}
-                  </span>
+                  <span className="font-medium">${shippingCosts[shippingMethod].toFixed(2)}</span>
                 </div>
-                {appliedVoucher && (
-                  <div className="flex justify-between text-sm text-green-600 font-medium">
-                    <div className="flex flex-col">
-                      <span>Voucher Discount</span>
-                      <span className="text-[10px] text-green-500 uppercase">
-                        CODE: {appliedVoucher.voucherCode}
-                      </span>
-                    </div>
-                    <span>-${appliedVoucher.discountAmount.toFixed(2)}</span>
-                  </div>
-                )}
                 <Separator className="my-4" />
                 <div className="flex justify-between items-baseline">
                   <span className="font-bold text-lg">Total</span>
-                  <span className="text-2xl font-black text-primary">
-                    ${totalAmount.toFixed(2)}
-                  </span>
+                  <span className="text-2xl font-black text-primary">${totalAmount.toFixed(2)}</span>
                 </div>
               </div>
+
+              {preview.voucherErrors && preview.voucherErrors.length > 0 && (
+                <div className="mt-4 rounded-md border border-red-200 bg-red-50 p-3 space-y-1">
+                  {preview.voucherErrors.map((error, index) => (
+                    <p key={`${error.code}-${index}`} className="text-xs text-red-700">
+                      {error.scope === "seller" && error.sellerName
+                        ? `${error.sellerName}: `
+                        : ""}
+                      {error.code} - {error.message}
+                    </p>
+                  ))}
+                </div>
+              )}
 
               <div className="mt-8 space-y-3">
                 <Button
@@ -772,9 +737,7 @@ export default function CheckoutPage() {
             {preview.outOfStockItems.length > 0 && (
               <Card className="border-red-200 bg-red-50/50">
                 <CardHeader className="pb-2">
-                  <CardTitle className="text-sm text-red-600 flex items-center gap-2">
-                    Unavailable Items
-                  </CardTitle>
+                  <CardTitle className="text-sm text-red-600">Unavailable Items</CardTitle>
                 </CardHeader>
                 <CardContent className="space-y-2">
                   {preview.outOfStockItems.map(
@@ -790,27 +753,7 @@ export default function CheckoutPage() {
           </div>
         </div>
       </div>
-      <AddressForm
-        open={isModalOpen}
-        onClose={() => setIsModalOpen(false)}
-        initialData={selectedAddressForEdit}
-        onSubmit={handleAddressSubmit}
-      />
-
-      <ConfirmDialog
-        open={confirmDialogOpen}
-        onOpenChange={setConfirmDialogOpen}
-        title={confirmDialogAction === "delete" ? "Delete Address" : "Set Default Address"}
-        description={
-          confirmDialogAction === "delete"
-            ? "Are you sure you want to delete this address? This action cannot be undone."
-            : "Are you sure you want to set this as your default address?"
-        }
-        confirmText={confirmDialogAction === "delete" ? "Delete" : "Set as Default"}
-        isDangerous={confirmDialogAction === "delete"}
-        loading={isActionLoading}
-        onConfirm={handleConfirmAction}
-      />
     </div>
   );
 }
+

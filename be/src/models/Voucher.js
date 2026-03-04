@@ -20,6 +20,21 @@ const voucherUsageSchema = new mongoose.Schema(
   { _id: false },
 );
 
+const voucherClaimSchema = new mongoose.Schema(
+  {
+    user: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "User",
+      required: true,
+    },
+    claimedAt: {
+      type: Date,
+      default: Date.now,
+    },
+  },
+  { _id: false },
+);
+
 const voucherSchema = new mongoose.Schema(
   {
     code: {
@@ -33,7 +48,14 @@ const voucherSchema = new mongoose.Schema(
     seller: {
       type: mongoose.Schema.Types.ObjectId,
       ref: "User",
-      required: true,
+      required: false,
+      default: null,
+      index: true,
+    },
+    scope: {
+      type: String,
+      enum: ["global", "seller"],
+      default: "seller",
       index: true,
     },
     type: {
@@ -94,11 +116,23 @@ const voucherSchema = new mongoose.Schema(
       ref: "VoucherRequest",
       default: null,
     },
+    source: {
+      type: String,
+      enum: ["admin_created", "seller_request", "gift_card_claim"],
+      default: "seller_request",
+    },
+    isClaimable: {
+      type: Boolean,
+      default: false,
+      index: true,
+    },
+    claimedBy: [voucherClaimSchema],
     usedBy: [voucherUsageSchema],
   },
   { timestamps: true },
 );
 
 voucherSchema.index({ code: 1, isActive: 1 });
+voucherSchema.index({ scope: 1, isActive: 1, seller: 1 });
 
 module.exports = mongoose.model("Voucher", voucherSchema);

@@ -1,6 +1,7 @@
 import api from "@/lib/axios";
 
 export type VoucherType = "percentage" | "fixed";
+export type VoucherScope = "global" | "seller";
 export type VoucherRequestStatus =
   | "pending"
   | "approved"
@@ -31,7 +32,9 @@ export interface VoucherRequest {
 
 export interface Voucher {
   _id: string;
-  seller: string;
+  scope: VoucherScope;
+  seller: string | null;
+  sellerName?: string;
   code: string;
   type: VoucherType;
   value: number;
@@ -40,11 +43,15 @@ export interface Voucher {
   usageLimit: number | null;
   usedCount: number;
   perUserLimit: number;
+  remainingUsage: number | null;
+  remainingForUser: number;
   startDate: string;
   endDate: string;
   isActive: boolean;
-  createdAt: string;
-  updatedAt: string;
+  isClaimable: boolean;
+  estimatedDiscount?: number;
+  createdAt?: string;
+  updatedAt?: string;
 }
 
 export interface VoucherPayload {
@@ -59,29 +66,57 @@ export interface VoucherPayload {
   endDate: string;
 }
 
+export type GlobalVoucherPayload = VoucherPayload;
+
 export interface VoucherValidationResponse {
   voucherId: string;
-  sellerId: string;
+  sellerId: string | null;
+  sellerName?: string;
   voucherCode: string;
+  scope: VoucherScope;
   discountAmount: number;
   finalAmount: number;
+  usageLimit: number | null;
+  usedCount: number;
+  remainingUsage: number | null;
 }
 
 export const validateVoucher = async (
   code: string,
   totalAmount: number,
   sellerId?: string,
+  scope?: VoucherScope,
 ) => {
   const response = await api.post("/api/vouchers/validate", {
     code,
     totalAmount,
     sellerId,
+    scope,
   });
   return response.data as {
     success: boolean;
     message: string;
     data: VoucherValidationResponse;
   };
+};
+
+export const getAvailableVouchers = async (params?: {
+  scope?: "all" | VoucherScope;
+  sellerId?: string;
+  subtotal?: number;
+}) => {
+  const response = await api.get("/api/vouchers/available", { params });
+  return response.data as { success: boolean; data: Voucher[] };
+};
+
+export const claimVoucherCode = async (code: string) => {
+  const response = await api.post("/api/vouchers/claim", { code });
+  return response.data as { success: boolean; message: string; data: Voucher };
+};
+
+export const getMyVoucherWallet = async () => {
+  const response = await api.get("/api/vouchers/my-wallet");
+  return response.data as { success: boolean; data: Voucher[] };
 };
 
 export const requestVoucher = async (payload: VoucherPayload) => {
@@ -144,4 +179,24 @@ export const rejectVoucherRequest = async (
     adminNotes,
   });
   return response.data as { success: boolean; message: string };
+};
+
+export const createAdminGlobalVoucher = async (payload: GlobalVoucherPayload) => {
+  const response = await api.post("/api/vouchers/admin/global", payload);
+  return response.data as { success: boolean; message: string; data: Voucher };
+};
+
+export const getAdminGlobalVouchers = async (params?: { isActive?: boolean }) => {
+  const response = await api.get("/api/vouchers/admin/global", { params });
+  return response.data as { success: boolean; data: Voucher[] };
+};
+
+export const setAdminGlobalVoucherStatus = async (
+  voucherId: string,
+  isActive: boolean,
+) => {
+  const response = await api.patch(`/api/vouchers/admin/global/${voucherId}/status`, {
+    isActive,
+  });
+  return response.data as { success: boolean; message: string; data: Voucher };
 };

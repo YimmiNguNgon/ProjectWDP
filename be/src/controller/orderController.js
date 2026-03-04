@@ -2,7 +2,13 @@ const Order = require("../models/Order");
 const Cart = require("../models/Cart");
 const CartItem = require("../models/CartItem");
 const Product = require("../models/Product");
+const User = require("../models/User");
+const Voucher = require("../models/Voucher");
 const recalculateCart = require("../utils/cart");
+const {
+  validateVoucherForUser,
+  markVoucherAsUsed,
+} = require("./voucherController");
 const {
   findVariantOption,
   normalizeSelectedVariants,
@@ -53,7 +59,44 @@ const toUnavailableItem = ({
   selectedVariants: normalizeSelectedVariants(selectedVariants || []),
 });
 
-const buildCheckoutGroups = (payableItems) => {
+const normalizeCode = (code = "") => String(code || "").trim().toUpperCase();
+
+const parseSellerVoucherCodes = (sellerVoucherCodes) => {
+  const normalized = {};
+  if (Array.isArray(sellerVoucherCodes)) {
+    for (const item of sellerVoucherCodes) {
+      const sellerId = item?.sellerId ? String(item.sellerId) : "";
+      const code = normalizeCode(item?.code);
+      if (sellerId && code) normalized[sellerId] = code;
+    }
+    return normalized;
+  }
+  if (sellerVoucherCodes && typeof sellerVoucherCodes === "object") {
+    for (const [sellerId, code] of Object.entries(sellerVoucherCodes)) {
+      const normalizedCode = normalizeCode(code);
+      if (sellerId && normalizedCode) normalized[String(sellerId)] = normalizedCode;
+    }
+  }
+  return normalized;
+};
+
+const loadSellerNameMap = async (payableItems) => {
+  const sellerIds = [...new Set(payableItems.map((item) => String(item.sellerId)))];
+  if (sellerIds.length === 0) return {};
+
+  const sellers = await User.find({ _id: { $in: sellerIds } })
+    .select("username sellerInfo.shopName")
+    .lean();
+
+  const sellerMap = {};
+  for (const seller of sellers) {
+    sellerMap[String(seller._id)] =
+      seller?.sellerInfo?.shopName || seller?.username || "Seller";
+  }
+  return sellerMap;
+};
+
+const buildCheckoutGroups = (payableItems, sellerNameMap = {}) => {
   const grouped = new Map();
 
   for (const item of payableItems) {
@@ -61,6 +104,7 @@ const buildCheckoutGroups = (payableItems) => {
     if (!grouped.has(sellerKey)) {
       grouped.set(sellerKey, {
         sellerId: sellerKey,
+        sellerName: sellerNameMap[sellerKey] || "Seller",
         items: [],
         subtotalAmount: 0,
       });
@@ -101,6 +145,172 @@ const buildCheckoutGroups = (payableItems) => {
     totals,
     payableItemCount: payableItems.length,
   };
+};
+
+const resolveVoucherAssignments = async ({
+  buyerId,
+  groups,
+  globalVoucherCode,
+  sellerVoucherCodes,
+}) => {
+  const errors = [];
+  const sellerCodeMap = parseSellerVoucherCodes(sellerVoucherCodes);
+  const subtotalAmount = Number(
+    groups.reduce((sum, group) => sum + Number(group.subtotalAmount || 0), 0).toFixed(2),
+  );
+
+  let globalVoucherDoc = null;
+  let appliedGlobalVoucher = null;
+  let globalDiscountAllocation = {};
+  if (globalVoucherCode) {
+    const code = normalizeCode(globalVoucherCode);
+    const voucher = await Voucher.findOne({ code });
+    if (!voucher) {
+      errors.push({
+        scope: "global",
+        code,
+        message: "Voucher not found",
+      });
+    } else {
+      const validation = validateVoucherForUser(voucher, buyerId, subtotalAmount, {
+        scope: "global",
+      });
+      if (!validation.ok) {
+        errors.push({ scope: "global", code, message: validation.message });
+      } else {
+        globalVoucherDoc = voucher;
+        appliedGlobalVoucher = {
+          voucherId: voucher._id,
+          code: voucher.code,
+          scope: voucher.scope || "seller",
+          type: voucher.type,
+          value: voucher.value,
+          discountAmount: validation.discountAmount,
+          usageLimit: voucher.usageLimit ?? null,
+          usedCount: voucher.usedCount || 0,
+          remainingUsage:
+            voucher.usageLimit === null || voucher.usageLimit === undefined
+              ? null
+              : Math.max(0, voucher.usageLimit - (voucher.usedCount || 0)),
+        };
+        globalDiscountAllocation = allocateGlobalDiscountBySeller(
+          groups,
+          Number(appliedGlobalVoucher.discountAmount || 0),
+        );
+      }
+    }
+  }
+
+  const sellerVoucherDocs = {};
+  const sellerVoucherBySellerId = {};
+  for (const group of groups) {
+    const sellerId = String(group.sellerId);
+    const code = sellerCodeMap[sellerId];
+    if (!code) continue;
+
+    const baseAmountAfterGlobal = Number(
+      Math.max(0, Number(group.subtotalAmount || 0) - Number(globalDiscountAllocation[sellerId] || 0)).toFixed(2),
+    );
+
+    const voucher = await Voucher.findOne({ code });
+    if (!voucher) {
+      errors.push({
+        scope: "seller",
+        sellerId,
+        sellerName: group.sellerName || "Seller",
+        code,
+        message: "Voucher not found",
+      });
+      continue;
+    }
+
+    const validation = validateVoucherForUser(
+      voucher,
+      buyerId,
+      baseAmountAfterGlobal,
+      { scope: "seller", sellerId },
+    );
+    if (!validation.ok) {
+      errors.push({
+        scope: "seller",
+        sellerId,
+        sellerName: group.sellerName || "Seller",
+        code,
+        message: validation.message,
+      });
+      continue;
+    }
+
+    sellerVoucherDocs[sellerId] = voucher;
+    sellerVoucherBySellerId[sellerId] = {
+      voucherId: voucher._id,
+      sellerId,
+      sellerName: group.sellerName || "Seller",
+      code: voucher.code,
+      scope: voucher.scope || "seller",
+      type: voucher.type,
+      value: voucher.value,
+      baseAmount: baseAmountAfterGlobal,
+      discountAmount: validation.discountAmount,
+      usageLimit: voucher.usageLimit ?? null,
+      usedCount: voucher.usedCount || 0,
+      remainingUsage:
+        voucher.usageLimit === null || voucher.usageLimit === undefined
+          ? null
+          : Math.max(0, voucher.usageLimit - (voucher.usedCount || 0)),
+    };
+  }
+
+  const sellerVoucherDiscountAmount = Number(
+    Object.values(sellerVoucherBySellerId)
+      .reduce((sum, voucher) => sum + Number(voucher.discountAmount || 0), 0)
+      .toFixed(2),
+  );
+  const globalDiscountAmount = Number(appliedGlobalVoucher?.discountAmount || 0);
+  const totalDiscount = Number((sellerVoucherDiscountAmount + globalDiscountAmount).toFixed(2));
+  const totalAmount = Number(Math.max(0, subtotalAmount - totalDiscount).toFixed(2));
+
+  return {
+    errors,
+    appliedGlobalVoucher,
+    globalDiscountAllocation,
+    sellerVoucherBySellerId,
+    sellerVouchers: Object.values(sellerVoucherBySellerId),
+    globalVoucherDoc,
+    sellerVoucherDocs,
+    totals: {
+      subtotalAmount,
+      globalDiscountAmount,
+      sellerDiscountAmount: sellerVoucherDiscountAmount,
+      discountAmount: totalDiscount,
+      totalAmount,
+    },
+  };
+};
+
+const allocateGlobalDiscountBySeller = (groups, globalDiscountAmount) => {
+  const totalSubtotal = Number(
+    groups.reduce((sum, group) => sum + Number(group.subtotalAmount || 0), 0).toFixed(2),
+  );
+  if (globalDiscountAmount <= 0 || totalSubtotal <= 0 || groups.length === 0) {
+    return {};
+  }
+
+  let allocatedSum = 0;
+  const allocation = {};
+  groups.forEach((group, index) => {
+    const sellerId = String(group.sellerId);
+    let amount = Number(
+      ((Number(group.subtotalAmount || 0) / totalSubtotal) * globalDiscountAmount).toFixed(2),
+    );
+    if (index === groups.length - 1) {
+      amount = Number((globalDiscountAmount - allocatedSum).toFixed(2));
+    }
+    allocatedSum = Number((allocatedSum + amount).toFixed(2));
+    allocation[sellerId] = amount;
+  });
+
+  return allocation;
 };
 
 const collectCheckoutItems = async ({
@@ -449,7 +659,12 @@ const deductStockForPayableItems = async (payableItems) => {
   }
 };
 
-const createOrdersFromPayableItems = async ({ buyerId, payableItems, status }) => {
+const createOrdersFromPayableItems = async ({
+  buyerId,
+  payableItems,
+  status,
+  voucherContext = {},
+}) => {
   const groupedBySeller = new Map();
 
   for (const item of payableItems) {
@@ -462,6 +677,25 @@ const createOrdersFromPayableItems = async ({ buyerId, payableItems, status }) =
 
   const now = new Date();
   const orders = [];
+  const groupsForAllocation = [...groupedBySeller.entries()].map(
+    ([sellerId, sellerItems]) => ({
+      sellerId,
+      subtotalAmount: Number(
+        sellerItems
+          .reduce(
+            (sum, item) => sum + Number(item.unitPrice || 0) * Number(item.quantity || 0),
+            0,
+          )
+          .toFixed(2),
+      ),
+    }),
+  );
+  const globalDiscountAllocation =
+    voucherContext.globalDiscountAllocation ||
+    allocateGlobalDiscountBySeller(
+      groupsForAllocation,
+      Number(voucherContext.appliedGlobalVoucher?.discountAmount || 0),
+    );
 
   for (const [sellerId, sellerItems] of groupedBySeller.entries()) {
     const orderItems = sellerItems.map((item) => ({
@@ -484,13 +718,68 @@ const createOrdersFromPayableItems = async ({ buyerId, payableItems, status }) =
       statusHistory.push({ status, timestamp: now });
     }
 
+    const sellerVoucher = voucherContext.sellerVoucherBySellerId?.[sellerId] || null;
+    const sellerDiscount = Number(sellerVoucher?.discountAmount || 0);
+    const globalAllocated = Number(globalDiscountAllocation[sellerId] || 0);
+    const totalDiscount = Number(
+      Math.min(subtotalAmount, sellerDiscount + globalAllocated).toFixed(2),
+    );
+    const totalAmount = Number(Math.max(0, subtotalAmount - totalDiscount).toFixed(2));
+
+    const voucherGlobal =
+      voucherContext.appliedGlobalVoucher && globalAllocated > 0
+        ? {
+            voucherId: voucherContext.appliedGlobalVoucher.voucherId,
+            code: voucherContext.appliedGlobalVoucher.code,
+            type: voucherContext.appliedGlobalVoucher.type,
+            value: voucherContext.appliedGlobalVoucher.value,
+            discountAmount: globalAllocated,
+          }
+        : undefined;
+
+    const voucherSeller = sellerVoucher
+      ? {
+          voucherId: sellerVoucher.voucherId,
+          code: sellerVoucher.code,
+          type: sellerVoucher.type,
+          value: sellerVoucher.value,
+          discountAmount: sellerDiscount,
+        }
+      : undefined;
+
+    const legacyVoucher = sellerVoucher
+      ? {
+          voucherId: sellerVoucher.voucherId,
+          code: sellerVoucher.code,
+          type: sellerVoucher.type,
+          value: sellerVoucher.value,
+          discountAmount: sellerDiscount,
+        }
+      : voucherGlobal
+        ? {
+            voucherId: voucherGlobal.voucherId,
+            code: voucherGlobal.code,
+            type: voucherGlobal.type,
+            value: voucherGlobal.value,
+            discountAmount: voucherGlobal.discountAmount,
+          }
+        : undefined;
+
     const order = await Order.create({
       buyer: buyerId,
       seller: sellerId,
       items: orderItems,
       subtotalAmount,
-      discountAmount: 0,
-      totalAmount: subtotalAmount,
+      discountAmount: totalDiscount,
+      voucher: legacyVoucher,
+      voucherGlobal,
+      voucherSeller,
+      discountBreakdown: {
+        globalAllocated,
+        sellerDiscount,
+        totalDiscount,
+      },
+      totalAmount,
       status,
       statusHistory,
     });
@@ -773,7 +1062,13 @@ getOrderStats = async (req, res) => {
 previewCheckout = async (req, res) => {
   try {
     const buyerId = req.user._id;
-    const { source, cartItemIds, items } = req.body || {};
+    const {
+      source,
+      cartItemIds,
+      items,
+      globalVoucherCode = "",
+      sellerVoucherCodes = [],
+    } = req.body || {};
 
     const checkout = await collectCheckoutItems({
       buyerId,
@@ -781,13 +1076,34 @@ previewCheckout = async (req, res) => {
       cartItemIds,
       items,
     });
-    const summary = buildCheckoutGroups(checkout.payableItems);
+    const sellerNameMap = await loadSellerNameMap(checkout.payableItems);
+    const summary = buildCheckoutGroups(checkout.payableItems, sellerNameMap);
+    const voucherResolution = await resolveVoucherAssignments({
+      buyerId,
+      groups: summary.groups,
+      globalVoucherCode,
+      sellerVoucherCodes,
+    });
+
+    const totals = {
+      itemCount: summary.totals.itemCount,
+      subtotalAmount: summary.totals.subtotalAmount,
+      globalDiscountAmount: voucherResolution.totals.globalDiscountAmount,
+      sellerDiscountAmount: voucherResolution.totals.sellerDiscountAmount,
+      discountAmount: voucherResolution.totals.discountAmount,
+      totalAmount: voucherResolution.totals.totalAmount,
+    };
 
     return res.status(200).json({
       success: true,
       source: checkout.source,
       groups: summary.groups,
-      totals: summary.totals,
+      totals,
+      appliedVouchers: {
+        global: voucherResolution.appliedGlobalVoucher,
+        seller: voucherResolution.sellerVouchers,
+      },
+      voucherErrors: voucherResolution.errors,
       payableItemCount: summary.payableItemCount,
       outOfStockItems: checkout.unavailableItems,
       canProceed: summary.payableItemCount > 0,
@@ -808,6 +1124,8 @@ confirmCheckout = async (req, res) => {
       source,
       cartItemIds,
       items,
+      globalVoucherCode = "",
+      sellerVoucherCodes = [],
       paymentSimulation = "success",
     } = req.body || {};
 
@@ -833,6 +1151,26 @@ confirmCheckout = async (req, res) => {
       });
     }
 
+    const sellerNameMap = await loadSellerNameMap(checkout.payableItems);
+    const summary = buildCheckoutGroups(checkout.payableItems, sellerNameMap);
+    const voucherResolution = await resolveVoucherAssignments({
+      buyerId,
+      groups: summary.groups,
+      globalVoucherCode,
+      sellerVoucherCodes,
+    });
+
+    const hasRequestedVouchers =
+      Boolean(String(globalVoucherCode || "").trim()) ||
+      Object.keys(parseSellerVoucherCodes(sellerVoucherCodes)).length > 0;
+    if (hasRequestedVouchers && voucherResolution.errors.length > 0) {
+      return res.status(400).json({
+        success: false,
+        message: voucherResolution.errors[0]?.message || "Voucher is invalid",
+        voucherErrors: voucherResolution.errors,
+      });
+    }
+
     if (paymentSimulation === "success") {
       const stockCheck = await preValidatePayableItemsStock(checkout.payableItems);
       if (!stockCheck.ok) {
@@ -850,7 +1188,29 @@ confirmCheckout = async (req, res) => {
       buyerId,
       payableItems: checkout.payableItems,
       status: finalStatus,
+      voucherContext: voucherResolution,
     });
+
+    if (paymentSimulation === "success") {
+      const orderBySellerId = {};
+      orders.forEach((order) => {
+        orderBySellerId[String(order.seller)] = order;
+      });
+
+      if (voucherResolution.globalVoucherDoc) {
+        await markVoucherAsUsed(
+          voucherResolution.globalVoucherDoc,
+          buyerId,
+          orders[0]?._id || null,
+        );
+      }
+
+      const sellerVoucherDocEntries = Object.entries(voucherResolution.sellerVoucherDocs || {});
+      for (const [sellerId, voucherDoc] of sellerVoucherDocEntries) {
+        const order = orderBySellerId[String(sellerId)];
+        await markVoucherAsUsed(voucherDoc, buyerId, order?._id || null);
+      }
+    }
 
     if (
       paymentSimulation === "success" &&
@@ -874,6 +1234,10 @@ confirmCheckout = async (req, res) => {
       success: true,
       paymentStatus: finalStatus,
       orders,
+      appliedVouchers: {
+        global: voucherResolution.appliedGlobalVoucher,
+        seller: voucherResolution.sellerVouchers,
+      },
       outOfStockItems: checkout.unavailableItems,
       redirectTo: "/my-ebay/activity/purchases",
     });
@@ -889,7 +1253,7 @@ confirmCheckout = async (req, res) => {
 // Legacy endpoint: direct order create is treated as successful buy-now checkout.
 createOrder = async (req, res) => {
   try {
-    const { items } = req.body || {};
+    const { items, globalVoucherCode, sellerVoucherCodes } = req.body || {};
     if (!Array.isArray(items) || items.length === 0) {
       return res.status(400).json({
         success: false,
@@ -901,6 +1265,8 @@ createOrder = async (req, res) => {
       source: CHECKOUT_SOURCE.BUY_NOW,
       items,
       paymentSimulation: "success",
+      globalVoucherCode,
+      sellerVoucherCodes,
     };
 
     return confirmCheckout(req, res);

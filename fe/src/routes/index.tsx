@@ -11,6 +11,7 @@ import ForgotPasswordPage from "@/pages/forgot-password";
 import ResetPasswordPage from "@/pages/reset-password";
 import BanAppealPage from "@/pages/ban-appeal";
 import HelpContactPage from "@/pages/help-contact";
+import GiftCardsPage from "@/pages/gift-cards";
 import UserManagement from "@/pages/admin/user-management";
 import AdminDashboard from "@/pages/admin/dashboard";
 import ProductManagement from "@/pages/admin/product-management";
@@ -58,6 +59,7 @@ import CartPage from "@/pages/buyer/cart";
 import CheckoutPage from "@/pages/checkout";
 import SellerVouchersPage from "@/pages/seller/vouchers";
 import AdminVoucherRequestsPage from "@/pages/admin/voucher-requests";
+import AdminGlobalVouchersPage from "@/pages/admin/vouchers-global";
 
 // Placeholder components for admin pages
 const AdminComplaints = () => (
@@ -120,6 +122,10 @@ export const AppRouter = () => {
         {
           path: "help-contact",
           element: <HelpContactPage />,
+        },
+        {
+          path: "gift-cards",
+          element: <GiftCardsPage />,
         },
         {
           path: "my-ebay",
@@ -224,6 +230,10 @@ export const AppRouter = () => {
         {
           path: "voucher-requests",
           element: <AdminVoucherRequestsPage />,
+        },
+        {
+          path: "global-vouchers",
+          element: <AdminGlobalVouchersPage />,
         },
         {
           path: "permissions",

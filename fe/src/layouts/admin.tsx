@@ -11,6 +11,7 @@ const navigation = [
   { name: 'Feedback Revision', href: '/admin/feedback', icon: MessageCircle },
   { name: 'Seller Applications', href: '/admin/seller-applications', icon: ClipboardList },
   { name: 'Voucher Requests', href: '/admin/voucher-requests', icon: TicketPercent },
+  { name: 'Global Vouchers', href: '/admin/global-vouchers', icon: TicketPercent },
 ];
 
 export default function AdminLayout() {
