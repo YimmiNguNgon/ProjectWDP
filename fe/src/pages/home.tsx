@@ -16,6 +16,7 @@ import {
 import { CategoryShowcase } from "@/components/category-showcase";
 import { Banner } from "@/components/banner";
 import { SaleTimeShowcase } from "@/components/sale-time-showcase";
+import { ThreeDMarqueeSection } from "@/components/three-d-marquee-section";
 
 export default function HomePage() {
   const banners = [
@@ -78,25 +79,36 @@ export default function HomePage() {
 
   return (
     <div className="flex flex-col gap-12">
-      <Carousel className="relative">
-        <CarouselContent>
-          {banners.map((banner) => (
-            <CarouselItem key={banner.id}>
-              <Banner {...banner} />
-            </CarouselItem>
-          ))}
-        </CarouselContent>
-        <div className="absolute right-4 bottom-4 flex gap-2">
-          <CarouselPrevious
-            size={"icon-lg"}
-            className="static translate-0 cursor-pointer"
-          />
-          <CarouselNext
-            size={"icon-lg"}
-            className="static translate-0 cursor-pointer"
-          />
+      {/* Banner + 3D Marquee side by side */}
+      <div className="flex gap-4 items-stretch">
+        {/* Banner carousel - nửa trái */}
+        <div className="w-1/2 relative">
+          <Carousel className="relative h-full">
+            <CarouselContent className="h-full">
+              {banners.map((banner) => (
+                <CarouselItem key={banner.id} className="h-full">
+                  <Banner {...banner} />
+                </CarouselItem>
+              ))}
+            </CarouselContent>
+            <div className="absolute right-4 bottom-4 flex gap-2">
+              <CarouselPrevious
+                size={"icon-lg"}
+                className="static translate-0 cursor-pointer"
+              />
+              <CarouselNext
+                size={"icon-lg"}
+                className="static translate-0 cursor-pointer"
+              />
+            </div>
+          </Carousel>
         </div>
-      </Carousel>
+
+        {/* 3D Marquee - nửa phải */}
+        <div className="w-1/2 rounded-2xl overflow-hidden">
+          <ThreeDMarqueeSection />
+        </div>
+      </div>
 
       <Item variant={"muted"} className="border border-border p-8 bg-[#AAED56]">
         <ItemContent>
@@ -124,5 +136,3 @@ export default function HomePage() {
     </div>
   );
 }
-
-
