@@ -91,11 +91,24 @@ export interface CheckoutPreviewResponse {
 
 export interface CheckoutConfirmPayload extends CheckoutPreviewPayload {
   paymentSimulation: "success" | "failed";
+  shippingAddress: {
+    fullName: string;
+    phone: string;
+    country?: string;
+    city?: string;
+    district?: string;
+    ward?: string;
+    street?: string;
+    detail?: string;
+  };
+  shippingPrice: number;
+  paymentMethod: string;
+  note?: string;
 }
 
 export interface CheckoutConfirmResponse {
   success: boolean;
-  paymentStatus: "paid" | "failed";
+  paymentStatus: "processing" | "paid" | "failed";
   orders: Array<{
     _id: string;
     status: string;

@@ -24,6 +24,7 @@ import AuthLayout from "@/layouts/auth";
 import UserProfilePage from "@/pages/profile";
 import AdminLayout from "@/layouts/admin";
 import PurchaseHistoryPage from "@/pages/purchases/purchase-history-page";
+import OrderDetailsPage from "@/pages/purchases/order-details-page";
 import WatchlistPage from "@/pages/purchases/watchlist-page";
 import LeaveFeedbackPage from "@/pages/purchases/leave-feedback-page";
 import FeatureUnderConstructionPage from "@/pages/feature-under-construction";
@@ -57,6 +58,7 @@ import SavedSearchesPage from "@/pages/saved-searches-page";
 import SavedSellersPage from "@/pages/saved-sellers-page";
 import CartPage from "@/pages/buyer/cart";
 import CheckoutPage from "@/pages/checkout";
+import CheckoutSuccessPage from "@/pages/checkout-success";
 import SellerVouchersPage from "@/pages/seller/vouchers";
 import AdminVoucherRequestsPage from "@/pages/admin/voucher-requests";
 import AdminGlobalVouchersPage from "@/pages/admin/vouchers-global";
@@ -156,6 +158,14 @@ export const AppRouter = () => {
               element: <SavedSellersPage />,
             },
           ],
+        },
+        {
+          path: "purchases/:orderId",
+          element: <OrderDetailsPage />,
+        },
+        {
+          path: "checkout/success",
+          element: <CheckoutSuccessPage />,
         },
         {
           path: "purchases/:orderId/feedback/:productId",
