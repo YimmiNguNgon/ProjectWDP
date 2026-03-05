@@ -13,6 +13,7 @@ const {
 } = require("../utils/productPricing");
 const Watchlist = require("../models/Watchlist");
 const notificationService = require("../services/notificationService");
+const { hardDeleteProductById } = require("../services/productDeletionService");
 
 const PROBATION_LIMITS = {
   MAX_PRODUCTS_PER_DAY: 5,
@@ -548,10 +549,7 @@ exports.deleteProduct = async (req, res, next) => {
       return res.status(403).json({ message: "Not authorized to delete this product" });
     }
 
-    product.listingStatus = "deleted";
-    product.deletedAt = new Date();
-    product.updatedAt = new Date();
-    await product.save();
+    await hardDeleteProductById(product._id);
 
     return res.json({ message: "Product deleted successfully" });
   } catch (err) {

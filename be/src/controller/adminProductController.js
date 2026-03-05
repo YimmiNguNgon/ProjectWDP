@@ -1,6 +1,7 @@
 // src/controllers/adminProductController.js
 const mongoose = require("mongoose");
 const Product = require("../models/Product");
+const { hardDeleteProductById } = require("../services/productDeletionService");
 
 const resolveProductQuantity = (product) => {
     if (Array.isArray(product.variantCombinations) && product.variantCombinations.length > 0) {
@@ -171,7 +172,7 @@ exports.deleteProduct = async (req, res, next) => {
             return res.status(404).json({ message: "Product not found" });
         }
 
-        await Product.findByIdAndDelete(id);
+        await hardDeleteProductById(product._id);
 
         return res.json({
             success: true,

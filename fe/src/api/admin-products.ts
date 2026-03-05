@@ -23,6 +23,7 @@ export interface Product {
     images: string[]; // Additional images
     condition: string;
     status: string;
+    listingStatus?: string;
     sellerId: {
         _id: string;
         username: string;

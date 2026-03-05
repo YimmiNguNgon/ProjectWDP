@@ -35,6 +35,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { useNavigate } from "react-router-dom";
 
 type SellerFeedbackSectionProps = {
   sellerId: string;
@@ -134,6 +135,7 @@ export function SellerFeedbackSection({
   sellerName,
   productId,
 }: SellerFeedbackSectionProps) {
+  const navigate = useNavigate();
   const [allData, setAllData] = useState<SellerReviewsResponse | null>(null);
   const [loading, setLoading] = useState(true);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
@@ -319,7 +321,7 @@ export function SellerFeedbackSection({
   };
 
   const handleViewProduct = (productId: string) => {
-    window.location.href = `/product/${productId}`;
+    navigate(`/products/${productId}`);
   };
 
   const handleCloseStore = () => {

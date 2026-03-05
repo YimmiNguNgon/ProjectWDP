@@ -137,6 +137,33 @@ const resolveSaleInfo = (product: Product): SaleInfo => {
     };
 };
 
+const listingStatusLabel: Record<string, string> = {
+    active: "Active",
+    paused: "Pause",
+    ended: "Ended",
+    deleted: "Deleted",
+    pending_review: "Pending review",
+};
+
+const listingStatusColor: Record<string, string> = {
+    active: "bg-green-100 text-green-800",
+    paused: "bg-yellow-100 text-yellow-800",
+    ended: "bg-gray-100 text-gray-800",
+    deleted: "bg-red-100 text-red-800",
+    pending_review: "bg-blue-100 text-blue-800",
+};
+
+const legacyStatusToListingStatus: Record<string, string> = {
+    available: "active",
+    sold: "ended",
+};
+
+const getDisplayListingStatus = (product: Product) => {
+    const listingStatus = product.listingStatus;
+    if (listingStatus) return listingStatus;
+    return legacyStatusToListingStatus[product.status] || "active";
+};
+
 export default function ProductManagement() {
     const [products, setProducts] = useState<Product[]>([]);
     const [loading, setLoading] = useState(false);
@@ -156,6 +183,7 @@ export default function ProductManagement() {
     const [reportMessage, setReportMessage] = useState('');
     const [reportLoading, setReportLoading] = useState(false);
     const viewingSaleInfo = viewProduct ? resolveSaleInfo(viewProduct) : null;
+    const viewingListingStatus = viewProduct ? getDisplayListingStatus(viewProduct) : null;
 
     const fetchProducts = async () => {
         setLoading(true);
@@ -259,6 +287,7 @@ export default function ProductManagement() {
                         ) : (
                             products.map((product) => {
                                 const saleInfo = resolveSaleInfo(product);
+                                const listingStatus = getDisplayListingStatus(product);
                                 return (
                                 <TableRow key={product._id} className={saleInfo.state === 'active' ? 'bg-red-50/30 hover:bg-red-50/50' : ''}>
                                     <TableCell>
@@ -336,11 +365,8 @@ export default function ProductManagement() {
                                         )}
                                     </TableCell>
                                     <TableCell>
-                                        <span className={`px-2 py-1 rounded text-xs ${product.status === 'available' ? 'bg-green-100 text-green-800' :
-                                                product.status === 'sold' ? 'bg-gray-100 text-gray-800' :
-                                                    'bg-yellow-100 text-yellow-800'
-                                            }`}>
-                                            {product.status || 'N/A'}
+                                        <span className={`px-2 py-1 rounded text-xs ${listingStatusColor[listingStatus] ?? 'bg-gray-100 text-gray-800'}`}>
+                                            {listingStatusLabel[listingStatus] ?? listingStatus}
                                         </span>
                                     </TableCell>
                                     <TableCell>
@@ -462,10 +488,9 @@ export default function ProductManagement() {
                                 <div><span className="text-gray-500">Condition:</span><span className="ml-2">{viewProduct.condition || '—'}</span></div>
                                 <div>
                                     <span className="text-gray-500">Status:</span>
-                                    <span className={`ml-2 px-2 py-0.5 rounded text-xs ${viewProduct.status === 'available' ? 'bg-green-100 text-green-800' :
-                                            viewProduct.status === 'sold' ? 'bg-gray-100 text-gray-800' :
-                                                'bg-yellow-100 text-yellow-800'
-                                        }`}>{viewProduct.status}</span>
+                                    <span className={`ml-2 px-2 py-0.5 rounded text-xs ${listingStatusColor[viewingListingStatus || ""] ?? 'bg-gray-100 text-gray-800'}`}>
+                                        {listingStatusLabel[viewingListingStatus || ""] ?? viewingListingStatus}
+                                    </span>
                                 </div>
                                 <div>
                                     <span className="text-gray-500">Rating:</span>

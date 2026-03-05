@@ -60,7 +60,9 @@ exports.createProduct = async (req, res, next) => {
 
 exports.getProduct = async (req, res, next) => {
   try {
-    const p = await Product.findById(req.params.productId).lean();
+    const p = await Product.findById(req.params.productId)
+      .populate("sellerId", "username avatarUrl sellerInfo.shopName")
+      .lean();
     if (!p) return res.status(404).json({ message: "Product not found" });
     return res.json({ data: decorateProductPricing(p) });
   } catch (err) {

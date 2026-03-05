@@ -65,7 +65,16 @@ export interface ProductVariantCombination {
 
 export interface ProductDetail {
   _id: string;
-  sellerId: string;
+  sellerId:
+    | string
+    | {
+      _id: string;
+      username?: string;
+      avatarUrl?: string;
+      sellerInfo?: {
+        shopName?: string;
+      };
+    };
   title: string;
   images: string[];
   image: string;
@@ -116,6 +125,14 @@ export default function ProductDetailPage() {
   const [productContext, setProductContext] = useState<
     ProductDetail | undefined
   >();
+  const sellerIdValue =
+    typeof product?.sellerId === "string"
+      ? product.sellerId
+      : product?.sellerId?._id || "";
+  const sellerShopName =
+    typeof product?.sellerId === "string"
+      ? ""
+      : (product?.sellerId?.sellerInfo?.shopName || product?.sellerId?.username || "").trim();
 
   useEffect(() => {
     api.get(`/api/products/${productId}`).then((res) => {
@@ -134,23 +151,27 @@ export default function ProductDetailPage() {
         .catch((err) => console.error(err));
 
       // Check if following seller
-      if (product?.sellerId) {
+      if (sellerIdValue) {
         axios
           .get("/api/saved-sellers")
           .then((res) => {
             const savedSellers = res.data.data || [];
             const isFollowing = savedSellers.some(
-              (seller: any) => seller._id === product.sellerId,
+              (seller: any) => seller._id === sellerIdValue,
             );
             setIsFollowingSeller(isFollowing);
           })
           .catch((err) => console.error(err));
       }
     }
-  }, [productId, product?.sellerId, accessToken]);
+  }, [productId, sellerIdValue, accessToken]);
 
   const handleToggleFollowSeller = async () => {
     if (!product) return;
+    if (!sellerIdValue) {
+      toast.error("Seller information is unavailable");
+      return;
+    }
     if (!accessToken) {
       toast.error("Please sign in to follow seller");
       navigate("/auth/sign-in");
@@ -159,12 +180,12 @@ export default function ProductDetailPage() {
     try {
       if (isFollowingSeller) {
         // Unfollow
-        await axios.delete(`/api/saved-sellers/${product.sellerId}`);
+        await axios.delete(`/api/saved-sellers/${sellerIdValue}`);
         setIsFollowingSeller(false);
         toast.success("Unfollowed seller");
       } else {
         // Follow
-        await axios.post("/api/saved-sellers", { sellerId: product.sellerId });
+        await axios.post("/api/saved-sellers", { sellerId: sellerIdValue });
         setIsFollowingSeller(true);
         toast.success("Following seller");
       }
@@ -196,9 +217,8 @@ export default function ProductDetailPage() {
     }
   };
 
-  const sellerDisplayName = product?.sellerId
-    ? `Seller #${product.sellerId.slice(-5)}`
-    : "Seller";
+  const sellerDisplayName = sellerShopName
+    || (sellerIdValue ? `Seller #${sellerIdValue.slice(-5)}` : "Seller");
 
   const selectedVariantPairs = Object.entries(selectedVariants)
     .filter(([, value]) => value)
@@ -308,7 +328,7 @@ export default function ProductDetailPage() {
 
   const handleJoinChat = () => {
     const sender = payload?.userId;
-    const receiver = product?.sellerId;
+    const receiver = sellerIdValue;
     if (!sender || !receiver) {
       toast.error("Please sign in to chat with seller");
       return;
@@ -495,13 +515,13 @@ export default function ProductDetailPage() {
             </ItemMedia>
             <ItemContent>
               <Link to={"#"} className="hover:bg-transparent">
-                <ItemTitle>{product?.sellerId}</ItemTitle>
+                <ItemTitle>{sellerDisplayName}</ItemTitle>
               </Link>
               <ItemDescription className="inline-flex flex-nowrap gap-2 items-center">
-                <span>Shop Desciption</span>
+                <span>{sellerShopName || "Seller shop"}</span>
                 {/* Chỉ hiện Contact Seller khi KHÔNG phải sản phẩm của chính mình */}
                 {(!payload?.userId ||
-                  String(payload.userId) !== String(product?.sellerId)) && (
+                  String(payload.userId) !== String(sellerIdValue)) && (
                     <Dialog open={open} onOpenChange={setOpen}>
                       <DialogTrigger asChild>
                         <Button
@@ -680,9 +700,9 @@ export default function ProductDetailPage() {
             In stock: {Math.max(0, maxSelectableQty)}
           </p>
           {/* Hide purchase buttons when this is your own product */}
-          {product?.sellerId &&
+          {sellerIdValue &&
             payload?.userId &&
-            String(product.sellerId) === String(payload.userId) ? (
+            String(sellerIdValue) === String(payload.userId) ? (
             <div className="w-full text-center py-3 bg-muted rounded-md text-sm text-muted-foreground">
               This is your product
             </div>
@@ -729,7 +749,7 @@ export default function ProductDetailPage() {
       {product && (
         <>
           <SellerFeedbackSection
-            sellerId={product.sellerId}
+            sellerId={sellerIdValue}
             sellerName={sellerDisplayName}
             productId={product._id}
           />

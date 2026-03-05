@@ -46,6 +46,11 @@ exports.getMyCart = async (req, res, next) => {
     const sideEffects = [];
 
     for (const item of items) {
+      if (!item.product) {
+        sideEffects.push(CartItem.deleteOne({ _id: item._id }));
+        continue;
+      }
+
       const pricedProduct = decorateProductPricing(item.product);
       const normalizedVariants = normalizeSelectedVariants(
         item.selectedVariants || [],
