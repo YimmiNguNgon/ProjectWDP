@@ -32,7 +32,7 @@ export interface CartItem {
   availabilityMessage?: string;
   seller: {
     _id: string;
-    name: string;
+    username: string;
   };
 }
 
