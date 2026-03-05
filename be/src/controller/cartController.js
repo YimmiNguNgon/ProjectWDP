@@ -39,7 +39,7 @@ exports.getMyCart = async (req, res, next) => {
 
     const items = await CartItem.find({ cart: cart._id })
       .populate("product")
-      .populate("seller", "name")
+      .populate("seller", "username")
       .lean();
 
     const mappedItems = [];
@@ -180,11 +180,11 @@ exports.getMyCart = async (req, res, next) => {
           Number(pricingMeta.discountPercent || 0) > 0 &&
           Number(pricingMeta.discountPercent || 0) < 100
             ? Number(
-              (
-                latestSnapshotPrice /
-                (1 - Number(pricingMeta.discountPercent) / 100)
-              ).toFixed(2),
-            )
+                (
+                  latestSnapshotPrice /
+                  (1 - Number(pricingMeta.discountPercent) / 100)
+                ).toFixed(2),
+              )
             : null,
         isOnSale: Boolean(pricingMeta.isOnSale),
         availableStock,
@@ -200,7 +200,8 @@ exports.getMyCart = async (req, res, next) => {
     );
     const computedTotalPrice = mappedItems.reduce(
       (sum, cartItem) =>
-        sum + Number(cartItem.quantity || 0) * Number(cartItem.priceSnapShot || 0),
+        sum +
+        Number(cartItem.quantity || 0) * Number(cartItem.priceSnapShot || 0),
       0,
     );
 
@@ -230,17 +231,15 @@ exports.getMyCart = async (req, res, next) => {
       }
     }
 
-    return res
-      .status(200)
-      .json({
-        message: "Get Cart",
-        cart: {
-          ...cart,
-          totalItems: computedTotalItems,
-          totalPrice: computedTotalPrice,
-          items: mappedItems,
-        },
-      });
+    return res.status(200).json({
+      message: "Get Cart",
+      cart: {
+        ...cart,
+        totalItems: computedTotalItems,
+        totalPrice: computedTotalPrice,
+        items: mappedItems,
+      },
+    });
   } catch (error) {
     next(error);
   }
@@ -297,7 +296,12 @@ exports.addToCart = async (req, res, next) => {
           .json({ message: "Product stock is not enough to add." });
       }
       item.quantity += parsedQty;
-      applyLatestVariantSnapshot(item, normalizedVariants, variantKey, variantCheck);
+      applyLatestVariantSnapshot(
+        item,
+        normalizedVariants,
+        variantKey,
+        variantCheck,
+      );
       await item.save();
     } else {
       try {
@@ -438,7 +442,12 @@ exports.updateCartItemQuantity = async (req, res, next) => {
 
     item.quantity = newQuantity;
     item.stockAlertSent = false;
-    applyLatestVariantSnapshot(item, normalizedVariants, variantKey, variantCheck);
+    applyLatestVariantSnapshot(
+      item,
+      normalizedVariants,
+      variantKey,
+      variantCheck,
+    );
     await item.save();
 
     await recalculateCart(cart._id);

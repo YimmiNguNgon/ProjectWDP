@@ -33,7 +33,7 @@ const productSchema = new mongoose.Schema(
     // Listing management
     listingStatus: {
       type: String,
-      enum: ["active", "paused", "ended", "deleted"],
+      enum: ["active", "paused", "ended", "deleted", "pending_review"],
       default: "active",
       index: true,
     },
