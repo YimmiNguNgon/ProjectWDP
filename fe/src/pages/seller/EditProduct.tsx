@@ -20,6 +20,9 @@ interface Category {
     name: string;
 }
 
+const numericInputClass =
+    "h-12 text-base font-semibold tracking-wide transition-[box-shadow,border-color,background-color] duration-200 focus-visible:shadow-sm focus-visible:ring-2 focus-visible:ring-blue-200";
+
 const toInputDateTime = (value?: string | null) => {
     if (!value) return "";
     const date = new Date(value);
@@ -177,7 +180,7 @@ export default function EditProduct() {
 
     return (
         <div className="p-6">
-            <div className="max-w-4xl mx-auto">
+            <div className="max-w-6xl mx-auto">
                 {/* Header */}
                 <div className="mb-8 flex items-center gap-4">
                     <Button variant="ghost" onClick={() => navigate('/seller/products')} className="flex items-center gap-2">
@@ -191,9 +194,9 @@ export default function EditProduct() {
                 </div>
 
                 <form onSubmit={handleSubmit}>
-                    <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                    <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
                         {/* Left Column */}
-                        <div className="lg:col-span-2 space-y-6">
+                        <div className="lg:col-span-3 space-y-6">
                             {/* Product Info */}
                             <Card>
                                 <CardHeader>
@@ -280,10 +283,12 @@ export default function EditProduct() {
                                     <div className="space-y-2">
                                         <Label htmlFor="price">Selling Price *</Label>
                                         <div className="relative">
-                                            <span className="absolute left-3 top-2.5 text-gray-500">$</span>
+                                            <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500">$</span>
                                             <Input
                                                 id="price" name="price" type="number" placeholder="0.00"
-                                                className="pl-8" value={formData.price} onChange={handleChange} required
+                                                className={`pl-8 ${numericInputClass}`} value={formData.price} onChange={handleChange} required
+                                                min="0"
+                                                step="0.01"
                                             />
                                         </div>
                                     </div>
@@ -309,6 +314,7 @@ export default function EditProduct() {
                                                     step="0.01"
                                                     value={formData.salePrice}
                                                     onChange={handleChange}
+                                                    className={numericInputClass}
                                                 />
                                                 <Label htmlFor="saleStartDate">Start Time *</Label>
                                                 <Input
@@ -332,10 +338,11 @@ export default function EditProduct() {
                                     <div className="space-y-2">
                                         <Label htmlFor="quantity">Stock Quantity</Label>
                                         <div className="relative">
-                                            <Package className="absolute left-3 top-2.5 h-4 w-4 text-gray-500" />
+                                            <Package className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-500" />
                                             <Input
                                                 id="quantity" name="quantity" type="number" placeholder="Quantity"
-                                                className="pl-10" value={variantCombinations.length > 0 ? String(totalVariantStock) : formData.quantity} onChange={handleChange} disabled={variantCombinations.length > 0}
+                                                className={`pl-10 ${numericInputClass}`} value={variantCombinations.length > 0 ? String(totalVariantStock) : formData.quantity} onChange={handleChange} disabled={variantCombinations.length > 0}
+                                                min="0"
                                             />
                                         </div>
                                     </div>

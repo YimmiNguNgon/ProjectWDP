@@ -13,14 +13,19 @@ interface ProductVariantsManagerProps {
     variants: ProductVariant[];
     variantCombinations: ProductVariantCombination[];
     basePrice?: number;
+    showSkuFields?: boolean;
     onChange: (variants: ProductVariant[]) => void;
     onCombinationsChange: (variantCombinations: ProductVariantCombination[]) => void;
 }
+
+const numericInputClass =
+    "h-12 text-base font-semibold transition-[box-shadow,border-color,background-color] duration-200 focus-visible:shadow-sm focus-visible:ring-2 focus-visible:ring-blue-200";
 
 export default function ProductVariantsManager({
     variants,
     variantCombinations,
     basePrice = 0,
+    showSkuFields = true,
     onChange,
     onCombinationsChange,
 }: ProductVariantsManagerProps) {
@@ -174,12 +179,13 @@ export default function ProductVariantsManager({
     };
 
     return (
-        <div className="space-y-4">
+        <div className="space-y-5">
             {/* Add Variant */}
-            <div className="flex gap-2">
+            <div className="flex flex-col sm:flex-row gap-3">
                 <Input
                     placeholder="Variant name (e.g., Size, Color)"
                     value={newVariantName}
+                    className="h-11 flex-1"
                     onChange={(e) => setNewVariantName(e.target.value)}
                     onKeyDown={(e) => {
                         if (e.key === 'Enter') {
@@ -188,7 +194,7 @@ export default function ProductVariantsManager({
                         }
                     }}
                 />
-                <Button type="button" onClick={addVariant} size="sm">
+                <Button type="button" onClick={addVariant} size="sm" className="h-11 px-4">
                     <PlusIcon className="w-4 h-4 mr-1" />
                     Add Variant
                 </Button>
@@ -196,12 +202,12 @@ export default function ProductVariantsManager({
 
             {/* Variant List */}
             {variants.map((variant, variantIndex) => (
-                <Card key={variantIndex} className="p-4">
-                    <div className="flex items-center justify-between mb-3">
+                <Card key={variantIndex} className="p-5">
+                    <div className="flex items-center justify-between mb-4 gap-3">
                         <Input
                             value={variant.name}
                             onChange={(e) => updateVariantName(variantIndex, e.target.value)}
-                            className="max-w-xs font-medium"
+                            className="max-w-xs h-11 font-medium"
                             placeholder="Variant name"
                         />
                         <Button
@@ -215,48 +221,83 @@ export default function ProductVariantsManager({
                     </div>
 
                     {/* Options */}
-                    <div className="space-y-2 ml-4">
-                        {variant.options.map((option, optionIndex) => (
-                            <div key={optionIndex} className="flex gap-2 items-end">
-                                <div className="flex-1 grid grid-cols-2 gap-2">
-                                    <div>
-                                        <Label className="text-xs">Value</Label>
-                                        <Input
-                                            value={option.value}
-                                            onChange={(e) =>
-                                                updateOption(variantIndex, optionIndex, 'value', e.target.value)
-                                            }
-                                            placeholder="e.g., M, Red"
-                                            size={1}
-                                        />
+                    <div className="space-y-3">
+                        {showSkuFields ? (
+                            <div className="space-y-2">
+                                {variant.options.map((option, optionIndex) => (
+                                    <div key={optionIndex} className="flex gap-2 items-end">
+                                        <div className="flex-1 grid gap-2 grid-cols-2">
+                                            <div>
+                                                <Label className="text-xs">Value</Label>
+                                                <Input
+                                                    value={option.value}
+                                                    className="h-11"
+                                                    onChange={(e) =>
+                                                        updateOption(variantIndex, optionIndex, "value", e.target.value)
+                                                    }
+                                                    placeholder="e.g., M, Red"
+                                                    size={1}
+                                                />
+                                            </div>
+                                            <div>
+                                                <Label className="text-xs">SKU</Label>
+                                                <Input
+                                                    value={option.sku || ""}
+                                                    className="h-11"
+                                                    onChange={(e) =>
+                                                        updateOption(variantIndex, optionIndex, "sku", e.target.value)
+                                                    }
+                                                    placeholder="Optional"
+                                                    size={1}
+                                                />
+                                            </div>
+                                        </div>
+                                        <Button
+                                            type="button"
+                                            variant="ghost"
+                                            size="sm"
+                                            onClick={() => removeOption(variantIndex, optionIndex)}
+                                        >
+                                            <XIcon className="w-4 h-4 text-gray-500" />
+                                        </Button>
                                     </div>
-                                    <div>
-                                        <Label className="text-xs">SKU</Label>
-                                        <Input
-                                            value={option.sku || ''}
-                                            onChange={(e) =>
-                                                updateOption(variantIndex, optionIndex, 'sku', e.target.value)
-                                            }
-                                            placeholder="Optional"
-                                            size={1}
-                                        />
-                                    </div>
-                                </div>
-                                <Button
-                                    type="button"
-                                    variant="ghost"
-                                    size="sm"
-                                    onClick={() => removeOption(variantIndex, optionIndex)}
-                                >
-                                    <XIcon className="w-4 h-4 text-gray-500" />
-                                </Button>
+                                ))}
                             </div>
-                        ))}
+                        ) : (
+                            <div className="space-y-2">
+                                <Label className="text-xs text-muted-foreground">Values</Label>
+                                <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-3">
+                                    {variant.options.map((option, optionIndex) => (
+                                        <div key={optionIndex} className="relative">
+                                            <Input
+                                                value={option.value}
+                                                className="h-11 pr-9"
+                                                onChange={(e) =>
+                                                    updateOption(variantIndex, optionIndex, "value", e.target.value)
+                                                }
+                                                placeholder="e.g., M, Red"
+                                                size={1}
+                                            />
+                                            <Button
+                                                type="button"
+                                                variant="ghost"
+                                                size="sm"
+                                                className="absolute right-1 top-1/2 -translate-y-1/2 h-7 w-7 p-0"
+                                                onClick={() => removeOption(variantIndex, optionIndex)}
+                                            >
+                                                <XIcon className="w-4 h-4 text-gray-500" />
+                                            </Button>
+                                        </div>
+                                    ))}
+                                </div>
+                            </div>
+                        )}
 
                         <Button
                             type="button"
                             variant="outline"
                             size="sm"
+                            className="h-10 px-3"
                             onClick={() => addOption(variantIndex)}
                         >
                             <PlusIcon className="w-3 h-3 mr-1" />
@@ -273,23 +314,33 @@ export default function ProductVariantsManager({
             )}
 
             {variantCombinations.length > 0 && (
-                <Card className="p-4">
+                <Card className="p-5">
                     <h4 className="font-medium mb-3">Combination Stock</h4>
-                    <div className="space-y-2">
+                    <div className="space-y-3">
                         {variantCombinations.map((combo) => (
-                            <div key={combo.key} className="grid grid-cols-12 gap-2 items-end">
-                                <div className="col-span-5">
+                            <div
+                                key={combo.key}
+                                className={
+                                    showSkuFields
+                                        ? "grid gap-3 items-end md:grid-cols-[minmax(0,1fr)_7rem_11rem_minmax(0,1fr)]"
+                                        : "grid gap-3 items-end md:grid-cols-[minmax(0,1fr)_6rem_12rem]"
+                                }
+                            >
+                                <div>
                                     <Label className="text-xs">Combination</Label>
-                                    <div className="h-10 px-3 rounded-md border bg-muted/30 flex items-center text-sm">
-                                        {combo.selections.map((s) => s.value).join(' / ')}
-                                    </div>
+                                    <Input
+                                        value={combo.selections.map((s) => s.value).join(" / ")}
+                                        readOnly
+                                        className="h-12 bg-muted/30 border-dashed font-medium"
+                                    />
                                 </div>
-                                <div className="col-span-2">
+                                <div>
                                     <Label className="text-xs">Quantity</Label>
                                     <Input
                                         type="number"
                                         min="0"
                                         value={combo.quantity}
+                                        className={`${numericInputClass} text-center`}
                                         onChange={(e) =>
                                             updateCombination(
                                                 combo.key,
@@ -299,13 +350,14 @@ export default function ProductVariantsManager({
                                         }
                                     />
                                 </div>
-                                <div className="col-span-2">
+                                <div>
                                     <Label className="text-xs">Price</Label>
                                     <Input
                                         type="number"
                                         min="0"
                                         step="0.01"
                                         value={combo.price ?? basePrice}
+                                        className={numericInputClass}
                                         onChange={(e) =>
                                             updateCombination(
                                                 combo.key,
@@ -315,16 +367,19 @@ export default function ProductVariantsManager({
                                         }
                                     />
                                 </div>
-                                <div className="col-span-3">
-                                    <Label className="text-xs">SKU</Label>
-                                    <Input
-                                        value={combo.sku || ''}
-                                        onChange={(e) =>
-                                            updateCombination(combo.key, 'sku', e.target.value)
-                                        }
-                                        placeholder="Optional"
-                                    />
-                                </div>
+                                {showSkuFields && (
+                                    <div>
+                                        <Label className="text-xs">SKU</Label>
+                                        <Input
+                                            value={combo.sku || ''}
+                                            className="h-12"
+                                            onChange={(e) =>
+                                                updateCombination(combo.key, 'sku', e.target.value)
+                                            }
+                                            placeholder="Optional"
+                                        />
+                                    </div>
+                                )}
                             </div>
                         ))}
                     </div>

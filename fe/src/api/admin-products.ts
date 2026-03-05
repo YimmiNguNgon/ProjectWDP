@@ -35,6 +35,9 @@ export interface Product {
     };
     averageRating: number;
     ratingCount: number;
+    sellerTrustScore?: number | null;
+    sellerTrustTier?: string | null;
+    sellerRiskFlagged?: boolean;
     isAuction: boolean;
     auctionEndTime: Date | null;
     createdAt: Date;
@@ -49,6 +52,8 @@ export interface GetProductsParams {
     categoryId?: string;
     minPrice?: number;
     maxPrice?: number;
+    listingStatus?: string;
+    reviewQueue?: boolean;
 }
 
 export interface GetProductsResponse {
@@ -114,5 +119,13 @@ export const createProduct = async (data: {
     auctionEndTime?: Date | null;
 }) => {
     const response = await api.post('/api/admin/products', data);
+    return response.data;
+};
+
+export const reviewPendingProduct = async (
+    productId: string,
+    data: { action: "approve" | "reject"; note?: string }
+) => {
+    const response = await api.patch(`/api/admin/products/${productId}/review`, data);
     return response.data;
 };

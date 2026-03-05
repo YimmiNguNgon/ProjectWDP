@@ -42,6 +42,7 @@ router.post("/products", adminProductController.createProduct);
 router.get("/products/:id", adminProductController.getProductDetail);
 router.put("/products/:id", adminProductController.updateProduct);
 router.delete("/products/:id", adminProductController.deleteProduct);
+router.patch("/products/:id/review", adminProductController.reviewPendingProduct);
 
 // Category management routes
 router.get("/categories", adminCategoryController.getAllCategories);

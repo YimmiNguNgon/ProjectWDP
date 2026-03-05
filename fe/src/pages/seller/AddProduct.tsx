@@ -37,6 +37,8 @@ interface ImageFile {
 }
 
 const MAX_IMAGES = 5;
+const numericInputClass =
+  'h-12 text-lg font-semibold tracking-wide transition-[box-shadow,border-color,background-color] duration-200 focus-visible:shadow-sm focus-visible:ring-2 focus-visible:ring-blue-200';
 
 export default function AddProduct() {
   const navigate = useNavigate();
@@ -237,7 +239,7 @@ export default function AddProduct() {
 
   return (
     <div className="p-6">
-      <div className="max-w-4xl mx-auto">
+      <div className="max-w-7xl mx-auto">
         {/* Header */}
         <div className="mb-8">
           <h1 className="text-2xl font-bold text-gray-900">Thêm sản phẩm mới</h1>
@@ -245,13 +247,13 @@ export default function AddProduct() {
         </div>
 
         <form onSubmit={handleSubmit}>
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+          <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
 
             {/* Left Column */}
-            <div className="lg:col-span-2 space-y-6">
+            <div className="lg:col-span-3 space-y-6">
 
               {/* Product Info */}
-              <Card>
+              <Card className="shadow-sm border-0 ring-1 ring-gray-100">
                 <CardHeader>
                   <CardTitle className="text-lg flex items-center gap-2">
                     <Tag className="h-5 w-5" />
@@ -285,7 +287,7 @@ export default function AddProduct() {
               </Card>
 
               {/* ── Image Upload ── */}
-              <Card>
+              <Card className="shadow-sm border-0 ring-1 ring-gray-100">
                 <CardHeader>
                   <CardTitle className="text-lg flex items-center gap-2">
                     <ImagePlus className="h-5 w-5" />
@@ -401,7 +403,7 @@ export default function AddProduct() {
               </Card>
 
               {/* Variants */}
-              <Card>
+              <Card className="shadow-sm border-0 ring-1 ring-gray-100">
                 <CardHeader>
                   <CardTitle className="text-lg flex items-center gap-2">
                     <Layers className="h-5 w-5" />
@@ -417,6 +419,7 @@ export default function AddProduct() {
                     onChange={setVariants}
                     variantCombinations={variantCombinations}
                     onCombinationsChange={setVariantCombinations}
+                    showSkuFields={false}
                   />
                 </CardContent>
               </Card>
@@ -425,7 +428,7 @@ export default function AddProduct() {
             {/* Right Column */}
             <div className="space-y-6">
               {/* Pricing */}
-              <Card>
+              <Card className="shadow-sm border-0 ring-1 ring-gray-100">
                 <CardHeader>
                   <CardTitle className="text-lg flex items-center gap-2">
                     <DollarSign className="h-5 w-5" />
@@ -436,13 +439,13 @@ export default function AddProduct() {
                   <div className="space-y-2">
                     <Label htmlFor="price">Giá bán *</Label>
                     <div className="relative">
-                      <span className="absolute left-3 top-2.5 text-gray-500">$</span>
+                      <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500">$</span>
                       <Input
                         id="price"
                         name="price"
                         type="number"
                         placeholder="0.00"
-                        className="pl-8"
+                        className={`pl-8 ${numericInputClass}`}
                         value={formData.price}
                         onChange={handleChange}
                         required
@@ -474,6 +477,7 @@ export default function AddProduct() {
                           step="0.01"
                           value={formData.salePrice}
                           onChange={handleChange}
+                          className={numericInputClass}
                           placeholder="Giá trong thời gian sale"
                         />
                         <Label htmlFor="saleStartDate">Bắt đầu sale *</Label>
@@ -499,13 +503,13 @@ export default function AddProduct() {
                   <div className="space-y-2">
                     <Label htmlFor="quantity">Số lượng tồn kho</Label>
                     <div className="relative">
-                      <Package className="absolute left-3 top-2.5 h-4 w-4 text-gray-500" />
+                      <Package className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-500" />
                       <Input
                         id="quantity"
                         name="quantity"
                         type="number"
                         placeholder="Số lượng"
-                        className="pl-10"
+                        className={`pl-10 ${numericInputClass}`}
                         value={variantCombinations.length > 0 ? String(totalVariantStock) : formData.quantity}
                         onChange={handleChange}
                         disabled={variantCombinations.length > 0}
@@ -549,7 +553,7 @@ export default function AddProduct() {
               </Card>
 
               {/* Actions */}
-              <Card>
+              <Card className="shadow-sm border-0 ring-1 ring-gray-100">
                 <CardContent className="pt-6">
                   <div className="space-y-3">
                     <Button

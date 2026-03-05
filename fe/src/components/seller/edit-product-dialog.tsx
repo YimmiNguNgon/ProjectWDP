@@ -20,6 +20,9 @@ interface EditProductDialogProps {
     onSuccess: () => void;
 }
 
+const numericInputClass =
+    "h-12 text-base font-semibold tracking-wide transition-[box-shadow,border-color,background-color] duration-200 focus-visible:shadow-sm focus-visible:ring-2 focus-visible:ring-blue-200";
+
 export default function EditProductDialog({
     product,
     open,
@@ -154,6 +157,7 @@ export default function EditProductDialog({
                                 type="number"
                                 step="0.01"
                                 min="0"
+                                className={numericInputClass}
                                 value={formData.price}
                                 onChange={(e) => setFormData({ ...formData, price: parseFloat(e.target.value) })}
                                 required
@@ -166,6 +170,7 @@ export default function EditProductDialog({
                                 id="quantity"
                                 type="number"
                                 min="0"
+                                className={numericInputClass}
                                 value={formData.quantity}
                                 onChange={(e) => setFormData({ ...formData, quantity: parseInt(e.target.value) })}
                                 required
@@ -190,6 +195,7 @@ export default function EditProductDialog({
                                 id="lowStockThreshold"
                                 type="number"
                                 min="0"
+                                className={numericInputClass}
                                 value={formData.lowStockThreshold}
                                 onChange={(e) =>
                                     setFormData({ ...formData, lowStockThreshold: parseInt(e.target.value) })
@@ -231,6 +237,7 @@ export default function EditProductDialog({
                                         type="number"
                                         step="0.01"
                                         min="0"
+                                        className={numericInputClass}
                                         value={formData.salePrice}
                                         onChange={(e) =>
                                             setFormData({ ...formData, salePrice: parseFloat(e.target.value) || 0 })

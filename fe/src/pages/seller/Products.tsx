@@ -108,6 +108,9 @@ const formatCountdown = (target: Date) => {
   return `${Math.max(1, mins)}m left`;
 };
 
+const numericInputClass =
+  'h-12 text-base font-semibold tracking-wide transition-[box-shadow,border-color,background-color] duration-200 focus-visible:shadow-sm focus-visible:ring-2 focus-visible:ring-blue-200';
+
 const resolveSaleInfo = (product: Product): SaleInfo => {
   const basePrice = Number(product.basePrice ?? product.originalPrice ?? product.price ?? 0);
   const salePriceRaw = Number(product.salePrice ?? product.price ?? 0);
@@ -731,6 +734,7 @@ export default function SellerProducts() {
                   type="number"
                   min="0"
                   step="0.01"
+                  className={numericInputClass}
                   value={formData.price}
                   onChange={(e) => setFormData({ ...formData, price: parseFloat(e.target.value) || 0 })}
                 />
@@ -740,6 +744,7 @@ export default function SellerProducts() {
                 <Input
                   type="number"
                   min="0"
+                  className={numericInputClass}
                   value={formData.variantCombinations.length > 0 ? totalVariantStock : formData.quantity}
                   onChange={(e) => setFormData({ ...formData, quantity: parseInt(e.target.value) || 0 })}
                   disabled={formData.variantCombinations.length > 0}
@@ -764,6 +769,7 @@ export default function SellerProducts() {
                       type="number"
                       min="0"
                       step="0.01"
+                      className={numericInputClass}
                       value={formData.salePrice}
                       onChange={(e) => setFormData({ ...formData, salePrice: parseFloat(e.target.value) || 0 })}
                     />

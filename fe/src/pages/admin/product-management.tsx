@@ -1,6 +1,11 @@
 ﻿// src/pages/admin/product-management.tsx
 import { useState, useEffect } from 'react';
-import { getAllProducts, type Product, type GetProductsParams } from '../../api/admin-products';
+import {
+    getAllProducts,
+    reviewPendingProduct,
+    type Product,
+    type GetProductsParams,
+} from '../../api/admin-products';
 import { Button } from '../../components/ui/button';
 import { Input } from '../../components/ui/input';
 import { Label } from '../../components/ui/label';
@@ -22,7 +27,7 @@ import {
     DialogTitle,
 } from '../../components/ui/dialog';
 import { Badge } from '../../components/ui/badge';
-import { Clock3, Eye, Flag, Flame, Layers } from 'lucide-react';
+import { CheckCircle2, Clock3, Eye, Flag, Flame, Layers, XCircle } from 'lucide-react';
 import { toast } from 'sonner';
 import api from '../../lib/axios';
 
@@ -165,6 +170,7 @@ const getDisplayListingStatus = (product: Product) => {
 };
 
 export default function ProductManagement() {
+    const [activeTab, setActiveTab] = useState<'all' | 'review'>('all');
     const [products, setProducts] = useState<Product[]>([]);
     const [loading, setLoading] = useState(false);
     const [page, setPage] = useState(1);
@@ -182,6 +188,7 @@ export default function ProductManagement() {
     const [reportReason, setReportReason] = useState(REPORT_REASONS[0]);
     const [reportMessage, setReportMessage] = useState('');
     const [reportLoading, setReportLoading] = useState(false);
+    const [reviewLoadingId, setReviewLoadingId] = useState<string | null>(null);
     const viewingSaleInfo = viewProduct ? resolveSaleInfo(viewProduct) : null;
     const viewingListingStatus = viewProduct ? getDisplayListingStatus(viewProduct) : null;
 
@@ -190,6 +197,10 @@ export default function ProductManagement() {
         try {
             const params: GetProductsParams = { page, limit: 10 };
             if (search) params.search = search;
+            if (activeTab === 'review') {
+                params.reviewQueue = true;
+                params.listingStatus = 'pending_review';
+            }
             const response = await getAllProducts(params);
             setProducts(response.data);
             setTotalPages(response.pagination.totalPages);
@@ -201,9 +212,13 @@ export default function ProductManagement() {
         }
     };
 
-    useEffect(() => { fetchProducts(); }, [page]);
+    useEffect(() => { fetchProducts(); }, [page, activeTab]);
 
     const handleSearch = () => { setPage(1); fetchProducts(); };
+    const handleChangeTab = (tab: 'all' | 'review') => {
+        setActiveTab(tab);
+        setPage(1);
+    };
 
     const handleViewClick = (product: Product) => {
         setViewProduct(product);
@@ -234,13 +249,51 @@ export default function ProductManagement() {
         }
     };
 
+    const handleReviewAction = async (product: Product, action: 'approve' | 'reject') => {
+        setReviewLoadingId(product._id);
+        try {
+            const note = action === 'reject'
+                ? window.prompt('Lý do từ chối (optional):', '') || ''
+                : '';
+            await reviewPendingProduct(product._id, { action, note: note.trim() });
+            toast.success(action === 'approve' ? 'Product approved' : 'Product rejected');
+            fetchProducts();
+        } catch (error: any) {
+            toast.error(error.response?.data?.message || 'Failed to review product');
+        } finally {
+            setReviewLoadingId(null);
+        }
+    };
+
     return (
         <div className="container mx-auto py-8">
             <div className="flex justify-between items-center mb-6">
                 <div>
                     <h1 className="text-3xl font-bold">Product Management</h1>
-                    <p className="text-gray-500 mt-1">Total products: {total}</p>
+                    <p className="text-gray-500 mt-1">
+                        {activeTab === 'review' ? 'Pending review queue' : 'Total products'}: {total}
+                    </p>
                 </div>
+            </div>
+
+            {/* Tabs */}
+            <div className="mb-4 inline-flex rounded-lg border bg-gray-50 p-1">
+                <Button
+                    variant={activeTab === 'all' ? 'default' : 'ghost'}
+                    size="sm"
+                    onClick={() => handleChangeTab('all')}
+                    className="rounded-md"
+                >
+                    All Products
+                </Button>
+                <Button
+                    variant={activeTab === 'review' ? 'default' : 'ghost'}
+                    size="sm"
+                    onClick={() => handleChangeTab('review')}
+                    className="rounded-md"
+                >
+                    Pending Review (Low Score)
+                </Button>
             </div>
 
             {/* Search */}
@@ -270,6 +323,7 @@ export default function ProductManagement() {
                             <TableHead>Stock</TableHead>
                             <TableHead>Variants</TableHead>
                             <TableHead>Status</TableHead>
+                            <TableHead>Trust Score</TableHead>
                             <TableHead>Rating</TableHead>
                             <TableHead>Created At</TableHead>
                             <TableHead className="text-right">Actions</TableHead>
@@ -278,11 +332,11 @@ export default function ProductManagement() {
                     <TableBody>
                         {loading ? (
                             <TableRow>
-                                <TableCell colSpan={12} className="text-center py-8">Loading...</TableCell>
+                                <TableCell colSpan={13} className="text-center py-8">Loading...</TableCell>
                             </TableRow>
                         ) : products.length === 0 ? (
                             <TableRow>
-                                <TableCell colSpan={12} className="text-center py-8">No products found</TableCell>
+                                <TableCell colSpan={13} className="text-center py-8">No products found</TableCell>
                             </TableRow>
                         ) : (
                             products.map((product) => {
@@ -370,6 +424,20 @@ export default function ProductManagement() {
                                         </span>
                                     </TableCell>
                                     <TableCell>
+                                        {product.sellerTrustScore != null ? (
+                                            <div className="flex items-center gap-2">
+                                                <span className={`font-semibold ${Number(product.sellerTrustScore) < 4 ? 'text-red-600' : 'text-amber-600'}`}>
+                                                    {Number(product.sellerTrustScore).toFixed(2)}
+                                                </span>
+                                                {product.sellerTrustTier && (
+                                                    <Badge variant="outline">{product.sellerTrustTier}</Badge>
+                                                )}
+                                            </div>
+                                        ) : (
+                                            <span className="text-gray-400 text-sm">—</span>
+                                        )}
+                                    </TableCell>
+                                    <TableCell>
                                         <div className="flex items-center gap-1">
                                             <span className="text-yellow-500">★</span>
                                             <span className="font-medium">{(product.averageRating || 0).toFixed(1)}</span>
@@ -379,6 +447,29 @@ export default function ProductManagement() {
                                     <TableCell>{new Date(product.createdAt).toLocaleDateString('en-US')}</TableCell>
                                     <TableCell className="text-right">
                                         <div className="flex gap-2 justify-end">
+                                            {activeTab === 'review' && listingStatus === 'pending_review' && (
+                                                <>
+                                                    <Button
+                                                        size="sm"
+                                                        onClick={() => handleReviewAction(product, 'approve')}
+                                                        disabled={reviewLoadingId === product._id}
+                                                        className="bg-green-600 hover:bg-green-700"
+                                                    >
+                                                        <CheckCircle2 className="h-3 w-3 mr-1" />
+                                                        Approve
+                                                    </Button>
+                                                    <Button
+                                                        size="sm"
+                                                        variant="outline"
+                                                        onClick={() => handleReviewAction(product, 'reject')}
+                                                        disabled={reviewLoadingId === product._id}
+                                                        className="text-red-600 border-red-200 hover:bg-red-50"
+                                                    >
+                                                        <XCircle className="h-3 w-3 mr-1" />
+                                                        Reject
+                                                    </Button>
+                                                </>
+                                            )}
                                             <Button size="sm" variant="outline" onClick={() => handleViewClick(product)}>
                                                 <Eye className="h-3 w-3 mr-1" />
                                                 View

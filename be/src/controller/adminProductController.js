@@ -1,6 +1,8 @@
 // src/controllers/adminProductController.js
 const mongoose = require("mongoose");
 const Product = require("../models/Product");
+const SellerTrustScore = require("../models/SellerTrustScore");
+const notificationService = require("../services/notificationService");
 const { hardDeleteProductById } = require("../services/productDeletionService");
 
 const resolveProductQuantity = (product) => {
@@ -55,6 +57,52 @@ exports.getAllProducts = async (req, res, next) => {
             if (req.query.maxPrice) query.price.$lte = parseFloat(req.query.maxPrice);
         }
 
+        if (req.query.listingStatus) {
+            query.listingStatus = String(req.query.listingStatus).trim();
+        }
+
+        let lowScoreSellerScoreMap = null;
+        const reviewQueueOnly = String(req.query.reviewQueue || "").toLowerCase() === "true";
+        if (reviewQueueOnly) {
+            query.listingStatus = "pending_review";
+
+            const lowScoreSellerScores = await SellerTrustScore.find({
+                $or: [
+                    { tier: { $in: ["RISK", "HIGH_RISK"] } },
+                    { riskFlagged: true },
+                    { finalScore: { $lt: 4 } },
+                ],
+            })
+                .select("seller finalScore tier riskFlagged")
+                .lean();
+
+            const lowScoreSellerIds = lowScoreSellerScores.map((item) => item.seller);
+            if (lowScoreSellerIds.length === 0) {
+                return res.json({
+                    success: true,
+                    data: [],
+                    pagination: {
+                        page,
+                        limit,
+                        total: 0,
+                        totalPages: 0,
+                    },
+                });
+            }
+
+            query.sellerId = { $in: lowScoreSellerIds };
+            lowScoreSellerScoreMap = new Map(
+                lowScoreSellerScores.map((item) => [
+                    String(item.seller),
+                    {
+                        finalScore: Number(item.finalScore || 0),
+                        tier: item.tier || "STANDARD",
+                        riskFlagged: Boolean(item.riskFlagged),
+                    },
+                ]),
+            );
+        }
+
         const total = await Product.countDocuments(query);
         const products = await Product.find(query)
             .populate("sellerId", "username email")
@@ -89,6 +137,7 @@ exports.getAllProducts = async (req, res, next) => {
             const ratingStats = ratingMap[productId];
             const averageRating = ratingStats ? ratingStats.total / ratingStats.count : 0;
             const ratingCount = ratingStats ? ratingStats.count : 0;
+            const trustScore = lowScoreSellerScoreMap?.get(String(product.sellerId?._id));
 
             return {
                 ...product,
@@ -98,6 +147,9 @@ exports.getAllProducts = async (req, res, next) => {
                 status: product.status || "available",
                 condition: product.condition || "",
                 images: product.images || (product.image ? [product.image] : []),
+                sellerTrustScore: trustScore?.finalScore ?? null,
+                sellerTrustTier: trustScore?.tier ?? null,
+                sellerRiskFlagged: trustScore?.riskFlagged ?? false,
             };
         });
 
@@ -113,6 +165,68 @@ exports.getAllProducts = async (req, res, next) => {
         });
     } catch (err) {
         console.error("Error in getAllProducts:", err);
+        return next(err);
+    }
+};
+
+exports.reviewPendingProduct = async (req, res, next) => {
+    try {
+        const { id } = req.params;
+        const { action, note } = req.body;
+
+        if (!mongoose.isValidObjectId(id)) {
+            return res.status(400).json({ message: "Invalid product id" });
+        }
+
+        if (!["approve", "reject"].includes(action)) {
+            return res.status(400).json({ message: "Invalid action. Use approve or reject" });
+        }
+
+        const product = await Product.findById(id);
+        if (!product) {
+            return res.status(404).json({ message: "Product not found" });
+        }
+
+        if (product.listingStatus !== "pending_review") {
+            return res.status(400).json({ message: "Product is not in pending review state" });
+        }
+
+        product.listingStatus = action === "approve" ? "active" : "ended";
+        product.updatedAt = new Date();
+        await product.save();
+
+        try {
+            await notificationService.sendNotification({
+                recipientId: product.sellerId,
+                type: action === "approve" ? "product_approved" : "product_rejected",
+                title: action === "approve"
+                    ? `Product approved: ${product.title}`
+                    : `Product rejected: ${product.title}`,
+                body: action === "approve"
+                    ? "Your product has been approved and is now active."
+                    : `Your product was rejected by admin.${note ? ` Reason: ${note}` : ""}`,
+                link: "/seller/products",
+                metadata: {
+                    productId: product._id,
+                    adminAction: action,
+                    note: note || "",
+                },
+            });
+        } catch (notifyErr) {
+            console.error("Failed to send product moderation notification:", notifyErr);
+        }
+
+        return res.json({
+            success: true,
+            message: action === "approve"
+                ? "Product approved successfully"
+                : "Product rejected successfully",
+            data: {
+                _id: product._id,
+                listingStatus: product.listingStatus,
+            },
+        });
+    } catch (err) {
         return next(err);
     }
 };
