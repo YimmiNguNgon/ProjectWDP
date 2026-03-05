@@ -1,4 +1,5 @@
 const Order = require("../models/Order");
+const OrderGroup = require("../models/OrderGroup");
 const Cart = require("../models/Cart");
 const CartItem = require("../models/CartItem");
 const Product = require("../models/Product");
@@ -15,6 +16,7 @@ const {
   buildVariantKey,
   syncProductStockFromVariants,
 } = require("../utils/productInventory");
+const sendEmail = require("../utils/sendEmail");
 
 // Helper function để format date
 const formatDate = (date) => {
@@ -59,7 +61,10 @@ const toUnavailableItem = ({
   selectedVariants: normalizeSelectedVariants(selectedVariants || []),
 });
 
-const normalizeCode = (code = "") => String(code || "").trim().toUpperCase();
+const normalizeCode = (code = "") =>
+  String(code || "")
+    .trim()
+    .toUpperCase();
 
 const parseSellerVoucherCodes = (sellerVoucherCodes) => {
   const normalized = {};
@@ -74,14 +79,17 @@ const parseSellerVoucherCodes = (sellerVoucherCodes) => {
   if (sellerVoucherCodes && typeof sellerVoucherCodes === "object") {
     for (const [sellerId, code] of Object.entries(sellerVoucherCodes)) {
       const normalizedCode = normalizeCode(code);
-      if (sellerId && normalizedCode) normalized[String(sellerId)] = normalizedCode;
+      if (sellerId && normalizedCode)
+        normalized[String(sellerId)] = normalizedCode;
     }
   }
   return normalized;
 };
 
 const loadSellerNameMap = async (payableItems) => {
-  const sellerIds = [...new Set(payableItems.map((item) => String(item.sellerId)))];
+  const sellerIds = [
+    ...new Set(payableItems.map((item) => String(item.sellerId))),
+  ];
   if (sellerIds.length === 0) return {};
 
   const sellers = await User.find({ _id: { $in: sellerIds } })
@@ -123,14 +131,21 @@ const buildCheckoutGroups = (payableItems, sellerNameMap = {}) => {
       availableStock: Number(item.availableStock || 0),
       lineTotal,
     });
-    group.subtotalAmount = Number((group.subtotalAmount + lineTotal).toFixed(2));
+    group.subtotalAmount = Number(
+      (group.subtotalAmount + lineTotal).toFixed(2),
+    );
   }
 
   const groups = [...grouped.values()];
   const totals = groups.reduce(
     (acc, group) => {
-      const itemCount = group.items.reduce((sum, item) => sum + item.quantity, 0);
-      const subtotalAmount = Number((acc.subtotalAmount + group.subtotalAmount).toFixed(2));
+      const itemCount = group.items.reduce(
+        (sum, item) => sum + item.quantity,
+        0,
+      );
+      const subtotalAmount = Number(
+        (acc.subtotalAmount + group.subtotalAmount).toFixed(2),
+      );
       return {
         itemCount: acc.itemCount + itemCount,
         subtotalAmount,
@@ -156,7 +171,9 @@ const resolveVoucherAssignments = async ({
   const errors = [];
   const sellerCodeMap = parseSellerVoucherCodes(sellerVoucherCodes);
   const subtotalAmount = Number(
-    groups.reduce((sum, group) => sum + Number(group.subtotalAmount || 0), 0).toFixed(2),
+    groups
+      .reduce((sum, group) => sum + Number(group.subtotalAmount || 0), 0)
+      .toFixed(2),
   );
 
   let globalVoucherDoc = null;
@@ -172,9 +189,14 @@ const resolveVoucherAssignments = async ({
         message: "Voucher not found",
       });
     } else {
-      const validation = validateVoucherForUser(voucher, buyerId, subtotalAmount, {
-        scope: "global",
-      });
+      const validation = validateVoucherForUser(
+        voucher,
+        buyerId,
+        subtotalAmount,
+        {
+          scope: "global",
+        },
+      );
       if (!validation.ok) {
         errors.push({ scope: "global", code, message: validation.message });
       } else {
@@ -209,7 +231,11 @@ const resolveVoucherAssignments = async ({
     if (!code) continue;
 
     const baseAmountAfterGlobal = Number(
-      Math.max(0, Number(group.subtotalAmount || 0) - Number(globalDiscountAllocation[sellerId] || 0)).toFixed(2),
+      Math.max(
+        0,
+        Number(group.subtotalAmount || 0) -
+          Number(globalDiscountAllocation[sellerId] || 0),
+      ).toFixed(2),
     );
 
     const voucher = await Voucher.findOne({ code });
@@ -266,9 +292,15 @@ const resolveVoucherAssignments = async ({
       .reduce((sum, voucher) => sum + Number(voucher.discountAmount || 0), 0)
       .toFixed(2),
   );
-  const globalDiscountAmount = Number(appliedGlobalVoucher?.discountAmount || 0);
-  const totalDiscount = Number((sellerVoucherDiscountAmount + globalDiscountAmount).toFixed(2));
-  const totalAmount = Number(Math.max(0, subtotalAmount - totalDiscount).toFixed(2));
+  const globalDiscountAmount = Number(
+    appliedGlobalVoucher?.discountAmount || 0,
+  );
+  const totalDiscount = Number(
+    (sellerVoucherDiscountAmount + globalDiscountAmount).toFixed(2),
+  );
+  const totalAmount = Number(
+    Math.max(0, subtotalAmount - totalDiscount).toFixed(2),
+  );
 
   return {
     errors,
@@ -290,7 +322,9 @@ const resolveVoucherAssignments = async ({
 
 const allocateGlobalDiscountBySeller = (groups, globalDiscountAmount) => {
   const totalSubtotal = Number(
-    groups.reduce((sum, group) => sum + Number(group.subtotalAmount || 0), 0).toFixed(2),
+    groups
+      .reduce((sum, group) => sum + Number(group.subtotalAmount || 0), 0)
+      .toFixed(2),
   );
   if (globalDiscountAmount <= 0 || totalSubtotal <= 0 || groups.length === 0) {
     return {};
@@ -301,7 +335,10 @@ const allocateGlobalDiscountBySeller = (groups, globalDiscountAmount) => {
   groups.forEach((group, index) => {
     const sellerId = String(group.sellerId);
     let amount = Number(
-      ((Number(group.subtotalAmount || 0) / totalSubtotal) * globalDiscountAmount).toFixed(2),
+      (
+        (Number(group.subtotalAmount || 0) / totalSubtotal) *
+        globalDiscountAmount
+      ).toFixed(2),
     );
     if (index === groups.length - 1) {
       amount = Number((globalDiscountAmount - allocatedSum).toFixed(2));
@@ -560,7 +597,9 @@ const preValidatePayableItemsStock = async (payableItems) => {
 
   for (const item of payableItems) {
     const product = await Product.findById(item.productId).lean();
-    const selectedVariants = normalizeSelectedVariants(item.selectedVariants || []);
+    const selectedVariants = normalizeSelectedVariants(
+      item.selectedVariants || [],
+    );
 
     if (!product) {
       unavailableItems.push(
@@ -648,10 +687,16 @@ const deductStockForPayableItems = async (payableItems) => {
         );
       }
 
-      combo.quantity = Math.max(0, (Number(combo.quantity) || 0) - item.quantity);
+      combo.quantity = Math.max(
+        0,
+        (Number(combo.quantity) || 0) - item.quantity,
+      );
       syncProductStockFromVariants(product);
     } else {
-      product.quantity = Math.max(0, (Number(product.quantity) || 0) - item.quantity);
+      product.quantity = Math.max(
+        0,
+        (Number(product.quantity) || 0) - item.quantity,
+      );
       product.stock = Math.max(0, (Number(product.stock) || 0) - item.quantity);
     }
 
@@ -664,6 +709,10 @@ const createOrdersFromPayableItems = async ({
   payableItems,
   status,
   voucherContext = {},
+  shippingAddress,
+  shippingPrice,
+  paymentMethod,
+  note,
 }) => {
   const groupedBySeller = new Map();
 
@@ -683,7 +732,8 @@ const createOrdersFromPayableItems = async ({
       subtotalAmount: Number(
         sellerItems
           .reduce(
-            (sum, item) => sum + Number(item.unitPrice || 0) * Number(item.quantity || 0),
+            (sum, item) =>
+              sum + Number(item.unitPrice || 0) * Number(item.quantity || 0),
             0,
           )
           .toFixed(2),
@@ -709,7 +759,10 @@ const createOrdersFromPayableItems = async ({
 
     const subtotalAmount = Number(
       orderItems
-        .reduce((sum, item) => sum + Number(item.unitPrice) * Number(item.quantity), 0)
+        .reduce(
+          (sum, item) => sum + Number(item.unitPrice) * Number(item.quantity),
+          0,
+        )
         .toFixed(2),
     );
 
@@ -718,13 +771,16 @@ const createOrdersFromPayableItems = async ({
       statusHistory.push({ status, timestamp: now });
     }
 
-    const sellerVoucher = voucherContext.sellerVoucherBySellerId?.[sellerId] || null;
+    const sellerVoucher =
+      voucherContext.sellerVoucherBySellerId?.[sellerId] || null;
     const sellerDiscount = Number(sellerVoucher?.discountAmount || 0);
     const globalAllocated = Number(globalDiscountAllocation[sellerId] || 0);
     const totalDiscount = Number(
       Math.min(subtotalAmount, sellerDiscount + globalAllocated).toFixed(2),
     );
-    const totalAmount = Number(Math.max(0, subtotalAmount - totalDiscount).toFixed(2));
+    const totalAmount = Number(
+      Math.max(0, subtotalAmount - totalDiscount).toFixed(2),
+    );
 
     const voucherGlobal =
       voucherContext.appliedGlobalVoucher && globalAllocated > 0
@@ -782,6 +838,10 @@ const createOrdersFromPayableItems = async ({
       totalAmount,
       status,
       statusHistory,
+      shippingAddress,
+      shippingPrice: 0, // Shipping is now at OrderGroup level
+      paymentMethod,
+      note,
     });
 
     orders.push(order);
@@ -794,8 +854,8 @@ const createOrdersFromPayableItems = async ({
 getAllOrders = async (req, res) => {
   try {
     const orders = await Order.find({})
-      .populate("buyer", "name email") // Giả sử User model có trường name và email
-      .populate("seller", "name")
+      .populate("buyer", "username email") // Giả sử User model có trường username và email
+      .populate("seller", "username")
       .populate("items.productId", "title")
       .sort({ createdAt: -1 });
 
@@ -813,8 +873,8 @@ getAllOrders = async (req, res) => {
       return {
         _id: order._id, // Hoặc có thể tạo orderId format như #ORD001
         // Nếu muốn format _id thành #ORD001:
-        // _id: `#ORD${String(order._id).slice(-6).toUpperCase()}`,
-        customer: order.buyer?.name || "Khách hàng",
+        //_id: `#ORD${String(order._id).slice(-6).toUpperCase()}`,
+        customer: order.buyer?.username || "Khách hàng",
         email: order.buyer?.email || "",
         total: order.totalAmount,
         subtotal: order.subtotalAmount ?? order.totalAmount,
@@ -847,61 +907,88 @@ getAllOrders = async (req, res) => {
   }
 };
 
-// Lấy order theo ID với format mới
 getOrderById = async (req, res) => {
   try {
-    const order = await Order.findById(req.params.id)
-      .populate("buyer", "name email phone address")
-      .populate("seller", "name email phone")
-      .populate("items.productId", "title images");
+    const { id } = req.params;
 
-    if (!order) {
+    // Check if it's a Group or a single Order
+    let group = await OrderGroup.findById(id).lean();
+    let orders = [];
+
+    if (group) {
+      orders = await Order.find({ orderGroup: id })
+        .populate("buyer", "username email phone address")
+        .populate("seller", "username email phone")
+        .populate("items.productId", "title images image");
+    } else {
+      const single = await Order.findById(id)
+        .populate("buyer", "username email phone address")
+        .populate("seller", "username email phone")
+        .populate("items.productId", "title images image");
+
+      if (single) {
+        if (single.orderGroup) {
+          // If it belongs to a group, get the whole group instead!
+          group = await OrderGroup.findById(single.orderGroup).lean();
+          orders = await Order.find({ orderGroup: single.orderGroup })
+            .populate("buyer", "username email phone address")
+            .populate("seller", "username email phone")
+            .populate("items.productId", "title images image");
+        } else {
+          orders = [single];
+        }
+      }
+    }
+
+    if (orders.length === 0) {
       return res.status(404).json({
         success: false,
         message: "Không tìm thấy đơn hàng",
       });
     }
 
-    // Tính tổng số items
-    const totalItems = order.items.reduce(
-      (sum, item) => sum + item.quantity,
-      0,
-    );
+    const formattedOrders = orders.map((order) => {
+      const totalItems = order.items.reduce(
+        (sum, item) => sum + item.quantity,
+        0,
+      );
+      const paymentMethod = order.paymentMethod || "Credit Card";
 
-    // Lấy payment method
-    const paymentMethod = order.paymentMethod || "Credit Card";
+      return {
+        _id: order._id,
+        orderId: `#ORD${String(order._id).slice(-6).toUpperCase()}`,
+        customer: order.buyer,
+        email: order.buyer?.email || "",
+        phone: order.buyer?.phone || "",
+        shippingAddress: order.shippingAddress || null,
+        seller: order.seller,
+        totalAmount: order.totalAmount, // WITHOUT group shipping
+        shippingPrice: 0,
+        subtotalAmount: order.subtotalAmount ?? order.totalAmount,
+        discountAmount: order.discountAmount ?? 0,
+        voucher: order.voucher || null,
+        status: order.status,
+        items: order.items,
+        itemCount: totalItems,
+        date: formatDate(order.createdAt),
+        paymentMethod: paymentMethod,
+        createdAt: order.createdAt,
+        updatedAt: order.updatedAt,
+      };
+    });
 
-    const formattedOrder = {
-      _id: order._id,
-      orderId: `#ORD${String(order._id).slice(-6).toUpperCase()}`, // Tạo orderId đẹp
-      customer: order.buyer?.name || "Khách hàng",
-      email: order.buyer?.email || "",
-      phone: order.buyer?.phone || "",
-      address: order.buyer?.address || "",
-      seller: order.seller?.name || "",
-      totalAmount: order.totalAmount,
-      subtotalAmount: order.subtotalAmount ?? order.totalAmount,
-      discountAmount: order.discountAmount ?? 0,
-      voucher: order.voucher || null,
-      status: order.status,
-      items: totalItems,
-      date: formatDate(order.createdAt),
-      paymentMethod: paymentMethod,
-      orderDetails: order.items.map((item) => ({
-        productId: item.productId?._id,
-        productName: item.productId?.title || item.title || "Sản phẩm",
-        unitPrice: item.unitPrice,
-        quantity: item.quantity,
-        subtotal: item.unitPrice * item.quantity,
-      })),
-      createdAt: order.createdAt,
-      updatedAt: order.updatedAt,
-    };
+    const shippingPrice = group ? (group.shippingPrice || 0) : (orders[0].shippingPrice || 0);
+    const totalAmount = group ? group.totalAmount : (orders[0].totalAmount + shippingPrice);
 
     res.status(200).json({
       success: true,
-      data: formattedOrder,
+      data: formattedOrders,
+      isGroup: !!group,
+      groupId: group ? group._id : (orders[0]?.orderGroup || null),
+      shippingPrice: shippingPrice,
+      groupTotal: totalAmount,
     });
+
   } catch (error) {
     res.status(500).json({
       success: false,
@@ -920,12 +1007,21 @@ getOrders = async (req, res) => {
       customer,
       startDate,
       endDate,
+      search,
       page = 1,
       limit = 10,
     } = req.query;
 
     // Build filter query
     let filter = {};
+
+    if (search) {
+      const searchRegex = new RegExp(search, "i");
+      filter.$or = [
+        { "items.title": searchRegex },
+        { "orderId": searchRegex },
+      ];
+    }
 
     // Lọc theo role của user hiện tại
     if (role === "buyer" && req.user) {
@@ -960,6 +1056,7 @@ getOrders = async (req, res) => {
       Order.find(filter)
         .populate("buyer", "username email")
         .populate("seller", "username email")
+        .populate("orderGroup", "shippingPrice totalAmount")
         .populate("items.productId", "title images image")
         .sort({ createdAt: -1 })
         .skip(skip)
@@ -978,6 +1075,7 @@ getOrders = async (req, res) => {
       return {
         _id: order._id,
         orderId: `#ORD${String(order._id).slice(-6).toUpperCase()}`,
+        orderGroup: order.orderGroup || null,
         buyer: order.buyer,
         seller: order.seller,
         customer: order.buyer?.username || "Khách hàng",
@@ -1030,7 +1128,11 @@ getOrderStats = async (req, res) => {
           totalRevenue: { $sum: "$totalAmount" },
           pendingOrders: {
             $sum: {
-              $cond: [{ $in: ["$status", ["created", "paid", "processing"]] }, 1, 0],
+              $cond: [
+                { $in: ["$status", ["created", "paid", "processing"]] },
+                1,
+                0,
+              ],
             },
           },
           completedOrders: {
@@ -1127,6 +1229,10 @@ confirmCheckout = async (req, res) => {
       globalVoucherCode = "",
       sellerVoucherCodes = [],
       paymentSimulation = "success",
+      shippingAddress,
+      shippingPrice,
+      paymentMethod,
+      note,
     } = req.body || {};
 
     if (!["success", "failed"].includes(paymentSimulation)) {
@@ -1172,7 +1278,9 @@ confirmCheckout = async (req, res) => {
     }
 
     if (paymentSimulation === "success") {
-      const stockCheck = await preValidatePayableItemsStock(checkout.payableItems);
+      const stockCheck = await preValidatePayableItemsStock(
+        checkout.payableItems,
+      );
       if (!stockCheck.ok) {
         return res.status(409).json({
           success: false,
@@ -1183,13 +1291,42 @@ confirmCheckout = async (req, res) => {
       await deductStockForPayableItems(checkout.payableItems);
     }
 
-    const finalStatus = paymentSimulation === "success" ? "paid" : "failed";
+    const finalStatus =
+      paymentSimulation === "success" ? "processing" : "failed";
     const orders = await createOrdersFromPayableItems({
       buyerId,
       payableItems: checkout.payableItems,
       status: finalStatus,
       voucherContext: voucherResolution,
+      shippingAddress,
+      shippingPrice,
+      paymentMethod,
+      note,
     });
+
+    let orderGroup = null;
+    if (orders.length > 0) {
+      const parentTotal = orders.reduce(
+        (sum, order) => sum + (order.totalAmount || 0),
+        0,
+      );
+      orderGroup = await OrderGroup.create({
+        buyer: buyerId,
+        orders: orders.map((o) => o._id),
+        totalAmount: parentTotal + Number(shippingPrice || 0), // Include shipping in group total
+        status: finalStatus,
+        shippingAddress,
+        shippingPrice: Number(shippingPrice || 0),
+        paymentMethod,
+        note,
+      });
+
+      // Link sub-orders to the group
+      await Order.updateMany(
+        { _id: { $in: orders.map((o) => o._id) } },
+        { $set: { orderGroup: orderGroup._id } },
+      );
+    }
 
     if (paymentSimulation === "success") {
       const orderBySellerId = {};
@@ -1205,7 +1342,9 @@ confirmCheckout = async (req, res) => {
         );
       }
 
-      const sellerVoucherDocEntries = Object.entries(voucherResolution.sellerVoucherDocs || {});
+      const sellerVoucherDocEntries = Object.entries(
+        voucherResolution.sellerVoucherDocs || {},
+      );
       for (const [sellerId, voucherDoc] of sellerVoucherDocEntries) {
         const order = orderBySellerId[String(sellerId)];
         await markVoucherAsUsed(voucherDoc, buyerId, order?._id || null);
@@ -1227,6 +1366,37 @@ confirmCheckout = async (req, res) => {
           cart: checkout.cart._id,
         });
         await recalculateCart(checkout.cart._id);
+      }
+    }
+
+    if (paymentSimulation === "success" && orders.length > 0) {
+      try {
+        const user = await User.findById(buyerId).lean();
+        if (user && user.email) {
+          await sendEmail({
+            to: user.email,
+            subject: "Đặt hàng thành công - Ebay",
+            template: "orderSuccess.ejs",
+            data: {
+              username: user.username,
+              orderGroupId: orderGroup ? orderGroup._id : orders[0]._id,
+              date: formatDate(new Date()),
+              totalAmount: orderGroup
+                ? orderGroup.totalAmount
+                : orders.reduce((sum, o) => sum + (o.totalAmount || 0), 0) +
+                  Number(shippingPrice || 0),
+              paymentMethod: paymentMethod || "COD",
+              shippingAddress: shippingAddress,
+              orderUrl: `${process.env.CLIENT_URL}/my-ebay/activity/purchases`,
+            },
+          });
+          console.log(`✅ Order confirmation email sent to ${user.email}`);
+        }
+      } catch (emailError) {
+        console.error(
+          "❌ Failed to send order confirmation email:",
+          emailError.message,
+        );
       }
     }
 
@@ -1288,5 +1458,3 @@ module.exports = {
   confirmCheckout,
   createOrder,
 };
-
-

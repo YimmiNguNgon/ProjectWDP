@@ -26,16 +26,28 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { MapPin, Truck, CreditCard, ChevronLeft, Pencil, Trash2, Plus, ChevronRight, Store } from "lucide-react";
+import {
+  MapPin,
+  Truck,
+  CreditCard,
+  ChevronLeft,
+  Pencil,
+  Trash2,
+  Plus,
+  ChevronRight,
+  Store,
+} from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Badge } from "@/components/ui/badge";
-import {
-  getAvailableVouchers,
-  type Voucher,
-} from "@/api/vouchers";
+import { getAvailableVouchers, type Voucher } from "@/api/vouchers";
 import AddressForm from "@/components/address-form";
 import { ConfirmDialog } from "@/components/confirm-dialog";
-import { createAddress, updateAddress, deleteAddress, setDefaultAddress } from "@/api/user";
+import {
+  createAddress,
+  updateAddress,
+  deleteAddress,
+  setDefaultAddress,
+} from "@/api/user";
 import VoucherTicket from "@/components/voucher/voucher-ticket";
 
 type CheckoutLocationState = {
@@ -83,23 +95,35 @@ export default function CheckoutPage() {
   const [processing, setProcessing] = useState(false);
   const [addresses, setAddresses] = useState<Address[]>([]);
   const [selectedAddressId, setSelectedAddressId] = useState<string>("");
+
   const [shippingMethod, setShippingMethod] = useState<string>("standard");
   const [paymentMethod, setPaymentMethod] = useState<string>("cod");
   const [orderNote, setOrderNote] = useState<string>("");
   const [globalVoucherInput, setGlobalVoucherInput] = useState("");
   const [globalVoucherCode, setGlobalVoucherCode] = useState("");
-  const [sellerVoucherInputs, setSellerVoucherInputs] = useState<Record<string, string>>({});
-  const [sellerVoucherCodes, setSellerVoucherCodes] = useState<Record<string, string>>({});
-  const [globalVoucherOptions, setGlobalVoucherOptions] = useState<Voucher[]>([]);
-  const [sellerVoucherOptions, setSellerVoucherOptions] = useState<Record<string, Voucher[]>>({});
+  const [sellerVoucherInputs, setSellerVoucherInputs] = useState<
+    Record<string, string>
+  >({});
+  const [sellerVoucherCodes, setSellerVoucherCodes] = useState<
+    Record<string, string>
+  >({});
+  const [globalVoucherOptions, setGlobalVoucherOptions] = useState<Voucher[]>(
+    [],
+  );
+  const [sellerVoucherOptions, setSellerVoucherOptions] = useState<
+    Record<string, Voucher[]>
+  >({});
   const [loadingVoucherOptions, setLoadingVoucherOptions] = useState(false);
 
   // Address CRUD state
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isAddressListModalOpen, setIsAddressListModalOpen] = useState(false);
-  const [selectedAddressForEdit, setSelectedAddressForEdit] = useState<Address | null>(null);
+  const [selectedAddressForEdit, setSelectedAddressForEdit] =
+    useState<Address | null>(null);
   const [confirmDialogOpen, setConfirmDialogOpen] = useState(false);
-  const [confirmDialogAction, setConfirmDialogAction] = useState<"setDefault" | "delete" | null>(null);
+  const [confirmDialogAction, setConfirmDialogAction] = useState<
+    "setDefault" | "delete" | null
+  >(null);
   const [pendingAddressId, setPendingAddressId] = useState<string | null>(null);
   const [isActionLoading, setIsActionLoading] = useState(false);
 
@@ -107,7 +131,10 @@ export default function CheckoutPage() {
     () =>
       Object.entries(sellerVoucherCodes)
         .filter(([, code]) => Boolean(code.trim()))
-        .map(([sellerId, code]) => ({ sellerId, code: code.trim().toUpperCase() })),
+        .map(([sellerId, code]) => ({
+          sellerId,
+          code: code.trim().toUpperCase(),
+        })),
     [sellerVoucherCodes],
   );
 
@@ -205,7 +232,9 @@ export default function CheckoutPage() {
     loadVoucherOptions(preview);
   }, [
     preview?.totals.subtotalAmount,
-    JSON.stringify(preview?.groups?.map((g) => [g.sellerId, g.subtotalAmount]) || []),
+    JSON.stringify(
+      preview?.groups?.map((g) => [g.sellerId, g.subtotalAmount]) || [],
+    ),
   ]);
 
   const shippingCosts: Record<string, number> = {
@@ -224,22 +253,65 @@ export default function CheckoutPage() {
       return;
     }
 
+    const selectedAddress = addresses.find((a) => a._id === selectedAddressId);
+    if (!selectedAddress) {
+      toast.error("Address details not found");
+      return;
+    }
+
     try {
       setProcessing(true);
       const requestBody: CheckoutConfirmPayload = {
         ...checkoutRequestBody,
         paymentSimulation: "success",
+        shippingAddress: {
+          fullName: selectedAddress.fullName,
+          phone: selectedAddress.phone,
+          country: selectedAddress.country,
+          city: selectedAddress.city,
+          district: selectedAddress.district,
+          ward: selectedAddress.ward,
+          street: selectedAddress.street,
+          detail: selectedAddress.detail,
+        },
+        shippingPrice: shippingCosts[shippingMethod] || 0,
+        paymentMethod: paymentMethod,
+        note: orderNote,
       };
       const result = await confirmCheckout(requestBody);
 
-      if (result.paymentStatus === "paid") {
+      if (
+        result.paymentStatus === "processing" ||
+        result.paymentStatus === "paid"
+      ) {
         toast.success("Payment successful.");
+        await refreshCart();
+        navigate("/checkout/success", {
+          state: {
+            orders: result.orders || [],
+            totalAmount: totalAmount || 0,
+            subtotalAmount: preview?.totals.subtotalAmount || 0,
+            discountAmount: preview?.totals.discountAmount || 0,
+            shippingPrice: shippingCosts[shippingMethod] || 0,
+            shippingAddress: {
+              fullName: selectedAddress.fullName,
+              phone: selectedAddress.phone,
+              country: selectedAddress.country,
+              city: selectedAddress.city,
+              district: selectedAddress.district,
+              ward: selectedAddress.ward,
+              street: selectedAddress.street,
+              detail: selectedAddress.detail,
+            },
+            paymentMethod: paymentMethod,
+            orderGroupId: result.orders?.[0]?._id,
+          },
+        });
       } else {
         toast.error("Payment failed.");
+        await refreshCart();
+        navigate(result.redirectTo || "/my-ebay/activity/purchases");
       }
-
-      await refreshCart();
-      navigate(result.redirectTo || "/my-ebay/activity/purchases");
     } catch (error: any) {
       const message =
         error.response?.data?.message || "Failed to confirm payment";
@@ -406,7 +478,7 @@ export default function CheckoutPage() {
             </div>
 
             {selectedAddress ? (
-              <div 
+              <div
                 className="group relative p-4 rounded-xl border-2 border-primary/20 bg-primary/5 hover:border-primary/40 transition-all cursor-pointer"
                 onClick={() => setIsAddressListModalOpen(true)}
               >
@@ -430,10 +502,16 @@ export default function CheckoutPage() {
                       )}
                     </div>
                     <p className="text-md text-foreground/80 leading-relaxed">
-                      {selectedAddress.detail ? `${selectedAddress.detail}, ` : ""}
-                      {selectedAddress.street ? `${selectedAddress.street}, ` : ""}
+                      {selectedAddress.detail
+                        ? `${selectedAddress.detail}, `
+                        : ""}
+                      {selectedAddress.street
+                        ? `${selectedAddress.street}, `
+                        : ""}
                       {selectedAddress.ward ? `${selectedAddress.ward}, ` : ""}
-                      {selectedAddress.district ? `${selectedAddress.district}, ` : ""}
+                      {selectedAddress.district
+                        ? `${selectedAddress.district}, `
+                        : ""}
                       {selectedAddress.city}
                     </p>
                   </div>
@@ -442,7 +520,9 @@ export default function CheckoutPage() {
               </div>
             ) : (
               <div className="text-center py-8 border-2 border-dashed rounded-xl bg-muted/30">
-                <p className="text-sm text-muted-foreground mb-4">No address selected for delivery</p>
+                <p className="text-sm text-muted-foreground mb-4">
+                  No address selected for delivery
+                </p>
                 <Button
                   variant="default"
                   className="bg-[#AAED56] cursor-pointer text-[#324E0F] hover:bg-[#9CD845] border-none font-bold px-6"
@@ -456,11 +536,16 @@ export default function CheckoutPage() {
           </section>
 
           {/* Address Selection Modal */}
-          <Dialog open={isAddressListModalOpen} onOpenChange={setIsAddressListModalOpen}>
+          <Dialog
+            open={isAddressListModalOpen}
+            onOpenChange={setIsAddressListModalOpen}
+          >
             <DialogContent className="max-w-2xl max-h-[90vh] overflow-hidden flex flex-col p-0 border-none rounded-2xl shadow-2xl">
               <DialogHeader className="px-6 py-8 border-b bg-white">
                 <div className="flex items-center justify-between">
-                  <DialogTitle className="text-2xl font-bold">Select Delivery Address</DialogTitle>
+                  <DialogTitle className="text-2xl font-bold">
+                    Select Delivery Address
+                  </DialogTitle>
                   <Button
                     size="sm"
                     className="bg-[#AAED56] cursor-pointer text-[#324E0F] hover:bg-[#9CD845] border-none font-bold rounded-full px-4 h-9 shadow-sm"
@@ -491,7 +576,7 @@ export default function CheckoutPage() {
                           "group relative flex flex-col p-5 rounded-2xl border-2 transition-all cursor-pointer",
                           selectedAddressId === addr._id
                             ? "border-primary bg-primary/3 shadow-inner"
-                            : "border-border hover:border-primary/30 hover:bg-muted/30"
+                            : "border-border hover:border-primary/30 hover:bg-muted/30",
                         )}
                         onClick={() => {
                           setSelectedAddressId(addr._id);
@@ -504,7 +589,9 @@ export default function CheckoutPage() {
                               <span className="font-bold text-lg text-foreground">
                                 {addr.fullName}
                               </span>
-                              <span className="text-muted-foreground opacity-50">|</span>
+                              <span className="text-muted-foreground opacity-50">
+                                |
+                              </span>
                               <span className="text-sm font-medium text-muted-foreground">
                                 {addr.phone}
                               </span>
@@ -552,8 +639,8 @@ export default function CheckoutPage() {
                               </Button>
                             )}
                             <div className="ml-2">
-                              <RadioGroupItem 
-                                value={addr._id} 
+                              <RadioGroupItem
+                                value={addr._id}
                                 className="w-5 h-5 border-2 border-primary/30 text-primary"
                               />
                             </div>
@@ -571,7 +658,9 @@ export default function CheckoutPage() {
                     </div>
                     <div className="space-y-1">
                       <p className="font-bold text-lg">No addresses found</p>
-                      <p className="text-sm text-muted-foreground">Add an address to continue with your checkout</p>
+                      <p className="text-sm text-muted-foreground">
+                        Add an address to continue with your checkout
+                      </p>
                     </div>
                     <Button
                       className="bg-[#AAED56] text-[#324E0F] hover:bg-[#9CD845] font-bold px-6"
@@ -677,14 +766,23 @@ export default function CheckoutPage() {
               <Input
                 placeholder="Enter global voucher code"
                 value={globalVoucherInput}
-                onChange={(e) => setGlobalVoucherInput(e.target.value.toUpperCase())}
+                onChange={(e) =>
+                  setGlobalVoucherInput(e.target.value.toUpperCase())
+                }
                 className="uppercase"
               />
-              <Button className="cursor-pointer" onClick={handleApplyGlobalVoucher}>
+              <Button
+                className="cursor-pointer"
+                onClick={handleApplyGlobalVoucher}
+              >
                 Apply
               </Button>
               {globalVoucherCode && (
-                <Button variant="outline" className="cursor-pointer" onClick={handleClearGlobalVoucher}>
+                <Button
+                  variant="outline"
+                  className="cursor-pointer"
+                  onClick={handleClearGlobalVoucher}
+                >
                   Remove
                 </Button>
               )}
@@ -702,7 +800,10 @@ export default function CheckoutPage() {
               <option value="">Quick select global voucher</option>
               {globalVoucherOptions.map((voucher) => (
                 <option key={voucher._id} value={voucher.code}>
-                  {voucher.code} - {voucher.type === "percentage" ? `${voucher.value}%` : `$${voucher.value}`}
+                  {voucher.code} -{" "}
+                  {voucher.type === "percentage"
+                    ? `${voucher.value}%`
+                    : `$${voucher.value}`}
                 </option>
               ))}
             </select>
@@ -716,7 +817,9 @@ export default function CheckoutPage() {
                 />
               ))}
               {!globalVoucherOptions.length && (
-                <p className="text-xs text-muted-foreground">No global vouchers available.</p>
+                <p className="text-xs text-muted-foreground">
+                  No global vouchers available.
+                </p>
               )}
             </div>
           </section>
@@ -724,7 +827,10 @@ export default function CheckoutPage() {
           <section className="bg-white rounded-xl border p-6 shadow-sm space-y-5">
             <h3 className="font-bold text-lg">Shop Vouchers</h3>
             {preview.groups.map((group: CheckoutGroup) => (
-              <div key={group.sellerId} className="border rounded-xl p-4 space-y-4">
+              <div
+                key={group.sellerId}
+                className="border rounded-xl p-4 space-y-4"
+              >
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-2 font-semibold">
                     <Store className="h-4 w-4 text-primary" />
@@ -743,17 +849,23 @@ export default function CheckoutPage() {
                     >
                       <div>
                         <p className="font-medium">{item.title}</p>
-                        {item.selectedVariants && item.selectedVariants.length > 0 && (
-                          <p className="text-xs text-muted-foreground">
-                            {item.selectedVariants
-                              .map((v: { name: string; value: string }) => `${v.name}: ${v.value}`)
-                              .join(" • ")}
-                          </p>
-                        )}
+                        {item.selectedVariants &&
+                          item.selectedVariants.length > 0 && (
+                            <p className="text-xs text-muted-foreground">
+                              {item.selectedVariants
+                                .map(
+                                  (v: { name: string; value: string }) =>
+                                    `${v.name}: ${v.value}`,
+                                )
+                                .join(" • ")}
+                            </p>
+                          )}
                       </div>
                       <div className="text-right">
                         <p>${item.lineTotal.toFixed(2)}</p>
-                        <p className="text-xs text-muted-foreground">x{item.quantity}</p>
+                        <p className="text-xs text-muted-foreground">
+                          x{item.quantity}
+                        </p>
                       </div>
                     </div>
                   ))}
@@ -808,24 +920,37 @@ export default function CheckoutPage() {
                     disabled={loadingVoucherOptions}
                   >
                     <option value="">Quick select shop voucher</option>
-                    {(sellerVoucherOptions[group.sellerId] || []).map((voucher) => (
-                      <option key={voucher._id} value={voucher.code}>
-                        {voucher.code} - {voucher.type === "percentage" ? `${voucher.value}%` : `$${voucher.value}`}
-                      </option>
-                    ))}
+                    {(sellerVoucherOptions[group.sellerId] || []).map(
+                      (voucher) => (
+                        <option key={voucher._id} value={voucher.code}>
+                          {voucher.code} -{" "}
+                          {voucher.type === "percentage"
+                            ? `${voucher.value}%`
+                            : `$${voucher.value}`}
+                        </option>
+                      ),
+                    )}
                   </select>
 
                   <div className="space-y-2">
-                    {(sellerVoucherOptions[group.sellerId] || []).map((voucher) => (
-                      <VoucherTicket
-                        key={voucher._id}
-                        voucher={voucher}
-                        selected={sellerVoucherCodes[group.sellerId] === voucher.code}
-                        onSelect={(v) => handleSelectSellerVoucher(group.sellerId, v)}
-                      />
-                    ))}
+                    {(sellerVoucherOptions[group.sellerId] || []).map(
+                      (voucher) => (
+                        <VoucherTicket
+                          key={voucher._id}
+                          voucher={voucher}
+                          selected={
+                            sellerVoucherCodes[group.sellerId] === voucher.code
+                          }
+                          onSelect={(v) =>
+                            handleSelectSellerVoucher(group.sellerId, v)
+                          }
+                        />
+                      ),
+                    )}
                     {!(sellerVoucherOptions[group.sellerId] || []).length && (
-                      <p className="text-xs text-muted-foreground">No shop vouchers available for this seller.</p>
+                      <p className="text-xs text-muted-foreground">
+                        No shop vouchers available for this seller.
+                      </p>
                     )}
                   </div>
                 </div>
@@ -905,15 +1030,21 @@ export default function CheckoutPage() {
                 </div>
                 <div className="flex justify-between text-sm text-yellow-700">
                   <span>Global Voucher</span>
-                  <span>-${(preview.totals.globalDiscountAmount || 0).toFixed(2)}</span>
+                  <span>
+                    -${(preview.totals.globalDiscountAmount || 0).toFixed(2)}
+                  </span>
                 </div>
                 <div className="flex justify-between text-sm text-blue-700">
                   <span>Shop Vouchers</span>
-                  <span>-${(preview.totals.sellerDiscountAmount || 0).toFixed(2)}</span>
+                  <span>
+                    -${(preview.totals.sellerDiscountAmount || 0).toFixed(2)}
+                  </span>
                 </div>
                 <div className="flex justify-between text-sm text-green-600 font-medium">
                   <span>Total Discount</span>
-                  <span>-${(preview.totals.discountAmount || 0).toFixed(2)}</span>
+                  <span>
+                    -${(preview.totals.discountAmount || 0).toFixed(2)}
+                  </span>
                 </div>
                 <div className="flex justify-between text-sm">
                   <span className="text-muted-foreground">Shipping Fee</span>
@@ -933,7 +1064,10 @@ export default function CheckoutPage() {
               {preview.voucherErrors && preview.voucherErrors.length > 0 && (
                 <div className="mt-4 rounded-md border border-red-200 bg-red-50 p-3 space-y-1">
                   {preview.voucherErrors.map((error, index) => (
-                    <p key={`${error.code}-${index}`} className="text-xs text-red-700">
+                    <p
+                      key={`${error.code}-${index}`}
+                      className="text-xs text-red-700"
+                    >
                       {error.scope === "seller" && error.sellerName
                         ? `${error.sellerName}: `
                         : ""}
@@ -994,13 +1128,19 @@ export default function CheckoutPage() {
       <ConfirmDialog
         open={confirmDialogOpen}
         onOpenChange={setConfirmDialogOpen}
-        title={confirmDialogAction === "delete" ? "Delete Address" : "Set Default Address"}
+        title={
+          confirmDialogAction === "delete"
+            ? "Delete Address"
+            : "Set Default Address"
+        }
         description={
           confirmDialogAction === "delete"
             ? "Are you sure you want to delete this address? This action cannot be undone."
             : "Are you sure you want to set this as your default address?"
         }
-        confirmText={confirmDialogAction === "delete" ? "Delete" : "Set as Default"}
+        confirmText={
+          confirmDialogAction === "delete" ? "Delete" : "Set as Default"
+        }
         isDangerous={confirmDialogAction === "delete"}
         loading={isActionLoading}
         onConfirm={handleConfirmAction}

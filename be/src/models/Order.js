@@ -111,12 +111,18 @@ const orderSchema = new mongoose.Schema({
 
   // Shipping information
   shippingAddress: {
-    street: String,
-    city: String,
-    state: String,
-    zipCode: String,
+    fullName: String,
+    phone: String,
     country: String,
+    city: String,
+    district: String,
+    ward: String,
+    street: String,
+    detail: String,
   },
+  shippingPrice: { type: Number, default: 0 },
+  paymentMethod: { type: String, default: "cod" },
+  note: { type: String, default: "" },
   trackingNumber: { type: String, default: "" },
   shippingLabel: { type: String, default: "" }, // URL to PDF label
   estimatedDelivery: { type: Date },
@@ -140,10 +146,16 @@ const orderSchema = new mongoose.Schema({
     note: { type: String, default: "" },
   }],
 
+  orderGroup: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: "OrderGroup",
+    default: null,
+  },
+
   createdAt: { type: Date, default: Date.now },
   updatedAt: { type: Date, default: Date.now },
 });
 
-orderSchema.index({ orderId: 1 }, { unique: true });
+orderSchema.index({ orderId: 1 }, { unique: false }); // Allow multiple items under same parent group order
 
 module.exports = mongoose.model("Order", orderSchema);

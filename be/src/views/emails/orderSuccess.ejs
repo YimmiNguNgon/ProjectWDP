@@ -1,0 +1,157 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="UTF-8" />
+    <title>Order Confirmation</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <style>
+      body {
+        margin: 0;
+        padding: 0;
+        background-color: #f2f6f8;
+        font-family: "Segoe UI", Arial, sans-serif;
+      }
+      .wrapper {
+        width: 100%;
+        padding: 30px 12px;
+        background-color: #f2f6f8;
+      }
+      .container {
+        max-width: 600px;
+        margin: 0 auto;
+        background: #ffffff;
+        border-radius: 10px;
+        overflow: hidden;
+        box-shadow: 0 4px 16px rgba(0, 0, 0, 0.06);
+      }
+      .header {
+        background: #5a9cb5;
+        padding: 24px;
+        text-align: center;
+        color: #ffffff;
+      }
+      .header h1 {
+        margin: 0;
+        font-size: 24px;
+        font-weight: 600;
+        text-transform: uppercase;
+      }
+      .content {
+        padding: 30px 24px;
+        color: #333333;
+        line-height: 1.6;
+      }
+      .content h2 {
+        margin-top: 0;
+        font-size: 20px;
+        color: #1f2937;
+      }
+      .order-summary {
+        background: #f8fafc;
+        border-radius: 8px;
+        padding: 20px;
+        margin: 24px 0;
+        border-left: 4px solid #5a9cb5;
+      }
+      .order-summary p {
+        margin: 8px 0;
+        font-size: 15px;
+      }
+      .order-summary strong {
+        color: #1f2937;
+      }
+      .btn-wrapper {
+        text-align: center;
+        margin: 30px 0;
+      }
+      .btn {
+        display: inline-block;
+        padding: 14px 28px;
+        background: #5a9cb5;
+        color: #ffffff !important;
+        text-decoration: none;
+        border-radius: 6px;
+        font-size: 16px;
+        font-weight: 600;
+      }
+      .btn:hover {
+        background: #4a8aa1;
+      }
+      .footer {
+        padding: 20px;
+        background: #f1f5f9;
+        text-align: center;
+        font-size: 13px;
+        color: #64748b;
+      }
+      .footer p {
+        margin: 4px 0;
+      }
+      .items-table {
+        width: 100%;
+        border-collapse: collapse;
+        margin: 20px 0;
+      }
+      .items-table th {
+        text-align: left;
+        border-bottom: 2px solid #e2e8f0;
+        padding: 10px;
+        font-size: 14px;
+        color: #64748b;
+      }
+      .items-table td {
+        padding: 12px 10px;
+        border-bottom: 1px solid #f1f5f9;
+        font-size: 15px;
+      }
+      .price {
+        text-align: right;
+        font-weight: 600;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="wrapper">
+      <div class="container">
+        <div class="header">
+          <h1>Order Place Successfully</h1>
+        </div>
+        <div class="content">
+          <h2>Hello <%= username %>,</h2>
+          <p>
+            Thank you for trusting and shopping at <strong>EFPT</strong>. We
+            have received your order and are processing it.
+          </p>
+
+          <div class="order-summary">
+            <p><strong>Order ID:</strong> <%= orderGroupId %></p>
+            <p><strong>Order Date:</strong> <%= date %></p>
+            <p><strong>Total Amount:</strong> <%= totalAmount %> $</p>
+            <p><strong>Payment Method:</strong> <%= paymentMethod %></p>
+          </div>
+
+          <h3>Shipping Address</h3>
+          <p>
+            <%= shippingAddress.fullName %><br />
+            <%= shippingAddress.phone %><br />
+            <%= shippingAddress.street %>, <%= shippingAddress.ward %>, <%=
+            shippingAddress.district %>, <%= shippingAddress.city %>
+          </p>
+
+          <div class="btn-wrapper">
+            <a href="<%= orderUrl %>" class="btn">View Order Details</a>
+          </div>
+
+          <p>
+            If you have any questions, please contact us through the support
+            page.
+          </p>
+        </div>
+        <div class="footer">
+          <p>© <%= new Date().getFullYear() %> EFPT. All rights reserved.</p>
+          <p>This is an automated email, please do not reply to this email.</p>
+        </div>
+      </div>
+    </div>
+  </body>
+</html>
