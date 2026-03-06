@@ -1,0 +1,133 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="UTF-8" />
+    <title>Order Status Update</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <style>
+      body {
+        margin: 0;
+        padding: 0;
+        background-color: #f2f6f8;
+        font-family: "Segoe UI", Arial, sans-serif;
+      }
+      .wrapper {
+        width: 100%;
+        padding: 30px 12px;
+        background-color: #f2f6f8;
+      }
+      .container {
+        max-width: 600px;
+        margin: 0 auto;
+        background: #ffffff;
+        border-radius: 10px;
+        overflow: hidden;
+        box-shadow: 0 4px 16px rgba(0, 0, 0, 0.06);
+      }
+      .header {
+        background: #5a9cb5;
+        padding: 24px;
+        text-align: center;
+        color: #ffffff;
+      }
+      .header h1 {
+        margin: 0;
+        font-size: 24px;
+        font-weight: 600;
+        text-transform: uppercase;
+      }
+      .content {
+        padding: 30px 24px;
+        color: #333333;
+        line-height: 1.6;
+      }
+      .content h2 {
+        margin-top: 0;
+        font-size: 20px;
+        color: #1f2937;
+      }
+      .status-box {
+        background: #f8fafc;
+        border-radius: 8px;
+        padding: 20px;
+        margin: 24px 0;
+        border-left: 4px solid #5a9cb5;
+      }
+      .status-highlight {
+        font-size: 18px;
+        font-weight: 700;
+        color: #0369a1;
+        text-transform: capitalize;
+      }
+      .order-summary p {
+        margin: 8px 0;
+        font-size: 15px;
+      }
+      .order-summary strong {
+        color: #1f2937;
+      }
+      .btn-wrapper {
+        text-align: center;
+        margin: 30px 0;
+      }
+      .btn {
+        display: inline-block;
+        padding: 14px 28px;
+        background: #5a9cb5;
+        color: #ffffff !important;
+        text-decoration: none;
+        border-radius: 6px;
+        font-size: 16px;
+        font-weight: 600;
+      }
+      .btn:hover {
+        background: #4a8aa1;
+      }
+      .footer {
+        padding: 20px;
+        background: #f1f5f9;
+        text-align: center;
+        font-size: 13px;
+        color: #64748b;
+      }
+      .footer p {
+        margin: 4px 0;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="wrapper">
+      <div class="container">
+        <div class="header">
+          <h1>Order Status Update</h1>
+        </div>
+        <div class="content">
+          <h2>Hello <%= username %>,</h2>
+          <p>
+            The status of your order <strong>#<%= orderId %></strong> has been updated.
+          </p>
+
+          <div class="status-box">
+            <p style="margin: 0;">New Status: <span class="status-highlight"><%= status.replace(/_/g, " ") %></span></p>
+            <p style="margin-top: 8px; margin-bottom: 0; color: #475569; font-size: 14px;"><%= statusMessage %></p>
+            <% if (locals.note) { %>
+              <p style="margin-top: 12px; margin-bottom: 0;"><strong>Note from seller:</strong> <%= note %></p>
+            <% } %>
+          </div>
+
+          <div class="btn-wrapper">
+            <a href="<%= orderUrl %>" class="btn">View Order Details</a>
+          </div>
+
+          <p>
+            If you have any questions, please contact the seller or our support team.
+          </p>
+        </div>
+        <div class="footer">
+          <p>© <%= new Date().getFullYear() %> EFPT. All rights reserved.</p>
+          <p>This is an automated email, please do not reply to this email.</p>
+        </div>
+      </div>
+    </div>
+  </body>
+</html>
