@@ -33,7 +33,7 @@ export const CartProvider = ({ children }: { children: React.ReactNode }) => {
   const [cart, setCart] = useState<Cart | null>(null);
   const [loading, setLoading] = useState(false);
   const { user } = useAuth();
-  const outOfStockNotifiedRef = useRef<Set<string>>(new Set());
+  const unavailableNotifiedRef = useRef<Set<string>>(new Set());
   const isFetchingRef = useRef(false);
 
   const fetchCart = useCallback(async (options?: { silent?: boolean }) => {
@@ -54,23 +54,26 @@ export const CartProvider = ({ children }: { children: React.ReactNode }) => {
       const cartData = await cartService.getMyCart();
       setCart(cartData);
 
-      const latestOutOfStock = new Set<string>();
+      const latestUnavailable = new Set<string>();
       for (const item of cartData?.items || []) {
-        if (item.isOutOfStock) {
-          latestOutOfStock.add(item._id);
-          if (!outOfStockNotifiedRef.current.has(item._id)) {
+        const isUnavailable = item.availabilityStatus
+          ? ["out_of_stock", "unavailable"].includes(item.availabilityStatus)
+          : Boolean(item.isOutOfStock);
+        if (isUnavailable) {
+          latestUnavailable.add(item._id);
+          if (!unavailableNotifiedRef.current.has(item._id)) {
             toast.error(
               item.availabilityMessage ||
-                `Product ${item.product?.title || ""} is out of stock`,
+                `Product ${item.product?.title || ""} is currently unavailable`,
             );
-            outOfStockNotifiedRef.current.add(item._id);
+            unavailableNotifiedRef.current.add(item._id);
           }
         }
       }
 
-      for (const existing of [...outOfStockNotifiedRef.current]) {
-        if (!latestOutOfStock.has(existing)) {
-          outOfStockNotifiedRef.current.delete(existing);
+      for (const existing of [...unavailableNotifiedRef.current]) {
+        if (!latestUnavailable.has(existing)) {
+          unavailableNotifiedRef.current.delete(existing);
         }
       }
     } catch (error) {

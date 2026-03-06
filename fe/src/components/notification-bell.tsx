@@ -40,12 +40,6 @@ function timeAgo(dateStr: string): string {
 }
 
 function getNotificationDisplayContent(notif: AppNotification) {
-    if (notif.type === "cart_item_out_of_stock") {
-        return {
-            title: "A cart item is out of stock",
-            body: "A product in your cart is out of stock",
-        };
-    }
     return {
         title: notif.title,
         body: notif.body,

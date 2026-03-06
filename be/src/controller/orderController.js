@@ -45,6 +45,23 @@ const toVnOutOfStockMessage = (title) => `Sản phẩm ${title} đã hết hàng
 const toVnLimitedStockMessage = (title, availableStock) =>
   `Sản phẩm ${title} chỉ còn ${availableStock} sản phẩm`;
 
+const toUnavailableMessage = (title) =>
+  `Product ${title} is currently unavailable`;
+
+const isProductListingUnavailable = (product) => {
+  if (!product) return true;
+
+  const listingStatus = String(product.listingStatus || "").toLowerCase();
+  const productStatus = String(product.status || "").toLowerCase();
+  const hasDeletedAt = Boolean(product.deletedAt);
+
+  if (hasDeletedAt || listingStatus === "deleted") return true;
+  if (listingStatus && listingStatus !== "active") return true;
+  if (productStatus && productStatus !== "available") return true;
+
+  return false;
+};
+
 const toUnavailableItem = ({
   title,
   message,
@@ -409,6 +426,20 @@ const collectCheckoutItems = async ({
       }
 
       const title = String(product.title || "Sản phẩm");
+      if (isProductListingUnavailable(product)) {
+        unavailableItems.push(
+          toUnavailableItem({
+            title,
+            message: toUnavailableMessage(title),
+            availableStock: 0,
+            productId: product._id,
+            cartItemId: cartItem._id,
+            selectedVariants,
+          }),
+        );
+        continue;
+      }
+
       if (String(product.sellerId) === String(buyerId)) {
         unavailableItems.push(
           toUnavailableItem({
@@ -521,6 +552,19 @@ const collectCheckoutItems = async ({
     }
 
     const title = String(product.title || "Sản phẩm");
+    if (isProductListingUnavailable(product)) {
+      unavailableItems.push(
+        toUnavailableItem({
+          title,
+          message: toUnavailableMessage(title),
+          availableStock: 0,
+          productId: product._id,
+          selectedVariants,
+        }),
+      );
+      continue;
+    }
+
     if (String(product.sellerId) === String(buyerId)) {
       unavailableItems.push(
         toUnavailableItem({
@@ -615,6 +659,20 @@ const preValidatePayableItemsStock = async (payableItems) => {
     }
 
     const title = String(product.title || item.title || "Sản phẩm");
+    if (isProductListingUnavailable(product)) {
+      unavailableItems.push(
+        toUnavailableItem({
+          title,
+          message: toUnavailableMessage(title),
+          availableStock: 0,
+          productId: product._id,
+          cartItemId: item.cartItemId,
+          selectedVariants,
+        }),
+      );
+      continue;
+    }
+
     const variantCheck = findVariantOption(product, selectedVariants);
     if (!variantCheck.ok) {
       unavailableItems.push(

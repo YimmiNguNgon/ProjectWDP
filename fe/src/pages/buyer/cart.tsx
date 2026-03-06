@@ -12,6 +12,16 @@ const CartPage = () => {
   const navigate = useNavigate();
 
   const items = useMemo(() => cart?.items || [], [cart?.items]);
+  const isItemPurchasable = React.useCallback(
+    (item: (typeof items)[number]) => {
+      if (item.availabilityStatus) {
+        return item.availabilityStatus === "ok";
+      }
+      const availableStock = item.availableStock ?? 0;
+      return !item.isOutOfStock && item.quantity <= availableStock;
+    },
+    [],
+  );
 
   // Group items by seller
   const groupedItems = useMemo(() => {
@@ -31,12 +41,8 @@ const CartPage = () => {
   }, [items]);
 
   const purchasableItems = useMemo(
-    () =>
-      items.filter((item) => {
-        const availableStock = item.availableStock ?? 0;
-        return !item.isOutOfStock && item.quantity <= availableStock;
-      }),
-    [items],
+    () => items.filter((item) => isItemPurchasable(item)),
+    [items, isItemPurchasable],
   );
 
   const purchasableItemIds = useMemo(
@@ -59,10 +65,7 @@ const CartPage = () => {
   const handleToggleSellerSelection = (sellerId: string) => {
     const sellerItems = groupedItems[sellerId].items;
     const sellerPurchasableIds = sellerItems
-      .filter((item) => {
-        const availableStock = item.availableStock ?? 0;
-        return !item.isOutOfStock && item.quantity <= availableStock;
-      })
+      .filter((item) => isItemPurchasable(item))
       .map((item) => item._id);
 
     const allSellerPurchasableSelected = sellerPurchasableIds.every((id) =>
@@ -85,9 +88,7 @@ const CartPage = () => {
 
   const handleToggleItem = (itemId: string) => {
     const item = items.find((x) => x._id === itemId);
-    const availableStock = item?.availableStock ?? 0;
-    const isPurchasable =
-      !!item && !item.isOutOfStock && item.quantity <= availableStock;
+    const isPurchasable = !!item && isItemPurchasable(item);
     if (!isPurchasable) return;
 
     setSelectedItemIds((prev) =>
@@ -166,12 +167,7 @@ const CartPage = () => {
             {Object.keys(groupedItems).length > 0 ? (
               Object.entries(groupedItems).map(([sellerId, group]) => {
                 const sellerPurchasableIds = group.items
-                  .filter((item) => {
-                    const availableStock = item.availableStock ?? 0;
-                    return (
-                      !item.isOutOfStock && item.quantity <= availableStock
-                    );
-                  })
+                  .filter((item) => isItemPurchasable(item))
                   .map((item) => item._id);
 
                 const isSellerAllSelected =

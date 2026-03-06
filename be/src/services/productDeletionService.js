@@ -19,7 +19,6 @@ const hardDeleteProductById = async (productId) => {
 
   const cleanupTasks = [
     Product.findByIdAndDelete(normalizedProductId),
-    CartItem.deleteMany({ product: normalizedProductId }),
     Watchlist.deleteMany({ product: normalizedProductId }),
     PromotionRequest.deleteMany({ product: normalizedProductId }),
   ];

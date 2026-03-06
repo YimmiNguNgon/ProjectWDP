@@ -67,8 +67,6 @@ export function useNotifications(
         notif.type === "cart_item_out_of_stock"
           ? {
               ...notif,
-              title: "A cart item is out of stock",
-              body: "A product in your cart is out of stock",
               link: "/cart",
             }
           : notif.type === "cart_item_price_changed"

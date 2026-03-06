@@ -28,7 +28,11 @@ export interface CartItem {
   variantSku?: string;
   availableStock?: number;
   isOutOfStock?: boolean;
-  availabilityStatus?: "ok" | "out_of_stock" | "insufficient_stock";
+  availabilityStatus?:
+    | "ok"
+    | "out_of_stock"
+    | "insufficient_stock"
+    | "unavailable";
   availabilityMessage?: string;
   seller: {
     _id: string;

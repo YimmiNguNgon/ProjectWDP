@@ -10,15 +10,26 @@ interface CartItemProps {
 
 export const CartDropdownItem = ({ item }: CartItemProps) => {
   const { updateQuantity, removeFromCart } = useCart();
-  const availableStock = item.availableStock ?? item.product.stock ?? 0;
-  const isOutOfStock = Boolean(item.isOutOfStock);
+  const availableStock = Number(item.availableStock ?? item.product.stock ?? 0);
+  const isPurchasable = item.availabilityStatus
+    ? item.availabilityStatus === "ok"
+    : !item.isOutOfStock && item.quantity <= availableStock;
+  const hasProductDetail = Boolean(item.product._id);
+  const availabilityMessage =
+    item.availabilityMessage ||
+    (isPurchasable ? "" : "Product is currently unavailable");
 
   const handleIncrease = () => {
-    if (isOutOfStock) return;
+    if (!isPurchasable) return;
     updateQuantity(item._id, "increase");
   };
 
   const handleDecrease = () => {
+    if (!isPurchasable) {
+      removeFromCart(item._id);
+      return;
+    }
+
     if (item.quantity > 1) {
       updateQuantity(item._id, "decrease");
     } else {
@@ -33,21 +44,31 @@ export const CartDropdownItem = ({ item }: CartItemProps) => {
   return (
     <div className="flex gap-4 py-3 group">
       <div className="h-20 w-20 overflow-hidden rounded-md border shrink-0">
-        <img
-          src={item.product?.image}
-          alt={item.product?.title}
-          className="h-full w-full object-cover"
-        />
+        {item.product?.image ? (
+          <img
+            src={item.product.image}
+            alt={item.product?.title}
+            className="h-full w-full object-cover"
+          />
+        ) : (
+          <div className="h-full w-full bg-gray-100" />
+        )}
       </div>
       <div className="flex flex-1 flex-col justify-between">
         <div className="flex justify-between gap-2">
           <div className="flex flex-col gap-1 mb-1">
-            <Link
-              to={`/products/${item.product._id}`}
-              className="text-sm font-medium leading-tight line-clamp-2 hover:underline"
-            >
-              {item.product.title}
-            </Link>
+            {hasProductDetail ? (
+              <Link
+                to={`/products/${item.product._id}`}
+                className="text-sm font-medium leading-tight line-clamp-2 hover:underline"
+              >
+                {item.product.title}
+              </Link>
+            ) : (
+              <p className="text-sm font-medium leading-tight line-clamp-2">
+                {item.product.title}
+              </p>
+            )}
             <p className="text-sm text-muted-foreground line-clamp-1">
               {item.product.description}
             </p>
@@ -74,14 +95,14 @@ export const CartDropdownItem = ({ item }: CartItemProps) => {
               size="icon"
               className="h-5 w-5 rounded-sm cursor-pointer"
               onClick={handleIncrease}
-              disabled={isOutOfStock || item.quantity >= availableStock}
+              disabled={!isPurchasable || item.quantity >= availableStock}
             >
               <Plus className="size-3" />
             </Button>
           </div>
-          {item.availabilityMessage && (
+          {availabilityMessage && (
             <span className="text-[11px] font-medium text-red-600">
-              {item.availabilityMessage}
+              {availabilityMessage}
             </span>
           )}
           <button

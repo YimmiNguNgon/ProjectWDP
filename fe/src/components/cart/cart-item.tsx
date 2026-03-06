@@ -21,7 +21,7 @@ export const CartItem = ({ item, isSelected, onToggle }: CartItemProps) => {
     setQuantity(item.quantity);
   }, [item.quantity]);
 
-  const description = item.product.description;
+  const description = item.product.description || "";
 
   const price = item.priceSnapShot;
   const originalPrice =
@@ -30,17 +30,29 @@ export const CartItem = ({ item, isSelected, onToggle }: CartItemProps) => {
       : null;
   const isOnSale = Boolean(item.isOnSale && originalPrice);
   const priceVND = price * 25400; // Approx rate
-  const availableStock =
-    item.availableStock ?? item.product.quantity ?? item.product.stock;
-  const isOutOfStock = Boolean(item.isOutOfStock);
+  const availableStock = Number(
+    item.availableStock ?? item.product.quantity ?? item.product.stock ?? 0,
+  );
+  const isOutOfStock = Boolean(
+    item.isOutOfStock || item.availabilityStatus === "out_of_stock",
+  );
   const isInsufficient = item.availabilityStatus === "insufficient_stock";
-  const isPurchasable =
-    !isOutOfStock && !isInsufficient && quantity <= availableStock;
-  const availabilityMessage = item.availabilityMessage;
+  const isPurchasable = item.availabilityStatus
+    ? item.availabilityStatus === "ok"
+    : !isOutOfStock && !isInsufficient && quantity <= availableStock;
+  const availabilityMessage =
+    item.availabilityMessage ||
+    (isPurchasable ? "" : "Product is currently unavailable");
+  const hasProductDetail = Boolean(item.product._id);
 
   const imageUrl = item.product.image || "";
 
   const handleDecrease = () => {
+    if (!isPurchasable) {
+      removeFromCart(item._id);
+      return;
+    }
+
     if (quantity > 1) {
       const newQty = quantity - 1;
       setQuantity(newQty);
@@ -51,7 +63,7 @@ export const CartItem = ({ item, isSelected, onToggle }: CartItemProps) => {
   };
 
   const handleIncrease = () => {
-    if (!isOutOfStock && quantity < availableStock) {
+    if (isPurchasable && quantity < availableStock) {
       const newQty = quantity + 1;
       setQuantity(newQty);
       updateQuantity(item._id, "increase");
@@ -80,7 +92,7 @@ export const CartItem = ({ item, isSelected, onToggle }: CartItemProps) => {
       }}
       className={`bg-white rounded-xl border-2 transition-all duration-200 shadow-sm overflow-hidden font-sans w-full mb-4 cursor-pointer hover:shadow-md ${
         isSelected ? "border-blue-300 ring-1 ring-blue-300" : "border-gray-200"
-      }`}
+      } ${isPurchasable ? "" : "opacity-80"}`}
     >
       {/* Item body */}
       <div className="p-4 flex gap-4 items-start">
@@ -132,13 +144,19 @@ export const CartItem = ({ item, isSelected, onToggle }: CartItemProps) => {
 
         {/* Product details */}
         <div className="flex-1 min-w-0">
-          <Link
-            to={`/products/${item.product._id}`}
-            onClick={(e) => e.stopPropagation()}
-            className="text-lg font-semibold text-blue-700 hover:text-blue-900 hover:underline leading-snug line-clamp-2 block transition-colors"
-          >
-            {item.product.title}
-          </Link>
+          {hasProductDetail ? (
+            <Link
+              to={`/products/${item.product._id}`}
+              onClick={(e) => e.stopPropagation()}
+              className="text-lg font-semibold text-blue-700 hover:text-blue-900 hover:underline leading-snug line-clamp-2 block transition-colors"
+            >
+              {item.product.title}
+            </Link>
+          ) : (
+            <p className="text-lg font-semibold text-gray-700 leading-snug line-clamp-2">
+              {item.product.title}
+            </p>
+          )}
           <p className="text-sm text-gray-500 mt-0.5 mb-2">{description}</p>
 
           {/* Pricing */}
@@ -187,7 +205,7 @@ export const CartItem = ({ item, isSelected, onToggle }: CartItemProps) => {
                     e.stopPropagation();
                     handleIncrease();
                   }}
-                  disabled={isOutOfStock || quantity >= availableStock}
+                  disabled={!isPurchasable || quantity >= availableStock}
                   className="w-8 h-8 flex cursor-pointer items-center justify-center text-gray-500 hover:bg-gray-100 disabled:opacity-30 disabled:cursor-not-allowed transition-colors border-l border-gray-300"
                 >
                   <Plus className="size-3.5" />

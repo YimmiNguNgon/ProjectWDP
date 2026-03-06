@@ -26,6 +26,49 @@ const applyLatestVariantSnapshot = (
 };
 
 const formatUsd = (value) => `$${Number(value || 0).toFixed(2)}`;
+const toUnavailableMessage = (label = "This product") =>
+  `${label} is currently unavailable`;
+
+const resolveListingAvailability = (product) => {
+  if (!product) {
+    return {
+      unavailable: true,
+      reason: "missing",
+    };
+  }
+
+  const listingStatus = String(product.listingStatus || "").toLowerCase();
+  const productStatus = String(product.status || "").toLowerCase();
+  const hasDeletedAt = Boolean(product.deletedAt);
+
+  if (hasDeletedAt || listingStatus === "deleted") {
+    return { unavailable: true, reason: "deleted" };
+  }
+
+  if (listingStatus && listingStatus !== "active") {
+    return { unavailable: true, reason: listingStatus };
+  }
+
+  if (productStatus && productStatus !== "available") {
+    return { unavailable: true, reason: productStatus };
+  }
+
+  return { unavailable: false, reason: "ok" };
+};
+
+const isProductPurchasable = (product) =>
+  !resolveListingAvailability(product).unavailable;
+
+const buildUnavailableProductSnapshot = (item) => ({
+  _id: "",
+  sellerId: String(item?.seller?._id || ""),
+  title: "Unavailable product",
+  description: "This product is currently unavailable.",
+  price: Number(item?.priceSnapShot || 0),
+  stock: 0,
+  quantity: 0,
+  image: "",
+});
 
 exports.getMyCart = async (req, res, next) => {
   try {
@@ -46,18 +89,61 @@ exports.getMyCart = async (req, res, next) => {
     const sideEffects = [];
 
     for (const item of items) {
-      if (!item.product) {
-        sideEffects.push(CartItem.deleteOne({ _id: item._id }));
-        continue;
-      }
-
-      const pricedProduct = decorateProductPricing(item.product);
       const normalizedVariants = normalizeSelectedVariants(
         item.selectedVariants || [],
       );
       const variantKey = buildVariantKey(normalizedVariants);
+
+      if (!item.product) {
+        const availabilityMessage = toUnavailableMessage();
+
+        sideEffects.push(
+          (async () => {
+            const markResult = await CartItem.updateOne(
+              { _id: item._id, stockAlertSent: { $ne: true } },
+              { $set: { stockAlertSent: true } },
+            );
+            if (markResult.modifiedCount > 0) {
+              await notificationService.sendNotification({
+                recipientId: userId,
+                type: "cart_item_out_of_stock",
+                title: "A cart item is unavailable",
+                body: availabilityMessage,
+                link: "/cart",
+                metadata: {
+                  cartItemId: String(item._id),
+                  productId: "",
+                  variantKey,
+                  reason: "deleted",
+                },
+              });
+            }
+          })(),
+        );
+
+        mappedItems.push({
+          ...item,
+          product: buildUnavailableProductSnapshot(item),
+          selectedVariants: normalizedVariants,
+          variantKey,
+          variantSku: item.variantSku || "",
+          priceSnapShot: Number(item.priceSnapShot || 0),
+          originalPriceSnapShot: null,
+          isOnSale: false,
+          availableStock: 0,
+          isOutOfStock: true,
+          availabilityStatus: "unavailable",
+          availabilityMessage,
+        });
+        continue;
+      }
+
+      const pricedProduct = decorateProductPricing(item.product);
       const variantCheck = findVariantOption(item.product, normalizedVariants);
       const pricingMeta = resolveProductPricing(item.product);
+      const listingAvailability = resolveListingAvailability(item.product);
+      const isListingUnavailable = listingAvailability.unavailable;
+      const isVariantUnavailable = !variantCheck.ok;
       const latestSnapshotPrice = Number(
         variantCheck.ok
           ? variantCheck.optionPrice
@@ -127,11 +213,14 @@ exports.getMyCart = async (req, res, next) => {
         );
       }
 
-      if (isOutOfStock) {
-        availabilityStatus = "out_of_stock";
-        availabilityMessage = `Product ${title} is out of stock`;
+      if (isListingUnavailable || isVariantUnavailable || isOutOfStock) {
+        availabilityStatus =
+          isListingUnavailable || isVariantUnavailable
+            ? "unavailable"
+            : "out_of_stock";
+        availabilityMessage = toUnavailableMessage(`Product ${title}`);
 
-        // Notify once per cart item while it remains out of stock.
+        // Notify once per cart item while it remains unavailable.
         sideEffects.push(
           (async () => {
             const markResult = await CartItem.updateOne(
@@ -142,13 +231,18 @@ exports.getMyCart = async (req, res, next) => {
               await notificationService.sendNotification({
                 recipientId: userId,
                 type: "cart_item_out_of_stock",
-                title: "A cart item is out of stock",
-                body: `Product ${title} is out of stock`,
+                title: "A cart item is unavailable",
+                body: availabilityMessage,
                 link: "/cart",
                 metadata: {
                   cartItemId: String(item._id),
                   productId: String(item.product?._id || ""),
                   variantKey,
+                  reason: isListingUnavailable
+                    ? listingAvailability.reason
+                    : isVariantUnavailable
+                      ? "variant_not_found"
+                      : "out_of_stock",
                 },
               });
             }
@@ -193,7 +287,8 @@ exports.getMyCart = async (req, res, next) => {
             : null,
         isOnSale: Boolean(pricingMeta.isOnSale),
         availableStock,
-        isOutOfStock,
+        isOutOfStock:
+          isOutOfStock || isListingUnavailable || isVariantUnavailable,
         availabilityStatus,
         availabilityMessage,
       });
@@ -263,6 +358,9 @@ exports.addToCart = async (req, res, next) => {
 
     if (!product) {
       return res.status(404).json({ message: "Not found product" });
+    }
+    if (!isProductPurchasable(product)) {
+      return res.status(400).json({ message: "Product is currently unavailable" });
     }
 
     const variantCheck = findVariantOption(product, selectedVariants);
@@ -398,6 +496,11 @@ exports.updateCartItemQuantity = async (req, res, next) => {
     const product = await Product.findById(item.product);
     if (!product) {
       return res.status(404).json({ message: "Product not found" });
+    }
+    if (!isProductPurchasable(product)) {
+      return res.status(400).json({
+        message: "Product is currently unavailable",
+      });
     }
     const normalizedVariants = normalizeSelectedVariants(
       item.selectedVariants || [],
