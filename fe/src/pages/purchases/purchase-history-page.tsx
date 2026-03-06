@@ -484,25 +484,41 @@ export default function PurchaseHistoryPage() {
                                 {/* LEFT: Image */}
                                 <div className="flex gap-3">
                                   <div className="flex h-24 w-24 items-center justify-center rounded border bg-muted overflow-hidden">
-                                    {item.productId?.imageUrl ? (
-                                      <img
-                                        src={item.productId.imageUrl}
-                                        alt={item.productId.title || item.title}
-                                        className="h-full w-full object-cover"
-                                      />
-                                    ) : (
-                                      <span className="text-xs text-muted-foreground text-center px-2">
-                                        No image
-                                      </span>
-                                    )}
+                                    <button
+                                      type="button"
+                                      onClick={() =>
+                                        handleViewOrderDetails(order._id)
+                                      }
+                                      className="h-full w-full cursor-pointer"
+                                      title="View order detail"
+                                    >
+                                      {item.productId?.imageUrl ? (
+                                        <img
+                                          src={item.productId.imageUrl}
+                                          alt={item.productId.title || item.title}
+                                          className="h-full w-full object-cover"
+                                        />
+                                      ) : (
+                                        <span className="text-xs text-muted-foreground text-center px-2">
+                                          No image
+                                        </span>
+                                      )}
+                                    </button>
                                   </div>
                                 </div>
 
                                 {/* MIDDLE: Info & Status */}
                                 <div className="flex-1 space-y-2 text-sm">
-                                  <div className="font-medium leading-snug">
+                                  <button
+                                    type="button"
+                                    onClick={() =>
+                                      handleViewOrderDetails(order._id)
+                                    }
+                                    className="font-medium leading-snug text-left hover:text-blue-600 hover:underline cursor-pointer"
+                                    title="View order detail"
+                                  >
                                     {item.productId?.title || item.title}
-                                  </div>
+                                  </button>
                                   {item.selectedVariants?.length ? (
                                     <div className="text-xs text-muted-foreground">
                                       Variant:{" "}
@@ -540,6 +556,17 @@ export default function PurchaseHistoryPage() {
 
                                 {/* RIGHT: Actions preserve all original buttons */}
                                 <div className="flex flex-col items-end gap-2 text-sm">
+                                  <Button
+                                    size="sm"
+                                    variant="outline"
+                                    className="w-40 cursor-pointer hover:text-blue-500 rounded-none border-blue-600 text-blue-600 hover:bg-blue-50"
+                                    onClick={() =>
+                                      handleViewOrderDetails(order._id)
+                                    }
+                                  >
+                                    View detail
+                                  </Button>
+
                                   {/* Return Button */}
                                   {["delivered", "refund_requested", "refunded"].includes(order.status) && (
                                     <Button

@@ -51,6 +51,7 @@ import AddProduct from "@/pages/seller/AddProduct";
 import EditProduct from "@/pages/seller/EditProduct";
 import SellerRevenue from "@/pages/seller/Revenue";
 import SellerReviews from "@/pages/seller/Reviews";
+import SellerTrustScorePage from "@/pages/seller/TrustScore";
 import MyEbayLayout from "@/layouts/my-ebay";
 import SellerFeedbackPage from "@/pages/seller/seller-feedback";
 import FeedbackRevisionRequestPage from "@/pages/seller/feedback-revision-request";
@@ -293,6 +294,10 @@ export const AppRouter = () => {
         {
           path: "revenue",
           element: <SellerRevenue />,
+        },
+        {
+          path: "trust-score",
+          element: <SellerTrustScorePage />,
         },
         {
           path: "reviews",

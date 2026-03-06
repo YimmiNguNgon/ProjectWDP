@@ -8,6 +8,7 @@ import {
   TrendingUp,
   AlertTriangle,
   RefreshCw,
+  ShieldCheck,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -156,6 +157,27 @@ export default function SellerOverview() {
           </div>
         </div>
       )}
+
+      <Card className="border-blue-200 bg-gradient-to-r from-blue-50 via-cyan-50 to-white">
+        <CardContent className="py-5">
+          <div className="flex flex-wrap items-center justify-between gap-4">
+            <div className="flex items-start gap-3">
+              <div className="w-10 h-10 rounded-lg bg-blue-100 flex items-center justify-center">
+                <ShieldCheck className="h-5 w-5 text-blue-600" />
+              </div>
+              <div>
+                <p className="font-semibold text-gray-900">Seller Score Center</p>
+                <p className="text-xs text-gray-600 mt-1">
+                  View score breakdown, moderation impact, and warning signals.
+                </p>
+              </div>
+            </div>
+            <Button asChild className="bg-blue-600 hover:bg-blue-700">
+              <Link to="/seller/trust-score">View score</Link>
+            </Button>
+          </div>
+        </CardContent>
+      </Card>
 
       {/* Stats Grid */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">

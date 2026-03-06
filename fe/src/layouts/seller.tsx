@@ -5,6 +5,7 @@ import {
   ShoppingBag,
   DollarSign,
   Star,
+  ShieldCheck,
   Home,
   MessageSquare,
   TicketPercent,
@@ -15,6 +16,7 @@ import { useAuth } from "@/hooks/use-auth";
 
 const navigation = [
   { name: "Overview", href: "/seller", icon: LayoutDashboard },
+  { name: "Seller Score", href: "/seller/trust-score", icon: ShieldCheck },
   { name: "Product Management", href: "/seller/products", icon: Package },
   { name: "Order Management", href: "/seller/orders", icon: ShoppingBag },
   { name: "Revenue Management", href: "/seller/revenue", icon: DollarSign },
