@@ -5,10 +5,16 @@ const adminUserController = require("../controller/adminUserController");
 const adminDashboardController = require("../controller/adminDashboardController");
 const adminProductController = require("../controller/adminProductController");
 const adminCategoryController = require("../controller/adminCategoryController");
+const auditLogController = require("../controller/auditLogController");
 const sellerApplicationController = require("../controller/sellerApplicationController");
 const banAppealController = require("../controller/banAppealController");
 const notificationService = require("../services/notificationService");
+const { withAuditLog } = require("../middleware/auditLogMiddleware");
 const User = require("../models/User");
+const Product = require("../models/Product");
+const Category = require("../models/Category");
+const SellerApplication = require("../models/SellerApplication");
+const BanAppeal = require("../models/BanAppeal");
 const { protectedRoute } = require("../middleware/authMiddleware");
 
 // Middleware to check if user is admin
@@ -25,36 +31,164 @@ router.use(isAdmin);
 
 // Dashboard routes
 router.get("/dashboard/stats", adminDashboardController.getDashboardStats);
+router.get("/audit-logs", auditLogController.getAuditLogs);
+router.get("/audit-logs/:id", auditLogController.getAuditLogDetail);
 
 // User management routes
 router.get("/users", adminUserController.getAllUsers);
 router.get("/users/ban-appeals", banAppealController.getAllAppeals);
-router.post("/users/ban-appeals/:id/review", banAppealController.reviewAppeal);
+router.post(
+    "/users/ban-appeals/:id/review",
+    withAuditLog({
+        resourceType: "ban_appeal",
+        model: BanAppeal,
+        resourceIdParam: "id",
+        actorRoles: ["admin"],
+        action: "review",
+    }),
+    banAppealController.reviewAppeal,
+);
 router.get("/users/:id", adminUserController.getUserDetail);
-router.put("/users/:id", adminUserController.updateUser);
-router.delete("/users/:id", adminUserController.deleteUser);
-router.post("/users/:id/ban", adminUserController.banUser);
-router.post("/users/:id/unban", adminUserController.unbanUser);
+router.put(
+    "/users/:id",
+    withAuditLog({
+        resourceType: "user",
+        model: User,
+        resourceIdParam: "id",
+        actorRoles: ["admin"],
+        action: "update",
+    }),
+    adminUserController.updateUser,
+);
+router.delete(
+    "/users/:id",
+    withAuditLog({
+        resourceType: "user",
+        model: User,
+        resourceIdParam: "id",
+        actorRoles: ["admin"],
+        action: "delete",
+    }),
+    adminUserController.deleteUser,
+);
+router.post(
+    "/users/:id/ban",
+    withAuditLog({
+        resourceType: "user",
+        model: User,
+        resourceIdParam: "id",
+        actorRoles: ["admin"],
+        action: "ban",
+    }),
+    adminUserController.banUser,
+);
+router.post(
+    "/users/:id/unban",
+    withAuditLog({
+        resourceType: "user",
+        model: User,
+        resourceIdParam: "id",
+        actorRoles: ["admin"],
+        action: "unban",
+    }),
+    adminUserController.unbanUser,
+);
 
 // Product management routes
 router.get("/products", adminProductController.getAllProducts);
-router.post("/products", adminProductController.createProduct);
+router.post(
+    "/products",
+    withAuditLog({
+        resourceType: "product",
+        model: Product,
+        actorRoles: ["admin"],
+        action: "create",
+    }),
+    adminProductController.createProduct,
+);
 router.get("/products/:id", adminProductController.getProductDetail);
-router.put("/products/:id", adminProductController.updateProduct);
-router.delete("/products/:id", adminProductController.deleteProduct);
-router.patch("/products/:id/review", adminProductController.reviewPendingProduct);
+router.put(
+    "/products/:id",
+    withAuditLog({
+        resourceType: "product",
+        model: Product,
+        resourceIdParam: "id",
+        actorRoles: ["admin"],
+        action: "update",
+    }),
+    adminProductController.updateProduct,
+);
+router.delete(
+    "/products/:id",
+    withAuditLog({
+        resourceType: "product",
+        model: Product,
+        resourceIdParam: "id",
+        actorRoles: ["admin"],
+        action: "delete",
+    }),
+    adminProductController.deleteProduct,
+);
+router.patch(
+    "/products/:id/review",
+    withAuditLog({
+        resourceType: "product",
+        model: Product,
+        resourceIdParam: "id",
+        actorRoles: ["admin"],
+        action: "review",
+    }),
+    adminProductController.reviewPendingProduct,
+);
 
 // Category management routes
 router.get("/categories", adminCategoryController.getAllCategories);
-router.post("/categories", adminCategoryController.createCategory);
+router.post(
+    "/categories",
+    withAuditLog({
+        resourceType: "category",
+        model: Category,
+        actorRoles: ["admin"],
+        action: "create",
+    }),
+    adminCategoryController.createCategory,
+);
 router.get("/categories/:id", adminCategoryController.getCategoryDetail);
-router.put("/categories/:id", adminCategoryController.updateCategory);
-router.delete("/categories/:id", adminCategoryController.deleteCategory);
+router.put(
+    "/categories/:id",
+    withAuditLog({
+        resourceType: "category",
+        model: Category,
+        resourceIdParam: "id",
+        actorRoles: ["admin"],
+        action: "update",
+    }),
+    adminCategoryController.updateCategory,
+);
+router.delete(
+    "/categories/:id",
+    withAuditLog({
+        resourceType: "category",
+        model: Category,
+        resourceIdParam: "id",
+        actorRoles: ["admin"],
+        action: "delete",
+    }),
+    adminCategoryController.deleteCategory,
+);
 
 // Report product - gửi cảnh báo tới seller
-router.post("/products/:id/report", async (req, res, next) => {
+router.post(
+  "/products/:id/report",
+  withAuditLog({
+    resourceType: "product",
+    model: Product,
+    resourceIdParam: "id",
+    actorRoles: ["admin"],
+    action: "warning",
+  }),
+  async (req, res, next) => {
     try {
-        const Product = require("../models/Product");
         const { reason, message } = req.body;
         if (!reason) {
             return res.status(400).json({ message: "Lý do báo cáo là bắt buộc" });
@@ -83,11 +217,38 @@ router.post("/products/:id/report", async (req, res, next) => {
 
 // Seller application management routes
 router.get("/seller-applications", sellerApplicationController.getAllApplications);
-router.post("/seller-applications/:id/approve", sellerApplicationController.approveApplication);
-router.post("/seller-applications/:id/reject", sellerApplicationController.rejectApplication);
+router.post(
+  "/seller-applications/:id/approve",
+  withAuditLog({
+    resourceType: "seller_application",
+    model: SellerApplication,
+    resourceIdParam: "id",
+    actorRoles: ["admin"],
+    action: "approve",
+  }),
+  sellerApplicationController.approveApplication,
+);
+router.post(
+  "/seller-applications/:id/reject",
+  withAuditLog({
+    resourceType: "seller_application",
+    model: SellerApplication,
+    resourceIdParam: "id",
+    actorRoles: ["admin"],
+    action: "reject",
+  }),
+  sellerApplicationController.rejectApplication,
+);
 
 // Broadcast notification to all users
-router.post("/notifications/broadcast", async (req, res, next) => {
+router.post(
+  "/notifications/broadcast",
+  withAuditLog({
+    resourceType: "notification",
+    actorRoles: ["admin"],
+    action: "broadcast",
+  }),
+  async (req, res, next) => {
     try {
         const { title, body, link = "/" } = req.body;
         if (!title || !body) {

@@ -202,3 +202,76 @@ export const reviewBanAppeal = async (
     });
     return response.data;
 };
+
+export interface AuditLogRow {
+    _id: string;
+    actorId?: string | null;
+    actorRole: string;
+    actorUsername: string;
+    action: string;
+    resourceType: string;
+    resourceId: string;
+    method: string;
+    path: string;
+    statusCode: number;
+    success: boolean;
+    ip: string;
+    durationMs: number;
+    createdAt: string;
+}
+
+export interface AuditLogDetail extends AuditLogRow {
+    userAgent?: string;
+    requestBodyRaw?: unknown;
+    before?: unknown;
+    after?: unknown;
+    changedFields?: Array<{
+        field: string;
+        before: unknown;
+        after: unknown;
+    }>;
+    errorMessage?: string;
+}
+
+export interface GetAuditLogsParams {
+    page?: number;
+    limit?: number;
+    actorRole?: string;
+    actorId?: string;
+    resourceType?: string;
+    action?: string;
+    statusCode?: number;
+    dateFrom?: string;
+    dateTo?: string;
+    search?: string;
+}
+
+export interface GetAuditLogsResponse {
+    success: boolean;
+    data: AuditLogRow[];
+    pagination: {
+        page: number;
+        limit: number;
+        total: number;
+        totalPages: number;
+    };
+}
+
+export interface GetAuditLogDetailResponse {
+    success: boolean;
+    data: AuditLogDetail;
+}
+
+export const getAuditLogs = async (
+    params: GetAuditLogsParams = {},
+): Promise<GetAuditLogsResponse> => {
+    const response = await api.get("/api/admin/audit-logs", { params });
+    return response.data;
+};
+
+export const getAuditLogDetail = async (
+    id: string,
+): Promise<GetAuditLogDetailResponse> => {
+    const response = await api.get(`/api/admin/audit-logs/${id}`);
+    return response.data;
+};

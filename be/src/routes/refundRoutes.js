@@ -1,7 +1,9 @@
 const express = require("express");
 const router = express.Router();
 const { protectedRoute } = require("../middleware/authMiddleware");
+const { withAuditLog } = require("../middleware/auditLogMiddleware");
 const refundController = require("../controller/refundController");
+const RefundRequest = require("../models/RefundRequest");
 
 // Midlewares role checker
 const checkRole = (role) => (req, res, next) => {
@@ -16,11 +18,47 @@ router.post("/request", protectedRoute, checkRole("buyer"), refundController.req
 router.post("/:id/dispute", protectedRoute, checkRole("buyer"), refundController.disputeRefund);
 
 // Seller endpoints
-router.post("/:id/approve", protectedRoute, checkRole("seller"), refundController.approveRefund);
-router.post("/:id/reject", protectedRoute, checkRole("seller"), refundController.rejectRefund);
+router.post(
+  "/:id/approve",
+  protectedRoute,
+  checkRole("seller"),
+  withAuditLog({
+    resourceType: "refund_request",
+    model: RefundRequest,
+    resourceIdParam: "id",
+    actorRoles: ["seller"],
+    action: "approve",
+  }),
+  refundController.approveRefund,
+);
+router.post(
+  "/:id/reject",
+  protectedRoute,
+  checkRole("seller"),
+  withAuditLog({
+    resourceType: "refund_request",
+    model: RefundRequest,
+    resourceIdParam: "id",
+    actorRoles: ["seller"],
+    action: "reject",
+  }),
+  refundController.rejectRefund,
+);
 
 // Admin endpoints
-router.post("/:id/admin-review", protectedRoute, checkRole("admin"), refundController.adminReviewRefund);
+router.post(
+  "/:id/admin-review",
+  protectedRoute,
+  checkRole("admin"),
+  withAuditLog({
+    resourceType: "refund_request",
+    model: RefundRequest,
+    resourceIdParam: "id",
+    actorRoles: ["admin"],
+    action: "review",
+  }),
+  refundController.adminReviewRefund,
+);
 
 // Endpoints to fetch data
 router.get("/order/:orderId", protectedRoute, refundController.getRefundByOrder);

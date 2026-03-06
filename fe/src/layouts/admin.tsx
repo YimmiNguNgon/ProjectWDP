@@ -1,5 +1,5 @@
 ﻿import { Link, Outlet, useLocation } from 'react-router-dom';
-import { LayoutDashboard, Users, ShoppingBag, MessageCircle, Home, ClipboardList, TicketPercent, Tags } from 'lucide-react';
+import { LayoutDashboard, Users, ShoppingBag, MessageCircle, Home, ClipboardList, TicketPercent, Tags, FileSearch } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import AdminBroadcast from '@/components/admin-broadcast';
 
@@ -12,6 +12,7 @@ const navigation = [
   { name: 'Seller Applications', href: '/admin/seller-applications', icon: ClipboardList },
   { name: 'Voucher Requests', href: '/admin/voucher-requests', icon: TicketPercent },
   { name: 'Global Vouchers', href: '/admin/global-vouchers', icon: TicketPercent },
+  { name: 'Audit Logs', href: '/admin/audit-logs', icon: FileSearch },
 ];
 
 export default function AdminLayout() {

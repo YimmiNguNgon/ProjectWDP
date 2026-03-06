@@ -18,6 +18,7 @@ import ProductManagement from "@/pages/admin/product-management";
 import FeedbackManagement from "@/pages/admin/feedback-management";
 import PermissionsPage from "@/pages/admin/permissions-page";
 import CategoryManagement from "@/pages/admin/category-management";
+import AdminAuditLogsPage from "@/pages/admin/audit-logs";
 
 import { MainLayout, SocketProvider } from "@/layouts/main";
 import AuthLayout from "@/layouts/auth";
@@ -260,6 +261,10 @@ export const AppRouter = () => {
         {
           path: "seller-applications",
           element: <AdminSellerApplicationsPage />,
+        },
+        {
+          path: "audit-logs",
+          element: <AdminAuditLogsPage />,
         },
       ],
     },
