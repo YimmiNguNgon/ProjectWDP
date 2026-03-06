@@ -368,10 +368,9 @@ export function SellerFeedbackSection({
             <div className="mt-4 flex flex-col gap-2">
               <Button 
                 className="rounded-full flex items-center gap-2"
-                onClick={() => setShowStore(true)}
-              >
-                <ShoppingBag className="h-4 w-4" />
-                Visit store
+                  onClick={() => navigate(`/seller/${sellerId}?name=${encodeURIComponent(displayName)}${productId ? `&productId=${productId}&tab=products` : '&tab=products'}`)}>
+                  <ShoppingBag className="h-4 w-4" />
+                    Visit store
               </Button>
             </div>
 
