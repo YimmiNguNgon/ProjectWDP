@@ -68,13 +68,13 @@ exports.getAllProducts = async (req, res, next) => {
 
             const lowScoreSellerScores = await SellerTrustScore.find({
                 $or: [
-                    { tier: { $in: ["RISK", "HIGH_RISK"] } },
-                    { riskFlagged: true },
-                    { finalScore: { $lt: 4 } },
+                    { tier: "HIGH_RISK" },
+                    { finalScore: { $lt: 3.0 } },
                 ],
             })
-                .select("seller finalScore tier riskFlagged")
+                .select("seller finalScore tier")
                 .lean();
+
 
             const lowScoreSellerIds = lowScoreSellerScores.map((item) => item.seller);
             if (lowScoreSellerIds.length === 0) {
@@ -97,7 +97,6 @@ exports.getAllProducts = async (req, res, next) => {
                     {
                         finalScore: Number(item.finalScore || 0),
                         tier: item.tier || "STANDARD",
-                        riskFlagged: Boolean(item.riskFlagged),
                     },
                 ]),
             );
@@ -149,7 +148,6 @@ exports.getAllProducts = async (req, res, next) => {
                 images: product.images || (product.image ? [product.image] : []),
                 sellerTrustScore: trustScore?.finalScore ?? null,
                 sellerTrustTier: trustScore?.tier ?? null,
-                sellerRiskFlagged: trustScore?.riskFlagged ?? false,
             };
         });
 

@@ -109,9 +109,13 @@ app.use("/api/vouchers", voucherRoutes);
 const feedbackRevisionRoutes = require("./routes/feedbackRevision");
 app.use("/api/feedback-revision", feedbackRevisionRoutes);
 
-// Trust Score routes (Seller Trust Score & Risk-based Moderation)
+// Trust Score routes (Seller Trust Score & Tier-based Moderation)
 const trustScoreRoutes = require("./routes/trustScore");
 app.use("/api/trust-score", trustScoreRoutes);
+
+// Verified Seller Badge routes
+const verifiedBadgeRoutes = require("./routes/verifiedBadge");
+app.use("/api/verified-badge", verifiedBadgeRoutes);
 
 // health check
 app.get("/health", (req, res) => res.json({ ok: true }));
@@ -269,6 +273,10 @@ async function start() {
   // Initialize seller stage cron job
   const { initSellerStageJob } = require("./jobs/sellerStageJob");
   initSellerStageJob();
+
+  // Initialize verified seller badge cron job
+  const { initVerifiedBadgeJob } = require("./jobs/verifiedBadgeJob");
+  initVerifiedBadgeJob();
 
   // Create HTTP server from Express app
   const http = require("http");

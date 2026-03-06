@@ -3,6 +3,11 @@ const mongoose = require("mongoose");
 /**
  * SellerTrustScore – lưu điểm uy tín tổng hợp của seller.
  * Được tính lại sau mỗi đơn DELIVERED, review mới, hoặc cron job hàng ngày.
+ *
+ * Tiers:
+ *   TRUSTED   (≥ 4.0) → AUTO_APPROVED  → sản phẩm active ngay
+ *   WARNING   (3.0-3.99) → AUTO_APPROVED  → sản phẩm active + gửi cảnh báo seller
+ *   HIGH_RISK (< 3.0)  → REQUIRE_ADMIN  → sản phẩm pending_review
  */
 const sellerTrustScoreSchema = new mongoose.Schema(
     {
@@ -15,52 +20,39 @@ const sellerTrustScoreSchema = new mongoose.Schema(
         },
 
         // ── Weighted Rating Score (Bayesian) ─────────────────────────
-        ratingScore: { type: Number, default: 0 },   // R weighted (0-5)
-        reviewCount: { type: Number, default: 0 },   // v
-        avgRating: { type: Number, default: 0 },      // R raw
+        ratingScore: { type: Number, default: 0 },
+        reviewCount: { type: Number, default: 0 },
+        avgRating: { type: Number, default: 0 },
 
-        // ── Component Scores (đã chuẩn hoá về thang 0-5) ─────────────
-        completionRateScore: { type: Number, default: 0 },  // CompletionRate × 5
-        responseRateScore: { type: Number, default: 0 },    // ResponseRate × 5
-        disputeScore: { type: Number, default: 5 },          // (1 - disputeRate) × 5
-        stabilityScore: { type: Number, default: 0 },        // min(ageMonths/24,1) × 5
+        // ── Component Scores (0-5) ────────────────────────────────────
+        completionRateScore: { type: Number, default: 0 },
+        responseRateScore: { type: Number, default: 0 },
+        disputeScore: { type: Number, default: 5 },
+        stabilityScore: { type: Number, default: 0 },
 
-        // ── Raw metrics (để hiển thị cho buyer) ──────────────────────
-        completionRate: { type: Number, default: 0 },   // % đơn hoàn thành
-        responseRate: { type: Number, default: 0 },     // % phản hồi trong 24h
-        disputeRate: { type: Number, default: 0 },      // % khiếu nại
-        accountAgeMonths: { type: Number, default: 0 }, // tuổi tài khoản (tháng)
-        totalDelivered: { type: Number, default: 0 },   // tổng đơn delivered
+        // ── Raw metrics ───────────────────────────────────────────────
+        completionRate: { type: Number, default: 0 },
+        responseRate: { type: Number, default: 0 },
+        disputeRate: { type: Number, default: 0 },
+        accountAgeMonths: { type: Number, default: 0 },
+        totalDelivered: { type: Number, default: 0 },
 
-        // ── Final weighted score ─────────────────────────────────────
-        finalScore: { type: Number, default: 0 },  // 0-5
+        // ── Final weighted score (0-5) ────────────────────────────────
+        finalScore: { type: Number, default: 0 },
 
-        // ── Tier phân loại ───────────────────────────────────────────
-        // "TRUSTED" | "STANDARD" | "RISK" | "HIGH_RISK"
+        // ── Tier ─────────────────────────────────────────────────────
         tier: {
             type: String,
-            enum: ["TRUSTED", "STANDARD", "RISK", "HIGH_RISK"],
-            default: "STANDARD",
+            enum: ["TRUSTED", "WARNING", "HIGH_RISK"],
+            default: "TRUSTED",
         },
 
-        // ── Moderation mode cho sản phẩm mới ─────────────────────────
-        // "AUTO_APPROVED" | "RANDOM_CHECK" | "REQUIRE_ADMIN" | "BLOCKED"
+        // ── Moderation mode ───────────────────────────────────────────
         productModerationMode: {
             type: String,
-            enum: ["AUTO_APPROVED", "RANDOM_CHECK", "REQUIRE_ADMIN", "BLOCKED"],
-            default: "REQUIRE_ADMIN",
+            enum: ["AUTO_APPROVED", "REQUIRE_ADMIN"],
+            default: "AUTO_APPROVED",
         },
-
-        // ── Dynamic Risk Flag ─────────────────────────────────────────
-        riskFlagged: { type: Boolean, default: false },
-        riskFlagReason: { type: String, default: "" },
-        underMonitoring: { type: Boolean, default: false },
-
-        // Metrics 30 ngày
-        totalOrders30Days: { type: Number, default: 0 },
-        refundCount30Days: { type: Number, default: 0 },
-        disputeCount30Days: { type: Number, default: 0 },
-        consecutiveReportedOrders: { type: Number, default: 0 },
 
         lastCalculatedAt: { type: Date, default: null },
     },

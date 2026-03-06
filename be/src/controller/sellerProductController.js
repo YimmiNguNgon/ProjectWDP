@@ -15,9 +15,6 @@ const Watchlist = require("../models/Watchlist");
 const notificationService = require("../services/notificationService");
 const { hardDeleteProductById } = require("../services/productDeletionService");
 
-const PROBATION_LIMITS = {
-  MAX_PRODUCTS_PER_DAY: 5,
-};
 
 const toBooleanOrUndefined = (value) => {
   if (value === true || value === false) return value;
@@ -90,18 +87,6 @@ const clearTimedSale = ({ product, fallbackPrice }) => {
   product.dealQuantitySold = 0;
 };
 
-async function countProductsCreatedToday(sellerId) {
-  const startOfDay = new Date();
-  startOfDay.setHours(0, 0, 0, 0);
-  const endOfDay = new Date();
-  endOfDay.setHours(23, 59, 59, 999);
-
-  return Product.countDocuments({
-    sellerId,
-    createdAt: { $gte: startOfDay, $lte: endOfDay },
-    listingStatus: { $ne: "deleted" },
-  });
-}
 
 exports.createProduct = async (req, res, next) => {
   try {
@@ -158,17 +143,6 @@ exports.createProduct = async (req, res, next) => {
       return res.status(404).json({ message: "Category not found" });
     }
 
-    if (seller.sellerStage === "PROBATION") {
-      const todayCount = await countProductsCreatedToday(sellerId);
-      if (todayCount >= PROBATION_LIMITS.MAX_PRODUCTS_PER_DAY) {
-        return res.status(429).json({
-          message: `Tai khoan PROBATION chi duoc dang toi da ${PROBATION_LIMITS.MAX_PRODUCTS_PER_DAY} san pham/ngay. Ban da dang ${todayCount} san pham hom nay.`,
-          probationLimit: true,
-          limit: PROBATION_LIMITS.MAX_PRODUCTS_PER_DAY,
-          todayCount,
-        });
-      }
-    }
 
     const normalizedCombinations = normalizeVariantCombinations(
       variantCombinations,
@@ -280,22 +254,11 @@ exports.getMyListings = async (req, res, next) => {
       .populate("categoryId", "name slug")
       .lean();
 
-    const seller = req.user;
-    const probationInfo =
-      seller.sellerStage === "PROBATION"
-        ? {
-          isProbation: true,
-          todayCount: await countProductsCreatedToday(sellerId),
-          dailyLimit: PROBATION_LIMITS.MAX_PRODUCTS_PER_DAY,
-        }
-        : null;
-
     return res.json({
       page: parsedPage,
       limit: parsedLimit,
       total,
       data: products.map((product) => decorateProductPricing(product)),
-      probationInfo,
     });
   } catch (err) {
     next(err);

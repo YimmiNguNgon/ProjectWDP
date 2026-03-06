@@ -94,6 +94,7 @@ const userSchema = new mongoose.Schema(
       avgRating: { type: Number, default: 0 },
       refundRate: { type: Number, default: 0 }, // 0-100 (%)
       reportRate: { type: Number, default: 0 }, // 0-100 (%)
+      isVerifiedSeller: { type: Boolean, default: false }, // Cached từ VerifiedBadge
     },
   },
   { timestamps: true },

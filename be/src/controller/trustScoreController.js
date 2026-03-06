@@ -1,6 +1,6 @@
-const { evaluateSellerTrust, runTrustScoreForAllSellers, computeTrustMetrics } = require("../services/sellerTrustService");
+const { evaluateSellerTrust, runTrustScoreForAllSellers } = require("../services/sellerTrustService");
 const SellerTrustScore = require("../models/SellerTrustScore");
-const SellerRiskHistory = require("../models/SellerRiskHistory");
+const VerifiedBadge = require("../models/VerifiedBadge");
 const User = require("../models/User");
 const mongoose = require("mongoose");
 
@@ -22,12 +22,19 @@ exports.getSellerTrustScore = async (req, res, next) => {
             trustDoc = await evaluateSellerTrust(sellerId, "CRON_JOB");
         }
 
+        // Lấy verified badge status
+        const badgeDoc = await VerifiedBadge.findOne({ seller: sellerId })
+            .select("isVerified verifiedAt")
+            .lean();
+
         return res.json({
             data: {
                 sellerId,
                 finalScore: trustDoc.finalScore,
                 tier: trustDoc.tier,
-                badge: getBadgeLabel(trustDoc.tier, trustDoc.riskFlagged, trustDoc.underMonitoring),
+                badge: getBadgeLabel(trustDoc.tier),
+                isVerifiedSeller: badgeDoc?.isVerified ?? false,
+                verifiedAt: badgeDoc?.verifiedAt ?? null,
 
                 // Stats for buyer UI
                 avgRating: trustDoc.avgRating,
@@ -47,7 +54,6 @@ exports.getSellerTrustScore = async (req, res, next) => {
                     stabilityScore: trustDoc.stabilityScore,
                 },
 
-                underMonitoring: trustDoc.underMonitoring,
                 lastCalculatedAt: trustDoc.lastCalculatedAt,
             },
         });
@@ -55,6 +61,7 @@ exports.getSellerTrustScore = async (req, res, next) => {
         next(err);
     }
 };
+
 
 /**
  * POST /api/trust-score/seller/:sellerId/recalculate
@@ -88,24 +95,6 @@ exports.recalculateAllSellers = async (req, res, next) => {
 };
 
 /**
- * GET /api/trust-score/seller/:sellerId/history
- * Protected (admin/seller): View risk flag history
- */
-exports.getSellerRiskHistory = async (req, res, next) => {
-    try {
-        const { sellerId } = req.params;
-        const history = await SellerRiskHistory.find({ seller: sellerId })
-            .sort({ createdAt: -1 })
-            .limit(50)
-            .lean();
-
-        return res.json({ data: history });
-    } catch (err) {
-        next(err);
-    }
-};
-
-/**
  * GET /api/trust-score/my-score
  * Protected (seller): View own trust score
  */
@@ -122,11 +111,8 @@ exports.getMyTrustScore = async (req, res, next) => {
             data: {
                 finalScore: trustDoc.finalScore,
                 tier: trustDoc.tier,
-                badge: getBadgeLabel(trustDoc.tier, trustDoc.riskFlagged, trustDoc.underMonitoring),
+                badge: getBadgeLabel(trustDoc.tier),
                 productModerationMode: trustDoc.productModerationMode,
-                riskFlagged: trustDoc.riskFlagged,
-                riskFlagReason: trustDoc.riskFlagReason,
-                underMonitoring: trustDoc.underMonitoring,
                 breakdown: {
                     ratingScore: trustDoc.ratingScore,
                     completionRateScore: trustDoc.completionRateScore,
@@ -141,7 +127,6 @@ exports.getMyTrustScore = async (req, res, next) => {
                     responseRate: (trustDoc.responseRate * 100).toFixed(1) + "%",
                     disputeRate: (trustDoc.disputeRate * 100).toFixed(1) + "%",
                     accountAgeMonths: trustDoc.accountAgeMonths,
-                    totalOrders30Days: trustDoc.totalOrders30Days,
                 },
                 lastCalculatedAt: trustDoc.lastCalculatedAt,
             },
@@ -152,15 +137,14 @@ exports.getMyTrustScore = async (req, res, next) => {
 };
 
 // ── Helper ────────────────────────────────────────────────────────────────────
-function getBadgeLabel(tier, riskFlagged, underMonitoring) {
-    if (riskFlagged || underMonitoring) return "Under Monitoring";
+function getBadgeLabel(tier) {
     switch (tier) {
         case "TRUSTED": return "Trusted Seller";
-        case "STANDARD": return "Standard Seller";
-        case "RISK": return "Risk Seller";
+        case "WARNING": return "Warning";
         case "HIGH_RISK": return "High Risk";
-        default: return "Standard Seller";
+        default: return "Trusted Seller";
     }
 }
+
 
 module.exports = exports;

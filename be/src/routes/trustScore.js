@@ -9,8 +9,7 @@ router.get("/seller/:sellerId", trustScoreController.getSellerTrustScore);
 // Seller: Xem điểm của chính mình
 router.get("/my-score", protectedRoute, trustScoreController.getMyTrustScore);
 
-// Admin: Xem history risk của seller
-router.get("/seller/:sellerId/history", protectedRoute, trustScoreController.getSellerRiskHistory);
+
 
 // Admin: Trigger recalculate
 router.post("/seller/:sellerId/recalculate", protectedRoute, trustScoreController.recalculateSellerTrustScore);
