@@ -23,15 +23,22 @@ const orderGroupSchema = new mongoose.Schema(
       type: String,
       enum: [
         "created",
-        "paid",
-        "processing",
-        "shipped",
+        "packaging",
+        "ready_to_ship",
+        "shipping",
         "delivered",
+        "completed",
         "cancelled",
         "failed",
         "returned",
       ],
       default: "created",
+      index: true,
+    },
+    paymentStatus: {
+      type: String,
+      enum: ["unpaid", "paid", "failed", "refunded"],
+      default: "unpaid",
       index: true,
     },
     // Shipping information shared across the group (optional)
@@ -50,7 +57,7 @@ const orderGroupSchema = new mongoose.Schema(
     paymentMethod: { type: String, default: "cod" },
     note: { type: String, default: "" },
   },
-  { timestamps: true }
+  { timestamps: true },
 );
 
 module.exports = mongoose.model("OrderGroup", orderGroupSchema);

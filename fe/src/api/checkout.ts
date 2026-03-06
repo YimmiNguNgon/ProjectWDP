@@ -17,6 +17,7 @@ export interface CheckoutPreviewPayload {
   items?: CheckoutRequestItem[];
   globalVoucherCode?: string;
   sellerVoucherCodes?: SellerVoucherCodeInput[] | Record<string, string>;
+  itemNotes?: Record<string, string>;
 }
 
 export interface CheckoutGroupItem {
@@ -108,7 +109,7 @@ export interface CheckoutConfirmPayload extends CheckoutPreviewPayload {
 
 export interface CheckoutConfirmResponse {
   success: boolean;
-  paymentStatus: "processing" | "paid" | "failed";
+  paymentStatus: "processing" | "paid" | "unpaid" | "created" | "failed";
   orders: Array<{
     _id: string;
     status: string;

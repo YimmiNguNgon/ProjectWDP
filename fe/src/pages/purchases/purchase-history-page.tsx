@@ -20,7 +20,7 @@ import {
 } from "@/hooks/use-message";
 import { useAuth } from "@/hooks/use-auth";
 import { toast } from "sonner";
-import { } from "lucide-react";
+import {} from "lucide-react";
 import {
   saveSeller as saveSellerApi,
   unsaveSeller as unsaveSellerApi,
@@ -56,6 +56,7 @@ type Order = {
   totalAmount: number;
   shippingPrice?: number;
   status: string;
+  paymentStatus?: string;
   createdAt: string;
 };
 
@@ -90,7 +91,9 @@ export default function PurchaseHistoryPage() {
     try {
       setLoading(true);
       // Fetch orders with pagination and search
-      const res = await api.get(`/api/orders?role=buyer&page=${p}&limit=${limit}&search=${encodeURIComponent(s)}`);
+      const res = await api.get(
+        `/api/orders?role=buyer&page=${p}&limit=${limit}&search=${encodeURIComponent(s)}`,
+      );
       const { data: ordersData, pagination } = res.data;
 
       setOrders(ordersData || []);
@@ -289,31 +292,32 @@ export default function PurchaseHistoryPage() {
 
   const getStatusMeta = (status: string) => {
     const normalized = String(status || "").toLowerCase();
-    if (normalized === "paid") {
+
+    if (normalized === "created") {
       return {
-        label: "Paid",
-        note: "Payment completed. Seller will process this order.",
-        dotClass: "bg-emerald-500",
-        textClass: "text-emerald-700",
+        label: "Placed",
+        note: "Order has been placed successfully.",
+        dotClass: "bg-blue-500",
+        textClass: "text-blue-700",
       };
     }
-    if (normalized === "failed") {
+    if (normalized === "packaging") {
       return {
-        label: "Payment failed",
-        note: "Payment failed. This order was marked as failed.",
-        dotClass: "bg-red-500",
-        textClass: "text-red-700",
+        label: "Packaging",
+        note: "Seller is preparing your order.",
+        dotClass: "bg-cyan-500",
+        textClass: "text-cyan-700",
       };
     }
-    if (normalized === "cancelled") {
+    if (normalized === "ready_to_ship") {
       return {
-        label: "Cancelled",
-        note: "This order was cancelled.",
-        dotClass: "bg-red-500",
-        textClass: "text-red-700",
+        label: "Ready to Ship",
+        note: "Seller has prepared your order and it's ready to be shipped.",
+        dotClass: "bg-yellow-500",
+        textClass: "text-yellow-700",
       };
     }
-    if (normalized === "shipped") {
+    if (normalized === "shipping") {
       return {
         label: "Shipped",
         note: "This order is on the way.",
@@ -329,12 +333,44 @@ export default function PurchaseHistoryPage() {
         textClass: "text-emerald-700",
       };
     }
+    if (normalized === "completed") {
+      return {
+        label: "Completed",
+        note: "Transaction completed.",
+        dotClass: "bg-emerald-600",
+        textClass: "text-emerald-800",
+      };
+    }
+    if (normalized === "cancelled") {
+      return {
+        label: "Cancelled",
+        note: "This order was cancelled.",
+        dotClass: "bg-red-500",
+        textClass: "text-red-700",
+      };
+    }
+    if (normalized === "failed") {
+      return {
+        label: "Failed",
+        note: "Payment or order failed.",
+        dotClass: "bg-red-600",
+        textClass: "text-red-800",
+      };
+    }
+    if (normalized === "returned") {
+      return {
+        label: "Returned",
+        note: "Items were returned.",
+        dotClass: "bg-purple-500",
+        textClass: "text-purple-700",
+      };
+    }
 
     return {
-      label: normalized ? normalized.toUpperCase() : "CREATED",
-      note: "Order is waiting for payment confirmation.",
-      dotClass: "bg-blue-500",
-      textClass: "text-blue-700",
+      label: normalized ? normalized.toUpperCase() : "UNKNOWN",
+      note: "Order status updated.",
+      dotClass: "bg-gray-500",
+      textClass: "text-gray-700",
     };
   };
 
@@ -350,7 +386,9 @@ export default function PurchaseHistoryPage() {
             onKeyDown={(e) => e.key === "Enter" && handleSearch()}
             className="w-64"
           />
-          <Button variant="default" onClick={handleSearch}>Search</Button>
+          <Button variant="default" onClick={handleSearch}>
+            Search
+          </Button>
         </div>
       </div>
 
@@ -484,26 +522,17 @@ export default function PurchaseHistoryPage() {
                                 {/* LEFT: Image */}
                                 <div className="flex gap-3">
                                   <div className="flex h-24 w-24 items-center justify-center rounded border bg-muted overflow-hidden">
-                                    <button
-                                      type="button"
-                                      onClick={() =>
-                                        handleViewOrderDetails(order._id)
-                                      }
-                                      className="h-full w-full cursor-pointer"
-                                      title="View order detail"
-                                    >
-                                      {item.productId?.imageUrl ? (
-                                        <img
-                                          src={item.productId.imageUrl}
-                                          alt={item.productId.title || item.title}
-                                          className="h-full w-full object-cover"
-                                        />
-                                      ) : (
-                                        <span className="text-xs text-muted-foreground text-center px-2">
-                                          No image
-                                        </span>
-                                      )}
-                                    </button>
+                                    {item.productId?.imageUrl ? (
+                                      <img
+                                        src={item.productId.imageUrl}
+                                        alt={item.productId.title || item.title}
+                                        className="h-full w-full object-cover"
+                                      />
+                                    ) : (
+                                      <span className="text-xs text-muted-foreground text-center px-2">
+                                        No image
+                                      </span>
+                                    )}
                                   </div>
                                 </div>
 
@@ -547,6 +576,26 @@ export default function PurchaseHistoryPage() {
                                       <div className="text-muted-foreground">
                                         Tracking number: -
                                       </div>
+                                      <div className="flex items-center gap-2 mt-1">
+                                        <span className="text-[10px] text-muted-foreground font-medium uppercase">
+                                          Payment:
+                                        </span>
+                                        <span
+                                          className={`px-2 py-0.5 rounded-sm font-bold text-[10px] uppercase ${
+                                            order.paymentStatus === "paid"
+                                              ? "bg-emerald-100 text-emerald-700"
+                                              : order.paymentStatus === "unpaid"
+                                                ? "bg-amber-100 text-amber-700"
+                                                : "bg-red-100 text-red-700"
+                                          }`}
+                                        >
+                                          {order.paymentStatus === "unpaid"
+                                            ? "Unpaid"
+                                            : order.paymentStatus === "paid"
+                                              ? "Paid"
+                                              : order.paymentStatus || "Unpaid"}
+                                        </span>
+                                      </div>
                                       <div className="text-muted-foreground text-[11px] italic">
                                         {statusMeta.note}
                                       </div>
@@ -558,29 +607,13 @@ export default function PurchaseHistoryPage() {
                                 <div className="flex flex-col items-end gap-2 text-sm">
                                   <Button
                                     size="sm"
-                                    variant="outline"
-                                    className="w-40 cursor-pointer hover:text-blue-500 rounded-none border-blue-600 text-blue-600 hover:bg-blue-50"
+                                    className="w-40 cursor-pointer rounded-none bg-blue-600 text-white hover:bg-blue-700"
                                     onClick={() =>
                                       handleViewOrderDetails(order._id)
                                     }
                                   >
                                     View detail
                                   </Button>
-
-                                  {/* Return Button */}
-                                  {["delivered", "refund_requested", "refunded"].includes(order.status) && (
-                                    <Button
-                                      size="sm"
-                                      className="w-40 cursor-pointer hover:text-blue-500 rounded-none bg-blue-600 text-white hover:bg-blue-700"
-                                      onClick={() =>
-                                        navigate(
-                                          `/purchases/${order._id}/return`,
-                                        )
-                                      }
-                                    >
-                                      {order.status === "delivered" ? "Return this item" : "View Return Details"}
-                                    </Button>
-                                  )}
 
                                   <Button
                                     size="sm"
@@ -730,7 +763,7 @@ export default function PurchaseHistoryPage() {
             variant="outline"
             size="sm"
             disabled={page <= 1}
-            onClick={() => setPage(p => p - 1)}
+            onClick={() => setPage((p) => p - 1)}
             className="cursor-pointer"
           >
             Previous
@@ -754,7 +787,7 @@ export default function PurchaseHistoryPage() {
             variant="outline"
             size="sm"
             disabled={page >= totalPages}
-            onClick={() => setPage(p => p + 1)}
+            onClick={() => setPage((p) => p + 1)}
             className="cursor-pointer"
           >
             Next

@@ -14,6 +14,7 @@ export interface OrderItem {
   quantity: number;
   selectedVariants?: { name: string; value: string }[];
   variantSku?: string;
+  note?: string;
 }
 
 export interface Order {
@@ -30,6 +31,7 @@ export interface Order {
   } | null;
   totalAmount: number;
   status: string;
+  paymentStatus?: string;
   shippingAddress?: {
     fullName: string;
     phone: string;
