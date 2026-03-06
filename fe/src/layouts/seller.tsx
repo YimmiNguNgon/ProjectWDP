@@ -8,6 +8,7 @@ import {
   Home,
   MessageSquare,
   TicketPercent,
+  RefreshCcw,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useAuth } from "@/hooks/use-auth";
@@ -19,6 +20,7 @@ const navigation = [
   { name: "Revenue Management", href: "/seller/revenue", icon: DollarSign },
   { name: "Customer Reviews", href: "/seller/reviews", icon: Star },
   { name: "Feedback Management", href: "/seller/feedback", icon: MessageSquare },
+  { name: "Refund Requests", href: "/seller/refunds", icon: RefreshCcw },
   { name: "Voucher", href: "/seller/vouchers", icon: TicketPercent },
 ];
 

@@ -20,7 +20,7 @@ import {
 } from "@/hooks/use-message";
 import { useAuth } from "@/hooks/use-auth";
 import { toast } from "sonner";
-import {} from "lucide-react";
+import { } from "lucide-react";
 import {
   saveSeller as saveSellerApi,
   unsaveSeller as unsaveSellerApi,
@@ -67,7 +67,7 @@ export default function PurchaseHistoryPage() {
   const [processingActions, setProcessingActions] = useState<Set<string>>(
     new Set(),
   );
-  
+
   // Pagination states
   const [page, setPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
@@ -92,7 +92,7 @@ export default function PurchaseHistoryPage() {
       // Fetch orders with pagination and search
       const res = await api.get(`/api/orders?role=buyer&page=${p}&limit=${limit}&search=${encodeURIComponent(s)}`);
       const { data: ordersData, pagination } = res.data;
-      
+
       setOrders(ordersData || []);
       setTotalPages(pagination?.pages || 1);
       setPage(pagination?.page || 1);
@@ -540,17 +540,20 @@ export default function PurchaseHistoryPage() {
 
                                 {/* RIGHT: Actions preserve all original buttons */}
                                 <div className="flex flex-col items-end gap-2 text-sm">
-                                  <Button
-                                    size="sm"
-                                    className="w-40 cursor-pointer hover:text-blue-500 rounded-none bg-blue-600 text-white hover:bg-blue-700"
-                                    onClick={() =>
-                                      navigate(
-                                        `/purchases/${order._id}/return/${item.productId?._id || ""}`,
-                                      )
-                                    }
-                                  >
-                                    Return this item
-                                  </Button>
+                                  {/* Return Button */}
+                                  {["delivered", "refund_requested", "refunded"].includes(order.status) && (
+                                    <Button
+                                      size="sm"
+                                      className="w-40 cursor-pointer hover:text-blue-500 rounded-none bg-blue-600 text-white hover:bg-blue-700"
+                                      onClick={() =>
+                                        navigate(
+                                          `/purchases/${order._id}/return`,
+                                        )
+                                      }
+                                    >
+                                      {order.status === "delivered" ? "Return this item" : "View Return Details"}
+                                    </Button>
+                                  )}
 
                                   <Button
                                     size="sm"
@@ -705,7 +708,7 @@ export default function PurchaseHistoryPage() {
           >
             Previous
           </Button>
-          
+
           <div className="flex items-center gap-1 mx-2">
             {Array.from({ length: totalPages }, (_, i) => i + 1).map((p) => (
               <Button

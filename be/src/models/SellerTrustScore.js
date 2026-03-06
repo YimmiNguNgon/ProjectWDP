@@ -40,6 +40,12 @@ const sellerTrustScoreSchema = new mongoose.Schema(
         // ── Final weighted score (0-5) ────────────────────────────────
         finalScore: { type: Number, default: 0 },
 
+        // ── Dynamic Risk Flag ─────────────────────────────────────────
+        orders30Days: { type: Number, default: 0 },
+        refunds30Days: { type: Number, default: 0 },
+        refundRate: { type: Number, default: 0 },
+        riskFlagged: { type: Boolean, default: false },
+
         // ── Tier ─────────────────────────────────────────────────────
         tier: {
             type: String,

@@ -32,7 +32,8 @@ exports.getSellerTrustScore = async (req, res, next) => {
                 sellerId,
                 finalScore: trustDoc.finalScore,
                 tier: trustDoc.tier,
-                badge: getBadgeLabel(trustDoc.tier),
+                badge: getBadgeLabel(trustDoc.tier, trustDoc.riskFlagged),
+                riskFlagged: trustDoc.riskFlagged,
                 isVerifiedSeller: badgeDoc?.isVerified ?? false,
                 verifiedAt: badgeDoc?.verifiedAt ?? null,
 
@@ -111,7 +112,8 @@ exports.getMyTrustScore = async (req, res, next) => {
             data: {
                 finalScore: trustDoc.finalScore,
                 tier: trustDoc.tier,
-                badge: getBadgeLabel(trustDoc.tier),
+                badge: getBadgeLabel(trustDoc.tier, trustDoc.riskFlagged),
+                riskFlagged: trustDoc.riskFlagged,
                 productModerationMode: trustDoc.productModerationMode,
                 breakdown: {
                     ratingScore: trustDoc.ratingScore,
@@ -137,7 +139,8 @@ exports.getMyTrustScore = async (req, res, next) => {
 };
 
 // ── Helper ────────────────────────────────────────────────────────────────────
-function getBadgeLabel(tier) {
+function getBadgeLabel(tier, riskFlagged) {
+    if (riskFlagged) return "Under Monitoring";
     switch (tier) {
         case "TRUSTED": return "Trusted Seller";
         case "WARNING": return "Warning";

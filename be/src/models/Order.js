@@ -8,7 +8,7 @@ const orderItemSchema = new mongoose.Schema(
       required: true,
     },
     title: String,
-    unitPrice: Number,  
+    unitPrice: Number,
     quantity: { type: Number, default: 1 },
     selectedVariants: [
       {
@@ -104,10 +104,15 @@ const orderSchema = new mongoose.Schema({
       "cancelled",
       "failed",
       "returned",
+      "refund_requested",  // Buyer đã gửi yêu cầu hoàn hàng
+      "refunded",          // Hoàn hàng được duyệt (seller / auto / admin)
     ],
     default: "created",
     index: true,
   },
+
+  // Timestamp khi đơn chuyển sang delivered (dùng cho 7-ngày refund window)
+  deliveredAt: { type: Date, default: null },
 
   // Shipping information
   shippingAddress: {
@@ -140,6 +145,8 @@ const orderSchema = new mongoose.Schema({
         "cancelled",
         "failed",
         "returned",
+        "refund_requested",
+        "refunded",
       ],
     },
     timestamp: { type: Date, default: Date.now },
