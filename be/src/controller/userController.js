@@ -326,7 +326,7 @@ exports.saveSeller = async (req, res, next) => {
     }
 
     // Check if seller exists
-    const seller = await User.findById(sellerId);
+    const seller = await User.findById(sellerId).select("role").lean();
     if (!seller) {
       return res.status(404).json({ message: "Seller not found" });
     }
@@ -335,25 +335,27 @@ exports.saveSeller = async (req, res, next) => {
     }
 
     // Cannot save yourself
-    if (sellerId === userId.toString()) {
+    if (String(sellerId) === String(userId)) {
       return res.status(400).json({ message: "Cannot save yourself as a seller" });
     }
 
-    const user = await User.findById(userId);
+    // Check if already saved
+    const user = await User.findById(userId).select("savedSellers").lean();
     if (!user) {
       return res.status(404).json({ message: "User not found" });
     }
-
-    // Check if already saved
-    const isAlreadySaved = user.savedSellers.some(
+    const isAlreadySaved = (user.savedSellers || []).some(
       (id) => String(id) === String(sellerId),
     );
     if (isAlreadySaved) {
       return res.status(400).json({ message: "Seller already saved" });
     }
 
-    user.savedSellers.push(sellerId);
-    await user.save();
+    // Dùng $addToSet để tránh schema validation lỗi
+    await User.findByIdAndUpdate(
+      userId,
+      { $addToSet: { savedSellers: sellerId } }
+    );
 
     return res.status(200).json({
       message: "Seller saved successfully",
@@ -374,16 +376,16 @@ exports.unsaveSeller = async (req, res, next) => {
       return res.status(400).json({ message: "Invalid seller id" });
     }
 
-    const user = await User.findById(userId);
-    if (!user) {
+    // Dùng $pull để tránh schema validation lỗi
+    const result = await User.findByIdAndUpdate(
+      userId,
+      { $pull: { savedSellers: sellerId } },
+      { new: true }
+    );
+
+    if (!result) {
       return res.status(404).json({ message: "User not found" });
     }
-
-    // Remove seller from savedSellers array
-    user.savedSellers = user.savedSellers.filter(
-      id => id.toString() !== sellerId
-    );
-    await user.save();
 
     return res.status(200).json({
       message: "Seller unsaved successfully",
