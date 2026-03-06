@@ -33,10 +33,11 @@ exports.updateOrderStatus = async (req, res, next) => {
 
         const validStatuses = [
             "created",
-            "paid",
-            "processing",
-            "shipped",
+            "packaging",
+            "ready_to_ship",
+            "shipping",
             "delivered",
+            "completed",
             "cancelled",
             "failed",
             "returned",

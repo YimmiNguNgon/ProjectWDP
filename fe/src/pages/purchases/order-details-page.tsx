@@ -10,6 +10,7 @@ import {
   Truck,
   PackageCheck,
   Star,
+  Package,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
@@ -95,8 +96,9 @@ export default function OrderDetailsPage() {
   // ─── Status timeline logic ───
   const STATUS_STEPS = [
     { key: "created", label: "Order Placed", Icon: ShoppingBag },
-    { key: "processing", label: "Processing", Icon: Settings2 },
-    { key: "shipped", label: "Shipping", Icon: Truck },
+    { key: "packaging", label: "Packaging", Icon: Settings2 },
+    { key: "ready_to_ship", label: "Ready to Ship", Icon: Package },
+    { key: "shipping", label: "Shipping", Icon: Truck },
     { key: "delivered", label: "Delivered", Icon: PackageCheck },
     { key: "completed", label: "Completed", Icon: Star },
   ] as const;
@@ -105,10 +107,11 @@ export default function OrderDetailsPage() {
 
   const STATUS_RANK: Record<string, number> = {
     created: 0,
-    processing: 1,
-    shipped: 2,
-    delivered: 3,
-    completed: 4,
+    packaging: 1,
+    ready_to_ship: 2,
+    shipping: 3,
+    delivered: 4,
+    completed: 5,
   };
 
   // Overall status = the minimum rank among all sub-orders (all must reach a state before the group advances)
@@ -249,6 +252,21 @@ export default function OrderDetailsPage() {
                 <div className="px-3 py-1.5 bg-blue-50 text-blue-700 rounded-md border border-blue-100 text-sm font-semibold uppercase">
                   {baseOrder.paymentMethod || "COD"}
                 </div>
+                <div
+                  className={`px-3 py-1.5 rounded-md border text-sm font-semibold uppercase ${
+                    baseOrder.paymentStatus === "paid"
+                      ? "bg-emerald-50 text-emerald-700 border-emerald-100"
+                      : baseOrder.paymentStatus === "unpaid"
+                        ? "bg-amber-50 text-amber-700 border-amber-100"
+                        : "bg-red-50 text-red-700 border-red-100"
+                  }`}
+                >
+                  {baseOrder.paymentStatus === "unpaid"
+                    ? "Unpaid"
+                    : baseOrder.paymentStatus === "paid"
+                      ? "Paid"
+                      : baseOrder.paymentStatus || "Unpaid"}
+                </div>
               </div>
             </div>
 
@@ -306,7 +324,7 @@ export default function OrderDetailsPage() {
                           ? "text-blue-600 bg-blue-50"
                           : STATUS_RANK[subOrder.status.toLowerCase()] >= 1
                             ? "text-cyan-600 bg-cyan-50"
-                            : "text-gray-600 bg-gray-50"
+                            : "text-blue-600 bg-blue-50"
                   }`}
                 >
                   {subOrder.status.toUpperCase()}
@@ -315,58 +333,63 @@ export default function OrderDetailsPage() {
 
               <div className="space-y-4 mt-4">
                 {subOrder.items.map((item, index) => (
-                  <div
-                    key={`${item.productId?._id}-${index}`}
-                    className="flex flex-col sm:flex-row gap-4 p-4 bg-muted/30 rounded-lg border-2 border-transparent hover:border-border transition-colors cursor-pointer"
-                    onClick={() => navigate(`/products/${item.productId?._id}`)}
-                  >
-                    <div className="h-24 w-24 bg-muted rounded-md flex items-center justify-center shrink-0 overflow-hidden border">
-                      {item.productId?.image || item.productId?.images?.[0] ? (
-                        <img
-                          src={
-                            item.productId.image || item.productId.images?.[0]
-                          }
-                          alt={item.title}
-                          className="h-full w-full object-cover"
-                        />
-                      ) : (
-                        <span className="text-xs text-muted-foreground">
-                          No image
-                        </span>
-                      )}
-                    </div>
-                    <div className="flex-1 space-y-1">
-                      <p className="font-medium text-lg leading-tight hover:underline">
-                        {item.productId?.title || item.title}
-                      </p>
-                      <p className="text-sm text-muted-foreground">
-                        Quantity: {item.quantity}
-                      </p>
-                      <p className="text-sm font-semibold mt-1">
-                        ${item.unitPrice.toFixed(2)} x {item.quantity} = $
-                        {(item.unitPrice * item.quantity).toFixed(2)}
-                      </p>
-                      {item.selectedVariants &&
-                        item.selectedVariants.length > 0 && (
-                          <div className="flex flex-wrap gap-2 mt-2">
-                            {item.selectedVariants.map((v) => (
-                              <span
-                                key={`${v.name}-${v.value}`}
-                                className="px-2 py-1 bg-white border rounded text-xs text-muted-foreground"
-                              >
-                                <span className="font-medium text-foreground mr-1">
-                                  {v.name}:
-                                </span>
-                                {v.value}
-                              </span>
-                            ))}
-                          </div>
+                  <div key={`${item.productId?._id}-${index}`} className="flex flex-col gap-2">
+                    <div
+                      className="flex flex-col sm:flex-row gap-4 p-4 bg-muted/30 rounded-lg border-2 border-transparent hover:border-border transition-colors cursor-pointer"
+                      onClick={() => navigate(`/products/${item.productId?._id}`)}
+                    >
+                      <div className="h-24 w-24 bg-muted rounded-md flex items-center justify-center shrink-0 overflow-hidden border">
+                        {item.productId?.image || item.productId?.images?.[0] ? (
+                          <img
+                            src={
+                              item.productId.image || item.productId.images?.[0]
+                            }
+                            alt={item.title}
+                            className="h-full w-full object-cover"
+                          />
+                        ) : (
+                          <span className="text-xs text-muted-foreground">
+                            No image
+                          </span>
                         )}
+                      </div>
+                      <div className="flex-1 space-y-1">
+                        <p className="font-medium text-lg leading-tight hover:underline">
+                          {item.productId?.title || item.title}
+                        </p>
+                        <p className="text-sm text-muted-foreground">
+                          Quantity: {item.quantity}
+                        </p>
+                        <p className="text-sm font-semibold mt-1">
+                          ${item.unitPrice.toFixed(2)} x {item.quantity} = $
+                          {(item.unitPrice * item.quantity).toFixed(2)}
+                        </p>
+                        {item.selectedVariants &&
+                          item.selectedVariants.length > 0 && (
+                            <div className="flex flex-wrap gap-2 mt-2">
+                              {item.selectedVariants.map((v) => (
+                                <span
+                                  key={`${v.name}-${v.value}`}
+                                  className="px-2 py-1 bg-white border rounded text-xs text-muted-foreground"
+                                >
+                                  <span className="font-medium text-foreground mr-1">
+                                    {v.name}:
+                                  </span>
+                                  {v.value}
+                                </span>
+                              ))}
+                            </div>
+                          )}
+                      </div>
                     </div>
+                    {item.note && (
+                      <div className="mx-4 mb-4 mt-0 p-3 bg-yellow-50/50 border border-yellow-100 rounded-lg text-sm text-yellow-800 italic">
+                        Note: "{item.note}"
+                      </div>
+                    )}
                   </div>
                 ))}
               </div>
-
               <div className="bg-muted/10 p-4 rounded-lg border mt-4 text-sm space-y-2">
                 <div className="flex justify-between">
                   <span className="text-muted-foreground">Subtotal</span>

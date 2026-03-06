@@ -19,7 +19,6 @@ import { getAddresses, type Address } from "@/api/user";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Textarea } from "@/components/ui/textarea";
 import {
   Dialog,
   DialogContent,
@@ -98,7 +97,7 @@ export default function CheckoutPage() {
 
   const [shippingMethod, setShippingMethod] = useState<string>("standard");
   const [paymentMethod, setPaymentMethod] = useState<string>("cod");
-  const [orderNote, setOrderNote] = useState<string>("");
+  const [itemNotes, setItemNotes] = useState<Record<string, string>>({});
   const [globalVoucherInput, setGlobalVoucherInput] = useState("");
   const [globalVoucherCode, setGlobalVoucherCode] = useState("");
   const [sellerVoucherInputs, setSellerVoucherInputs] = useState<
@@ -143,8 +142,9 @@ export default function CheckoutPage() {
       ...payload,
       globalVoucherCode: globalVoucherCode || undefined,
       sellerVoucherCodes: sellerVoucherPayload,
+      itemNotes,
     }),
-    [payload, globalVoucherCode, sellerVoucherPayload],
+    [payload, globalVoucherCode, sellerVoucherPayload, itemNotes],
   );
 
   const loadPreview = async () => {
@@ -276,13 +276,14 @@ export default function CheckoutPage() {
         },
         shippingPrice: shippingCosts[shippingMethod] || 0,
         paymentMethod: paymentMethod,
-        note: orderNote,
+        itemNotes: itemNotes,
       };
       const result = await confirmCheckout(requestBody);
 
       if (
         result.paymentStatus === "processing" ||
-        result.paymentStatus === "paid"
+        result.paymentStatus === "paid" ||
+        result.paymentStatus === "unpaid"
       ) {
         toast.success("Payment successful.");
         await refreshCart();
@@ -845,27 +846,42 @@ export default function CheckoutPage() {
                   {group.items.map((item: CheckoutGroupItem) => (
                     <div
                       key={`${group.sellerId}-${item.productId}-${item.cartItemId || ""}`}
-                      className="flex items-center justify-between text-sm"
+                      className="flex flex-col gap-2 p-3 bg-muted/10 rounded-lg"
                     >
-                      <div>
-                        <p className="font-medium">{item.title}</p>
-                        {item.selectedVariants &&
-                          item.selectedVariants.length > 0 && (
-                            <p className="text-xs text-muted-foreground">
-                              {item.selectedVariants
-                                .map(
-                                  (v: { name: string; value: string }) =>
-                                    `${v.name}: ${v.value}`,
-                                )
-                                .join(" • ")}
-                            </p>
-                          )}
+                      <div className="flex items-center justify-between text-sm">
+                        <div>
+                          <p className="font-medium">{item.title}</p>
+                          {item.selectedVariants &&
+                            item.selectedVariants.length > 0 && (
+                              <p className="text-xs text-muted-foreground">
+                                {item.selectedVariants
+                                  .map(
+                                    (v: { name: string; value: string }) =>
+                                      `${v.name}: ${v.value}`,
+                                  )
+                                  .join(" • ")}
+                              </p>
+                            )}
+                        </div>
+                        <div className="text-right">
+                          <p>${item.lineTotal.toFixed(2)}</p>
+                          <p className="text-xs text-muted-foreground">
+                            x{item.quantity}
+                          </p>
+                        </div>
                       </div>
-                      <div className="text-right">
-                        <p>${item.lineTotal.toFixed(2)}</p>
-                        <p className="text-xs text-muted-foreground">
-                          x{item.quantity}
-                        </p>
+                      <div className="mt-1">
+                        <Input
+                          placeholder="Note for this item..."
+                          value={itemNotes[item.cartItemId || item.productId] || ""}
+                          onChange={(e) =>
+                            setItemNotes((prev) => ({
+                              ...prev,
+                              [item.cartItemId || item.productId]: e.target.value,
+                            }))
+                          }
+                          className="h-8 text-xs bg-white"
+                        />
                       </div>
                     </div>
                   ))}
@@ -956,17 +972,6 @@ export default function CheckoutPage() {
                 </div>
               </div>
             ))}
-          </section>
-
-          {/* Note Section */}
-          <section className="bg-white rounded-xl border p-6 shadow-sm">
-            <h3 className="font-bold mb-4">Order Note (optional)</h3>
-            <Textarea
-              placeholder="Enter instructions for the shop..."
-              value={orderNote}
-              onChange={(e) => setOrderNote(e.target.value)}
-              className="resize-none h-24"
-            />
           </section>
         </div>
 

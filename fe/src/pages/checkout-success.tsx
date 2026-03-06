@@ -67,16 +67,16 @@ const PARTICLES = Array.from({ length: 24 }, (_, i) => ({
 
 const STEPS = [
   { key: "created", label: "Order Placed", Icon: ShoppingBag },
-  { key: "processing", label: "Processing", Icon: Settings2 },
-  { key: "shipped", label: "Shipping", Icon: Truck },
+  { key: "packaging", label: "Packaging", Icon: Settings2 },
+  { key: "shipping", label: "Shipping", Icon: Truck },
   { key: "delivered", label: "Delivered", Icon: PackageCheck },
   { key: "completed", label: "Completed", Icon: Star },
 ];
 
 const STATUS_RANK: Record<string, number> = {
   created: 0,
-  processing: 1,
-  shipped: 2,
+  packaging: 1,
+  shipping: 2,
   delivered: 3,
   completed: 4,
 };
@@ -116,13 +116,13 @@ export default function CheckoutSuccessPage() {
   const orderGroupId = state?.orderGroupId ?? orders[0]?._id ?? "";
 
   const overallStatus = (() => {
-    if (orders.length === 0) return "processing";
+    if (orders.length === 0) return "packaging";
     let minRank = 4;
     for (const o of orders) {
       const rank = STATUS_RANK[o.status?.toLowerCase()] ?? 0;
       if (rank < minRank) minRank = rank;
     }
-    return STEPS[minRank]?.key ?? "processing";
+    return STEPS[minRank]?.key ?? "packaging";
   })();
 
   const overallRank = STATUS_RANK[overallStatus] ?? 0;
@@ -231,11 +231,11 @@ export default function CheckoutSuccessPage() {
                   ),
                   label: "Status",
                   value:
-                    overallStatus === "processing"
-                      ? "Processing"
+                    overallStatus === "packaging"
+                      ? "Packaging"
                       : overallStatus === "created"
                         ? "Order Placed"
-                        : overallStatus === "shipped"
+                        : overallStatus === "shipping"
                           ? "Shipping"
                           : overallStatus === "delivered"
                             ? "Delivered"

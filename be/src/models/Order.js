@@ -17,12 +17,14 @@ const orderItemSchema = new mongoose.Schema(
       },
     ],
     variantSku: { type: String, default: "" },
+    note: { type: String, default: "" },
   },
-  { _id: false }
+  { _id: false },
 );
 
 const orderSchema = new mongoose.Schema({
-  orderId: {  // Thêm field orderId
+  orderId: {
+    // Thêm field orderId
     type: mongoose.Schema.Types.ObjectId,
     default: () => new mongoose.Types.ObjectId(),
     index: true,
@@ -97,17 +99,22 @@ const orderSchema = new mongoose.Schema({
     type: String,
     enum: [
       "created",
-      "paid",
-      "processing",
-      "shipped",
+      "packaging",
+      "ready_to_ship",
+      "shipping",
       "delivered",
+      "completed",
       "cancelled",
       "failed",
       "returned",
-      "refund_requested",  // Buyer đã gửi yêu cầu hoàn hàng
-      "refunded",          // Hoàn hàng được duyệt (seller / auto / admin)
     ],
     default: "created",
+    index: true,
+  },
+  paymentStatus: {
+    type: String,
+    enum: ["unpaid", "paid", "failed", "refunded"],
+    default: "unpaid",
     index: true,
   },
 
@@ -133,25 +140,26 @@ const orderSchema = new mongoose.Schema({
   estimatedDelivery: { type: Date },
 
   // Status history
-  statusHistory: [{
-    status: {
-      type: String,
-      enum: [
-        "created",
-        "paid",
-        "processing",
-        "shipped",
-        "delivered",
-        "cancelled",
-        "failed",
-        "returned",
-        "refund_requested",
-        "refunded",
-      ],
+  statusHistory: [
+    {
+      status: {
+        type: String,
+        enum: [
+          "created",
+          "packaging",
+          "ready_to_ship",
+          "shipping",
+          "delivered",
+          "completed",
+          "cancelled",
+          "failed",
+          "returned",
+        ],
+      },
+      timestamp: { type: Date, default: Date.now },
+      note: { type: String, default: "" },
     },
-    timestamp: { type: Date, default: Date.now },
-    note: { type: String, default: "" },
-  }],
+  ],
 
   orderGroup: {
     type: mongoose.Schema.Types.ObjectId,

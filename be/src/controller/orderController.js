@@ -372,10 +372,11 @@ const collectCheckoutItems = async ({
   source,
   cartItemIds = [],
   items = [],
+  itemNotes = {},
 }) => {
   const normalizedSource = normalizeCheckoutSource(source);
-  const unavailableItems = [];
-  const payableItems = [];
+  let unavailableItems = [];
+  let payableItems = [];
   let cart = null;
 
   if (normalizedSource === CHECKOUT_SOURCE.CART) {
@@ -511,6 +512,7 @@ const collectCheckoutItems = async ({
         variantSku: variantCheck.optionSku || "",
         variantKey: buildVariantKey(selectedVariants),
         availableStock,
+        note: itemNotes[String(cartItem._id)] || itemNotes[String(product._id)] || "",
       });
     }
 
@@ -770,6 +772,7 @@ const createOrdersFromPayableItems = async ({
   shippingAddress,
   shippingPrice,
   paymentMethod,
+  paymentStatus,
   note,
 }) => {
   const groupedBySeller = new Map();
@@ -813,6 +816,7 @@ const createOrdersFromPayableItems = async ({
       quantity: Number(item.quantity),
       selectedVariants: normalizeSelectedVariants(item.selectedVariants || []),
       variantSku: item.variantSku || "",
+      note: item.note || "",
     }));
 
     const subtotalAmount = Number(
@@ -895,6 +899,7 @@ const createOrdersFromPayableItems = async ({
       },
       totalAmount,
       status,
+      paymentStatus,
       statusHistory,
       shippingAddress,
       shippingPrice: 0, // Shipping is now at OrderGroup level
@@ -911,7 +916,18 @@ const createOrdersFromPayableItems = async ({
 // Lấy tất cả orders với format mới
 getAllOrders = async (req, res) => {
   try {
-    const orders = await Order.find({})
+    const filter = {};
+    
+    // Only return user's own orders unless they are an admin
+    if (req.user.role === "buyer") {
+      filter.buyer = req.user._id;
+    } else if (req.user.role === "seller") {
+      filter.seller = req.user._id;
+    } else if (req.user.role !== "admin") {
+      return res.status(403).json({ success: false, message: "Unauthorized role" });
+    }
+
+    const orders = await Order.find(filter)
       .populate("buyer", "username email") // Giả sử User model có trường username và email
       .populate("seller", "username")
       .populate("items.productId", "title")
@@ -944,6 +960,7 @@ getAllOrders = async (req, res) => {
             }
           : null,
         status: order.status,
+        paymentStatus: order.paymentStatus || "unpaid",
         items: order.items, // Return the actual items array
         itemCount: totalItems, // Số lượng items (tổng quantity)
         date: formatDate(order.createdAt),
@@ -973,28 +990,42 @@ getOrderById = async (req, res) => {
     let group = await OrderGroup.findById(id).lean();
     let orders = [];
 
-    if (group) {
-      orders = await Order.find({ orderGroup: id })
-        .populate("buyer", "username email phone address")
-        .populate("seller", "username email phone")
-        .populate("items.productId", "title images image");
-    } else {
-      const single = await Order.findById(id)
-        .populate("buyer", "username email phone address")
-        .populate("seller", "username email phone")
-        .populate("items.productId", "title images image");
+    let single = null;
+    if (!group) {
+      single = await Order.findById(id);
+    }
 
-      if (single) {
-        if (single.orderGroup) {
-          // If it belongs to a group, get the whole group instead!
-          group = await OrderGroup.findById(single.orderGroup).lean();
-          orders = await Order.find({ orderGroup: single.orderGroup })
-            .populate("buyer", "username email phone address")
-            .populate("seller", "username email phone")
-            .populate("items.productId", "title images image");
-        } else {
-          orders = [single];
-        }
+    const groupOrderId = group ? id : (single?.orderGroup || null);
+
+    if (groupOrderId) {
+      const groupFilter = { orderGroup: groupOrderId };
+      
+      // Security: Only return orders belonging to the user if they are not an admin
+      if (req.user.role === "buyer") {
+        groupFilter.buyer = req.user._id;
+      } else if (req.user.role === "seller") {
+        groupFilter.seller = req.user._id;
+      }
+
+      orders = await Order.find(groupFilter)
+        .populate("buyer", "username email phone address")
+        .populate("seller", "username email phone")
+        .populate("items.productId", "title images image");
+    } else if (single) {
+      orders = [single];
+    }
+
+    if (orders.length > 0) {
+      // Security check: ensure user owns the order or is admin
+      const firstOrder = orders[0];
+      const isOwner = String(firstOrder.buyer?._id || firstOrder.buyer) === String(req.user._id) || 
+                      String(firstOrder.seller?._id || firstOrder.seller) === String(req.user._id);
+      
+      if (!isOwner && req.user.role !== "admin") {
+        return res.status(403).json({
+          success: false,
+          message: "You do not have permission to view this order",
+        });
       }
     }
 
@@ -1026,6 +1057,7 @@ getOrderById = async (req, res) => {
         discountAmount: order.discountAmount ?? 0,
         voucher: order.voucher || null,
         status: order.status,
+        paymentStatus: order.paymentStatus || "unpaid",
         items: order.items,
         itemCount: totalItems,
         date: formatDate(order.createdAt),
@@ -1082,9 +1114,13 @@ getOrders = async (req, res) => {
     }
 
     // Lọc theo role của user hiện tại
-    if (role === "buyer" && req.user) {
+    if (role === "buyer") {
       filter.buyer = req.user._id;
-    } else if (role === "seller" && req.user) {
+    } else if (role === "seller") {
+      filter.seller = req.user._id;
+    } else if (req.user.role === "buyer") {
+      filter.buyer = req.user._id;
+    } else if (req.user.role === "seller") {
       filter.seller = req.user._id;
     }
 
@@ -1148,6 +1184,7 @@ getOrders = async (req, res) => {
             }
           : null,
         status: order.status,
+        paymentStatus: order.paymentStatus || "unpaid",
         items: order.items,
         itemCount: totalItems,
         date: formatDate(order.createdAt),
@@ -1178,35 +1215,60 @@ getOrders = async (req, res) => {
 // Thống kê orders
 getOrderStats = async (req, res) => {
   try {
+    const match = {};
+    if (req.user.role === "seller") {
+      match.seller = req.user._id;
+    } else if (req.user.role === "buyer") {
+      match.buyer = req.user._id;
+    }
+
     const stats = await Order.aggregate([
+      { $match: match },
       {
-        $group: {
-          _id: null,
-          totalOrders: { $sum: 1 },
-          totalRevenue: { $sum: "$totalAmount" },
-          pendingOrders: {
-            $sum: {
-              $cond: [
-                { $in: ["$status", ["created", "paid", "processing"]] },
-                1,
-                0,
-              ],
+        $facet: {
+          totals: [
+            {
+              $group: {
+                _id: null,
+                totalOrders: { $sum: 1 },
+                totalRevenue: { $sum: "$totalAmount" },
+              },
             },
-          },
-          completedOrders: {
-            $sum: { $cond: [{ $eq: ["$status", "delivered"] }, 1, 0] },
-          },
+          ],
+          countsByStatus: [
+            {
+              $group: {
+                _id: "$status",
+                count: { $sum: 1 },
+              },
+            },
+          ],
         },
       },
     ]);
 
+    const result = stats[0];
+    const totals = result.totals[0] || { totalOrders: 0, totalRevenue: 0 };
+    const counts = {};
+    
+    // Initialize all possible statuses to 0
+    const allStatuses = ["created", "packaging", "ready_to_ship", "shipping", "delivered", "cancelled", "failed", "completed"];
+    allStatuses.forEach(s => counts[s] = 0);
+    
+    // Map aggregation results to counts object
+    result.countsByStatus.forEach(item => {
+      counts[item._id] = item.count;
+    });
+
     res.status(200).json({
       success: true,
-      data: stats[0] || {
-        totalOrders: 0,
-        totalRevenue: 0,
-        pendingOrders: 0,
-        completedOrders: 0,
+      data: {
+        totalOrders: totals.totalOrders,
+        totalRevenue: totals.totalRevenue,
+        counts: counts,
+        // Legacy support if needed
+        pendingOrders: (counts.created || 0) + (counts.packaging || 0) + (counts.ready_to_ship || 0),
+        completedOrders: (counts.delivered || 0) + (counts.completed || 0),
       },
     });
   } catch (error) {
@@ -1350,11 +1412,21 @@ confirmCheckout = async (req, res) => {
     }
 
     const finalStatus =
-      paymentSimulation === "success" ? "processing" : "failed";
+      paymentSimulation === "success" ? "created" : "failed";
+
+    let paymentStatus = "unpaid";
+    if (paymentSimulation === "success") {
+      paymentStatus =
+        String(paymentMethod || "").toLowerCase() === "cod" ? "unpaid" : "paid";
+    } else {
+      paymentStatus = "failed";
+    }
+
     const orders = await createOrdersFromPayableItems({
       buyerId,
       payableItems: checkout.payableItems,
       status: finalStatus,
+      paymentStatus,
       voucherContext: voucherResolution,
       shippingAddress,
       shippingPrice,
@@ -1373,6 +1445,7 @@ confirmCheckout = async (req, res) => {
         orders: orders.map((o) => o._id),
         totalAmount: parentTotal + Number(shippingPrice || 0), // Include shipping in group total
         status: finalStatus,
+        paymentStatus,
         shippingAddress,
         shippingPrice: Number(shippingPrice || 0),
         paymentMethod,
@@ -1460,7 +1533,7 @@ confirmCheckout = async (req, res) => {
 
     return res.status(201).json({
       success: true,
-      paymentStatus: finalStatus,
+      paymentStatus: paymentStatus,
       orders,
       appliedVouchers: {
         global: voucherResolution.appliedGlobalVoucher,

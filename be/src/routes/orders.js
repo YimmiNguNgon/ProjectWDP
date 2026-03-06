@@ -46,9 +46,9 @@ router.patch(
   }),
   sellerOrderController.updateShippingAddress,
 );
-router.get('/all', orderController.getAllOrders);
-router.get('/stats', orderController.getOrderStats);
-router.get('/:id', orderController.getOrderById);
+router.get('/all', protectedRoute, orderController.getAllOrders);
+router.get('/stats', protectedRoute, orderController.getOrderStats);
+router.get('/:id', protectedRoute, orderController.getOrderById);
 router.get('/', protectedRoute, orderController.getOrders);
 
 module.exports = router;
