@@ -3,6 +3,7 @@ const Product = require("../models/Product");
 const mongoose = require("mongoose");
 // Trust Score trigger (non-blocking, fire-and-forget)
 const { evaluateSellerTrust } = require("../services/sellerTrustService");
+const sendEmail = require("../utils/sendEmail");
 
 /**
  * Update order status
@@ -79,6 +80,40 @@ exports.updateOrderStatus = async (req, res, next) => {
             .populate("seller", "username")
             .populate("items.productId", "title price image images")
             .lean();
+
+        // Send email to buyer asynchronously (fire-and-forget)
+        if (updated && updated.buyer && updated.buyer.email) {
+            setImmediate(() => {
+                const statusMessages = {
+                    created: "Your order has been created and is waiting for processing.",
+                    packaging: "The seller is currently packaging your items.",
+                    ready_to_ship: "Your order is packed and waiting for the shipping carrier.",
+                    shipping: "Your order is on the way! It has been handed over to the shipping carrier.",
+                    delivered: "Your order has been successfully delivered. We hope you enjoy it!",
+                    completed: "Your order is marked as completed.",
+                    cancelled: "Your order has been cancelled.",
+                    failed: "There was an issue fulfilling your order. It has been marked as failed.",
+                    returned: "Your order has been returned.",
+                };
+                const statusMessage = statusMessages[status] || `Your order status has changed to ${status.replace(/_/g, " ")}.`;
+
+                sendEmail({
+                    to: updated.buyer.email,
+                    subject: `Order Status Updated - #${updated._id}`,
+                    template: "orderStatusUpdate.ejs",
+                    data: {
+                        username: updated.buyer.username,
+                        orderId: updated._id,
+                        status: status,
+                        statusMessage: statusMessage,
+                        note: note || "",
+                        orderUrl: `${process.env.CLIENT_URL || "http://localhost:5173"}/purchases/${updated._id}`,
+                    },
+                }).catch((err) =>
+                    console.error("[OrderStatusEmail] send notification failed:", err.message)
+                );
+            });
+        }
 
         return res.json({
             message: `Order status updated to ${status}`,
