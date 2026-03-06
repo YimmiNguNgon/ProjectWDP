@@ -62,6 +62,7 @@ import CheckoutSuccessPage from "@/pages/checkout-success";
 import SellerVouchersPage from "@/pages/seller/vouchers";
 import AdminVoucherRequestsPage from "@/pages/admin/voucher-requests";
 import AdminGlobalVouchersPage from "@/pages/admin/vouchers-global";
+import SellerInformationPage from "@/components/seller/seller-information";
 
 // Placeholder components for admin pages
 const AdminComplaints = () => (
@@ -304,6 +305,10 @@ export const AppRouter = () => {
           element: <SellerVouchersPage />,
         },
       ],
+    },
+    {
+      path: "/seller/:sellerId",
+      element: <SellerInformationPage />,
     },
     {
       path: "/verify-email",
