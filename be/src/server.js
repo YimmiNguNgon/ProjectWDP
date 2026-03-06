@@ -117,6 +117,10 @@ app.use("/api/trust-score", trustScoreRoutes);
 const verifiedBadgeRoutes = require("./routes/verifiedBadge");
 app.use("/api/verified-badge", verifiedBadgeRoutes);
 
+// Refund System routes
+const refundRoutes = require("./routes/refundRoutes");
+app.use("/api/refund", refundRoutes);
+
 // health check
 app.get("/health", (req, res) => res.json({ ok: true }));
 
@@ -277,6 +281,10 @@ async function start() {
   // Initialize verified seller badge cron job
   const { initVerifiedBadgeJob } = require("./jobs/verifiedBadgeJob");
   initVerifiedBadgeJob();
+
+  // Initialize refund auto-approve cron job
+  const { initRefundJob } = require("./jobs/refundJob");
+  initRefundJob();
 
   // Create HTTP server from Express app
   const http = require("http");

@@ -27,6 +27,7 @@ import PurchaseHistoryPage from "@/pages/purchases/purchase-history-page";
 import OrderDetailsPage from "@/pages/purchases/order-details-page";
 import WatchlistPage from "@/pages/purchases/watchlist-page";
 import LeaveFeedbackPage from "@/pages/purchases/leave-feedback-page";
+import ReturnItemPage from "@/pages/purchases/return-item-page";
 import FeatureUnderConstructionPage from "@/pages/feature-under-construction";
 import MessagesPage from "@/pages/messages-page";
 import MyListingsPage from "@/pages/seller/my-listings";
@@ -45,6 +46,7 @@ import SellerLayout from "@/layouts/seller";
 import SellerOverview from "@/pages/seller/Overview";
 import SellerOrders from "@/pages/seller/Orders";
 import SellerProducts from "@/pages/seller/Products";
+import SellerRefunds from "@/pages/seller/Refunds";
 import AddProduct from "@/pages/seller/AddProduct";
 import EditProduct from "@/pages/seller/EditProduct";
 import SellerRevenue from "@/pages/seller/Revenue";
@@ -173,6 +175,10 @@ export const AppRouter = () => {
           element: <LeaveFeedbackPage />,
         },
         {
+          path: "purchases/:orderId/return",
+          element: <ReturnItemPage />,
+        },
+        {
           path: "seller/my-listings",
           element: <MyListingsPage />,
         },
@@ -267,6 +273,10 @@ export const AppRouter = () => {
         {
           path: "orders",
           element: <SellerOrders />,
+        },
+        {
+          path: "refunds",
+          element: <SellerRefunds />,
         },
         {
           path: "products",

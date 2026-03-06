@@ -51,6 +51,9 @@ exports.updateOrderStatus = async (req, res, next) => {
         // Update status
         order.status = status;
         order.updatedAt = new Date();
+        if (status === "delivered" && !order.deliveredAt) {
+            order.deliveredAt = new Date();
+        }
 
         // Add to status history
         order.statusHistory.push({

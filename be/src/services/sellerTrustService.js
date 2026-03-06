@@ -112,6 +112,22 @@ async function computeTrustMetrics(sellerId, seller) {
     const accountAgeMonths = (now - new Date(registeredAt)) / (1000 * 60 * 60 * 24 * 30);
     const stabilityScore = Math.min(accountAgeMonths / 24, 1) * 5;
 
+    // ── RISK MONITORING: 30-day Refunds ──
+    const thirtyDaysAgo = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
+    const orders30Days = await Order.countDocuments({
+        seller: sellerId,
+        createdAt: { $gte: thirtyDaysAgo }
+    });
+    const RefundRequest = require("../models/RefundRequest");
+    const refunds30Days = await RefundRequest.countDocuments({
+        seller: sellerId,
+        requestedAt: { $gte: thirtyDaysAgo }
+    });
+
+    // refundRate = refunds30Days / max(orders30Days, 20)
+    const refundRate = refunds30Days / Math.max(orders30Days, 20);
+    const riskFlagged = refundRate > 0.15;
+
     // 6. Final weighted score
     const finalScore =
         SCORE_WEIGHTS.rating * ratingScore +
@@ -134,10 +150,15 @@ async function computeTrustMetrics(sellerId, seller) {
         accountAgeMonths: parseFloat(accountAgeMonths.toFixed(2)),
         stabilityScore: parseFloat(stabilityScore.toFixed(4)),
         finalScore: parseFloat(Math.min(finalScore, 5).toFixed(4)),
+        orders30Days,
+        refunds30Days,
+        refundRate: parseFloat(refundRate.toFixed(4)),
+        riskFlagged,
     };
 }
 
 // ── Main: evaluate and persist trust score ────────────────────────────────────
+
 async function evaluateSellerTrust(sellerId, triggeredBy = "CRON_JOB") {
     const seller = await User.findById(sellerId)
         .select("username sellerInfo createdAt sellerStage")
@@ -147,9 +168,15 @@ async function evaluateSellerTrust(sellerId, triggeredBy = "CRON_JOB") {
 
     const metrics = await computeTrustMetrics(sellerId, seller);
     const tier = classifyTier(metrics.finalScore);
-    const productModerationMode = getModerationMode(tier);
+    let productModerationMode = getModerationMode(tier);
+
+    // Dynamic Risk Flag Overrides Moderation Mode
+    if (metrics.riskFlagged) {
+        productModerationMode = "REQUIRE_ADMIN";
+    }
 
     // Load existing record để so sánh tier thay đổi
+
     const existing = await SellerTrustScore.findOne({ seller: sellerId }).lean();
     const previousTier = existing?.tier;
 
