@@ -512,7 +512,10 @@ const collectCheckoutItems = async ({
         variantSku: variantCheck.optionSku || "",
         variantKey: buildVariantKey(selectedVariants),
         availableStock,
-        note: itemNotes[String(cartItem._id)] || itemNotes[String(product._id)] || "",
+        note:
+          itemNotes[String(cartItem._id)] ||
+          itemNotes[String(product._id)] ||
+          "",
       });
     }
 
@@ -917,14 +920,16 @@ const createOrdersFromPayableItems = async ({
 getAllOrders = async (req, res) => {
   try {
     const filter = {};
-    
+
     // Only return user's own orders unless they are an admin
     if (req.user.role === "buyer") {
       filter.buyer = req.user._id;
     } else if (req.user.role === "seller") {
       filter.seller = req.user._id;
     } else if (req.user.role !== "admin") {
-      return res.status(403).json({ success: false, message: "Unauthorized role" });
+      return res
+        .status(403)
+        .json({ success: false, message: "Unauthorized role" });
     }
 
     const orders = await Order.find(filter)
@@ -986,7 +991,6 @@ getOrderById = async (req, res) => {
   try {
     const { id } = req.params;
 
-    // Check if it's a Group or a single Order
     let group = await OrderGroup.findById(id).lean();
     let orders = [];
 
@@ -995,11 +999,15 @@ getOrderById = async (req, res) => {
       single = await Order.findById(id);
     }
 
-    const groupOrderId = group ? id : (single?.orderGroup || null);
+    const groupOrderId = group ? id : single?.orderGroup || null;
 
     if (groupOrderId) {
+      if (!group) {
+        group = await OrderGroup.findById(groupOrderId).lean();
+      }
+
       const groupFilter = { orderGroup: groupOrderId };
-      
+
       // Security: Only return orders belonging to the user if they are not an admin
       if (req.user.role === "buyer") {
         groupFilter.buyer = req.user._id;
@@ -1018,9 +1026,12 @@ getOrderById = async (req, res) => {
     if (orders.length > 0) {
       // Security check: ensure user owns the order or is admin
       const firstOrder = orders[0];
-      const isOwner = String(firstOrder.buyer?._id || firstOrder.buyer) === String(req.user._id) || 
-                      String(firstOrder.seller?._id || firstOrder.seller) === String(req.user._id);
-      
+      const isOwner =
+        String(firstOrder.buyer?._id || firstOrder.buyer) ===
+          String(req.user._id) ||
+        String(firstOrder.seller?._id || firstOrder.seller) ===
+          String(req.user._id);
+
       if (!isOwner && req.user.role !== "admin") {
         return res.status(403).json({
           success: false,
@@ -1052,7 +1063,7 @@ getOrderById = async (req, res) => {
         shippingAddress: order.shippingAddress || null,
         seller: order.seller,
         totalAmount: order.totalAmount, // WITHOUT group shipping
-        shippingPrice: 0,
+        shippingPrice: order.shippingPrice || 0,
         subtotalAmount: order.subtotalAmount ?? order.totalAmount,
         discountAmount: order.discountAmount ?? 0,
         voucher: order.voucher || null,
@@ -1067,18 +1078,21 @@ getOrderById = async (req, res) => {
       };
     });
 
-    const shippingPrice = group ? (group.shippingPrice || 0) : (orders[0].shippingPrice || 0);
-    const totalAmount = group ? group.totalAmount : (orders[0].totalAmount + shippingPrice);
+    const shippingPrice = group
+      ? group.shippingPrice || 0
+      : orders[0].shippingPrice || 0;
+    const totalAmount = group
+      ? group.totalAmount
+      : orders[0].totalAmount + shippingPrice;
 
     res.status(200).json({
       success: true,
       data: formattedOrders,
       isGroup: !!group,
-      groupId: group ? group._id : (orders[0]?.orderGroup || null),
+      groupId: group ? group._id : orders[0]?.orderGroup || null,
       shippingPrice: shippingPrice,
       groupTotal: totalAmount,
     });
-
   } catch (error) {
     res.status(500).json({
       success: false,
@@ -1107,10 +1121,7 @@ getOrders = async (req, res) => {
 
     if (search) {
       const searchRegex = new RegExp(search, "i");
-      filter.$or = [
-        { "items.title": searchRegex },
-        { "orderId": searchRegex },
-      ];
+      filter.$or = [{ "items.title": searchRegex }, { orderId: searchRegex }];
     }
 
     // Lọc theo role của user hiện tại
@@ -1250,13 +1261,22 @@ getOrderStats = async (req, res) => {
     const result = stats[0];
     const totals = result.totals[0] || { totalOrders: 0, totalRevenue: 0 };
     const counts = {};
-    
+
     // Initialize all possible statuses to 0
-    const allStatuses = ["created", "packaging", "ready_to_ship", "shipping", "delivered", "cancelled", "failed", "completed"];
-    allStatuses.forEach(s => counts[s] = 0);
-    
+    const allStatuses = [
+      "created",
+      "packaging",
+      "ready_to_ship",
+      "shipping",
+      "delivered",
+      "cancelled",
+      "failed",
+      "completed",
+    ];
+    allStatuses.forEach((s) => (counts[s] = 0));
+
     // Map aggregation results to counts object
-    result.countsByStatus.forEach(item => {
+    result.countsByStatus.forEach((item) => {
       counts[item._id] = item.count;
     });
 
@@ -1267,7 +1287,10 @@ getOrderStats = async (req, res) => {
         totalRevenue: totals.totalRevenue,
         counts: counts,
         // Legacy support if needed
-        pendingOrders: (counts.created || 0) + (counts.packaging || 0) + (counts.ready_to_ship || 0),
+        pendingOrders:
+          (counts.created || 0) +
+          (counts.packaging || 0) +
+          (counts.ready_to_ship || 0),
         completedOrders: (counts.delivered || 0) + (counts.completed || 0),
       },
     });
@@ -1411,8 +1434,7 @@ confirmCheckout = async (req, res) => {
       await deductStockForPayableItems(checkout.payableItems);
     }
 
-    const finalStatus =
-      paymentSimulation === "success" ? "created" : "failed";
+    const finalStatus = paymentSimulation === "success" ? "created" : "failed";
 
     let paymentStatus = "unpaid";
     if (paymentSimulation === "success") {
