@@ -140,7 +140,7 @@ export default function OrderDetailsPage() {
         <Button
           variant="outline"
           className="flex items-center gap-2 cursor-pointer"
-          onClick={() => navigate(-1)}
+          onClick={() => navigate("/my-ebay/activity/purchases")}
         >
           <ChevronLeft className="h-4 w-4" />
           Back
