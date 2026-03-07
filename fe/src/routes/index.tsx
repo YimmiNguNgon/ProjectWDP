@@ -1,81 +1,79 @@
 import { useRoutes } from "react-router-dom";
 
-import HomePage from "@/pages/home";
-import SignInPage from "@/pages/sign-in";
-import SignUpPage from "@/pages/sign-up";
-import ProductsPage from "@/pages/products";
-import ProductDetailPage from "@/pages/product-detail";
-import VerifyEmailPage from "@/pages/verify-email";
-import GoogleAuthSuccessPage from "@/pages/google-auth-success";
-import ForgotPasswordPage from "@/pages/forgot-password";
-import ResetPasswordPage from "@/pages/reset-password";
-import BanAppealPage from "@/pages/ban-appeal";
-import HelpContactPage from "@/pages/help-contact";
-import GiftCardsPage from "@/pages/gift-cards";
-import UserManagement from "@/pages/admin/user-management";
+import HomePage from "@/pages/public/home";
+import SignInPage from "@/pages/auth/sign-in";
+import SignUpPage from "@/pages/auth/sign-up";
+import ProductsPage from "@/pages/public/products";
+import ProductDetailPage from "@/pages/public/product-detail";
+import VerifyEmailPage from "@/pages/auth/verify-email";
+import GoogleAuthSuccessPage from "@/pages/auth/google-auth-success";
+import ForgotPasswordPage from "@/pages/auth/forgot-password";
+import ResetPasswordPage from "@/pages/auth/reset-password";
+import BanAppealPage from "@/pages/auth/ban-appeal";
+import HelpContactPage from "@/pages/public/help-contact";
+import GiftCardsPage from "@/pages/public/gift-cards";
+import UserManagement from "@/pages/admin/users/user-management";
 import AdminDashboard from "@/pages/admin/dashboard";
-import ProductManagement from "@/pages/admin/product-management";
-import FeedbackManagement from "@/pages/admin/feedback-management";
-import PermissionsPage from "@/pages/admin/permissions-page";
-import CategoryManagement from "@/pages/admin/category-management";
-import AdminAuditLogsPage from "@/pages/admin/audit-logs";
+import ProductManagement from "@/pages/admin/products/product-management";
+import FeedbackManagement from "@/pages/admin/feedback/feedback-management";
+import PermissionsPage from "@/pages/admin/settings/permissions-page";
+import CategoryManagement from "@/pages/admin/products/category-management";
+import AdminAuditLogsPage from "@/pages/admin/audit/audit-logs";
 
 import { MainLayout, SocketProvider } from "@/layouts/main";
 import { SocketContext } from "@/hooks/use-socket";
 import AuthLayout from "@/layouts/auth";
-import UserProfilePage from "@/pages/profile";
+import UserProfilePage from "@/pages/buyer/profile";
 import AdminLayout from "@/layouts/admin";
-import PurchaseHistoryPage from "@/pages/purchases/purchase-history-page";
-import OrderDetailsPage from "@/pages/purchases/order-details-page";
-import WatchlistPage from "@/pages/purchases/watchlist-page";
-import LeaveFeedbackPage from "@/pages/purchases/leave-feedback-page";
-import ReturnItemPage from "@/pages/purchases/return-item-page";
-import FeatureUnderConstructionPage from "@/pages/feature-under-construction";
-import MessagesPage from "@/pages/messages-page";
-import MyListingsPage from "@/pages/seller/my-listings";
-import InventoryPage from "@/pages/seller/inventory";
-import SellerSoldPage from "@/pages/seller/seller-sold-page";
-import PromotionRequestsPage from "@/pages/seller/promotion-requests";
-import AdminPromotionRequestsPage from "@/pages/admin/promotion-requests";
-import UnauthorizedPage from "@/pages/unauthorized";
-import BecomeSellerPage from "@/pages/become-seller";
-import SellerApplyPage from "@/pages/seller-apply";
-import AdminSellerApplicationsPage from "@/pages/admin/seller-applications";
+import PurchaseHistoryPage from "@/pages/buyer/orders/purchase-history-page";
+import OrderDetailsPage from "@/pages/buyer/orders/order-details-page";
+import WatchlistPage from "@/pages/buyer/watchlist-page";
+import LeaveFeedbackPage from "@/pages/buyer/feedback/leave-feedback-page";
+import ReturnItemPage from "@/pages/buyer/orders/return-item-page";
+import FeatureUnderConstructionPage from "@/pages/public/feature-under-construction";
+import MessagesPage from "@/pages/buyer/messages/messages-page";
+import InventoryPage from "@/pages/seller/products/inventory";
+import PromotionRequestsPage from "@/pages/seller/promotions/promotion-requests";
+import AdminPromotionRequestsPage from "@/pages/admin/promotions/promotion-requests";
+import UnauthorizedPage from "@/pages/public/unauthorized";
+import BecomeSellerPage from "@/pages/buyer/become-seller/become-seller";
+import SellerApplyPage from "@/pages/buyer/become-seller/seller-apply";
+import AdminSellerApplicationsPage from "@/pages/admin/sellers/seller-applications";
 
 import ProtectedRoute from "@/components/ProtectedRoute";
 import { RoleGuard } from "@/components/RoleGuard";
 import SellerLayout from "@/layouts/seller";
 import SellerOverview from "@/pages/seller/Overview";
-import SellerOrders from "@/pages/seller/Orders";
-import SellerProducts from "@/pages/seller/Products";
-import SellerRefunds from "@/pages/seller/Refunds";
-import AddProduct from "@/pages/seller/AddProduct";
-import EditProduct from "@/pages/seller/EditProduct";
-import SellerRevenue from "@/pages/seller/Revenue";
-import SellerReviews from "@/pages/seller/Reviews";
-import SellerTrustScorePage from "@/pages/seller/TrustScore";
+import SellerOrders from "@/pages/seller/orders/Orders";
+import SellerProducts from "@/pages/seller/products/Products";
+import SellerRefunds from "@/pages/seller/orders/Refunds";
+import AddProduct from "@/pages/seller/products/AddProduct";
+import EditProduct from "@/pages/seller/products/EditProduct";
+import SellerRevenue from "@/pages/seller/revenue/Revenue";
+import SellerReviews from "@/pages/seller/reviews/Reviews";
+import SellerTrustScorePage from "@/pages/seller/trust-score/TrustScore";
 import MyEbayLayout from "@/layouts/my-ebay";
-import SellerFeedbackPage from "@/pages/seller/seller-feedback";
-import FeedbackRevisionRequestPage from "@/pages/seller/feedback-revision-request";
-import SellerFeedbackRequestsPage from "@/pages/seller/feedback-requests";
-import BuyerFeedbackRequestsPage from "@/pages/buyer/feedback-requests";
-import SavedSearchesPage from "@/pages/saved-searches-page";
-import SavedSellersPage from "@/pages/saved-sellers-page";
+import SellerFeedbackPage from "@/pages/seller/feedback/seller-feedback";
+import FeedbackRevisionRequestPage from "@/pages/seller/feedback/feedback-revision-request";
+import SellerFeedbackRequestsPage from "@/pages/seller/feedback/feedback-requests";
+import BuyerFeedbackRequestsPage from "@/pages/buyer/feedback/feedback-requests";
+import SavedSearchesPage from "@/pages/buyer/saved/saved-searches-page";
+import SavedSellersPage from "@/pages/buyer/saved/saved-sellers-page";
 import CartPage from "@/pages/buyer/cart";
-import CheckoutPage from "@/pages/checkout";
-import CheckoutSuccessPage from "@/pages/checkout-success";
-import SellerVouchersPage from "@/pages/seller/vouchers";
-import AdminVoucherRequestsPage from "@/pages/admin/voucher-requests";
-import AdminGlobalVouchersPage from "@/pages/admin/vouchers-global";
+import CheckoutPage from "@/pages/buyer/orders/checkout";
+import CheckoutSuccessPage from "@/pages/buyer/orders/checkout-success";
+import SellerVouchersPage from "@/pages/seller/vouchers/vouchers";
+import AdminVoucherRequestsPage from "@/pages/admin/vouchers/voucher-requests";
+import AdminGlobalVouchersPage from "@/pages/admin/vouchers/vouchers-global";
 import SellerInformationPage from "@/components/seller/seller-information";
 import ShipperLayout from "@/layouts/shipper";
 import ShipperDashboard from "@/pages/shipper/Dashboard";
 import ShipperAvailableOrders from "@/pages/shipper/AvailableOrders";
 import ShipperMyOrders from "@/pages/shipper/MyOrders";
 import ShipperDisputes from "@/pages/shipper/Disputes";
-import AdminShipperManagement from "@/pages/admin/shipper-management";
-import AdminDeliveryReports from "@/pages/admin/delivery-reports";
-import AdminOrders from "@/pages/admin/orders";
+import AdminShipperManagement from "@/pages/admin/shippers/shipper-management";
+import AdminDeliveryReports from "@/pages/admin/shippers/delivery-reports";
+import AdminOrders from "@/pages/admin/orders/orders";
 
 // Placeholder components for admin pages
 const AdminComplaints = () => (
@@ -190,16 +188,8 @@ export const AppRouter = () => {
           element: <ReturnItemPage />,
         },
         {
-          path: "seller/my-listings",
-          element: <MyListingsPage />,
-        },
-        {
           path: "seller/inventory",
           element: <InventoryPage />,
-        },
-        {
-          path: "seller/sold",
-          element: <SellerSoldPage />,
         },
         {
           path: "seller/promotion-requests",

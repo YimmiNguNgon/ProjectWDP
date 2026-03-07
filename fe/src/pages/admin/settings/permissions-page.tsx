@@ -1,7 +1,7 @@
-﻿import { useAuth } from '../../hooks/use-auth';
-import { getUserCapabilities, ROLE_PERMISSIONS, type UserRole } from '../../lib/permissions';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../../components/ui/card';
-import { Badge } from '../../components/ui/badge';
+﻿import { useAuth } from '@/hooks/use-auth';
+import { getUserCapabilities, ROLE_PERMISSIONS, type UserRole } from '@/lib/permissions';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Badge } from '@/components/ui/badge';
 import { Shield, CheckCircle2 } from 'lucide-react';
 
 export default function PermissionsPage() {

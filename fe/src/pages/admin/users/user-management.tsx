@@ -10,9 +10,9 @@ import {
     type User,
     type BanAppeal,
     type GetUsersParams
-} from '../../api/admin';
-import { Button } from '../../components/ui/button';
-import { Input } from '../../components/ui/input';
+} from '@/api/admin';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
 import {
     Table,
     TableBody,
@@ -20,15 +20,15 @@ import {
     TableHead,
     TableHeader,
     TableRow,
-} from '../../components/ui/table';
+} from '@/components/ui/table';
 import {
     Select,
     SelectContent,
     SelectItem,
     SelectTrigger,
     SelectValue,
-} from '../../components/ui/select';
-import { Badge } from '../../components/ui/badge';
+} from '@/components/ui/select';
+import { Badge } from '@/components/ui/badge';
 import {
     Dialog,
     DialogContent,
@@ -36,8 +36,8 @@ import {
     DialogFooter,
     DialogHeader,
     DialogTitle,
-} from '../../components/ui/dialog';
-import { Textarea } from '../../components/ui/textarea';
+} from '@/components/ui/dialog';
+import { Textarea } from '@/components/ui/textarea';
 import { toast } from 'sonner';
 
 export default function UserManagement() {
