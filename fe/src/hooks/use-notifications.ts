@@ -51,7 +51,11 @@ export function useNotifications(
       seller_application_rejected: "\u274C",
       new_message: "\uD83D\uDCAC",
       order_placed: "\uD83D\uDCE6",
+      new_order: "\uD83D\uDCE6",
       order_status_changed: "\uD83D\uDE9A",
+      order_shipping: "\uD83D\uDE9A",
+      order_delivered: "\uD83D\uDCE6",
+      order_completed: "\u2705",
       new_review: "\u2B50",
       user_banned: "\uD83D\uDD12",
       user_unbanned: "\uD83D\uDD13",
@@ -60,6 +64,10 @@ export function useNotifications(
       cart_item_out_of_stock: "\uD83D\uDEAB",
       cart_item_price_changed: "\uD83D\uDCB2",
       watchlist_product_updated: "\uD83D\uDC41\uFE0F",
+      delivery_dispute_new: "\u26A0\uFE0F",
+      delivery_dispute_responded: "\uD83D\uDCAC",
+      delivery_dispute_admin: "\uD83D\uDEA8",
+      delivery_dispute_admin_replied: "\uD83D\uDCDD",
     };
 
     const handleNotification = (notif: AppNotification) => {

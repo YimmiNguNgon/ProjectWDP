@@ -4,6 +4,7 @@ const mongoose = require("mongoose");
 // Trust Score trigger (non-blocking, fire-and-forget)
 const { evaluateSellerTrust } = require("../services/sellerTrustService");
 const sendEmail = require("../utils/sendEmail");
+const notificationService = require("../services/notificationService");
 
 /**
  * Update order status
@@ -80,6 +81,38 @@ exports.updateOrderStatus = async (req, res, next) => {
             .populate("seller", "username")
             .populate("items.productId", "title price image images")
             .lean();
+
+        // In-app notification to buyer (fire-and-forget)
+        if (updated && updated.buyer) {
+            const productNames = (updated.items || [])
+                .map((item) => item.productId?.title || item.title || "Product")
+                .filter(Boolean);
+            const productLabel = productNames.length === 1
+                ? productNames[0]
+                : productNames.length > 1
+                    ? `${productNames[0]} and ${productNames.length - 1} more`
+                    : "your order";
+
+            const statusLabels = {
+                created: `Your order for "${productLabel}" has been placed`,
+                packaging: `"${productLabel}" is being packaged`,
+                ready_to_ship: `"${productLabel}" is ready to ship`,
+                shipping: `"${productLabel}" is on the way`,
+                delivered: `"${productLabel}" has been delivered`,
+                completed: `Order for "${productLabel}" completed`,
+                cancelled: `Order for "${productLabel}" cancelled`,
+                failed: `Order for "${productLabel}" failed`,
+                returned: `Order for "${productLabel}" returned`,
+            };
+            notificationService.sendNotification({
+                recipientId: updated.buyer._id,
+                type: "order_status_changed",
+                title: statusLabels[status] || `Order status: ${status}`,
+                body: `Status: ${status.replace(/_/g, " ")}`,
+                link: `/purchases/${updated._id}`,
+                metadata: { orderId: updated._id, status },
+            }).catch(() => {});
+        }
 
         // Send email to buyer asynchronously (fire-and-forget)
         if (updated && updated.buyer && updated.buyer.email) {

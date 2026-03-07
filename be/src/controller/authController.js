@@ -15,12 +15,21 @@ const RESEND_COOLDOWN = 60 * 1000;
 
 exports.register = async (req, res, next) => {
   try {
-    const { username, email, password, role } = req.body;
+    const { username, email, password, role, staffCode } = req.body;
 
     if (!email || !password) {
       return res
         .status(400)
         .json({ message: "Email and password are required" });
+    }
+
+    // Chỉ cho phép role "shipper" nếu có staff code hợp lệ
+    const STAFF_CODE = process.env.STAFF_CODE || "STAFF2024";
+    const isStaffRegistration = role === "shipper" && staffCode === STAFF_CODE;
+
+    // Không cho phép đăng ký role admin hoặc shipper không có code
+    if (role && role !== "buyer" && role !== "seller" && !isStaffRegistration) {
+      return res.status(403).json({ message: "Invalid role" });
     }
 
     const existingUsername = await User.findOne({ username });
@@ -38,7 +47,21 @@ exports.register = async (req, res, next) => {
     const salt = await bcrypt.genSalt(10);
     const hashPassword = await bcrypt.hash(password, salt);
 
-    // tạo token xác thực email
+    // Staff (shipper): tạo tài khoản đã xác thực, không cần email verification
+    if (isStaffRegistration) {
+      const newUser = new User({
+        username,
+        email,
+        passwordHash: hashPassword,
+        role: "shipper",
+        isEmailVerified: true,
+        status: "active",
+      });
+      await newUser.save();
+      return res.status(201).json({ ok: true, message: "Staff account created successfully" });
+    }
+
+    // Người dùng thông thường: gửi email xác thực
     const verificationToken = crypto.randomBytes(32).toString("hex");
     const hashedToken = crypto
       .createHash("sha256")

@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { useParams, useNavigate } from "react-router-dom";
+import { useParams, useNavigate, Link } from "react-router-dom";
 import { getOrderDetails, type Order } from "@/api/orders";
 import { Separator } from "@/components/ui/separator";
 import { toast } from "sonner";
@@ -11,8 +11,20 @@ import {
   PackageCheck,
   Star,
   Package,
+  CheckCircle2,
+  AlertTriangle,
+  MessageSquare,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { Textarea } from "@/components/ui/textarea";
+import {
+  getDisputeByOrder,
+  confirmReceived,
+  reportNotReceived,
+  buyerConfirmAfterDispute,
+  buyerReportToAdmin,
+  type DeliveryDispute,
+} from "@/api/deliveryDispute";
 
 export default function OrderDetailsPage() {
   const { orderId } = useParams<{ orderId: string }>();
@@ -23,6 +35,11 @@ export default function OrderDetailsPage() {
   const [groupShippingTotal, setGroupShippingTotal] = useState<number>(0);
   const [groupDiscount, setGroupDiscount] = useState<number>(0);
   const [loading, setLoading] = useState(true);
+  // Delivery confirmation state (per sub-order)
+  const [disputes, setDisputes] = useState<Record<string, DeliveryDispute | null>>({});
+  const [reportNote, setReportNote] = useState<Record<string, string>>({});
+  const [showReportForm, setShowReportForm] = useState<Record<string, boolean>>({});
+  const [actionLoading, setActionLoading] = useState<string | null>(null);
 
   const totalAmount = groupSubtotal + groupShippingTotal - groupDiscount;
 
@@ -34,6 +51,23 @@ export default function OrderDetailsPage() {
         setLoading(true);
         const res = await getOrderDetails(orderId);
         setOrders(res.data);
+
+        // Fetch disputes for delivered/completed sub-orders
+        const deliveredOrders = res.data.filter(
+          (o) => o.status === "delivered" || o.status === "completed",
+        );
+        const disputeResults = await Promise.allSettled(
+          deliveredOrders.map((o) =>
+            getDisputeByOrder(o._id).then((r) => ({ id: o._id, dispute: r.data.dispute })),
+          ),
+        );
+        const disputeMap: Record<string, DeliveryDispute | null> = {};
+        disputeResults.forEach((r) => {
+          if (r.status === "fulfilled") {
+            disputeMap[r.value.id] = r.value.dispute;
+          }
+        });
+        setDisputes(disputeMap);
 
         // Calculate group totals properly
         let subtotal = 0;
@@ -63,6 +97,82 @@ export default function OrderDetailsPage() {
 
     fetchOrderDetails();
   }, [orderId]);
+
+  const handleConfirmReceived = async (subOrderId: string) => {
+    setActionLoading(subOrderId + "_confirm");
+    try {
+      await confirmReceived(subOrderId);
+      toast.success("Order confirmed as received! You can now leave a review.");
+      setOrders((prev) =>
+        prev.map((o) => (o._id === subOrderId ? { ...o, status: "completed" } : o)),
+      );
+    } catch (err: any) {
+      toast.error(err?.response?.data?.message || "Failed to confirm");
+    } finally {
+      setActionLoading(null);
+    }
+  };
+
+  const handleReportNotReceived = async (subOrderId: string, skipToAdmin = false) => {
+    setActionLoading(subOrderId + (skipToAdmin ? "_reportAdmin" : "_report"));
+    try {
+      const res = await reportNotReceived(subOrderId, reportNote[subOrderId] || "", skipToAdmin);
+      toast.info(
+        skipToAdmin
+          ? "Report sent to admin. We will review and contact you shortly."
+          : "Report submitted. The shipper will be notified.",
+      );
+      setDisputes((prev) => ({ ...prev, [subOrderId]: res.data.dispute }));
+      setShowReportForm((prev) => ({ ...prev, [subOrderId]: false }));
+    } catch (err: any) {
+      const msg = err?.response?.data?.message || "Failed to submit report";
+      if (err?.response?.status === 409 && err?.response?.data?.data) {
+        setDisputes((prev) => ({ ...prev, [subOrderId]: err.response.data.data }));
+      }
+      toast.error(msg);
+    } finally {
+      setActionLoading(null);
+    }
+  };
+
+  const handleConfirmAfterDispute = async (subOrderId: string, disputeId: string) => {
+    setActionLoading(subOrderId + "_disputeConfirm");
+    try {
+      await buyerConfirmAfterDispute(disputeId);
+      toast.success("Confirmed! Order is now completed.");
+      setOrders((prev) =>
+        prev.map((o) => (o._id === subOrderId ? { ...o, status: "completed" } : o)),
+      );
+      setDisputes((prev) => ({
+        ...prev,
+        [subOrderId]: prev[subOrderId]
+          ? { ...prev[subOrderId]!, status: "CONFIRMED" }
+          : null,
+      }));
+    } catch (err: any) {
+      toast.error(err?.response?.data?.message || "Failed to confirm");
+    } finally {
+      setActionLoading(null);
+    }
+  };
+
+  const handleReportToAdmin = async (subOrderId: string, disputeId: string) => {
+    setActionLoading(subOrderId + "_reportAdmin");
+    try {
+      await buyerReportToAdmin(disputeId);
+      toast.info("Your report has been sent to admin. We will review and contact you shortly.");
+      setDisputes((prev) => ({
+        ...prev,
+        [subOrderId]: prev[subOrderId]
+          ? { ...prev[subOrderId]!, status: "REPORTED_TO_ADMIN" }
+          : null,
+      }));
+    } catch (err: any) {
+      toast.error(err?.response?.data?.message || "Failed to report to admin");
+    } finally {
+      setActionLoading(null);
+    }
+  };
 
   if (loading) {
     return (
@@ -116,7 +226,7 @@ export default function OrderDetailsPage() {
 
   // Overall status = the minimum rank among all sub-orders (all must reach a state before the group advances)
   const overallStatus: StepKey = (() => {
-    let minRank = 4;
+    let minRank = STATUS_STEPS.length - 1; // bắt đầu từ max để tìm minimum đúng
     for (const o of orders) {
       const rank = STATUS_RANK[o.status.toLowerCase()] ?? 0;
       if (rank < minRank) minRank = rank;
@@ -419,6 +529,235 @@ export default function OrderDetailsPage() {
                   <span>${subOrder.totalAmount.toFixed(2)}</span>
                 </div>
               </div>
+
+              {/* ─── Delivery Confirmation Actions ─── */}
+              {subOrder.status === "delivered" && (() => {
+                const dispute = disputes[subOrder._id];
+
+                // Dispute đã CONFIRMED: hoàn tất
+                if (dispute?.status === "CONFIRMED") {
+                  return (
+                    <div className="mt-4 p-3 bg-gray-50 border rounded-lg text-sm text-gray-600">
+                      You have confirmed receipt of this order.
+                    </div>
+                  );
+                }
+
+                // Đã báo cáo admin, admin chưa phản hồi
+                if (dispute?.status === "REPORTED_TO_ADMIN" && !dispute.adminNotifiedAt) {
+                  return (
+                    <div className="mt-4 p-3 bg-purple-50 border border-purple-200 rounded-lg text-sm text-purple-700">
+                      <AlertTriangle className="h-4 w-4 inline mr-1" />
+                      Your report has been sent to admin. Please wait for their response.
+                    </div>
+                  );
+                }
+
+                // Admin đã phản hồi → buyer xác nhận nhận hàng
+                if (dispute?.status === "REPORTED_TO_ADMIN" && dispute.adminNotifiedAt) {
+                  return (
+                    <div className="mt-4 p-4 border border-purple-200 bg-purple-50 rounded-lg space-y-3">
+                      <p className="text-sm font-semibold text-purple-800">
+                        Admin responded to your report:
+                      </p>
+                      <p className="text-sm text-purple-700">{dispute.adminNote}</p>
+                      <p className="text-xs text-purple-500">
+                        {new Date(dispute.adminNotifiedAt).toLocaleString()}
+                      </p>
+                      <Button
+                        size="sm"
+                        className="bg-emerald-600 hover:bg-emerald-700 text-white"
+                        disabled={!!actionLoading}
+                        onClick={() => handleConfirmAfterDispute(subOrder._id, dispute._id)}
+                      >
+                        <CheckCircle2 className="h-3.5 w-3.5 mr-1" />
+                        {actionLoading === subOrder._id + "_disputeConfirm"
+                          ? "..."
+                          : "I have received my order"}
+                      </Button>
+                    </div>
+                  );
+                }
+
+                // Shipper đã phản hồi: buyer xác nhận hoặc report lên admin
+                if (dispute?.status === "SHIPPER_RESPONDED") {
+                  return (
+                    <div className="mt-4 p-4 border border-blue-200 bg-blue-50 rounded-lg space-y-3">
+                      <p className="text-sm font-semibold text-blue-800">
+                        Shipper responded to your report:
+                      </p>
+                      <p className="text-sm text-blue-700">{dispute.shipperNote}</p>
+                      {dispute.shipperImages?.length > 0 && (
+                        <div className="flex gap-2 flex-wrap">
+                          {dispute.shipperImages.map((url, i) => (
+                            <img
+                              key={i}
+                              src={url}
+                              alt={`Evidence ${i + 1}`}
+                              className="h-20 w-20 object-cover rounded-md border border-blue-200"
+                            />
+                          ))}
+                        </div>
+                      )}
+                      <p className="text-xs text-blue-600">
+                        If you have received your order, confirm below. Otherwise, report to admin for further assistance.
+                      </p>
+                      <div className="flex gap-2 flex-wrap">
+                        <Button
+                          size="sm"
+                          className="bg-emerald-600 hover:bg-emerald-700 text-white"
+                          disabled={!!actionLoading}
+                          onClick={() => handleConfirmAfterDispute(subOrder._id, dispute._id)}
+                        >
+                          <CheckCircle2 className="h-3.5 w-3.5 mr-1" />
+                          {actionLoading === subOrder._id + "_disputeConfirm"
+                            ? "..."
+                            : "I received it"}
+                        </Button>
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          className="border-red-300 text-red-600 hover:bg-red-50"
+                          disabled={!!actionLoading}
+                          onClick={() => handleReportToAdmin(subOrder._id, dispute._id)}
+                        >
+                          <AlertTriangle className="h-3.5 w-3.5 mr-1" />
+                          {actionLoading === subOrder._id + "_reportAdmin"
+                            ? "..."
+                            : "Still not received — Report to Admin"}
+                        </Button>
+                      </div>
+                    </div>
+                  );
+                }
+
+                // Dispute đang chờ shipper phản hồi
+                if (dispute?.status === "PENDING_SHIPPER") {
+                  return (
+                    <div className="mt-4 p-4 bg-amber-50 border border-amber-200 rounded-lg space-y-3">
+                      <p className="text-sm text-amber-700">
+                        <MessageSquare className="h-4 w-4 inline mr-1" />
+                        Your non-receipt report has been sent to the shipper. Waiting for their response...
+                      </p>
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        className="border-red-300 text-red-600 hover:bg-red-50"
+                        disabled={!!actionLoading}
+                        onClick={() => handleReportToAdmin(subOrder._id, dispute._id)}
+                      >
+                        <AlertTriangle className="h-3.5 w-3.5 mr-1" />
+                        {actionLoading === subOrder._id + "_reportAdmin"
+                          ? "..."
+                          : "Skip shipper — Report to Admin"}
+                      </Button>
+                    </div>
+                  );
+                }
+
+                // Chưa có dispute: show Confirm or Report buttons
+                return (
+                  <div className="mt-4 space-y-3">
+                    <p className="text-sm font-medium text-gray-700">
+                      Have you received this order?
+                    </p>
+                    <div className="flex gap-2 flex-wrap">
+                      <Button
+                        size="sm"
+                        className="bg-emerald-600 hover:bg-emerald-700 text-white"
+                        disabled={!!actionLoading}
+                        onClick={() => handleConfirmReceived(subOrder._id)}
+                      >
+                        <CheckCircle2 className="h-3.5 w-3.5 mr-1" />
+                        {actionLoading === subOrder._id + "_confirm"
+                          ? "..."
+                          : "Yes, I received it"}
+                      </Button>
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        className="border-red-300 text-red-600 hover:bg-red-50"
+                        disabled={!!actionLoading}
+                        onClick={() =>
+                          setShowReportForm((prev) => ({
+                            ...prev,
+                            [subOrder._id]: !prev[subOrder._id],
+                          }))
+                        }
+                      >
+                        <AlertTriangle className="h-3.5 w-3.5 mr-1" />
+                        No, I didn't receive it
+                      </Button>
+                    </div>
+
+                    {showReportForm[subOrder._id] && (
+                      <div className="p-4 border border-red-200 bg-red-50 rounded-lg space-y-3">
+                        <p className="text-sm font-semibold text-red-700">
+                          Describe the issue:
+                        </p>
+                        <Textarea
+                          placeholder="Describe the issue (optional)..."
+                          value={reportNote[subOrder._id] || ""}
+                          onChange={(e) =>
+                            setReportNote((prev) => ({
+                              ...prev,
+                              [subOrder._id]: e.target.value,
+                            }))
+                          }
+                          rows={2}
+                        />
+                        <div className="flex gap-2 flex-wrap">
+                          <Button
+                            size="sm"
+                            className="bg-red-600 hover:bg-red-700 text-white"
+                            disabled={!!actionLoading}
+                            onClick={() => handleReportNotReceived(subOrder._id, false)}
+                          >
+                            {actionLoading === subOrder._id + "_report"
+                              ? "Submitting..."
+                              : "Report to Shipper"}
+                          </Button>
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            disabled={!!actionLoading}
+                            onClick={() =>
+                              setShowReportForm((prev) => ({
+                                ...prev,
+                                [subOrder._id]: false,
+                              }))
+                            }
+                          >
+                            Cancel
+                          </Button>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                );
+              })()}
+
+              {/* ─── Post-completion actions ─── */}
+              {subOrder.status === "completed" && (
+                <div className="mt-4 flex gap-3 flex-wrap">
+                  {subOrder.items.map((item) => (
+                    <Link
+                      key={item.productId?._id}
+                      to={`/purchases/${subOrder._id}/feedback/${item.productId?._id}`}
+                      className="inline-flex items-center gap-1.5 text-sm text-blue-600 hover:underline"
+                    >
+                      <Star className="h-3.5 w-3.5" />
+                      Leave a review
+                    </Link>
+                  ))}
+                  <Link
+                    to={`/purchases/${subOrder._id}/return`}
+                    className="inline-flex items-center gap-1.5 text-sm text-orange-600 hover:underline"
+                  >
+                    Request Return/Refund
+                  </Link>
+                </div>
+              )}
             </div>
           ))}
         </div>

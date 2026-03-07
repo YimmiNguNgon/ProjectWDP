@@ -1,6 +1,6 @@
 const express = require('express');
 const router = express.Router();
-const { upload, uploadAvatar, uploadProductImages, uploadChatFile } = require('../controller/uploadController');
+const { upload, uploadAvatar, uploadProductImages, uploadChatFile, uploadDisputeImages } = require('../controller/uploadController');
 const { protectedRoute } = require('../middleware/authMiddleware');
 const auth = require('../middleware/auth');
 
@@ -12,5 +12,8 @@ router.post('/product-images', protectedRoute, upload.array('images', 5), upload
 
 // Upload chat file
 router.post('/chat-file', auth, upload.single('file'), uploadChatFile);
+
+// Upload dispute evidence images (max 5)
+router.post('/dispute-images', protectedRoute, upload.array('images', 5), uploadDisputeImages);
 
 module.exports = router;

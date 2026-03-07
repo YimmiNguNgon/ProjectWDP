@@ -51,12 +51,14 @@ export function SignInForm({
 
   const onSubmit = async (data: SignInValues) => {
     try {
-      await signIn(data.username, data.password);
-      navigate("/");
+      const loginUser = await signIn(data.username, data.password);
       toast.info("Sign in successfully", {
         position: "top-center",
         closeButton: true,
       });
+      if (loginUser?.role === "shipper") navigate("/shipper");
+      else if (loginUser?.role === "admin") navigate("/admin");
+      else navigate("/");
     } catch (error: any) {
       if (error.response?.status === 401) {
         toast.error(

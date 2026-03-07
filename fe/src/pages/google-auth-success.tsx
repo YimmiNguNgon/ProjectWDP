@@ -43,7 +43,9 @@ export default function GoogleAuthSuccessPage() {
                         closeButton: true,
                     });
 
-                    navigate('/');
+                    if (user?.role === 'shipper') navigate('/shipper');
+                    else if (user?.role === 'admin') navigate('/admin');
+                    else navigate('/');
                 } catch (error) {
                     hasProcessed.current = true;
                     console.error('Failed to parse user data:', error);

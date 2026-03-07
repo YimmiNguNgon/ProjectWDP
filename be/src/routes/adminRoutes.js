@@ -2,6 +2,7 @@
 const express = require("express");
 const router = express.Router();
 const adminUserController = require("../controller/adminUserController");
+const adminShipperController = require("../controller/adminShipperController");
 const adminDashboardController = require("../controller/adminDashboardController");
 const adminProductController = require("../controller/adminProductController");
 const adminCategoryController = require("../controller/adminCategoryController");
@@ -272,6 +273,45 @@ router.post(
     } catch (err) {
         next(err);
     }
+});
+
+// Shipper management routes
+router.get("/shippers", adminShipperController.getAllShippers);
+router.get("/shipper-orders", adminShipperController.getShipperOrders);
+
+// Admin order management
+router.get("/orders", async (req, res, next) => {
+  try {
+    const Order = require("../models/Order");
+    const page = Math.max(1, parseInt(req.query.page) || 1);
+    const limit = Math.min(50, parseInt(req.query.limit) || 20);
+    const skip = (page - 1) * limit;
+
+    const filter = {};
+    if (req.query.status) filter.status = req.query.status;
+    if (req.query.search) {
+      const mongoose = require("mongoose");
+      if (mongoose.isValidObjectId(req.query.search)) {
+        filter._id = req.query.search;
+      }
+    }
+
+    const [orders, total] = await Promise.all([
+      Order.find(filter)
+        .populate("buyer", "username email")
+        .populate("seller", "username email")
+        .populate("shipper", "username email")
+        .sort({ createdAt: -1 })
+        .skip(skip)
+        .limit(limit)
+        .lean(),
+      Order.countDocuments(filter),
+    ]);
+
+    res.json({ orders, total, page, pages: Math.ceil(total / limit) });
+  } catch (err) {
+    next(err);
+  }
 });
 
 module.exports = router;

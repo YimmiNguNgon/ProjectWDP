@@ -53,19 +53,14 @@ exports.createReview = async (req, res, next) => {
         .json({ message: "rating must be number between 1 and 5" });
     }
 
-    // Validate rating1..3 (model requires them: so they must be provided)
-    if (rating1 == null || rating2 == null || rating3 == null) {
-      return res
-        .status(400)
-        .json({ message: "rating1, rating2 and rating3 are required" });
-    }
-    const r1 = Number(rating1);
-    const r2 = Number(rating2);
-    const r3 = Number(rating3);
+    // Validate rating1..3 (optional: accept 0 or null as "not rated")
+    const r1 = rating1 != null && Number(rating1) > 0 ? Number(rating1) : null;
+    const r2 = rating2 != null && Number(rating2) > 0 ? Number(rating2) : null;
+    const r3 = rating3 != null && Number(rating3) > 0 ? Number(rating3) : null;
     if (
-      !validateRatingField(r1) ||
-      !validateRatingField(r2) ||
-      !validateRatingField(r3)
+      (r1 !== null && !validateRatingField(r1)) ||
+      (r2 !== null && !validateRatingField(r2)) ||
+      (r3 !== null && !validateRatingField(r3))
     ) {
       return res
         .status(400)

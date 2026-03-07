@@ -89,6 +89,8 @@ exports.listProducts = async (req, res, next) => {
         ],
       },
       { $or: [{ deletedAt: null }, { deletedAt: { $exists: false } }] }, // Exclude soft-deleted
+      // Exclude out-of-stock products (stock = 0). Show products without stock field (legacy).
+      { $or: [{ stock: { $gt: 0 } }, { stock: { $exists: false } }] },
     ];
 
     // Search filter - search in title and description

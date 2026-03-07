@@ -995,6 +995,24 @@ export default function SellerOrders() {
             Delivered
           </Badge>
         );
+      case "completed":
+        return (
+          <Badge
+            variant="outline"
+            className="border-emerald-400 text-emerald-800 bg-emerald-50"
+          >
+            Completed
+          </Badge>
+        );
+      case "returned":
+        return (
+          <Badge
+            variant="outline"
+            className="border-purple-300 text-purple-800 bg-purple-50"
+          >
+            Returned
+          </Badge>
+        );
       case "cancelled":
         return (
           <Badge

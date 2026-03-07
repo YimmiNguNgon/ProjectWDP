@@ -41,6 +41,12 @@ const orderSchema = new mongoose.Schema({
     required: true,
     index: true,
   },
+  shipper: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: "User",
+    default: null,
+    index: true,
+  },
   items: [orderItemSchema],
   subtotalAmount: { type: Number, default: 0 },
   discountAmount: { type: Number, default: 0 },

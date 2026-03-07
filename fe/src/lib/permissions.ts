@@ -1,4 +1,4 @@
-﻿export type UserRole = 'admin' | 'seller' | 'buyer';
+﻿export type UserRole = 'admin' | 'seller' | 'buyer' | 'shipper';
 
 export interface Permission {
   resource: string;
@@ -6,6 +6,9 @@ export interface Permission {
 }
 
 export const ROLE_PERMISSIONS: Record<UserRole, Permission[]> = {
+  shipper: [
+    { resource: 'orders', actions: ['read', 'update'] },
+  ],
   admin: [
     { resource: 'users', actions: ['create', 'read', 'update', 'delete', 'ban', 'unban'] },
     { resource: 'products', actions: ['create', 'read', 'update', 'delete'] },
@@ -89,6 +92,10 @@ export const getAllowedRoutes = (userRole: UserRole): string[] => {
 
 export const getUserCapabilities = (userRole: UserRole): string[] => {
   const capabilities: Record<UserRole, string[]> = {
+    shipper: [
+      'View and accept delivery orders',
+      'Mark orders as delivered',
+    ],
     admin: [
       'Manage the entire system',
       'Manage users (create, edit, delete, ban)',

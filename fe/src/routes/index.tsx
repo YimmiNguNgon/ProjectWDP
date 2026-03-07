@@ -21,6 +21,7 @@ import CategoryManagement from "@/pages/admin/category-management";
 import AdminAuditLogsPage from "@/pages/admin/audit-logs";
 
 import { MainLayout, SocketProvider } from "@/layouts/main";
+import { SocketContext } from "@/hooks/use-socket";
 import AuthLayout from "@/layouts/auth";
 import UserProfilePage from "@/pages/profile";
 import AdminLayout from "@/layouts/admin";
@@ -67,6 +68,14 @@ import SellerVouchersPage from "@/pages/seller/vouchers";
 import AdminVoucherRequestsPage from "@/pages/admin/voucher-requests";
 import AdminGlobalVouchersPage from "@/pages/admin/vouchers-global";
 import SellerInformationPage from "@/components/seller/seller-information";
+import ShipperLayout from "@/layouts/shipper";
+import ShipperDashboard from "@/pages/shipper/Dashboard";
+import ShipperAvailableOrders from "@/pages/shipper/AvailableOrders";
+import ShipperMyOrders from "@/pages/shipper/MyOrders";
+import ShipperDisputes from "@/pages/shipper/Disputes";
+import AdminShipperManagement from "@/pages/admin/shipper-management";
+import AdminDeliveryReports from "@/pages/admin/delivery-reports";
+import AdminOrders from "@/pages/admin/orders";
 
 // Placeholder components for admin pages
 const AdminComplaints = () => (
@@ -209,9 +218,11 @@ export const AppRouter = () => {
     {
       path: "/admin",
       element: (
-        <RoleGuard requireRole="admin">
-          <AdminLayout />
-        </RoleGuard>
+        <SocketProvider>
+          <RoleGuard requireRole="admin">
+            <AdminLayout />
+          </RoleGuard>
+        </SocketProvider>
       ),
       children: [
         {
@@ -266,11 +277,43 @@ export const AppRouter = () => {
           path: "audit-logs",
           element: <AdminAuditLogsPage />,
         },
+        {
+          path: "orders",
+          element: <AdminOrders />,
+        },
+        {
+          path: "shippers",
+          element: <AdminShipperManagement />,
+        },
+        {
+          path: "delivery-reports",
+          element: <AdminDeliveryReports />,
+        },
+      ],
+    },
+    {
+      path: "/shipper",
+      element: (
+        <SocketProvider>
+          <RoleGuard requireRole="shipper">
+            <ShipperLayout />
+          </RoleGuard>
+        </SocketProvider>
+      ),
+      children: [
+        { index: true, element: <ShipperDashboard /> },
+        { path: "available", element: <ShipperAvailableOrders /> },
+        { path: "my-orders", element: <ShipperMyOrders /> },
+        { path: "disputes", element: <ShipperDisputes /> },
       ],
     },
     {
       path: "/seller",
-      element: <SellerLayout />,
+      element: (
+        <SocketProvider>
+          <SellerLayout />
+        </SocketProvider>
+      ),
       children: [
         {
           index: true,

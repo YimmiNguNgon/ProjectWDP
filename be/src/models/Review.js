@@ -34,21 +34,24 @@ const reviewSchema = new mongoose.Schema(
     },
     rating1: {
       type: Number,
-      required: true,
+      required: false,
       min: 1,
       max: 5,
+      default: null,
     },
     rating2: {
       type: Number,
-      required: true,
+      required: false,
       min: 1,
       max: 5,
+      default: null,
     },
     rating3: {
       type: Number,
-      required: true,
+      required: false,
       min: 1,
       max: 5,
+      default: null,
     },
     comment: {
       type: String,

@@ -17,6 +17,7 @@ const {
   syncProductStockFromVariants,
 } = require("../utils/productInventory");
 const sendEmail = require("../utils/sendEmail");
+const notificationService = require("../services/notificationService");
 
 // Helper function để format date
 const formatDate = (date) => {
@@ -1498,6 +1499,28 @@ confirmCheckout = async (req, res) => {
         { _id: { $in: orders.map((o) => o._id) } },
         { $set: { orderGroup: orderGroup._id } },
       );
+    }
+
+    // Notify each seller about new orders (fire-and-forget)
+    if (paymentSimulation === "success" && orders.length > 0) {
+      for (const order of orders) {
+        const productNames = (order.items || [])
+          .map((item) => item.title || "Product")
+          .filter(Boolean);
+        const productLabel = productNames.length === 1
+          ? productNames[0]
+          : productNames.length > 1
+            ? `${productNames[0]} and ${productNames.length - 1} more`
+            : "an item";
+        notificationService.sendNotification({
+          recipientId: order.seller,
+          type: "new_order",
+          title: `New order: "${productLabel}"`,
+          body: `A buyer just ordered "${productLabel}". Please start packaging.`,
+          link: `/seller/orders`,
+          metadata: { orderId: order._id },
+        }).catch(() => {});
+      }
     }
 
     if (paymentSimulation === "success") {

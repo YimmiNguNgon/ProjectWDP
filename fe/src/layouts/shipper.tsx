@@ -1,16 +1,5 @@
 import { Link, Outlet, useLocation } from "react-router-dom";
-import {
-  LayoutDashboard,
-  Package,
-  ShoppingBag,
-  DollarSign,
-  Star,
-  ShieldCheck,
-  Home,
-  MessageSquare,
-  TicketPercent,
-  RefreshCcw,
-} from "lucide-react";
+import { LayoutDashboard, Package, Truck, Home, AlertTriangle } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useAuth } from "@/hooks/use-auth";
 import { useContext } from "react";
@@ -18,18 +7,13 @@ import { SocketContext } from "@/hooks/use-socket";
 import NotificationBell from "@/components/notification-bell";
 
 const navigation = [
-  { name: "Overview", href: "/seller", icon: LayoutDashboard },
-  { name: "Seller Score", href: "/seller/trust-score", icon: ShieldCheck },
-  { name: "Product Management", href: "/seller/products", icon: Package },
-  { name: "Order Management", href: "/seller/orders", icon: ShoppingBag },
-  { name: "Revenue Management", href: "/seller/revenue", icon: DollarSign },
-  { name: "Customer Reviews", href: "/seller/reviews", icon: Star },
-  { name: "Feedback Management", href: "/seller/feedback", icon: MessageSquare },
-  { name: "Refund Requests", href: "/seller/refunds", icon: RefreshCcw },
-  { name: "Voucher", href: "/seller/vouchers", icon: TicketPercent },
+  { name: "Dashboard", href: "/shipper", icon: LayoutDashboard },
+  { name: "Available Orders", href: "/shipper/available", icon: Package },
+  { name: "My Deliveries", href: "/shipper/my-orders", icon: Truck },
+  { name: "Delivery Disputes", href: "/shipper/disputes", icon: AlertTriangle },
 ];
 
-export default function SellerLayout() {
+export default function ShipperLayout() {
   const location = useLocation();
   const { user } = useAuth();
   const socketCtx = useContext(SocketContext);
@@ -40,11 +24,11 @@ export default function SellerLayout() {
         <div className="w-64 bg-white border-r border-gray-200 min-h-screen">
           <div className="p-6">
             <div className="flex items-center gap-3">
-              <div className="w-10 h-10 bg-green-100 rounded-lg flex items-center justify-center">
-                <span className="text-green-600 font-bold">S</span>
+              <div className="w-10 h-10 bg-orange-100 rounded-lg flex items-center justify-center">
+                <span className="text-orange-600 font-bold">S</span>
               </div>
               <div className="flex-1">
-                <h1 className="text-xl font-bold text-gray-900">Seller Panel</h1>
+                <h1 className="text-xl font-bold text-gray-900">Shipper Panel</h1>
                 <p className="text-sm text-gray-600">
                   {user?.username || user?.email?.split("@")[0]}
                 </p>
@@ -58,7 +42,7 @@ export default function SellerLayout() {
               const Icon = item.icon;
               const isActive =
                 location.pathname === item.href ||
-                (item.href !== "/seller" && location.pathname.startsWith(item.href));
+                (item.href !== "/shipper" && location.pathname.startsWith(item.href));
 
               return (
                 <Link
@@ -67,19 +51,17 @@ export default function SellerLayout() {
                   className={cn(
                     "flex items-center gap-3 px-3 py-3 rounded-lg text-sm font-medium transition-colors group",
                     isActive
-                      ? "bg-green-50 text-green-700 border-l-4 border-green-600"
+                      ? "bg-orange-50 text-orange-700 border-l-4 border-orange-600"
                       : "text-gray-700 hover:bg-gray-50 hover:text-gray-900",
                   )}
                 >
                   <Icon
                     className={cn(
                       "h-5 w-5",
-                      isActive ? "text-green-600" : "text-gray-400 group-hover:text-gray-600",
+                      isActive ? "text-orange-600" : "text-gray-400 group-hover:text-gray-600",
                     )}
                   />
-                  <div className="flex flex-col">
-                    <span>{item.name}</span>
-                  </div>
+                  <span>{item.name}</span>
                 </Link>
               );
             })}
@@ -105,8 +87,8 @@ export default function SellerLayout() {
                     {navigation.find(
                       (nav) =>
                         nav.href === location.pathname ||
-                        (nav.href !== "/seller" && location.pathname.startsWith(nav.href)),
-                    )?.name || "Overview"}
+                        (nav.href !== "/shipper" && location.pathname.startsWith(nav.href)),
+                    )?.name || "Dashboard"}
                   </h2>
                 </div>
               </div>

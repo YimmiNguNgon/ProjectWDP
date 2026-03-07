@@ -52,8 +52,10 @@ export interface Order {
     | "ready_to_ship"
     | "shipping"
     | "delivered"
+    | "completed"
     | "cancelled"
-    | "failed";
+    | "failed"
+    | "returned";
   paymentStatus: "unpaid" | "paid" | "failed" | "refunded";
   items: number;
   date: string;
@@ -89,8 +91,11 @@ const mapStatus = (status: string): Order["status"] => {
     case "shipping":
       return "shipping";
     case "delivered":
-    case "completed":
       return "delivered";
+    case "completed":
+      return "completed";
+    case "returned":
+      return "returned";
     case "cancelled":
     case "canceled":
       return "cancelled";
@@ -293,6 +298,8 @@ export const orderService = {
         ready_to_ship: "ready_to_ship",
         shipping: "shipping",
         delivered: "delivered",
+        completed: "completed",
+        returned: "returned",
         cancelled: "cancelled",
         failed: "failed",
       };

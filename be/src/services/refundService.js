@@ -7,8 +7,8 @@ async function createRefundRequest(buyerId, orderId, reason, description) {
     const order = await Order.findOne({ _id: orderId, buyer: buyerId }).lean();
     if (!order) throw new Error("Order not found or not owned by you");
 
-    // Only delivered orders
-    if (order.status !== "delivered") {
+    // Only delivered or completed orders
+    if (order.status !== "delivered" && order.status !== "completed") {
         throw new Error("Order must be delivered to request a refund");
     }
 

@@ -36,7 +36,7 @@ type Order = {
 };
 
 type GetOrderResponse = {
-  data: Order;
+  data: Order | Order[];
 };
 
 type ReviewCreated = {
@@ -124,10 +124,12 @@ export default function LeaveFeedbackPage() {
         const res = await api.get<GetOrderResponse>(
           `/api/orders/${orderId}`
         );
-        const orderData = res.data.data;
+        // API trả về array — lấy phần tử đầu tiên
+        const dataArr = res.data.data;
+        const orderData = Array.isArray(dataArr) ? dataArr[0] : dataArr;
         setOrder(orderData);
 
-        const found = orderData.items.find(
+        const found = orderData?.items?.find(
           (it) => it.productId?._id === productId
         );
         if (found) setItem(found);
@@ -326,7 +328,7 @@ export default function LeaveFeedbackPage() {
                   <UserIcon className="h-6 w-6 text-gray-400" />
                 </div>
                 <div className="text-sm font-medium">
-                  {order?.seller.username ?? "seller"}
+                  {order?.seller?.username ?? "seller"}
                 </div>
               </div>
 
@@ -372,7 +374,7 @@ export default function LeaveFeedbackPage() {
                 <div className="text-sm text-muted-foreground">
                   Sold by{" "}
                   <span className="underline">
-                    {order?.seller.username ?? "seller"}
+                    {order?.seller?.username ?? "seller"}
                   </span>
                 </div>
               </div>

@@ -32,27 +32,33 @@ const signUpSchema = z.object({
   password: z.string().min(6, "Password must be at least 6 characters"),
 });
 
+const staffSignUpSchema = z.object({
+  username: z.string().min(3, "Username must be at least 3 characters"),
+  email: z.string().email("Invalid email address"),
+  password: z.string().min(6, "Password must be at least 6 characters"),
+  staffCode: z.string().min(1, "Staff code is required"),
+});
+
 type SignUpValues = z.infer<typeof signUpSchema>;
-type Step = "form" | "pending";
+type StaffSignUpValues = z.infer<typeof staffSignUpSchema>;
+type Step = "form" | "pending" | "staff-success";
+type Mode = "normal" | "staff";
 
 export function SignupForm({ ...props }: React.ComponentProps<typeof Card>) {
   const [step, setStep] = React.useState<Step>("form");
+  const [mode, setMode] = React.useState<Mode>("normal");
   const [resendLoading, setResendLoading] = React.useState(false);
   const navigate = useNavigate();
   const { signUp, loading } = useAuth();
 
-  const {
-    register,
-    handleSubmit,
-    getValues,
-    formState: { errors },
-  } = useForm<SignUpValues>({
+  const normalForm = useForm<SignUpValues>({
     resolver: zodResolver(signUpSchema),
-    defaultValues: {
-      username: "",
-      email: "",
-      password: "",
-    },
+    defaultValues: { username: "", email: "", password: "" },
+  });
+
+  const staffForm = useForm<StaffSignUpValues>({
+    resolver: zodResolver(staffSignUpSchema),
+    defaultValues: { username: "", email: "", password: "", staffCode: "" },
   });
 
   const [countdown, setCountdown] = React.useState(0);
@@ -68,16 +74,15 @@ export function SignupForm({ ...props }: React.ComponentProps<typeof Card>) {
   const handleResendEmail = async () => {
     try {
       setResendLoading(true);
-      const email = getValues("email");
-      const username = getValues("username");
+      const email = normalForm.getValues("email");
+      const username = normalForm.getValues("username");
       if (!email) return;
 
       await api.post("/api/auth/resend-email", { username, email });
 
       toast.success("Verification email sent successfully!");
-      setCountdown(60); // Disable for 60 seconds
+      setCountdown(60);
     } catch (error: any) {
-      console.error("Failed to resend email:", error);
       toast.error(error.response?.data?.message || "Failed to resend email");
     } finally {
       setResendLoading(false);
@@ -91,15 +96,33 @@ export function SignupForm({ ...props }: React.ComponentProps<typeof Card>) {
         position: "top-center",
         closeButton: true,
       });
-
       setStep("pending");
     } catch (error: any) {
       toast.error(
         error.response?.data?.message || "Invalid username or password",
-        {
-          position: "top-center",
-          closeButton: true,
-        },
+        { position: "top-center", closeButton: true },
+      );
+    }
+  };
+
+  const onStaffSubmit = async (data: StaffSignUpValues) => {
+    try {
+      await api.post("/api/auth/register", {
+        username: data.username,
+        email: data.email,
+        password: data.password,
+        role: "shipper",
+        staffCode: data.staffCode,
+      });
+      toast.success("Staff account created! You can now sign in.", {
+        position: "top-center",
+        closeButton: true,
+      });
+      setStep("staff-success");
+    } catch (error: any) {
+      toast.error(
+        error.response?.data?.message || "Failed to create staff account",
+        { position: "top-center", closeButton: true },
       );
     }
   };
@@ -108,13 +131,41 @@ export function SignupForm({ ...props }: React.ComponentProps<typeof Card>) {
     return <LoadingAuth />;
   }
 
+  if (step === "staff-success") {
+    return (
+      <Card {...props}>
+        <CardHeader>
+          <CardTitle>Staff account created!</CardTitle>
+          <CardDescription>
+            Your shipper account is ready to use.
+          </CardDescription>
+        </CardHeader>
+        <Separator />
+        <CardContent className="text-center space-y-3 pt-4">
+          <p className="text-sm text-muted-foreground">
+            You can now sign in with your credentials.
+          </p>
+        </CardContent>
+        <Separator />
+        <CardFooter className="flex justify-center">
+          <Button
+            className="cursor-pointer"
+            onClick={() => navigate("/auth/sign-in")}
+          >
+            Go to Sign In
+          </Button>
+        </CardFooter>
+      </Card>
+    );
+  }
+
   if (step === "pending") {
     return (
       <Card {...props}>
         <CardHeader>
           <CardTitle>Verify your email</CardTitle>
           <CardDescription>
-            We’ve sent a verification link to your email address.
+            We've sent a verification link to your email address.
           </CardDescription>
         </CardHeader>
         <Separator />
@@ -124,7 +175,7 @@ export function SignupForm({ ...props }: React.ComponentProps<typeof Card>) {
             your account.
           </p>
           <p className="text-sm text-muted-foreground">
-            If you don’t see the email, check your Spam folder.
+            If you don't see the email, check your Spam folder.
           </p>
 
           <div className="pt-2">
@@ -166,69 +217,181 @@ export function SignupForm({ ...props }: React.ComponentProps<typeof Card>) {
           Enter your information below to create your account
         </CardDescription>
       </CardHeader>
+
+      {/* Mode tabs */}
+      <div className="px-6 pb-2">
+        <div className="flex gap-1 bg-gray-100 p-1 rounded-lg">
+          <button
+            type="button"
+            onClick={() => setMode("normal")}
+            className={`flex-1 py-1.5 rounded-md text-sm font-medium transition-colors ${
+              mode === "normal"
+                ? "bg-white text-gray-900 shadow-sm"
+                : "text-gray-500 hover:text-gray-700"
+            }`}
+          >
+            Customer
+          </button>
+          <button
+            type="button"
+            onClick={() => setMode("staff")}
+            className={`flex-1 py-1.5 rounded-md text-sm font-medium transition-colors ${
+              mode === "staff"
+                ? "bg-white text-orange-600 shadow-sm"
+                : "text-gray-500 hover:text-gray-700"
+            }`}
+          >
+            Staff (Shipper)
+          </button>
+        </div>
+      </div>
+
       <Separator />
       <CardContent>
-        <form onSubmit={handleSubmit(onSubmit)}>
-          <FieldGroup>
-            <Field>
-              <FieldLabel htmlFor="username">Username</FieldLabel>
-              <Input
-                id="username"
-                type="text"
-                placeholder="Enter your username"
-                {...register("username")}
-              />
-              {errors.username && (
-                <p className="text-sm text-destructive">
-                  {errors.username.message}
-                </p>
-              )}
-            </Field>
-            <Field>
-              <FieldLabel htmlFor="email">Email</FieldLabel>
-              <Input
-                id="email"
-                type="email"
-                placeholder="Enter your email"
-                {...register("email")}
-              />
-              {errors.email && (
-                <p className="text-sm text-destructive">
-                  {errors.email.message}
-                </p>
-              )}
-            </Field>
-            <Field>
-              <FieldLabel htmlFor="password">Password</FieldLabel>
-              <Password id="password" {...register("password")} />
-              {errors.password && (
-                <p className="text-sm text-destructive">
-                  {errors.password.message}
-                </p>
-              )}
-            </Field>
-          </FieldGroup>
-          <Separator className="my-4" />
-          <FieldGroup>
-            <Field>
-              <Button className="cursor-pointer w-full" type="submit">
-                Create Account
-              </Button>
-              <Button
-                className="cursor-pointer w-full"
-                variant="outline"
-                type="button"
-                onClick={() => window.location.href = "http://localhost:8080/api/auth/google"}
-              >
-                Sign up with Google
-              </Button>
-              <FieldDescription className="px-6 text-center">
-                Already have an account?{" "}
-                <Link to={"/auth/sign-in"}>Sign in</Link>
-              </FieldDescription>
-            </Field>
-          </FieldGroup>
-        </form>
+        {mode === "normal" ? (
+          <form onSubmit={normalForm.handleSubmit(onSubmit)}>
+            <FieldGroup>
+              <Field>
+                <FieldLabel htmlFor="username">Username</FieldLabel>
+                <Input
+                  id="username"
+                  type="text"
+                  placeholder="Enter your username"
+                  {...normalForm.register("username")}
+                />
+                {normalForm.formState.errors.username && (
+                  <p className="text-sm text-destructive">
+                    {normalForm.formState.errors.username.message}
+                  </p>
+                )}
+              </Field>
+              <Field>
+                <FieldLabel htmlFor="email">Email</FieldLabel>
+                <Input
+                  id="email"
+                  type="email"
+                  placeholder="Enter your email"
+                  {...normalForm.register("email")}
+                />
+                {normalForm.formState.errors.email && (
+                  <p className="text-sm text-destructive">
+                    {normalForm.formState.errors.email.message}
+                  </p>
+                )}
+              </Field>
+              <Field>
+                <FieldLabel htmlFor="password">Password</FieldLabel>
+                <Password id="password" {...normalForm.register("password")} />
+                {normalForm.formState.errors.password && (
+                  <p className="text-sm text-destructive">
+                    {normalForm.formState.errors.password.message}
+                  </p>
+                )}
+              </Field>
+            </FieldGroup>
+            <Separator className="my-4" />
+            <FieldGroup>
+              <Field>
+                <Button className="cursor-pointer w-full" type="submit">
+                  Create Account
+                </Button>
+                <Button
+                  className="cursor-pointer w-full"
+                  variant="outline"
+                  type="button"
+                  onClick={() =>
+                    (window.location.href =
+                      "http://localhost:8080/api/auth/google")
+                  }
+                >
+                  Sign up with Google
+                </Button>
+                <FieldDescription className="px-6 text-center">
+                  Already have an account?{" "}
+                  <Link to={"/auth/sign-in"}>Sign in</Link>
+                </FieldDescription>
+              </Field>
+            </FieldGroup>
+          </form>
+        ) : (
+          <form onSubmit={staffForm.handleSubmit(onStaffSubmit)}>
+            <div className="mb-3 p-3 bg-orange-50 border border-orange-200 rounded-lg text-sm text-orange-700">
+              Staff registration requires a valid staff code provided by the
+              administrator.
+            </div>
+            <FieldGroup>
+              <Field>
+                <FieldLabel htmlFor="s-username">Username</FieldLabel>
+                <Input
+                  id="s-username"
+                  type="text"
+                  placeholder="Enter your username"
+                  {...staffForm.register("username")}
+                />
+                {staffForm.formState.errors.username && (
+                  <p className="text-sm text-destructive">
+                    {staffForm.formState.errors.username.message}
+                  </p>
+                )}
+              </Field>
+              <Field>
+                <FieldLabel htmlFor="s-email">Email</FieldLabel>
+                <Input
+                  id="s-email"
+                  type="email"
+                  placeholder="Enter your email"
+                  {...staffForm.register("email")}
+                />
+                {staffForm.formState.errors.email && (
+                  <p className="text-sm text-destructive">
+                    {staffForm.formState.errors.email.message}
+                  </p>
+                )}
+              </Field>
+              <Field>
+                <FieldLabel htmlFor="s-password">Password</FieldLabel>
+                <Password
+                  id="s-password"
+                  {...staffForm.register("password")}
+                />
+                {staffForm.formState.errors.password && (
+                  <p className="text-sm text-destructive">
+                    {staffForm.formState.errors.password.message}
+                  </p>
+                )}
+              </Field>
+              <Field>
+                <FieldLabel htmlFor="staffCode">Staff Code</FieldLabel>
+                <Input
+                  id="staffCode"
+                  type="password"
+                  placeholder="Enter staff code"
+                  {...staffForm.register("staffCode")}
+                />
+                {staffForm.formState.errors.staffCode && (
+                  <p className="text-sm text-destructive">
+                    {staffForm.formState.errors.staffCode.message}
+                  </p>
+                )}
+              </Field>
+            </FieldGroup>
+            <Separator className="my-4" />
+            <FieldGroup>
+              <Field>
+                <Button
+                  className="cursor-pointer w-full bg-orange-600 hover:bg-orange-700"
+                  type="submit"
+                >
+                  Create Staff Account
+                </Button>
+                <FieldDescription className="px-6 text-center">
+                  Already have an account?{" "}
+                  <Link to={"/auth/sign-in"}>Sign in</Link>
+                </FieldDescription>
+              </Field>
+            </FieldGroup>
+          </form>
+        )}
       </CardContent>
     </Card>
   );

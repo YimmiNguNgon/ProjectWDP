@@ -78,6 +78,10 @@ app.use("/api/watchlist", watchlistRoutes);
 app.use("/api/cart", cartRoutes);
 const sellerApplicationRoutes = require("./routes/sellerApplicationRoutes");
 app.use("/api/seller-applications", sellerApplicationRoutes);
+const shipperRoutes = require("./routes/shipperRoutes");
+app.use("/api/shipper", shipperRoutes);
+const deliveryDisputeRoutes = require("./routes/deliveryDisputeRoutes");
+app.use("/api/delivery-disputes", deliveryDisputeRoutes);
 const notificationRoutes = require("./routes/notificationRoutes");
 app.use("/api/notifications", notificationRoutes);
 
@@ -160,6 +164,36 @@ async function createDefaultAdmin() {
     }
   } catch (error) {
     console.error("❌ Lỗi khi tạo tài khoản admin mặc định:", error);
+  }
+}
+
+async function createDefaultShipper() {
+  const shippers = [
+    { username: "shipper", email: "shipper@shipper.com", password: "shipper" },
+    { username: "shipper1", email: "shipper1@shipper.com", password: "123" },
+    { username: "shipper2", email: "shipper2@shipper.com", password: "123" },
+    { username: "shipper3", email: "shipper3@shipper.com", password: "123" },
+  ];
+
+  for (const s of shippers) {
+    try {
+      const existing = await User.findOne({ username: s.username });
+      if (!existing) {
+        const salt = await bcrypt.genSalt(10);
+        const passwordHash = await bcrypt.hash(s.password, salt);
+        await new User({
+          username: s.username,
+          email: s.email,
+          passwordHash,
+          role: "shipper",
+          isEmailVerified: true,
+          status: "active",
+        }).save();
+        console.log(`✅ Tài khoản shipper "${s.username}" đã được tạo`);
+      }
+    } catch (error) {
+      console.error(`❌ Lỗi khi tạo tài khoản ${s.username}:`, error);
+    }
   }
 }
 
@@ -269,6 +303,7 @@ async function start() {
   await ensureCartItemVariantIndex();
   await createDefaultAdmin();
   await createDefaultSeller();
+  await createDefaultShipper();
 
   // Initialize deal expiration cron job
   const { initDealExpirationJob } = require("./jobs/dealExpirationJob");

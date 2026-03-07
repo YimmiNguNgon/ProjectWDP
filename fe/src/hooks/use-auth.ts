@@ -34,7 +34,7 @@ export interface AuthContextProps {
     password: string,
     role?: string,
   ) => Promise<void>;
-  signIn: (username: string, password: string) => Promise<void>;
+  signIn: (username: string, password: string) => Promise<{ username: string; email: string; role: string } | undefined>;
   signOut: () => void;
   refresh: () => Promise<void>;
   fetchMe: () => Promise<void>;

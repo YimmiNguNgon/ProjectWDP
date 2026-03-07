@@ -83,6 +83,8 @@ export function MainLayout() {
               {user?.role === "admin" && <AdminMenu />}
               {/* Seller Menu - only show for seller users */}
               {user?.role === "seller" && <SellerMenu />}
+              {/* Shipper Menu - only show for shipper users */}
+              {user?.role === "shipper" && <ShipperMenu />}
               {/* Notification Bell */}
               {user && (
                 <NotificationBell socket={socketCtx?.socket ?? undefined} />
@@ -393,6 +395,17 @@ function SellerMenu() {
       className="font-medium text-sm text-red-600 hover:text-red-700"
     >
       Seller Panel
+    </Link>
+  );
+}
+
+function ShipperMenu() {
+  return (
+    <Link
+      to="/shipper"
+      className="font-medium text-sm text-orange-600 hover:text-orange-700"
+    >
+      Shipper Panel
     </Link>
   );
 }

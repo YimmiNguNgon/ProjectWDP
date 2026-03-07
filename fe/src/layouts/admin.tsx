@@ -1,7 +1,10 @@
 ﻿import { Link, Outlet, useLocation } from 'react-router-dom';
-import { LayoutDashboard, Users, ShoppingBag, MessageCircle, Home, ClipboardList, TicketPercent, Tags, FileSearch } from 'lucide-react';
+import { LayoutDashboard, Users, ShoppingBag, MessageCircle, ClipboardList, TicketPercent, Tags, FileSearch, Truck, AlertTriangle, PackageSearch, Home } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import AdminBroadcast from '@/components/admin-broadcast';
+import NotificationBell from '@/components/notification-bell';
+import { useContext } from 'react';
+import { SocketContext } from '@/hooks/use-socket';
 
 const navigation = [
   { name: 'Dashboard', href: '/admin', icon: LayoutDashboard },
@@ -12,18 +15,23 @@ const navigation = [
   { name: 'Seller Applications', href: '/admin/seller-applications', icon: ClipboardList },
   { name: 'Voucher Requests', href: '/admin/voucher-requests', icon: TicketPercent },
   { name: 'Global Vouchers', href: '/admin/global-vouchers', icon: TicketPercent },
+  { name: 'Order Management', href: '/admin/orders', icon: PackageSearch },
+  { name: 'Shipper Management', href: '/admin/shippers', icon: Truck },
+  { name: 'Delivery Reports', href: '/admin/delivery-reports', icon: AlertTriangle },
   { name: 'Audit Logs', href: '/admin/audit-logs', icon: FileSearch },
 ];
 
 export default function AdminLayout() {
   const location = useLocation();
+  const socketCtx = useContext(SocketContext);
 
   return (
     <div className="min-h-screen bg-gray-50">
       <div className="flex">
         <div className="w-64 bg-white border-r border-gray-200 min-h-screen">
-          <div className="p-6">
+          <div className="p-6 flex items-center justify-between">
             <h1 className="text-2xl font-bold text-gray-900">Admin Panel</h1>
+            <NotificationBell socket={socketCtx?.socket ?? undefined} />
           </div>
           <nav className="px-3 space-y-1">
             {navigation.map((item) => {

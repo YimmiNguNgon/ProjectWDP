@@ -108,13 +108,15 @@ export function AuthProvider({ children }: PropsWithChildren) {
     try {
       setLoading(true);
       const res = await api.post("/api/auth/login", { username, password });
-      const { token } = res.data.data;
+      const { token, user: loginUser } = res.data.data;
       setAuthToken(token);
       localStorage.setItem("token", token);
       setAccessToken(token);
 
       // Fetch full user profile immediately
       await fetchMe();
+
+      return loginUser as { username: string; email: string; role: string };
     } catch (error) {
       console.error("Failed to sign in:", error);
       throw error;
