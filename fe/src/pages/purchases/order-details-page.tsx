@@ -269,17 +269,6 @@ export default function OrderDetailsPage() {
                 </div>
               </div>
             </div>
-
-            {baseOrder.note && (
-              <div>
-                <p className="text-sm font-semibold text-muted-foreground mb-2 tracking-wider">
-                  ORDER NOTE
-                </p>
-                <div className="p-4 bg-yellow-50/50 border border-yellow-100 rounded-lg text-sm text-yellow-800 italic">
-                  "{baseOrder.note}"
-                </div>
-              </div>
-            )}
           </div>
         </div>
 
@@ -331,6 +320,11 @@ export default function OrderDetailsPage() {
                 </div>
               </div>
 
+              {subOrder.note && (
+                <div className="mx-4 mb-4 mt-0 p-3 bg-yellow-50/50 border border-yellow-100 rounded-lg text-sm text-yellow-800 italic">
+                  Note: "{subOrder.note}"
+                </div>
+              )}
               <div className="space-y-4 mt-4">
                 {subOrder.items.map((item, index) => (
                   <div
@@ -388,11 +382,6 @@ export default function OrderDetailsPage() {
                           )}
                       </div>
                     </div>
-                    {item.note && (
-                      <div className="mx-4 mb-4 mt-0 p-3 bg-yellow-50/50 border border-yellow-100 rounded-lg text-sm text-yellow-800 italic">
-                        Note: "{item.note}"
-                      </div>
-                    )}
                   </div>
                 ))}
               </div>

@@ -121,7 +121,11 @@ const loadSellerNameMap = async (payableItems) => {
   return sellerMap;
 };
 
-const buildCheckoutGroups = (payableItems, sellerNameMap = {}) => {
+const buildCheckoutGroups = (
+  payableItems,
+  sellerNameMap = {},
+  sellerNotes = {},
+) => {
   const grouped = new Map();
 
   for (const item of payableItems) {
@@ -132,6 +136,7 @@ const buildCheckoutGroups = (payableItems, sellerNameMap = {}) => {
         sellerName: sellerNameMap[sellerKey] || "Seller",
         items: [],
         subtotalAmount: 0,
+        note: String(sellerNotes[sellerKey] || ""),
       });
     }
 
@@ -777,6 +782,7 @@ const createOrdersFromPayableItems = async ({
   paymentMethod,
   paymentStatus,
   note,
+  sellerNotes = {},
 }) => {
   const groupedBySeller = new Map();
 
@@ -819,7 +825,6 @@ const createOrdersFromPayableItems = async ({
       quantity: Number(item.quantity),
       selectedVariants: normalizeSelectedVariants(item.selectedVariants || []),
       variantSku: item.variantSku || "",
-      note: item.note || "",
     }));
 
     const subtotalAmount = Number(
@@ -886,6 +891,7 @@ const createOrdersFromPayableItems = async ({
           }
         : undefined;
 
+    const orderNote = sellerNotes[sellerId] || note || "";
     const order = await Order.create({
       buyer: buyerId,
       seller: sellerId,
@@ -907,7 +913,7 @@ const createOrdersFromPayableItems = async ({
       shippingAddress,
       shippingPrice: 0, // Shipping is now at OrderGroup level
       paymentMethod,
-      note,
+      note: orderNote,
     });
 
     orders.push(order);
@@ -1071,6 +1077,7 @@ getOrderById = async (req, res) => {
         paymentStatus: order.paymentStatus || "unpaid",
         items: order.items,
         itemCount: totalItems,
+        note: order.note || "", // include seller/buyer note here
         date: formatDate(order.createdAt),
         paymentMethod: paymentMethod,
         createdAt: order.createdAt,
@@ -1311,6 +1318,7 @@ previewCheckout = async (req, res) => {
       source,
       cartItemIds,
       items,
+      sellerNotes = {},
       globalVoucherCode = "",
       sellerVoucherCodes = [],
     } = req.body || {};
@@ -1322,7 +1330,11 @@ previewCheckout = async (req, res) => {
       items,
     });
     const sellerNameMap = await loadSellerNameMap(checkout.payableItems);
-    const summary = buildCheckoutGroups(checkout.payableItems, sellerNameMap);
+    const summary = buildCheckoutGroups(
+      checkout.payableItems,
+      sellerNameMap,
+      sellerNotes,
+    );
     const voucherResolution = await resolveVoucherAssignments({
       buyerId,
       groups: summary.groups,
@@ -1352,6 +1364,7 @@ previewCheckout = async (req, res) => {
       payableItemCount: summary.payableItemCount,
       outOfStockItems: checkout.unavailableItems,
       canProceed: summary.payableItemCount > 0,
+      sellerNotes,
     });
   } catch (error) {
     return res.status(500).json({
@@ -1369,6 +1382,7 @@ confirmCheckout = async (req, res) => {
       source,
       cartItemIds,
       items,
+      sellerNotes = {},
       globalVoucherCode = "",
       sellerVoucherCodes = [],
       paymentSimulation = "success",
@@ -1401,7 +1415,11 @@ confirmCheckout = async (req, res) => {
     }
 
     const sellerNameMap = await loadSellerNameMap(checkout.payableItems);
-    const summary = buildCheckoutGroups(checkout.payableItems, sellerNameMap);
+    const summary = buildCheckoutGroups(
+      checkout.payableItems,
+      sellerNameMap,
+      sellerNotes,
+    );
     const voucherResolution = await resolveVoucherAssignments({
       buyerId,
       groups: summary.groups,
@@ -1454,6 +1472,7 @@ confirmCheckout = async (req, res) => {
       shippingPrice,
       paymentMethod,
       note,
+      sellerNotes,
     });
 
     let orderGroup = null;
@@ -1528,7 +1547,7 @@ confirmCheckout = async (req, res) => {
         if (user && user.email) {
           await sendEmail({
             to: user.email,
-            subject: "Đặt hàng thành công - Ebay",
+            subject: "Order Place Successfully - EFPT",
             template: "orderSuccess.ejs",
             data: {
               username: user.username,

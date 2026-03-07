@@ -54,6 +54,7 @@ export interface Order {
     | "delivered"
     | "cancelled"
     | "failed";
+  paymentStatus: "unpaid" | "paid" | "failed" | "refunded";
   items: number;
   date: string;
   paymentMethod: string;
@@ -98,6 +99,22 @@ const mapStatus = (status: string): Order["status"] => {
     default:
       console.warn("Unknown status:", status);
       return "created";
+  }
+};
+
+const mapPaymentStatus = (status: string): Order["paymentStatus"] => {
+  switch (status.toLowerCase()) {
+    case "unpaid":
+      return "unpaid";
+    case "paid":
+      return "paid";
+    case "failed":
+      return "failed";
+    case "refunded":
+      return "refunded";
+    default:
+      console.warn("Unknown status:", status);
+      return "unpaid";
   }
 };
 
@@ -150,6 +167,7 @@ const transformOrder = (apiOrder: ApiOrder): Order => {
     email: apiOrder.customer?.email || "",
     total: apiOrder.totalAmount || apiOrder.total || 0,
     status: mapStatus(apiOrder.status || "pending"),
+    paymentStatus: mapPaymentStatus(apiOrder.paymentStatus || "unpaid"),
     items:
       apiOrder.itemCount ||
       (Array.isArray(apiOrder.items) ? apiOrder.items.length : 0) ||
@@ -297,6 +315,7 @@ export const orderService = {
 
   // Helper functions export náº¿u cáº§n
   mapStatus,
+  mapPaymentStatus,
   formatDate,
   formatFullDate,
 };

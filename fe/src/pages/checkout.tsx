@@ -19,6 +19,7 @@ import { getAddresses, type Address } from "@/api/user";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
 import {
   Dialog,
   DialogContent,
@@ -97,7 +98,8 @@ export default function CheckoutPage() {
 
   const [shippingMethod, setShippingMethod] = useState<string>("standard");
   const [paymentMethod, setPaymentMethod] = useState<string>("cod");
-  const [itemNotes, setItemNotes] = useState<Record<string, string>>({});
+  // notes keyed by sellerId for each suborder
+  const [sellerNotes, setSellerNotes] = useState<Record<string, string>>({});
   const [globalVoucherInput, setGlobalVoucherInput] = useState("");
   const [globalVoucherCode, setGlobalVoucherCode] = useState("");
   const [sellerVoucherInputs, setSellerVoucherInputs] = useState<
@@ -142,14 +144,19 @@ export default function CheckoutPage() {
       ...payload,
       globalVoucherCode: globalVoucherCode || undefined,
       sellerVoucherCodes: sellerVoucherPayload,
-      itemNotes,
+      sellerNotes,
     }),
-    [payload, globalVoucherCode, sellerVoucherPayload, itemNotes],
+    [payload, globalVoucherCode, sellerVoucherPayload, sellerNotes],
   );
 
   const loadPreview = async () => {
     try {
-      setLoading(true);
+      // only show the full-screen loading indicator if we don't
+      // already have a preview. otherwise the UI will flash/refresh
+      // when the user is typing in seller notes.
+      if (!preview) {
+        setLoading(true);
+      }
       const data = await previewCheckout(checkoutRequestBody);
       setPreview(data);
     } catch (error: any) {
@@ -221,6 +228,7 @@ export default function CheckoutPage() {
     JSON.stringify(payload.items || []),
     globalVoucherCode,
     JSON.stringify(sellerVoucherPayload),
+    JSON.stringify(sellerNotes), // recalc when seller notes change
   ]);
 
   useEffect(() => {
@@ -276,7 +284,7 @@ export default function CheckoutPage() {
         },
         shippingPrice: shippingCosts[shippingMethod] || 0,
         paymentMethod: paymentMethod,
-        itemNotes: itemNotes,
+        sellerNotes: sellerNotes,
       };
       const result = await confirmCheckout(requestBody);
 
@@ -419,7 +427,11 @@ export default function CheckoutPage() {
     (a: Address) => a._id === selectedAddressId,
   );
 
-  if (loading) {
+  // show a full‑page loader only when we truly have **no** preview yet.
+  // subsequent preview requests (triggered by typing seller notes, etc.)
+  // will set `loading` but we keep the current UI on screen so the user
+  // can continue typing uninterrupted.
+  if (loading && !preview) {
     return (
       <div className="flex items-center justify-center min-h-[60vh]">
         <div className="text-center text-muted-foreground">
@@ -842,6 +854,21 @@ export default function CheckoutPage() {
                   </Badge>
                 </div>
 
+                <div className="mt-2">
+                  <Textarea
+                    placeholder="Note for this shop..."
+                    value={sellerNotes[group.sellerId] || ""}
+                    onChange={(e) =>
+                      setSellerNotes((prev) => ({
+                        ...prev,
+                        [group.sellerId]: e.target.value,
+                      }))
+                    }
+                    className="w-full"
+                    rows={2}
+                  />
+                </div>
+
                 <div className="space-y-2">
                   {group.items.map((item: CheckoutGroupItem) => (
                     <div
@@ -870,22 +897,7 @@ export default function CheckoutPage() {
                           </p>
                         </div>
                       </div>
-                      <div className="mt-1">
-                        <Input
-                          placeholder="Note for this item..."
-                          value={
-                            itemNotes[item.cartItemId || item.productId] || ""
-                          }
-                          onChange={(e) =>
-                            setItemNotes((prev) => ({
-                              ...prev,
-                              [item.cartItemId || item.productId]:
-                                e.target.value,
-                            }))
-                          }
-                          className="h-8 text-xs bg-white"
-                        />
-                      </div>
+                      {/* no per-item note any more */}
                     </div>
                   ))}
                 </div>
@@ -1090,9 +1102,15 @@ export default function CheckoutPage() {
                   size="lg"
                   className="w-full cursor-pointer h-12 text-md font-bold shadow-lg shadow-primary/20"
                   onClick={handleConfirmPayment}
-                  disabled={processing || !preview.canProceed}
+                  disabled={
+                    processing || !preview.canProceed || (loading && !!preview)
+                  }
                 >
-                  {processing ? "Processing..." : "Place Order"}
+                  {processing
+                    ? "Processing..."
+                    : loading && !!preview
+                      ? "Updating…"
+                      : "Place Order"}
                 </Button>
                 <Button
                   variant="outline"
