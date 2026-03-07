@@ -1,5 +1,5 @@
 ﻿import { useNavigate } from 'react-router-dom';
-import { Button } from '../components/ui/button';
+import { Button } from '@/components/ui/button';
 import { ShieldAlert, Home, ArrowLeft } from 'lucide-react';
 
 export default function UnauthorizedPage() {

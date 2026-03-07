@@ -5,11 +5,11 @@ import {
     reviewPendingProduct,
     type Product,
     type GetProductsParams,
-} from '../../api/admin-products';
-import { Button } from '../../components/ui/button';
-import { Input } from '../../components/ui/input';
-import { Label } from '../../components/ui/label';
-import { Textarea } from '../../components/ui/textarea';
+} from '@/api/admin-products';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { Textarea } from '@/components/ui/textarea';
 import {
     Table,
     TableBody,
@@ -17,7 +17,7 @@ import {
     TableHead,
     TableHeader,
     TableRow,
-} from '../../components/ui/table';
+} from '@/components/ui/table';
 import {
     Dialog,
     DialogContent,
@@ -25,11 +25,11 @@ import {
     DialogFooter,
     DialogHeader,
     DialogTitle,
-} from '../../components/ui/dialog';
-import { Badge } from '../../components/ui/badge';
+} from '@/components/ui/dialog';
+import { Badge } from '@/components/ui/badge';
 import { CheckCircle2, Clock3, Eye, Flag, Flame, Layers, XCircle } from 'lucide-react';
 import { toast } from 'sonner';
-import api from '../../lib/axios';
+import api from '@/lib/axios';
 
 const REPORT_REASONS = [
     'Product violates policy',

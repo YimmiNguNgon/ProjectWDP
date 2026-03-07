@@ -1,7 +1,7 @@
 ﻿// src/pages/admin/feedback-management.tsx
 import { useState, useEffect } from 'react';
-import { getAllFeedbackRequests, getFlaggedFeedbackRequests, reviewFeedbackRequest, type FeedbackRevisionRequest } from '../../api/feedback-revision';
-import { Button } from '../../components/ui/button';
+import { getAllFeedbackRequests, getFlaggedFeedbackRequests, reviewFeedbackRequest, type FeedbackRevisionRequest } from '@/api/feedback-revision';
+import { Button } from '@/components/ui/button';
 import {
     Table,
     TableBody,
@@ -9,7 +9,7 @@ import {
     TableHead,
     TableHeader,
     TableRow,
-} from '../../components/ui/table';
+} from '@/components/ui/table';
 import {
     Dialog,
     DialogContent,
@@ -17,9 +17,9 @@ import {
     DialogFooter,
     DialogHeader,
     DialogTitle,
-} from '../../components/ui/dialog';
-import { Label } from '../../components/ui/label';
-import { Textarea } from '../../components/ui/textarea';
+} from '@/components/ui/dialog';
+import { Label } from '@/components/ui/label';
+import { Textarea } from '@/components/ui/textarea';
 import { toast } from 'sonner';
 
 export default function FeedbackManagement() {
