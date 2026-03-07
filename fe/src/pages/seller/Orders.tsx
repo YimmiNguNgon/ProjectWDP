@@ -12,6 +12,7 @@ import {
   User,
   CreditCard,
   MapPin,
+  Wallet,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -86,6 +87,37 @@ const STATUS_CONFIG = {
   },
 } as const;
 
+const PAYMENT_STATUS_CONFIG = {
+  unpaid: {
+    label: "Unpaid",
+    dot: "#EAB308",
+    bg: "#FEFCE8",
+    text: "#A16207",
+    border: "#FEF08A",
+  },
+  paid: {
+    label: "Paid",
+    dot: "#22C55E",
+    bg: "#F0FDF4",
+    text: "#15803D",
+    border: "#BBF7D0",
+  },
+  failed: {
+    label: "Failed",
+    dot: "#EF4444",
+    bg: "#FEF2F2",
+    text: "#B91C1C",
+    border: "#FECACA",
+  },
+  refunded: {
+    label: "Refunded",
+    dot: "#6B7280",
+    bg: "#F9FAFB",
+    text: "#374151",
+    border: "#E5E7EB",
+  },
+};
+
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 function formatDate(dateString?: string) {
   if (!dateString) return "—";
@@ -153,6 +185,49 @@ function StatusPill({ status }: { status: Order["status"] }) {
     text: "#475569",
     border: "#E2E8F0",
   };
+  return (
+    <span
+      style={{
+        display: "inline-flex",
+        alignItems: "center",
+        gap: 6,
+        padding: "4px 12px",
+        borderRadius: 999,
+        background: cfg.bg,
+        color: cfg.text,
+        border: `1px solid ${cfg.border}`,
+        fontSize: 12,
+        fontWeight: 600,
+        letterSpacing: "0.03em",
+      }}
+    >
+      <span
+        style={{
+          width: 6,
+          height: 6,
+          borderRadius: "50%",
+          background: cfg.dot,
+          flexShrink: 0,
+        }}
+      />
+      {cfg.label}
+    </span>
+  );
+}
+
+function PaymentStatusPill({
+  paymentStatus,
+}: {
+  paymentStatus: Order["paymentStatus"];
+}) {
+  const cfg = PAYMENT_STATUS_CONFIG[paymentStatus] ?? {
+    label: "Unknown",
+    dot: "#94A3B8",
+    bg: "#F8FAFC",
+    text: "#475569",
+    border: "#E2E8F0",
+  };
+
   return (
     <span
       style={{
@@ -386,61 +461,95 @@ function OrderDetailsPopup({
                 </InfoBlock>
               )}
 
-              {/* Note */}
-              {order.note && (
-                <InfoBlock
-                  icon={<div style={{ display: "flex", alignItems: "center", justifyContent: "center", width: 16, height: 16 }}><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#F59E0B" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M14.5 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7.5L14.5 2z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="16" y1="13" x2="8" y2="13"></line><line x1="16" y1="17" x2="8" y2="17"></line><line x1="10" y1="9" x2="8" y2="9"></line></svg></div>}
-                  label="Note from Buyer"
-                >
-                  <p
-                    style={{
-                      color: "#475569",
-                      fontSize: 13,
-                      margin: 0,
-                      lineHeight: 1.5,
-                      fontStyle: "italic",
-                      backgroundColor: "#FFFBEB",
-                      padding: "8px 12px",
-                      borderRadius: "8px",
-                      border: "1px solid #FEF3C7",
-                      borderLeft: "3px solid #F59E0B"
-                    }}
-                  >
-                    "{order.note}"
-                  </p>
-                </InfoBlock>
-              )}
+              <InfoBlock
+                icon={<Package size={16} color="#F59E0B" />}
+                label="Status"
+              >
+                <div style={{ marginTop: 2 }}>
+                  <StatusPill status={order.status} />
+                </div>
+              </InfoBlock>
 
               {/* Payment + Status */}
-              <div
-                style={{ display: "flex", flexDirection: "column", gap: 20 }}
+              <InfoBlock
+                icon={<CreditCard size={16} color="#10B981" />}
+                label="Payment"
               >
-                <InfoBlock
-                  icon={<CreditCard size={16} color="#10B981" />}
-                  label="Payment"
+                <p
+                  style={{
+                    fontWeight: 600,
+                    color: "#0F172A",
+                    fontSize: 14,
+                    margin: 0,
+                    textTransform: "uppercase",
+                    letterSpacing: "0.04em",
+                  }}
                 >
-                  <p
-                    style={{
-                      fontWeight: 600,
-                      color: "#0F172A",
-                      fontSize: 14,
-                      margin: 0,
-                      textTransform: "uppercase",
-                      letterSpacing: "0.04em",
-                    }}
+                  {order.paymentMethod}
+                </p>
+              </InfoBlock>
+              <InfoBlock
+                icon={<Wallet size={16} color="#F59E0B" />}
+                label="Payment Status"
+              >
+                <div style={{ marginTop: 2 }}>
+                  <PaymentStatusPill paymentStatus={order.paymentStatus} />
+                </div>
+              </InfoBlock>
+
+              {/* Note */}
+              {order.note && (
+                <div style={{ gridColumn: "1 / -1" }}>
+                  <InfoBlock
+                    icon={
+                      <div
+                        style={{
+                          display: "flex",
+                          alignItems: "center",
+                          justifyContent: "center",
+                          width: 16,
+                          height: 16,
+                        }}
+                      >
+                        <svg
+                          width="14"
+                          height="14"
+                          viewBox="0 0 24 24"
+                          fill="none"
+                          stroke="#F59E0B"
+                          strokeWidth="2"
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                        >
+                          <path d="M14.5 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7.5L14.5 2z"></path>
+                          <polyline points="14 2 14 8 20 8"></polyline>
+                          <line x1="16" y1="13" x2="8" y2="13"></line>
+                          <line x1="16" y1="17" x2="8" y2="17"></line>
+                          <line x1="10" y1="9" x2="8" y2="9"></line>
+                        </svg>
+                      </div>
+                    }
+                    label="Note from Buyer"
                   >
-                    {order.paymentMethod}
-                  </p>
-                </InfoBlock>
-                <InfoBlock
-                  icon={<Package size={16} color="#F59E0B" />}
-                  label="Status"
-                >
-                  <div style={{ marginTop: 2 }}>
-                    <StatusPill status={order.status} />
-                  </div>
-                </InfoBlock>
-              </div>
+                    <p
+                      style={{
+                        color: "#475569",
+                        fontSize: 13,
+                        margin: 0,
+                        lineHeight: 1.5,
+                        fontStyle: "italic",
+                        backgroundColor: "#FFFBEB",
+                        padding: "8px 12px",
+                        borderRadius: "8px",
+                        border: "1px solid #FEF3C7",
+                        borderLeft: "3px solid #F59E0B",
+                      }}
+                    >
+                      "{order.note}"
+                    </p>
+                  </InfoBlock>
+                </div>
+              )}
             </div>
 
             {/* ── Products table ── */}
@@ -588,7 +697,7 @@ function OrderDetailsPopup({
                             <p
                               style={{
                                 fontSize: 11,
-                                color: "#CBD5E1",
+                                color: "#D1D1D1",
                                 margin: 0,
                               }}
                             >
@@ -1050,6 +1159,9 @@ export default function SellerOrders() {
                     Total
                   </th>
                   <th className="text-left p-4 font-medium text-gray-600">
+                    Payment Status
+                  </th>
+                  <th className="text-left p-4 font-medium text-gray-600">
                     Status
                   </th>
                   <th className="text-left p-4 font-medium text-gray-600">
@@ -1075,6 +1187,9 @@ export default function SellerOrders() {
                     <td className="p-4">{order.items} products</td>
                     <td className="p-4 font-medium">
                       ${order.total.toFixed(2)}
+                    </td>
+                    <td className="p-4">
+                      <PaymentStatusPill paymentStatus={order.paymentStatus} />
                     </td>
                     <td className="p-4">{getStatusBadge(order.status)}</td>
                     <td className="p-4">

@@ -17,7 +17,10 @@ export interface CheckoutPreviewPayload {
   items?: CheckoutRequestItem[];
   globalVoucherCode?: string;
   sellerVoucherCodes?: SellerVoucherCodeInput[] | Record<string, string>;
+  sellerNotes?: Record<string, string>;
+  // legacy support – server will ignore these
   itemNotes?: Record<string, string>;
+  note?: string;
 }
 
 export interface CheckoutGroupItem {
@@ -37,6 +40,7 @@ export interface CheckoutGroup {
   sellerName: string;
   items: CheckoutGroupItem[];
   subtotalAmount: number;
+  note?: string;
 }
 
 export interface CheckoutUnavailableItem {
@@ -104,6 +108,7 @@ export interface CheckoutConfirmPayload extends CheckoutPreviewPayload {
   };
   shippingPrice: number;
   paymentMethod: string;
+  // note field still allowed for legacy but sellers should use sellerNotes
   note?: string;
 }
 
