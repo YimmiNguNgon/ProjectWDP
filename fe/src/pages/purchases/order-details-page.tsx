@@ -333,13 +333,19 @@ export default function OrderDetailsPage() {
 
               <div className="space-y-4 mt-4">
                 {subOrder.items.map((item, index) => (
-                  <div key={`${item.productId?._id}-${index}`} className="flex flex-col gap-2">
+                  <div
+                    key={`${item.productId?._id}-${index}`}
+                    className="flex flex-col gap-2"
+                  >
                     <div
                       className="flex flex-col sm:flex-row gap-4 p-4 bg-muted/30 rounded-lg border-2 border-transparent hover:border-border transition-colors cursor-pointer"
-                      onClick={() => navigate(`/products/${item.productId?._id}`)}
+                      onClick={() =>
+                        navigate(`/products/${item.productId?._id}`)
+                      }
                     >
                       <div className="h-24 w-24 bg-muted rounded-md flex items-center justify-center shrink-0 overflow-hidden border">
-                        {item.productId?.image || item.productId?.images?.[0] ? (
+                        {item.productId?.image ||
+                        item.productId?.images?.[0] ? (
                           <img
                             src={
                               item.productId.image || item.productId.images?.[0]

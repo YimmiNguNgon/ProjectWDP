@@ -873,11 +873,14 @@ export default function CheckoutPage() {
                       <div className="mt-1">
                         <Input
                           placeholder="Note for this item..."
-                          value={itemNotes[item.cartItemId || item.productId] || ""}
+                          value={
+                            itemNotes[item.cartItemId || item.productId] || ""
+                          }
                           onChange={(e) =>
                             setItemNotes((prev) => ({
                               ...prev,
-                              [item.cartItemId || item.productId]: e.target.value,
+                              [item.cartItemId || item.productId]:
+                                e.target.value,
                             }))
                           }
                           className="h-8 text-xs bg-white"
