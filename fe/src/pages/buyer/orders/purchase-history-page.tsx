@@ -12,6 +12,17 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
+import { Textarea } from "@/components/ui/textarea";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { Messages } from "@/components/chat/messages";
 import {
   MessageContext,
@@ -26,6 +37,7 @@ import {
   unsaveSeller as unsaveSellerApi,
   getSavedSellers,
   hideOrder as hideOrderApi,
+  cancelOrder as cancelOrderApi,
 } from "@/api/orders";
 
 type OrderItem = {
@@ -68,6 +80,24 @@ export default function PurchaseHistoryPage() {
   const [processingActions, setProcessingActions] = useState<Set<string>>(
     new Set(),
   );
+
+  // Cancel order dialog state
+  const [cancelDialogOpen, setCancelDialogOpen] = useState(false);
+  const [orderIdToCancel, setOrderIdToCancel] = useState<string | null>(null);
+  const cancelReasons = [
+    "changed_mind",
+    "ordered_by_mistake",
+    "wrong_quantity",
+    "found_better_price",
+    "payment_issue",
+    "delivery_too_long",
+    "seller_not_responding",
+    "want_change_address",
+    "want_change_product",
+    "other",
+  ];
+  const [cancelReason, setCancelReason] = useState<string>("");
+  const [cancelOtherText, setCancelOtherText] = useState<string>("");
 
   // Pagination states
   const [page, setPage] = useState(1);
@@ -167,6 +197,52 @@ export default function PurchaseHistoryPage() {
         newSet.delete(actionKey);
         return newSet;
       });
+    }
+  };
+
+  // Handler: Cancel order
+  const handleCancelOrder = async () => {
+    if (!orderIdToCancel) return;
+    if (!cancelReason) {
+      toast.error("Please select a reason for cancellation");
+      return;
+    }
+    if (cancelReason === "other" && !cancelOtherText.trim()) {
+      toast.error("Please provide details for 'Other' reason");
+      return;
+    }
+    const actionKey = `cancel-${orderIdToCancel}`;
+    if (processingActions.has(actionKey)) return;
+
+    try {
+      setProcessingActions((prev) => new Set(prev).add(actionKey));
+      await cancelOrderApi(
+        orderIdToCancel,
+        cancelReason,
+        cancelReason === "other" ? cancelOtherText.trim() : undefined,
+      );
+
+      // Update local state: mark that order as cancelled
+      setOrders((prev) =>
+        prev.map((o) =>
+          o._id === orderIdToCancel ? { ...o, status: "cancelled" } : o,
+        ),
+      );
+
+      toast.success("Order cancelled successfully");
+    } catch (err: any) {
+      console.error("Failed to cancel order", err);
+      toast.error(err.response?.data?.message || "Failed to cancel order");
+    } finally {
+      setProcessingActions((prev) => {
+        const newSet = new Set(prev);
+        newSet.delete(actionKey);
+        return newSet;
+      });
+      setCancelDialogOpen(false);
+      setOrderIdToCancel(null);
+      setCancelReason("");
+      setCancelOtherText("");
     }
   };
 
@@ -319,7 +395,7 @@ export default function PurchaseHistoryPage() {
     }
     if (normalized === "shipping") {
       return {
-        label: "Shipped",
+        label: "Shipping",
         note: "This order is on the way.",
         dotClass: "bg-amber-500",
         textClass: "text-amber-700",
@@ -739,6 +815,22 @@ export default function PurchaseHistoryPage() {
                                       >
                                         Hide order
                                       </DropdownMenuItem>
+                                      {(order.status.toLowerCase() ===
+                                        "created" ||
+                                        order.status.toLowerCase() ===
+                                          "packaging") && (
+                                        <DropdownMenuItem
+                                          className="cursor-pointer text-red-600 hover:bg-red-50 focus:text-red-600"
+                                          onClick={() => {
+                                            setOrderIdToCancel(order._id);
+                                            setCancelReason("");
+                                            setCancelOtherText("");
+                                            setCancelDialogOpen(true);
+                                          }}
+                                        >
+                                          Cancel Order
+                                        </DropdownMenuItem>
+                                      )}
                                     </DropdownMenuContent>
                                   </DropdownMenu>
                                 </div>
@@ -820,6 +912,67 @@ export default function PurchaseHistoryPage() {
           </MessageContext.Provider>
         </DialogContent>
       </Dialog>
+
+      {/* Cancel Order Confirmation Dialog */}
+      <AlertDialog open={cancelDialogOpen} onOpenChange={setCancelDialogOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Cancel Order</AlertDialogTitle>
+            <AlertDialogDescription>
+              Please select a reason for cancelling this order. This action
+              cannot be undone.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <div className="mt-2 space-y-2">
+            {cancelReasons.map((r) => (
+              <label key={r} className="flex items-center gap-2">
+                <input
+                  type="radio"
+                  name="cancelReason"
+                  value={r}
+                  checked={cancelReason === r}
+                  onChange={() => setCancelReason(r)}
+                />
+                <span className="text-sm capitalize">
+                  {r.replace(/_/g, " ")}
+                </span>
+              </label>
+            ))}
+            {cancelReason === "other" && (
+              <Textarea
+                value={cancelOtherText}
+                onChange={(e) => setCancelOtherText(e.target.value)}
+                placeholder="Please specify the reason"
+                rows={3}
+              />
+            )}
+          </div>
+          <AlertDialogFooter>
+            <AlertDialogCancel
+              onClick={() => {
+                setCancelDialogOpen(false);
+                setOrderIdToCancel(null);
+                setCancelReason("");
+                setCancelOtherText("");
+              }}
+            >
+              Keep Order
+            </AlertDialogCancel>
+            <AlertDialogAction
+              className="bg-red-600 hover:bg-red-700 text-white"
+              onClick={handleCancelOrder}
+              disabled={
+                processingActions.has(`cancel-${orderIdToCancel}`) ||
+                !cancelReason
+              }
+            >
+              {processingActions.has(`cancel-${orderIdToCancel}`)
+                ? "Cancelling..."
+                : "Confirm Cancel"}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </>
   );
 }

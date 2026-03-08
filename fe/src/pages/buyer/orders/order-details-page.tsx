@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { useParams, useNavigate, Link } from "react-router-dom";
-import { getOrderDetails, type Order } from "@/api/orders";
+import { getOrderDetails, cancelOrder, type Order } from "@/api/orders";
 import { Separator } from "@/components/ui/separator";
 import { toast } from "sonner";
 import {
@@ -14,9 +14,20 @@ import {
   CheckCircle2,
   AlertTriangle,
   MessageSquare,
+  XCircle,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import {
   getDisputeByOrder,
   confirmReceived,
@@ -36,10 +47,34 @@ export default function OrderDetailsPage() {
   const [groupDiscount, setGroupDiscount] = useState<number>(0);
   const [loading, setLoading] = useState(true);
   // Delivery confirmation state (per sub-order)
-  const [disputes, setDisputes] = useState<Record<string, DeliveryDispute | null>>({});
+  const [disputes, setDisputes] = useState<
+    Record<string, DeliveryDispute | null>
+  >({});
   const [reportNote, setReportNote] = useState<Record<string, string>>({});
-  const [showReportForm, setShowReportForm] = useState<Record<string, boolean>>({});
+  const [showReportForm, setShowReportForm] = useState<Record<string, boolean>>(
+    {},
+  );
   const [actionLoading, setActionLoading] = useState<string | null>(null);
+
+  // Cancel order dialog state
+  const [cancelDialogOpen, setCancelDialogOpen] = useState(false);
+  const [subOrderIdToCancel, setSubOrderIdToCancel] = useState<string | null>(
+    null,
+  );
+  const cancelReasons = [
+    "changed_mind",
+    "ordered_by_mistake",
+    "wrong_quantity",
+    "found_better_price",
+    "payment_issue",
+    "delivery_too_long",
+    "seller_not_responding",
+    "want_change_address",
+    "want_change_product",
+    "other",
+  ];
+  const [cancelReason, setCancelReason] = useState<string>("");
+  const [cancelOtherText, setCancelOtherText] = useState<string>("");
 
   const totalAmount = groupSubtotal + groupShippingTotal - groupDiscount;
 
@@ -58,7 +93,10 @@ export default function OrderDetailsPage() {
         );
         const disputeResults = await Promise.allSettled(
           deliveredOrders.map((o) =>
-            getDisputeByOrder(o._id).then((r) => ({ id: o._id, dispute: r.data.dispute })),
+            getDisputeByOrder(o._id).then((r) => ({
+              id: o._id,
+              dispute: r.data.dispute,
+            })),
           ),
         );
         const disputeMap: Record<string, DeliveryDispute | null> = {};
@@ -104,7 +142,9 @@ export default function OrderDetailsPage() {
       await confirmReceived(subOrderId);
       toast.success("Order confirmed as received! You can now leave a review.");
       setOrders((prev) =>
-        prev.map((o) => (o._id === subOrderId ? { ...o, status: "completed" } : o)),
+        prev.map((o) =>
+          o._id === subOrderId ? { ...o, status: "completed" } : o,
+        ),
       );
     } catch (err: any) {
       toast.error(err?.response?.data?.message || "Failed to confirm");
@@ -113,10 +153,17 @@ export default function OrderDetailsPage() {
     }
   };
 
-  const handleReportNotReceived = async (subOrderId: string, skipToAdmin = false) => {
+  const handleReportNotReceived = async (
+    subOrderId: string,
+    skipToAdmin = false,
+  ) => {
     setActionLoading(subOrderId + (skipToAdmin ? "_reportAdmin" : "_report"));
     try {
-      const res = await reportNotReceived(subOrderId, reportNote[subOrderId] || "", skipToAdmin);
+      const res = await reportNotReceived(
+        subOrderId,
+        reportNote[subOrderId] || "",
+        skipToAdmin,
+      );
       toast.info(
         skipToAdmin
           ? "Report sent to admin. We will review and contact you shortly."
@@ -127,7 +174,10 @@ export default function OrderDetailsPage() {
     } catch (err: any) {
       const msg = err?.response?.data?.message || "Failed to submit report";
       if (err?.response?.status === 409 && err?.response?.data?.data) {
-        setDisputes((prev) => ({ ...prev, [subOrderId]: err.response.data.data }));
+        setDisputes((prev) => ({
+          ...prev,
+          [subOrderId]: err.response.data.data,
+        }));
       }
       toast.error(msg);
     } finally {
@@ -135,13 +185,18 @@ export default function OrderDetailsPage() {
     }
   };
 
-  const handleConfirmAfterDispute = async (subOrderId: string, disputeId: string) => {
+  const handleConfirmAfterDispute = async (
+    subOrderId: string,
+    disputeId: string,
+  ) => {
     setActionLoading(subOrderId + "_disputeConfirm");
     try {
       await buyerConfirmAfterDispute(disputeId);
       toast.success("Confirmed! Order is now completed.");
       setOrders((prev) =>
-        prev.map((o) => (o._id === subOrderId ? { ...o, status: "completed" } : o)),
+        prev.map((o) =>
+          o._id === subOrderId ? { ...o, status: "completed" } : o,
+        ),
       );
       setDisputes((prev) => ({
         ...prev,
@@ -160,7 +215,9 @@ export default function OrderDetailsPage() {
     setActionLoading(subOrderId + "_reportAdmin");
     try {
       await buyerReportToAdmin(disputeId);
-      toast.info("Your report has been sent to admin. We will review and contact you shortly.");
+      toast.info(
+        "Your report has been sent to admin. We will review and contact you shortly.",
+      );
       setDisputes((prev) => ({
         ...prev,
         [subOrderId]: prev[subOrderId]
@@ -171,6 +228,40 @@ export default function OrderDetailsPage() {
       toast.error(err?.response?.data?.message || "Failed to report to admin");
     } finally {
       setActionLoading(null);
+    }
+  };
+
+  const handleCancelOrder = async () => {
+    if (!subOrderIdToCancel) return;
+    if (!cancelReason) {
+      toast.error("Please select a reason for cancellation");
+      return;
+    }
+    if (cancelReason === "other" && !cancelOtherText.trim()) {
+      toast.error("Please provide details for 'Other' reason");
+      return;
+    }
+    setActionLoading(subOrderIdToCancel + "_cancel");
+    try {
+      await cancelOrder(
+        subOrderIdToCancel,
+        cancelReason,
+        cancelReason === "other" ? cancelOtherText.trim() : undefined,
+      );
+      toast.success("Order cancelled successfully.");
+      setOrders((prev) =>
+        prev.map((o) =>
+          o._id === subOrderIdToCancel ? { ...o, status: "cancelled" } : o,
+        ),
+      );
+    } catch (err: any) {
+      toast.error(err?.response?.data?.message || "Failed to cancel order");
+    } finally {
+      setActionLoading(null);
+      setCancelDialogOpen(false);
+      setSubOrderIdToCancel(null);
+      setCancelReason("");
+      setCancelOtherText("");
     }
   };
 
@@ -217,6 +308,7 @@ export default function OrderDetailsPage() {
 
   const STATUS_RANK: Record<string, number> = {
     created: 0,
+    cancelled: 0,
     packaging: 1,
     ready_to_ship: 2,
     shipping: 3,
@@ -263,45 +355,70 @@ export default function OrderDetailsPage() {
           <p className="text-sm font-semibold text-muted-foreground mb-8">
             ORDER STATUS
           </p>
-          <div className="relative flex items-start justify-between">
-            {/* connecting line behind icons — top-[28px] = half of h-14 (56px) */}
-            <div className="absolute top-[28px] left-8 right-8 h-0.5 bg-border z-0" />
-            {STATUS_STEPS.map((step) => {
-              const state = getStepState(step.key);
-              const { Icon } = step;
-              return (
-                <div
-                  key={step.key}
-                  className="relative z-10 flex flex-col items-center gap-3 flex-1"
-                >
-                  {state === "done" ? (
-                    <div className="h-14 w-14 rounded-full bg-emerald-50 border-2 border-emerald-400 flex items-center justify-center shadow-sm">
-                      <Icon className="h-6 w-6 text-emerald-500" />
-                    </div>
-                  ) : state === "active" ? (
-                    <div className="h-14 w-14 rounded-full bg-blue-50 border-2 border-blue-500 flex items-center justify-center shadow-md ring-4 ring-blue-100">
-                      <Icon className="h-6 w-6 text-blue-600" />
-                    </div>
-                  ) : (
-                    <div className="h-14 w-14 rounded-full bg-muted border border-border flex items-center justify-center">
-                      <Icon className="h-6 w-6 text-muted-foreground/40" />
-                    </div>
-                  )}
-                  <span
-                    className={`text-xs font-semibold text-center leading-tight tracking-wide ${
-                      state === "done"
-                        ? "text-emerald-600"
-                        : state === "active"
-                          ? "text-blue-600"
-                          : "text-muted-foreground/50"
-                    }`}
+
+          {/* Check if ALL sub-orders are cancelled or failed */}
+          {orders.every(
+            (o) => o.status === "cancelled" || o.status === "failed",
+          ) ? (
+            <div className="flex items-center gap-4 p-4 bg-red-50 border border-red-200 rounded-xl">
+              <div className="h-14 w-14 rounded-full bg-red-100 border-2 border-red-500 flex items-center justify-center shadow-md shrink-0">
+                <XCircle className="h-7 w-7 text-red-600" />
+              </div>
+              <div>
+                <p className="font-bold text-red-700 text-base">
+                  Order{" "}
+                  {orders.every((o) => o.status === "failed")
+                    ? "Failed"
+                    : "Cancelled"}
+                </p>
+                <p className="text-sm text-red-500 mt-0.5">
+                  {orders.every((o) => o.status === "failed")
+                    ? "This order could not be processed."
+                    : "This order was cancelled. Any payment will be refunded."}
+                </p>
+              </div>
+            </div>
+          ) : (
+            <div className="relative flex items-start justify-between">
+              {/* connecting line behind icons — top-[28px] = half of h-14 (56px) */}
+              <div className="absolute top-[28px] left-8 right-8 h-0.5 bg-border z-0" />
+              {STATUS_STEPS.map((step) => {
+                const state = getStepState(step.key);
+                const { Icon } = step;
+                return (
+                  <div
+                    key={step.key}
+                    className="relative z-10 flex flex-col items-center gap-3 flex-1"
                   >
-                    {step.label}
-                  </span>
-                </div>
-              );
-            })}
-          </div>
+                    {state === "done" ? (
+                      <div className="h-14 w-14 rounded-full bg-emerald-50 border-2 border-emerald-400 flex items-center justify-center shadow-sm">
+                        <Icon className="h-6 w-6 text-emerald-500" />
+                      </div>
+                    ) : state === "active" ? (
+                      <div className="h-14 w-14 rounded-full bg-blue-50 border-2 border-blue-500 flex items-center justify-center shadow-md ring-4 ring-blue-100">
+                        <Icon className="h-6 w-6 text-blue-600" />
+                      </div>
+                    ) : (
+                      <div className="h-14 w-14 rounded-full bg-muted border border-border flex items-center justify-center">
+                        <Icon className="h-6 w-6 text-muted-foreground/40" />
+                      </div>
+                    )}
+                    <span
+                      className={`text-xs font-semibold text-center leading-tight tracking-wide ${
+                        state === "done"
+                          ? "text-emerald-600"
+                          : state === "active"
+                            ? "text-blue-600"
+                            : "text-muted-foreground/50"
+                      }`}
+                    >
+                      {step.label}
+                    </span>
+                  </div>
+                );
+              })}
+            </div>
+          )}
         </div>
 
         <Separator />
@@ -423,18 +540,37 @@ export default function OrderDetailsPage() {
                           ? "text-blue-600 bg-blue-50"
                           : STATUS_RANK[subOrder.status.toLowerCase()] >= 1
                             ? "text-cyan-600 bg-cyan-50"
-                            : "text-blue-600 bg-blue-50"
+                            : subOrder.status.toLowerCase() === "cancelled"
+                              ? "text-red-600 bg-red-50"
+                              : "text-blue-600 bg-blue-50"
                   }`}
                 >
                   {subOrder.status.toUpperCase()}
                 </div>
               </div>
 
-              {subOrder.note && (
-                <div className="mx-4 mb-4 mt-0 p-3 bg-yellow-50/50 border border-yellow-100 rounded-lg text-sm text-yellow-800 italic">
-                  Note: "{subOrder.note}"
-                </div>
-              )}
+              {(() => {
+                // show buyer-provided note and/or cancellation reason from status history
+                const cancelEntry = subOrder.statusHistory?.find(
+                  (h) => h.status === "cancelled" && h.note && h.note.trim(),
+                );
+                const cancelNote = cancelEntry?.note;
+                const buyerNote = subOrder.note;
+                return (
+                  <>
+                    {buyerNote && (
+                      <div className="mx-4 mb-4 mt-0 p-3 bg-yellow-50/50 border border-yellow-100 rounded-lg text-sm text-yellow-800 italic">
+                        Note: "{buyerNote}"
+                      </div>
+                    )}
+                    {cancelNote && (
+                      <div className="mx-4 mb-4 mt-0 p-3 bg-red-50/50 border border-red-100 rounded-lg text-sm text-red-800 italic">
+                        <strong>Cancellation reason:</strong> "{cancelNote}"
+                      </div>
+                    )}
+                  </>
+                );
+              })()}
               <div className="space-y-4 mt-4">
                 {subOrder.items.map((item, index) => (
                   <div
@@ -531,211 +667,262 @@ export default function OrderDetailsPage() {
               </div>
 
               {/* ─── Delivery Confirmation Actions ─── */}
-              {subOrder.status === "delivered" && (() => {
-                const dispute = disputes[subOrder._id];
+              {subOrder.status === "delivered" &&
+                (() => {
+                  const dispute = disputes[subOrder._id];
 
-                // Dispute đã CONFIRMED: hoàn tất
-                if (dispute?.status === "CONFIRMED") {
-                  return (
-                    <div className="mt-4 p-3 bg-gray-50 border rounded-lg text-sm text-gray-600">
-                      You have confirmed receipt of this order.
-                    </div>
-                  );
-                }
+                  // Dispute đã CONFIRMED: hoàn tất
+                  if (dispute?.status === "CONFIRMED") {
+                    return (
+                      <div className="mt-4 p-3 bg-gray-50 border rounded-lg text-sm text-gray-600">
+                        You have confirmed receipt of this order.
+                      </div>
+                    );
+                  }
 
-                // Đã báo cáo admin, admin chưa phản hồi
-                if (dispute?.status === "REPORTED_TO_ADMIN" && !dispute.adminNotifiedAt) {
-                  return (
-                    <div className="mt-4 p-3 bg-purple-50 border border-purple-200 rounded-lg text-sm text-purple-700">
-                      <AlertTriangle className="h-4 w-4 inline mr-1" />
-                      Your report has been sent to admin. Please wait for their response.
-                    </div>
-                  );
-                }
+                  // Đã báo cáo admin, admin chưa phản hồi
+                  if (
+                    dispute?.status === "REPORTED_TO_ADMIN" &&
+                    !dispute.adminNotifiedAt
+                  ) {
+                    return (
+                      <div className="mt-4 p-3 bg-purple-50 border border-purple-200 rounded-lg text-sm text-purple-700">
+                        <AlertTriangle className="h-4 w-4 inline mr-1" />
+                        Your report has been sent to admin. Please wait for
+                        their response.
+                      </div>
+                    );
+                  }
 
-                // Admin đã phản hồi → buyer xác nhận nhận hàng
-                if (dispute?.status === "REPORTED_TO_ADMIN" && dispute.adminNotifiedAt) {
-                  return (
-                    <div className="mt-4 p-4 border border-purple-200 bg-purple-50 rounded-lg space-y-3">
-                      <p className="text-sm font-semibold text-purple-800">
-                        Admin responded to your report:
-                      </p>
-                      <p className="text-sm text-purple-700">{dispute.adminNote}</p>
-                      <p className="text-xs text-purple-500">
-                        {new Date(dispute.adminNotifiedAt).toLocaleString()}
-                      </p>
-                      <Button
-                        size="sm"
-                        className="bg-emerald-600 hover:bg-emerald-700 text-white"
-                        disabled={!!actionLoading}
-                        onClick={() => handleConfirmAfterDispute(subOrder._id, dispute._id)}
-                      >
-                        <CheckCircle2 className="h-3.5 w-3.5 mr-1" />
-                        {actionLoading === subOrder._id + "_disputeConfirm"
-                          ? "..."
-                          : "I have received my order"}
-                      </Button>
-                    </div>
-                  );
-                }
+                  // Admin đã phản hồi → buyer xác nhận nhận hàng
+                  if (
+                    dispute?.status === "REPORTED_TO_ADMIN" &&
+                    dispute.adminNotifiedAt
+                  ) {
+                    return (
+                      <div className="mt-4 p-4 border border-purple-200 bg-purple-50 rounded-lg space-y-3">
+                        <p className="text-sm font-semibold text-purple-800">
+                          Admin responded to your report:
+                        </p>
+                        <p className="text-sm text-purple-700">
+                          {dispute.adminNote}
+                        </p>
+                        <p className="text-xs text-purple-500">
+                          {new Date(dispute.adminNotifiedAt).toLocaleString()}
+                        </p>
+                        <Button
+                          size="sm"
+                          className="bg-emerald-600 hover:bg-emerald-700 text-white"
+                          disabled={!!actionLoading}
+                          onClick={() =>
+                            handleConfirmAfterDispute(subOrder._id, dispute._id)
+                          }
+                        >
+                          <CheckCircle2 className="h-3.5 w-3.5 mr-1" />
+                          {actionLoading === subOrder._id + "_disputeConfirm"
+                            ? "..."
+                            : "I have received my order"}
+                        </Button>
+                      </div>
+                    );
+                  }
 
-                // Shipper đã phản hồi: buyer xác nhận hoặc report lên admin
-                if (dispute?.status === "SHIPPER_RESPONDED") {
-                  return (
-                    <div className="mt-4 p-4 border border-blue-200 bg-blue-50 rounded-lg space-y-3">
-                      <p className="text-sm font-semibold text-blue-800">
-                        Shipper responded to your report:
-                      </p>
-                      <p className="text-sm text-blue-700">{dispute.shipperNote}</p>
-                      {dispute.shipperImages?.length > 0 && (
+                  // Shipper đã phản hồi: buyer xác nhận hoặc report lên admin
+                  if (dispute?.status === "SHIPPER_RESPONDED") {
+                    return (
+                      <div className="mt-4 p-4 border border-blue-200 bg-blue-50 rounded-lg space-y-3">
+                        <p className="text-sm font-semibold text-blue-800">
+                          Shipper responded to your report:
+                        </p>
+                        <p className="text-sm text-blue-700">
+                          {dispute.shipperNote}
+                        </p>
+                        {dispute.shipperImages?.length > 0 && (
+                          <div className="flex gap-2 flex-wrap">
+                            {dispute.shipperImages.map((url, i) => (
+                              <img
+                                key={i}
+                                src={url}
+                                alt={`Evidence ${i + 1}`}
+                                className="h-20 w-20 object-cover rounded-md border border-blue-200"
+                              />
+                            ))}
+                          </div>
+                        )}
+                        <p className="text-xs text-blue-600">
+                          If you have received your order, confirm below.
+                          Otherwise, report to admin for further assistance.
+                        </p>
                         <div className="flex gap-2 flex-wrap">
-                          {dispute.shipperImages.map((url, i) => (
-                            <img
-                              key={i}
-                              src={url}
-                              alt={`Evidence ${i + 1}`}
-                              className="h-20 w-20 object-cover rounded-md border border-blue-200"
-                            />
-                          ))}
+                          <Button
+                            size="sm"
+                            className="bg-emerald-600 hover:bg-emerald-700 text-white"
+                            disabled={!!actionLoading}
+                            onClick={() =>
+                              handleConfirmAfterDispute(
+                                subOrder._id,
+                                dispute._id,
+                              )
+                            }
+                          >
+                            <CheckCircle2 className="h-3.5 w-3.5 mr-1" />
+                            {actionLoading === subOrder._id + "_disputeConfirm"
+                              ? "..."
+                              : "I received it"}
+                          </Button>
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            className="border-red-300 text-red-600 hover:bg-red-50"
+                            disabled={!!actionLoading}
+                            onClick={() =>
+                              handleReportToAdmin(subOrder._id, dispute._id)
+                            }
+                          >
+                            <AlertTriangle className="h-3.5 w-3.5 mr-1" />
+                            {actionLoading === subOrder._id + "_reportAdmin"
+                              ? "..."
+                              : "Still not received — Report to Admin"}
+                          </Button>
                         </div>
-                      )}
-                      <p className="text-xs text-blue-600">
-                        If you have received your order, confirm below. Otherwise, report to admin for further assistance.
+                      </div>
+                    );
+                  }
+
+                  // Dispute đang chờ shipper phản hồi
+                  if (dispute?.status === "PENDING_SHIPPER") {
+                    return (
+                      <div className="mt-4 p-4 bg-amber-50 border border-amber-200 rounded-lg space-y-3">
+                        <p className="text-sm text-amber-700">
+                          <MessageSquare className="h-4 w-4 inline mr-1" />
+                          Your non-receipt report has been sent to the shipper.
+                          Waiting for their response...
+                        </p>
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          className="border-red-300 text-red-600 hover:bg-red-50"
+                          disabled={!!actionLoading}
+                          onClick={() =>
+                            handleReportToAdmin(subOrder._id, dispute._id)
+                          }
+                        >
+                          <AlertTriangle className="h-3.5 w-3.5 mr-1" />
+                          {actionLoading === subOrder._id + "_reportAdmin"
+                            ? "..."
+                            : "Skip shipper — Report to Admin"}
+                        </Button>
+                      </div>
+                    );
+                  }
+
+                  // Chưa có dispute: show Confirm or Report buttons
+                  return (
+                    <div className="mt-4 space-y-3">
+                      <p className="text-sm font-medium text-gray-700">
+                        Have you received this order?
                       </p>
                       <div className="flex gap-2 flex-wrap">
                         <Button
                           size="sm"
                           className="bg-emerald-600 hover:bg-emerald-700 text-white"
                           disabled={!!actionLoading}
-                          onClick={() => handleConfirmAfterDispute(subOrder._id, dispute._id)}
+                          onClick={() => handleConfirmReceived(subOrder._id)}
                         >
                           <CheckCircle2 className="h-3.5 w-3.5 mr-1" />
-                          {actionLoading === subOrder._id + "_disputeConfirm"
+                          {actionLoading === subOrder._id + "_confirm"
                             ? "..."
-                            : "I received it"}
+                            : "Yes, I received it"}
                         </Button>
                         <Button
                           size="sm"
                           variant="outline"
                           className="border-red-300 text-red-600 hover:bg-red-50"
                           disabled={!!actionLoading}
-                          onClick={() => handleReportToAdmin(subOrder._id, dispute._id)}
-                        >
-                          <AlertTriangle className="h-3.5 w-3.5 mr-1" />
-                          {actionLoading === subOrder._id + "_reportAdmin"
-                            ? "..."
-                            : "Still not received — Report to Admin"}
-                        </Button>
-                      </div>
-                    </div>
-                  );
-                }
-
-                // Dispute đang chờ shipper phản hồi
-                if (dispute?.status === "PENDING_SHIPPER") {
-                  return (
-                    <div className="mt-4 p-4 bg-amber-50 border border-amber-200 rounded-lg space-y-3">
-                      <p className="text-sm text-amber-700">
-                        <MessageSquare className="h-4 w-4 inline mr-1" />
-                        Your non-receipt report has been sent to the shipper. Waiting for their response...
-                      </p>
-                      <Button
-                        size="sm"
-                        variant="outline"
-                        className="border-red-300 text-red-600 hover:bg-red-50"
-                        disabled={!!actionLoading}
-                        onClick={() => handleReportToAdmin(subOrder._id, dispute._id)}
-                      >
-                        <AlertTriangle className="h-3.5 w-3.5 mr-1" />
-                        {actionLoading === subOrder._id + "_reportAdmin"
-                          ? "..."
-                          : "Skip shipper — Report to Admin"}
-                      </Button>
-                    </div>
-                  );
-                }
-
-                // Chưa có dispute: show Confirm or Report buttons
-                return (
-                  <div className="mt-4 space-y-3">
-                    <p className="text-sm font-medium text-gray-700">
-                      Have you received this order?
-                    </p>
-                    <div className="flex gap-2 flex-wrap">
-                      <Button
-                        size="sm"
-                        className="bg-emerald-600 hover:bg-emerald-700 text-white"
-                        disabled={!!actionLoading}
-                        onClick={() => handleConfirmReceived(subOrder._id)}
-                      >
-                        <CheckCircle2 className="h-3.5 w-3.5 mr-1" />
-                        {actionLoading === subOrder._id + "_confirm"
-                          ? "..."
-                          : "Yes, I received it"}
-                      </Button>
-                      <Button
-                        size="sm"
-                        variant="outline"
-                        className="border-red-300 text-red-600 hover:bg-red-50"
-                        disabled={!!actionLoading}
-                        onClick={() =>
-                          setShowReportForm((prev) => ({
-                            ...prev,
-                            [subOrder._id]: !prev[subOrder._id],
-                          }))
-                        }
-                      >
-                        <AlertTriangle className="h-3.5 w-3.5 mr-1" />
-                        No, I didn't receive it
-                      </Button>
-                    </div>
-
-                    {showReportForm[subOrder._id] && (
-                      <div className="p-4 border border-red-200 bg-red-50 rounded-lg space-y-3">
-                        <p className="text-sm font-semibold text-red-700">
-                          Describe the issue:
-                        </p>
-                        <Textarea
-                          placeholder="Describe the issue (optional)..."
-                          value={reportNote[subOrder._id] || ""}
-                          onChange={(e) =>
-                            setReportNote((prev) => ({
+                          onClick={() =>
+                            setShowReportForm((prev) => ({
                               ...prev,
-                              [subOrder._id]: e.target.value,
+                              [subOrder._id]: !prev[subOrder._id],
                             }))
                           }
-                          rows={2}
-                        />
-                        <div className="flex gap-2 flex-wrap">
-                          <Button
-                            size="sm"
-                            className="bg-red-600 hover:bg-red-700 text-white"
-                            disabled={!!actionLoading}
-                            onClick={() => handleReportNotReceived(subOrder._id, false)}
-                          >
-                            {actionLoading === subOrder._id + "_report"
-                              ? "Submitting..."
-                              : "Report to Shipper"}
-                          </Button>
-                          <Button
-                            size="sm"
-                            variant="outline"
-                            disabled={!!actionLoading}
-                            onClick={() =>
-                              setShowReportForm((prev) => ({
+                        >
+                          <AlertTriangle className="h-3.5 w-3.5 mr-1" />
+                          No, I didn't receive it
+                        </Button>
+                      </div>
+
+                      {showReportForm[subOrder._id] && (
+                        <div className="p-4 border border-red-200 bg-red-50 rounded-lg space-y-3">
+                          <p className="text-sm font-semibold text-red-700">
+                            Describe the issue:
+                          </p>
+                          <Textarea
+                            placeholder="Describe the issue (optional)..."
+                            value={reportNote[subOrder._id] || ""}
+                            onChange={(e) =>
+                              setReportNote((prev) => ({
                                 ...prev,
-                                [subOrder._id]: false,
+                                [subOrder._id]: e.target.value,
                               }))
                             }
-                          >
-                            Cancel
-                          </Button>
+                            rows={2}
+                          />
+                          <div className="flex gap-2 flex-wrap">
+                            <Button
+                              size="sm"
+                              className="bg-red-600 hover:bg-red-700 text-white"
+                              disabled={!!actionLoading}
+                              onClick={() =>
+                                handleReportNotReceived(subOrder._id, false)
+                              }
+                            >
+                              {actionLoading === subOrder._id + "_report"
+                                ? "Submitting..."
+                                : "Report to Shipper"}
+                            </Button>
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              disabled={!!actionLoading}
+                              onClick={() =>
+                                setShowReportForm((prev) => ({
+                                  ...prev,
+                                  [subOrder._id]: false,
+                                }))
+                              }
+                            >
+                              Cancel
+                            </Button>
+                          </div>
                         </div>
-                      </div>
-                    )}
-                  </div>
-                );
-              })()}
+                      )}
+                    </div>
+                  );
+                })()}
+
+              {/* ─── Cancel Order (buyer, early statuses only) ─── */}
+              {(subOrder.status === "created" ||
+                subOrder.status === "packaging") && (
+                <div className="mt-4">
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    className="border-red-300 text-red-600 hover:bg-red-50 hover:text-red-600 cursor-pointer"
+                    disabled={!!actionLoading}
+                    onClick={() => {
+                      setSubOrderIdToCancel(subOrder._id);
+                      setCancelReason("");
+                      setCancelOtherText("");
+                      setCancelDialogOpen(true);
+                    }}
+                  >
+                    <XCircle className="h-3.5 w-3.5 mr-1" />
+                    {actionLoading === subOrder._id + "_cancel"
+                      ? "Cancelling..."
+                      : "Cancel Order"}
+                  </Button>
+                </div>
+              )}
 
               {/* ─── Post-completion actions ─── */}
               {subOrder.status === "completed" && (
@@ -792,6 +979,68 @@ export default function OrderDetailsPage() {
           </div>
         </div>
       </div>
+
+      {/* Cancel Order Confirmation Dialog */}
+      <AlertDialog open={cancelDialogOpen} onOpenChange={setCancelDialogOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Cancel Order</AlertDialogTitle>
+            <AlertDialogDescription>
+              Please select a reason for cancelling the order. This action
+              cannot be undone.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <div className="mt-2 space-y-2">
+            {cancelReasons.map((r) => (
+              <label key={r} className="flex items-center gap-2">
+                <input
+                  type="radio"
+                  name="cancelReason"
+                  value={r}
+                  checked={cancelReason === r}
+                  onChange={() => setCancelReason(r)}
+                />
+                <span className="text-sm capitalize">
+                  {r.replace(/_/g, " ")}
+                </span>
+              </label>
+            ))}
+            {cancelReason === "other" && (
+              <Textarea
+                value={cancelOtherText}
+                onChange={(e) => setCancelOtherText(e.target.value)}
+                placeholder="Please specify the reason"
+                rows={3}
+              />
+            )}
+          </div>
+          <AlertDialogFooter>
+            <AlertDialogCancel
+              className="cursor-pointer"
+              onClick={() => {
+                setCancelDialogOpen(false);
+                setSubOrderIdToCancel(null);
+                setCancelReason("");
+                setCancelOtherText("");
+              }}
+            >
+              Keep Order
+            </AlertDialogCancel>
+            <AlertDialogAction
+              className="bg-red-600 cursor-pointer hover:bg-red-700 text-white"
+              onClick={handleCancelOrder}
+              disabled={
+                actionLoading === subOrderIdToCancel + "_cancel" ||
+                !cancelReason
+              }
+            >
+              {actionLoading === subOrderIdToCancel + "_cancel"
+                ? "Cancelling..."
+                : "Confirm Cancel"}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }

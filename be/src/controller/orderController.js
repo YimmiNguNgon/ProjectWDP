@@ -1079,6 +1079,7 @@ getOrderById = async (req, res) => {
         items: order.items,
         itemCount: totalItems,
         note: order.note || "", // include seller/buyer note here
+        statusHistory: order.statusHistory || [],
         date: formatDate(order.createdAt),
         paymentMethod: paymentMethod,
         createdAt: order.createdAt,
@@ -1507,19 +1508,22 @@ confirmCheckout = async (req, res) => {
         const productNames = (order.items || [])
           .map((item) => item.title || "Product")
           .filter(Boolean);
-        const productLabel = productNames.length === 1
-          ? productNames[0]
-          : productNames.length > 1
-            ? `${productNames[0]} and ${productNames.length - 1} more`
-            : "an item";
-        notificationService.sendNotification({
-          recipientId: order.seller,
-          type: "new_order",
-          title: `New order: "${productLabel}"`,
-          body: `A buyer just ordered "${productLabel}". Please start packaging.`,
-          link: `/seller/orders`,
-          metadata: { orderId: order._id },
-        }).catch(() => {});
+        const productLabel =
+          productNames.length === 1
+            ? productNames[0]
+            : productNames.length > 1
+              ? `${productNames[0]} and ${productNames.length - 1} more`
+              : "an item";
+        notificationService
+          .sendNotification({
+            recipientId: order.seller,
+            type: "new_order",
+            title: `New order: "${productLabel}"`,
+            body: `A buyer just ordered "${productLabel}". Please start packaging.`,
+            link: `/seller/orders`,
+            metadata: { orderId: order._id },
+          })
+          .catch(() => {});
       }
     }
 

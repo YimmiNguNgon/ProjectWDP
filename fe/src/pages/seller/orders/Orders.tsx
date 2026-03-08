@@ -26,6 +26,17 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { toast } from "sonner";
 import { type Order, orderService } from "@/services/orderService";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
+import { Textarea } from "@/components/ui/textarea";
 
 // ─── Status config ────────────────────────────────────────────────────────────
 const STATUS_CONFIG = {
@@ -80,6 +91,13 @@ const STATUS_CONFIG = {
   },
   failed: {
     label: "Failed",
+    dot: "#EF4444",
+    bg: "#FEF2F2",
+    text: "#7F1D1D",
+    border: "#FECACA",
+  },
+  returned: {
+    label: "Returned",
     dot: "#EF4444",
     bg: "#FEF2F2",
     text: "#7F1D1D",
@@ -550,6 +568,38 @@ function OrderDetailsPopup({
                   </InfoBlock>
                 </div>
               )}
+              {order.status === "cancelled" &&
+                order.statusHistory &&
+                (() => {
+                  const cancelEntry = order.statusHistory.find(
+                    (h) => h.status === "cancelled" && h.note && h.note.trim(),
+                  );
+                  if (!cancelEntry) return null;
+                  return (
+                    <div style={{ gridColumn: "1 / -1" }}>
+                      <InfoBlock
+                        icon={<XCircle size={16} color="#EF4444" />}
+                        label="Cancellation Reason"
+                      >
+                        <p
+                          style={{
+                            color: "#B91C1C",
+                            fontSize: 13,
+                            margin: 0,
+                            lineHeight: 1.5,
+                            fontStyle: "italic",
+                            backgroundColor: "#FEF2F2",
+                            padding: "8px 12px",
+                            borderRadius: "8px",
+                            border: "1px solid #FECACA",
+                          }}
+                        >
+                          "{cancelEntry.note}"
+                        </p>
+                      </InfoBlock>
+                    </div>
+                  );
+                })()}
             </div>
 
             {/* ── Products table ── */}
@@ -879,6 +929,12 @@ export default function SellerOrders() {
   const [showOrderDetails, setShowOrderDetails] = useState(false);
   const [loadingDetails, setLoadingDetails] = useState(false);
 
+  // cancellation UI state
+  const [cancelDialogOpen, setCancelDialogOpen] = useState(false);
+  const [cancelReason, setCancelReason] = useState("");
+  const [orderIdToCancel, setOrderIdToCancel] = useState<string | null>(null);
+  const [cancelProcessing, setCancelProcessing] = useState(false);
+
   useEffect(() => {
     fetchOrders();
     fetchStats();
@@ -1057,6 +1113,45 @@ export default function SellerOrders() {
       }
     } catch {
       toast.error("An error occurred while updating");
+    }
+  };
+
+  const openCancelDialog = (orderId: string) => {
+    setOrderIdToCancel(orderId);
+    setCancelReason("");
+    setCancelDialogOpen(true);
+  };
+
+  const handleCancelWithReason = async () => {
+    if (!orderIdToCancel) return;
+    if (!cancelReason.trim()) {
+      toast.error("Please provide a reason for cancellation");
+      return;
+    }
+    setCancelProcessing(true);
+    try {
+      const success = await orderService.updateOrderStatus(
+        orderIdToCancel,
+        "cancelled",
+        cancelReason.trim(),
+      );
+      if (success) {
+        toast.success("Order cancelled successfully");
+        fetchOrders();
+        fetchStats();
+        if (selectedOrder && selectedOrder._id === orderIdToCancel) {
+          const updated = await orderService.getOrderById(orderIdToCancel);
+          setSelectedOrder(updated);
+        }
+      } else {
+        toast.error("Failed to cancel order");
+      }
+    } catch (err: any) {
+      toast.error(err?.response?.data?.message || "Failed to cancel order");
+    } finally {
+      setCancelProcessing(false);
+      setCancelDialogOpen(false);
+      setOrderIdToCancel(null);
     }
   };
 
@@ -1261,6 +1356,17 @@ export default function SellerOrders() {
                                 Mark as Ready to Ship
                               </DropdownMenuItem>
                             )}
+                            {["created", "packaging", "ready_to_ship"].includes(
+                              order.status,
+                            ) && (
+                              <DropdownMenuItem
+                                className="cursor-pointer text-red-600"
+                                onClick={() => openCancelDialog(order._id)}
+                              >
+                                <XCircle className="h-4 w-4 mr-2" />
+                                Cancel Order
+                              </DropdownMenuItem>
+                            )}
                           </DropdownMenuContent>
                         </DropdownMenu>
                       </div>
@@ -1284,6 +1390,44 @@ export default function SellerOrders() {
           </p>
         </div>
       )}
+
+      {/* Cancel order dialog for seller */}
+      <AlertDialog open={cancelDialogOpen} onOpenChange={setCancelDialogOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Cancel Order</AlertDialogTitle>
+            <AlertDialogDescription>
+              Please provide a reason for cancelling this order. The buyer will
+              see it in their order details and in the notification/email.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <div className="mt-2">
+            <Textarea
+              value={cancelReason}
+              onChange={(e) => setCancelReason(e.target.value)}
+              placeholder="Reason for cancellation"
+              rows={4}
+            />
+          </div>
+          <AlertDialogFooter>
+            <AlertDialogCancel
+              onClick={() => {
+                setCancelDialogOpen(false);
+                setOrderIdToCancel(null);
+              }}
+            >
+              Keep Order
+            </AlertDialogCancel>
+            <AlertDialogAction
+              className="bg-red-600 hover:bg-red-700 text-white"
+              onClick={handleCancelWithReason}
+              disabled={cancelProcessing || !cancelReason.trim()}
+            >
+              {cancelProcessing ? "Cancelling..." : "Confirm Cancel"}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }

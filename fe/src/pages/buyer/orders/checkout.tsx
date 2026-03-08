@@ -838,7 +838,7 @@ export default function CheckoutPage() {
           </section>
 
           <section className="bg-white rounded-xl border p-6 shadow-sm space-y-5">
-            <h3 className="font-bold text-lg">Shop Vouchers</h3>
+            <h3 className="font-bold text-lg">Order Details</h3>
             {preview.groups.map((group: CheckoutGroup) => (
               <div
                 key={group.sellerId}
@@ -873,7 +873,7 @@ export default function CheckoutPage() {
                   {group.items.map((item: CheckoutGroupItem) => (
                     <div
                       key={`${group.sellerId}-${item.productId}-${item.cartItemId || ""}`}
-                      className="flex flex-col gap-2 p-3 bg-muted/10 rounded-lg"
+                      className="flex flex-col gap-2 p-3 bg-muted/10 rounded-lg border border-muted"
                     >
                       <div className="flex items-center justify-between text-sm">
                         <div>

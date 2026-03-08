@@ -1,4 +1,6 @@
 const Order = require("../models/Order");
+const User = require("../models/User");
+const sendEmail = require("../utils/sendEmail");
 const { evaluateSellerTrust } = require("../services/sellerTrustService");
 const notificationService = require("../services/notificationService");
 
@@ -80,31 +82,66 @@ exports.acceptOrder = async (req, res, next) => {
     const productNames = (order.items || [])
       .map((item) => item.productId?.title || item.title || "Product")
       .filter(Boolean);
-    const productLabel = productNames.length === 1
-      ? productNames[0]
-      : productNames.length > 1
-        ? `${productNames[0]} and ${productNames.length - 1} more`
-        : "your order";
+    const productLabel =
+      productNames.length === 1
+        ? productNames[0]
+        : productNames.length > 1
+          ? `${productNames[0]} and ${productNames.length - 1} more`
+          : "your order";
 
     // Notify buyer
-    notificationService.sendNotification({
-      recipientId: order.buyer,
-      type: "order_shipping",
-      title: `"${productLabel}" is on the way`,
-      body: `Your order is being delivered by ${req.user.username}.`,
-      link: `/purchases/${order._id}`,
-      metadata: { orderId: order._id },
-    }).catch(() => {});
+    notificationService
+      .sendNotification({
+        recipientId: order.buyer,
+        type: "order_shipping",
+        title: `"${productLabel}" is on the way`,
+        body: `Your order is being delivered by ${req.user.username}.`,
+        link: `/purchases/${order._id}`,
+        metadata: { orderId: order._id },
+      })
+      .catch(() => {});
 
     // Notify seller
-    notificationService.sendNotification({
-      recipientId: order.seller,
-      type: "order_shipping",
-      title: `"${productLabel}" picked up by shipper`,
-      body: `Shipper ${req.user.username} has picked up the order.`,
-      link: `/seller/orders`,
-      metadata: { orderId: order._id },
-    }).catch(() => {});
+    notificationService
+      .sendNotification({
+        recipientId: order.seller,
+        type: "order_shipping",
+        title: `"${productLabel}" picked up by shipper`,
+        body: `Shipper ${req.user.username} has picked up the order.`,
+        link: `/seller/orders`,
+        metadata: { orderId: order._id },
+      })
+      .catch(() => {});
+
+    // Send email to buyer (reuse orderStatusUpdate template)
+    if (order?.buyer) {
+      const buyer = await User.findById(order.buyer).select("username email");
+
+      if (buyer?.email) {
+        setImmediate(() => {
+          const statusMessage =
+            "Your order has been picked up by the shipper and is now on the way.";
+
+          sendEmail({
+            to: buyer.email,
+            subject: `Order Status Updated - #${order._id}`,
+            template: "orderStatusUpdate.ejs",
+            data: {
+              username: buyer.username,
+              orderId: order._id,
+              status: "shipping",
+              statusMessage,
+              note: `Accepted by shipper ${req.user.username}`,
+              orderUrl: `${
+                process.env.CLIENT_URL || "http://localhost:5173"
+              }/purchases/${order._id}`,
+            },
+          }).catch((err) =>
+            console.error("[AcceptOrderEmail] failed:", err.message),
+          );
+        });
+      }
+    }
 
     res.json({ ok: true, order });
   } catch (err) {
@@ -142,34 +179,69 @@ exports.markDelivered = async (req, res, next) => {
     const deliveredProductNames = (order.items || [])
       .map((item) => item.productId?.title || item.title || "Product")
       .filter(Boolean);
-    const deliveredLabel = deliveredProductNames.length === 1
-      ? deliveredProductNames[0]
-      : deliveredProductNames.length > 1
-        ? `${deliveredProductNames[0]} and ${deliveredProductNames.length - 1} more`
-        : "your order";
+    const deliveredLabel =
+      deliveredProductNames.length === 1
+        ? deliveredProductNames[0]
+        : deliveredProductNames.length > 1
+          ? `${deliveredProductNames[0]} and ${deliveredProductNames.length - 1} more`
+          : "your order";
 
     // Trigger seller trust evaluation
     evaluateSellerTrust(order.seller, "ORDER_DELIVERED").catch(() => {});
 
     // Notify buyer
-    notificationService.sendNotification({
-      recipientId: order.buyer,
-      type: "order_delivered",
-      title: `"${deliveredLabel}" has been delivered`,
-      body: `Please confirm receipt of your order.`,
-      link: `/purchases/${order._id}`,
-      metadata: { orderId: order._id },
-    }).catch(() => {});
+    notificationService
+      .sendNotification({
+        recipientId: order.buyer,
+        type: "order_delivered",
+        title: `"${deliveredLabel}" has been delivered`,
+        body: `Please confirm receipt of your order.`,
+        link: `/purchases/${order._id}`,
+        metadata: { orderId: order._id },
+      })
+      .catch(() => {});
 
     // Notify seller
-    notificationService.sendNotification({
-      recipientId: order.seller,
-      type: "order_delivered",
-      title: `"${deliveredLabel}" delivered successfully`,
-      body: `Shipper ${req.user.username} has completed the delivery.`,
-      link: `/seller/orders`,
-      metadata: { orderId: order._id },
-    }).catch(() => {});
+    notificationService
+      .sendNotification({
+        recipientId: order.seller,
+        type: "order_delivered",
+        title: `"${deliveredLabel}" delivered successfully`,
+        body: `Shipper ${req.user.username} has completed the delivery.`,
+        link: `/seller/orders`,
+        metadata: { orderId: order._id },
+      })
+      .catch(() => {});
+
+    // Send email to buyer (reuse orderStatusUpdate template)
+    if (order?.buyer) {
+      const buyer = await User.findById(order.buyer).select("username email");
+
+      if (buyer?.email) {
+        setImmediate(() => {
+          const statusMessage =
+            "Your order has been delivered successfully. Please confirm receipt.";
+
+          sendEmail({
+            to: buyer.email,
+            subject: `Order Status Updated - #${order._id}`,
+            template: "orderStatusUpdate.ejs",
+            data: {
+              username: buyer.username,
+              orderId: order._id,
+              status: "delivered",
+              statusMessage,
+              note: `Delivered by shipper ${req.user.username}`,
+              orderUrl: `${
+                process.env.CLIENT_URL || "http://localhost:5173"
+              }/purchases/${order._id}`,
+            },
+          }).catch((err) =>
+            console.error("[DeliveredEmail] failed:", err.message),
+          );
+        });
+      }
+    }
 
     res.json({ ok: true, order });
   } catch (err) {
