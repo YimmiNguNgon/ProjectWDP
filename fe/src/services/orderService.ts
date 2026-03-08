@@ -37,6 +37,7 @@ interface ApiOrder {
   };
   paymentMethod?: string;
   note?: string;
+  statusHistory?: Array<{ status: string; timestamp: string; note: string }>;
   orderDetails?: any[];
 }
 
@@ -63,6 +64,7 @@ export interface Order {
   phone?: string;
   address?: string;
   note?: string;
+  statusHistory?: Array<{ status: string; timestamp: string; note: string }>;
   orderDetails?: Array<{
     productId: string;
     productName: string;
@@ -182,6 +184,7 @@ const transformOrder = (apiOrder: ApiOrder): Order => {
     phone: address?.phone || apiOrder.shippingAddress?.phone || "",
     address: addressString || "",
     note: apiOrder.note || "",
+    statusHistory: apiOrder.statusHistory || [],
     orderDetails: (apiOrder.items || []).map((item) => ({
       productId:
         typeof item.productId === "object"
@@ -289,6 +292,7 @@ export const orderService = {
   async updateOrderStatus(
     orderId: string,
     newStatus: Order["status"],
+    note?: string,
   ): Promise<boolean> {
     try {
       // Map status ngÆ°á»£c láº¡i tá»« FE sang BE
@@ -305,10 +309,10 @@ export const orderService = {
       };
 
       const backendStatus = statusMapToBackend[newStatus];
+      const payload: any = { status: backendStatus };
+      if (note !== undefined) payload.note = note;
 
-      const response = await api.patch(`${API_URL}/${orderId}/status`, {
-        status: backendStatus,
-      });
+      await api.patch(`${API_URL}/${orderId}/status`, payload);
 
       return true;
     } catch (error) {

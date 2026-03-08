@@ -45,6 +45,7 @@ export interface Order {
   shippingPrice?: number;
   paymentMethod?: string;
   note?: string;
+  statusHistory?: Array<{ status: string; timestamp: string; note: string }>;
   createdAt: string;
 }
 
@@ -124,5 +125,21 @@ export const unhideOrder = async (
   orderId: string,
 ): Promise<{ message: string; data: { orderId: string } }> => {
   const response = await api.delete(`/api/users/hidden-orders/${orderId}`);
+  return response.data;
+};
+
+// Cancel an order (buyer only - status must be "created" or "packaging")
+// reason must be one of the predefined codes; if "other", a custom text may
+// be supplied in otherText.
+export const cancelOrder = async (
+  orderId: string,
+  reason: string,
+  otherText?: string,
+): Promise<{ message: string; data: any }> => {
+  const response = await api.patch(`/api/orders/${orderId}/status`, {
+    status: "cancelled",
+    reason,
+    otherReason: otherText,
+  });
   return response.data;
 };
