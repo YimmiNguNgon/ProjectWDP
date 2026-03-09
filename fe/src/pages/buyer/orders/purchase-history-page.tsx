@@ -1,4 +1,4 @@
-﻿import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import api from "@/lib/axios";
 import { Button } from "@/components/ui/button";
@@ -508,6 +508,13 @@ export default function PurchaseHistoryPage() {
             const uniqueSellers = Array.from(
               new Set(group.orders.map((o) => o.seller?.username)),
             ).filter(Boolean);
+            const productNames = Array.from(
+              new Set(
+                group.orders.flatMap((o) =>
+                  o.items.map((item) => item.productId?.title || item.title)
+                )
+              )
+            ).filter(Boolean);
 
             return (
               <Card key={group.sessionId} className="overflow-hidden">
@@ -526,10 +533,10 @@ export default function PurchaseHistoryPage() {
                     </div>
                     <div className="space-y-1">
                       <div className="text-[11px] font-semibold uppercase text-muted-foreground">
-                        Purchase ID
+                        Product
                       </div>
-                      <div className="text-xs">
-                        {shortOrderNumber(group.sessionId)}
+                      <div className="text-xs truncate max-w-[150px]" title={productNames.join(", ")}>
+                        {productNames.join(", ")}
                       </div>
                     </div>
                     <div className="space-y-1">

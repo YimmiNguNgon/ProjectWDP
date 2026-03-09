@@ -1,4 +1,4 @@
-﻿import { useState, useEffect } from "react";
+import { useState, useEffect } from "react";
 import {
   Search,
   Truck,
@@ -1263,6 +1263,9 @@ export default function SellerOrders() {
                     Order ID
                   </th>
                   <th className="text-left p-4 font-medium text-gray-600">
+                    Product
+                  </th>
+                  <th className="text-left p-4 font-medium text-gray-600">
                     Customer
                   </th>
                   <th className="text-left p-4 font-medium text-gray-600">
@@ -1291,6 +1294,11 @@ export default function SellerOrders() {
                       </div>
                       <div className="text-sm text-gray-500">
                         {order.paymentMethod}
+                      </div>
+                    </td>
+                    <td className="p-4">
+                      <div className="font-medium text-sm truncate max-w-[200px]" title={order.orderDetails?.map(item => item.productName).join(", ")}>
+                        {order.orderDetails?.map(item => item.productName).join(", ") || "—"}
                       </div>
                     </td>
                     <td className="p-4">
