@@ -72,6 +72,8 @@ app.use("/api/reviews", reviewRoutes);
 app.use("/api/admin", adminRoutes);
 app.use('/api/seller', sellerRoutes);
 app.use("/api/orders", orderRoutes);
+// Backward-compatible alias for legacy clients using singular path.
+app.use("/api/order", orderRoutes);
 app.use("/api/search", searchRoutes);
 app.use("/api/addresses", addressRoutes);
 app.use("/api/watchlist", watchlistRoutes);

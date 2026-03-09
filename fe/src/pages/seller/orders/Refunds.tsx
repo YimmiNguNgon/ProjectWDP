@@ -35,7 +35,7 @@ export default function SellerRefunds() {
     const [selectedRefund, setSelectedRefund] = useState<RefundRequest | null>(null);
     const [isDialogOpen, setIsDialogOpen] = useState(false);
     const [sellerNote, setSellerNote] = useState("");
-    const [actionType, setActionType] = useState<"APPROVE" | "REJECT">("APPROVE");
+    const [pendingAction, setPendingAction] = useState<"APPROVE" | "REJECT" | null>(null);
     const [submitting, setSubmitting] = useState(false);
 
     useEffect(() => {
@@ -54,7 +54,7 @@ export default function SellerRefunds() {
         }
     };
 
-    const handleAction = async () => {
+    const handleAction = async (actionType: "APPROVE" | "REJECT") => {
         if (!selectedRefund) return;
         if (actionType === "REJECT" && !sellerNote.trim()) {
             toast.error("Please provide a reason for rejection.");
@@ -63,6 +63,7 @@ export default function SellerRefunds() {
 
         try {
             setSubmitting(true);
+            setPendingAction(actionType);
             const endpoint = actionType === "APPROVE" ? "approve" : "reject";
             await api.post(`/api/refund/${selectedRefund._id}/${endpoint}`, {
                 sellerNote,
@@ -75,6 +76,7 @@ export default function SellerRefunds() {
             toast.error(err.response?.data?.message || `Failed to ${actionType.toLowerCase()} refund`);
         } finally {
             setSubmitting(false);
+            setPendingAction(null);
         }
     };
 
@@ -123,7 +125,7 @@ export default function SellerRefunds() {
                                                 {theme.text}
                                             </Badge>
                                             <span className="text-sm font-medium">
-                                                Order ID: {refund.order?._id.slice(-8).toUpperCase()}
+                                                Order ID: {refund.order?._id?.slice(-8)?.toUpperCase() || "N/A"}
                                             </span>
                                             <span className="text-sm text-muted-foreground whitespace-nowrap">
                                                 {new Date(refund.requestedAt).toLocaleDateString()}
@@ -213,23 +215,17 @@ export default function SellerRefunds() {
                                     <div className="flex justify-end gap-3 pt-4">
                                         <Button
                                             variant="destructive"
-                                            onClick={() => {
-                                                setActionType("REJECT");
-                                                handleAction();
-                                            }}
+                                            onClick={() => handleAction("REJECT")}
                                             disabled={submitting}
                                         >
-                                            {submitting && actionType === "REJECT" ? "Processing..." : "Reject Request"}
+                                            {submitting && pendingAction === "REJECT" ? "Processing..." : "Reject Request"}
                                         </Button>
                                         <Button
                                             className="bg-green-600 hover:bg-green-700"
-                                            onClick={() => {
-                                                setActionType("APPROVE");
-                                                handleAction();
-                                            }}
+                                            onClick={() => handleAction("APPROVE")}
                                             disabled={submitting}
                                         >
-                                            {submitting && actionType === "APPROVE" ? "Processing..." : "Approve Return"}
+                                            {submitting && pendingAction === "APPROVE" ? "Processing..." : "Approve Return"}
                                         </Button>
                                     </div>
                                 </div>

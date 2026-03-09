@@ -997,6 +997,11 @@ getAllOrders = async (req, res) => {
 getOrderById = async (req, res) => {
   try {
     const { id } = req.params;
+    const requestedRole = String(req.query.role || "").toLowerCase();
+    const roleScope =
+      requestedRole === "buyer" || requestedRole === "seller"
+        ? requestedRole
+        : req.user.role;
 
     let group = await OrderGroup.findById(id).lean();
     let orders = [];
@@ -1015,10 +1020,11 @@ getOrderById = async (req, res) => {
 
       const groupFilter = { orderGroup: groupOrderId };
 
-      // Security: Only return orders belonging to the user if they are not an admin
-      if (req.user.role === "buyer") {
+      // Security: Scope order-group details by requested context (buyer/seller).
+      // Falls back to authenticated role when role query is absent.
+      if (roleScope === "buyer") {
         groupFilter.buyer = req.user._id;
-      } else if (req.user.role === "seller") {
+      } else if (roleScope === "seller") {
         groupFilter.seller = req.user._id;
       }
 

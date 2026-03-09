@@ -84,7 +84,7 @@ export default function OrderDetailsPage() {
     const fetchOrderDetails = async () => {
       try {
         setLoading(true);
-        const res = await getOrderDetails(orderId);
+        const res = await getOrderDetails(orderId, { role: "buyer" });
         setOrders(res.data);
 
         // Fetch disputes for delivered/completed sub-orders

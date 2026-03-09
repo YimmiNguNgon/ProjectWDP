@@ -7,15 +7,15 @@ const RefundRequest = require("../models/RefundRequest");
 
 // Midlewares role checker
 const checkRole = (role) => (req, res, next) => {
-    if (req.user && req.user.role === role) {
+    if (req.user && (req.user.role === role || req.user.role === "admin")) {
         return next();
     }
     return res.status(403).json({ message: `Forbidden: ${role} only` });
 };
 
 // Buyer endpoints
-router.post("/request", protectedRoute, checkRole("buyer"), refundController.requestRefund);
-router.post("/:id/dispute", protectedRoute, checkRole("buyer"), refundController.disputeRefund);
+router.post("/request", protectedRoute, refundController.requestRefund);
+router.post("/:id/dispute", protectedRoute, refundController.disputeRefund);
 
 // Seller endpoints
 router.post(
@@ -62,8 +62,9 @@ router.post(
 
 // Endpoints to fetch data
 router.get("/order/:orderId", protectedRoute, refundController.getRefundByOrder);
-router.get("/buyer", protectedRoute, checkRole("buyer"), refundController.getBuyerRefunds);
+router.get("/buyer", protectedRoute, refundController.getBuyerRefunds);
 router.get("/seller", protectedRoute, checkRole("seller"), refundController.getSellerRefunds);
+router.get("/admin", protectedRoute, checkRole("admin"), refundController.getAdminRefunds);
 
 module.exports = router;
 

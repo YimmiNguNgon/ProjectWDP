@@ -74,11 +74,16 @@ export interface GetOrderDetailsResponse {
   groupTotal?: number;
 }
 
+export interface GetOrderDetailsParams {
+  role?: "buyer" | "seller";
+}
+
 // Get order details by ID
 export const getOrderDetails = async (
   orderId: string,
+  params: GetOrderDetailsParams = {},
 ): Promise<GetOrderDetailsResponse> => {
-  const response = await api.get(`/api/orders/${orderId}`);
+  const response = await api.get(`/api/orders/${orderId}`, { params });
   return response.data;
 };
 
