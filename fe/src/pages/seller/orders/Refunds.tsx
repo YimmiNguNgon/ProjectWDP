@@ -15,7 +15,7 @@ import { Eye, CheckCircle2, AlertTriangle } from "lucide-react";
 
 type RefundRequest = {
     _id: string;
-    order: { _id: string; totalAmount: number };
+    order: { _id: string; totalAmount: number; status: string };
     buyer: { _id: string; username: string };
     reason: string;
     description: string;
@@ -35,7 +35,7 @@ export default function SellerRefunds() {
     const [selectedRefund, setSelectedRefund] = useState<RefundRequest | null>(null);
     const [isDialogOpen, setIsDialogOpen] = useState(false);
     const [sellerNote, setSellerNote] = useState("");
-    const [pendingAction, setPendingAction] = useState<"APPROVE" | "REJECT" | null>(null);
+    const [pendingAction, setPendingAction] = useState<"APPROVE" | "REJECT" | "CONFIRM_RECEIPT" | null>(null);
     const [submitting, setSubmitting] = useState(false);
 
     useEffect(() => {
@@ -80,6 +80,23 @@ export default function SellerRefunds() {
         }
     };
 
+    const handleConfirmReceipt = async () => {
+        if (!selectedRefund) return;
+        try {
+            setSubmitting(true);
+            setPendingAction("CONFIRM_RECEIPT");
+            await api.post(`/api/refund/${selectedRefund._id}/confirm-receipt`);
+            toast.success("Return receipt confirmed successfully. Refund completed.");
+            setIsDialogOpen(false);
+            fetchRefunds();
+        } catch (err: any) {
+            toast.error(err.response?.data?.message || "Failed to confirm return receipt");
+        } finally {
+            setSubmitting(false);
+            setPendingAction(null);
+        }
+    };
+
     const getStatusTheme = (status: string) => {
         switch (status) {
             case "PENDING":
@@ -93,6 +110,8 @@ export default function SellerRefunds() {
                 return { badge: "destructive", text: "Rejected" };
             case "DISPUTED":
                 return { badge: "warning", text: "Under Dispute" };
+            case "SELLER_RECEIVED_RETURN":
+                return { badge: "default", text: "Returned Successfully" };
             default:
                 return { badge: "outline", text: status };
         }
@@ -226,6 +245,27 @@ export default function SellerRefunds() {
                                             disabled={submitting}
                                         >
                                             {submitting && pendingAction === "APPROVE" ? "Processing..." : "Approve Return"}
+                                        </Button>
+                                    </div>
+                                </div>
+                            )}
+
+                            {["APPROVED", "AUTO_APPROVED", "ADMIN_APPROVED"].includes(selectedRefund.status) && selectedRefund.order?.status === "delivered_to_seller" && (
+                                <div className="space-y-4 pt-4 border-t">
+                                    <div className="bg-blue-50 text-blue-800 p-4 rounded-lg flex items-start gap-2">
+                                        <CheckCircle2 className="w-5 h-5 mt-0.5 flex-shrink-0" />
+                                        <div>
+                                            <p className="font-medium">Shipper has returned the package to you.</p>
+                                            <p className="text-sm mt-1">Please inspect the item and confirm receipt to process the final refund to the buyer.</p>
+                                        </div>
+                                    </div>
+                                    <div className="flex justify-end gap-3 pt-2">
+                                        <Button
+                                            className="bg-blue-600 hover:bg-blue-700"
+                                            onClick={handleConfirmReceipt}
+                                            disabled={submitting}
+                                        >
+                                            {submitting && pendingAction === "CONFIRM_RECEIPT" ? "Processing..." : "Confirm Item Received"}
                                         </Button>
                                     </div>
                                 </div>

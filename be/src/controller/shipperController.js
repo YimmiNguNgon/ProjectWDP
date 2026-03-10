@@ -12,15 +12,22 @@ exports.getAvailableOrders = async (req, res, next) => {
     const limit = Math.min(100, parseInt(req.query.limit) || PAGE_SIZE);
     const skip = (page - 1) * limit;
 
+    const query = {
+      $or: [
+        { status: "ready_to_ship", shipper: null },
+        { status: "waiting_return_shipment", returnShipper: null },
+      ],
+    };
+
     const [orders, total] = await Promise.all([
-      Order.find({ status: "ready_to_ship", shipper: null })
+      Order.find(query)
         .populate("buyer", "username email")
         .populate("seller", "username sellerInfo")
         .sort({ createdAt: -1 })
         .skip(skip)
         .limit(limit)
         .lean(),
-      Order.countDocuments({ status: "ready_to_ship", shipper: null }),
+      Order.countDocuments(query),
     ]);
 
     res.json({ orders, total, page, pages: Math.ceil(total / limit) });
@@ -35,7 +42,12 @@ exports.getMyOrders = async (req, res, next) => {
     const limit = Math.min(100, parseInt(req.query.limit) || PAGE_SIZE);
     const skip = (page - 1) * limit;
 
-    const filter = { shipper: req.user._id };
+    const filter = {
+      $or: [
+        { shipper: req.user._id },
+        { returnShipper: req.user._id },
+      ]
+    };
     if (req.query.status) filter.status = req.query.status;
 
     const [orders, total] = await Promise.all([
@@ -57,19 +69,41 @@ exports.getMyOrders = async (req, res, next) => {
 
 exports.acceptOrder = async (req, res, next) => {
   try {
-    const order = await Order.findOneAndUpdate(
-      { _id: req.params.id, status: "ready_to_ship", shipper: null },
-      {
-        status: "shipping",
-        shipper: req.user._id,
-        $push: {
-          statusHistory: {
-            status: "shipping",
-            timestamp: new Date(),
-            note: `Accepted by shipper ${req.user.username}`,
-          },
+    const orderToAccept = await Order.findOne({
+      _id: req.params.id,
+      $or: [
+        { status: "ready_to_ship", shipper: null },
+        { status: "waiting_return_shipment", returnShipper: null },
+      ],
+    });
+
+    if (!orderToAccept) {
+      return res.status(409).json({ message: "Order no longer available" });
+    }
+
+    const isReturn = orderToAccept.status === "waiting_return_shipment";
+    const nextStatus = isReturn ? "return_shipping" : "shipping";
+
+    const updateFields = {
+      status: nextStatus,
+      $push: {
+        statusHistory: {
+          status: nextStatus,
+          timestamp: new Date(),
+          note: `Accepted by shipper ${req.user.username}`,
         },
       },
+    };
+
+    if (isReturn) {
+      updateFields.returnShipper = req.user._id;
+    } else {
+      updateFields.shipper = req.user._id;
+    }
+
+    const order = await Order.findByIdAndUpdate(
+      req.params.id,
+      updateFields,
       { new: true },
     );
 
@@ -157,18 +191,25 @@ exports.markDelivered = async (req, res, next) => {
   try {
     const order = await Order.findOne({
       _id: req.params.id,
-      shipper: req.user._id,
-      status: "shipping",
+      $or: [
+        { shipper: req.user._id, status: "shipping" },
+        { returnShipper: req.user._id, status: "return_shipping" }
+      ]
     });
 
     if (!order) {
       return res.status(404).json({ message: "Order not found or not yours" });
     }
 
-    order.status = "delivered";
-    order.deliveredAt = new Date();
+    const isReturn = order.status === "return_shipping";
+    const nextStatus = isReturn ? "delivered_to_seller" : "delivered";
+
+    order.status = nextStatus;
+    if (!isReturn) {
+      order.deliveredAt = new Date();
+    }
     order.statusHistory.push({
-      status: "delivered",
+      status: nextStatus,
       timestamp: new Date(),
       note: `Delivered by shipper ${req.user.username}`,
     });
@@ -254,9 +295,24 @@ exports.getShipperStats = async (req, res, next) => {
     const shipperId = req.user._id;
 
     const [delivered, inTransit, totalAccepted] = await Promise.all([
-      Order.countDocuments({ shipper: shipperId, status: "delivered" }),
-      Order.countDocuments({ shipper: shipperId, status: "shipping" }),
-      Order.countDocuments({ shipper: shipperId }),
+      Order.countDocuments({
+        $or: [
+          { shipper: shipperId, status: "delivered" },
+          { returnShipper: shipperId, status: "delivered_to_seller" }
+        ]
+      }),
+      Order.countDocuments({
+        $or: [
+          { shipper: shipperId, status: "shipping" },
+          { returnShipper: shipperId, status: "return_shipping" }
+        ]
+      }),
+      Order.countDocuments({
+        $or: [
+          { shipper: shipperId },
+          { returnShipper: shipperId }
+        ]
+      }),
     ]);
 
     res.json({ delivered, inTransit, totalAccepted });

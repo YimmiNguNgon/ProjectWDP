@@ -1,4 +1,4 @@
-﻿"use client";
+"use client";
 
 import { SellerFeedbackSection } from "@/components/feedback/seller-feedback-section";
 import { Button } from "@/components/ui/button";

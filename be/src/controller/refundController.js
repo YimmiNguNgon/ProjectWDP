@@ -60,6 +60,18 @@ exports.disputeRefund = async (req, res, next) => {
     }
 };
 
+exports.confirmReturnReceived = async (req, res, next) => {
+    try {
+        const { id } = req.params;
+        const sellerId = req.user._id;
+
+        const refund = await refundService.confirmReturnReceived(sellerId, id);
+        res.status(200).json({ message: "Return receipt confirmed", data: refund });
+    } catch (err) {
+        next(err);
+    }
+};
+
 exports.adminReviewRefund = async (req, res, next) => {
     try {
         const { id } = req.params;
