@@ -106,10 +106,10 @@ export default function LeaveFeedbackPage() {
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
 
   const [createdReview, setCreatedReview] = useState<ReviewCreated | null>(
-    null
+    null,
   );
   const [existingReview, setExistingReview] = useState<ReviewCreated | null>(
-    null
+    null,
   );
 
   const [showThankYouPage, setShowThankYouPage] = useState(false);
@@ -121,16 +121,14 @@ export default function LeaveFeedbackPage() {
       if (!orderId) return;
 
       try {
-        const res = await api.get<GetOrderResponse>(
-          `/api/orders/${orderId}`
-        );
+        const res = await api.get<GetOrderResponse>(`/api/orders/${orderId}`);
         // API trả về array — lấy phần tử đầu tiên
         const dataArr = res.data.data;
         const orderData = Array.isArray(dataArr) ? dataArr[0] : dataArr;
         setOrder(orderData);
 
         const found = orderData?.items?.find(
-          (it) => it.productId?._id === productId
+          (it) => it.productId?._id === productId,
         );
         if (found) setItem(found);
       } catch (error: unknown) {
@@ -150,12 +148,12 @@ export default function LeaveFeedbackPage() {
       try {
         const res = await api.get<GetProductReviewsResponse>(
           `/api/reviews/product/${productId}`,
-          { params: { page: 1, limit: 100 } }
+          { params: { page: 1, limit: 100 } },
         );
 
         const reviews = res.data.data || [];
         const found = reviews.find(
-          (r) => r.order === orderId && r.reviewer?._id === userId
+          (r) => r.order === orderId && r.reviewer?._id === userId,
         );
 
         if (found) {
@@ -222,8 +220,8 @@ export default function LeaveFeedbackPage() {
         };
         setErrorMsg(
           data.message ||
-          data.error ||
-          "Failed to submit feedback. Please try again."
+            data.error ||
+            "Failed to submit feedback. Please try again.",
         );
       } else {
         setErrorMsg("Failed to submit feedback. Please try again.");
@@ -396,7 +394,7 @@ export default function LeaveFeedbackPage() {
                     type="button"
                     onClick={() => handleSelectType(type)}
                     className={[
-                      "flex-1 rounded-full border",
+                      "flex-1 rounded-full border cursor-pointer",
                       "py-2 text-base font-medium",
                       "transition-all duration-150",
                       ratingType === type
@@ -447,7 +445,7 @@ export default function LeaveFeedbackPage() {
                   <Textarea
                     rows={5}
                     maxLength={500}
-                    className="bg-[#fdfbf2] w-full text-base p-4 rounded-md border"
+                    className="bg-[#fdfbf2] w-full text-base p-2 rounded-md border"
                     value={comment}
                     onChange={(e) => setComment(e.target.value)}
                   />

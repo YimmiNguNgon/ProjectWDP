@@ -117,7 +117,9 @@ export default function ProductsPage() {
   // Get search query from URL params (read-only)
   const searchQuery = (searchParams.get("search") || "").trim();
   const sellerQuery = (searchParams.get("seller") || "").trim();
-  const saleOnlyQuery = (searchParams.get("saleOnly") || "").trim().toLowerCase();
+  const saleOnlyQuery = (searchParams.get("saleOnly") || "")
+    .trim()
+    .toLowerCase();
   const isSaleOnly = ["1", "true", "yes"].includes(saleOnlyQuery);
 
   // Initialize state from URL params
@@ -382,7 +384,7 @@ export default function ProductsPage() {
       <Sidebar
         collapsible="none"
         variant="inset"
-        className={cn("border-x bg-transparent w-64 h-[calc(100vh-12rem)]")}
+        className={cn("border-x bg-transparent w-64 h-fit")}
       >
         <Separator />
         <SidebarHeader className="font-bold text-lg">
@@ -479,9 +481,6 @@ export default function ProductsPage() {
             <ScrollBar orientation="vertical" />
           </ScrollArea>
         </SidebarContent>
-        <Separator />
-        <SidebarFooter />
-        <Separator />
       </Sidebar>
       <SidebarInset className="w-full">
         <div className="flex flex-col gap-6 p-6">
@@ -578,17 +577,15 @@ export default function ProductsPage() {
                       </CardTitle>
                       {product.variants && product.variants.length > 0 && (
                         <div className="flex flex-wrap gap-1">
-                          {product.variants
-                            .slice(0, 2)
-                            .map((v) => (
-                              <span
-                                key={v.name}
-                                className="text-xs bg-muted px-2 py-0.5 rounded-full text-muted-foreground"
-                              >
-                                {v.name}:{" "}
-                                {v.options.map((o) => o.value).join(", ")}
-                              </span>
-                            ))}
+                          {product.variants.slice(0, 2).map((v) => (
+                            <span
+                              key={v.name}
+                              className="text-xs bg-muted px-2 py-0.5 rounded-full text-muted-foreground"
+                            >
+                              {v.name}:{" "}
+                              {v.options.map((o) => o.value).join(", ")}
+                            </span>
+                          ))}
                         </div>
                       )}
                       <CardDescription className="line-clamp-2">
@@ -655,7 +652,9 @@ export default function ProductsPage() {
                               size="icon-sm"
                               variant={"default"}
                               className="cursor-pointer"
-                              onClick={() => navigate(`/products/${product._id}`)}
+                              onClick={() =>
+                                navigate(`/products/${product._id}`)
+                              }
                             >
                               <ShoppingCart className="h-4 w-4" />
                             </Button>

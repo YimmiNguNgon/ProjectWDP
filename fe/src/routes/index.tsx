@@ -127,6 +127,10 @@ export const AppRouter = () => {
           ],
         },
         {
+          path: "/seller/:sellerId",
+          element: <SellerInformationPage />,
+        },
+        {
           path: "products",
           element: <ProductsPage />,
         },
@@ -363,10 +367,6 @@ export const AppRouter = () => {
           element: <SellerVouchersPage />,
         },
       ],
-    },
-    {
-      path: "/seller/:sellerId",
-      element: <SellerInformationPage />,
     },
     {
       path: "/verify-email",

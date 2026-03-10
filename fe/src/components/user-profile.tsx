@@ -11,13 +11,44 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { useAuth } from "@/hooks/use-auth";
-import { changeUserPassword, createAddress, deleteAddress, getAddresses, setDefaultAddress, updateAddress, updateUserEmail, updateUserProfile, uploadImageToCloudinary, type Address } from "@/api/user";
+import {
+  changeUserPassword,
+  createAddress,
+  deleteAddress,
+  getAddresses,
+  setDefaultAddress,
+  updateAddress,
+  updateUserEmail,
+  updateUserProfile,
+  uploadImageToCloudinary,
+  type Address,
+} from "@/api/user";
 import { useForm } from "react-hook-form";
-import { changePasswordSchema, emailSchema, type ChangePasswordFormValues, type EmailFormValues } from "@/schema/user.schema";
+import {
+  changePasswordSchema,
+  emailSchema,
+  type ChangePasswordFormValues,
+  type EmailFormValues,
+} from "@/schema/user.schema";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { toast } from "sonner";
-import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogTitle, AlertDialogTrigger } from "./ui/alert-dialog";
-import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "./ui/form";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "./ui/alert-dialog";
+import {
+  Form,
+  FormControl,
+  FormField,
+  FormItem,
+  FormLabel,
+  FormMessage,
+} from "./ui/form";
 import { MapIcon } from "lucide-react";
 import AddressItems from "./address-items";
 import AddressForm from "./address-form";
@@ -28,6 +59,7 @@ export interface UserProfileProps {
     username: string;
     email: string;
     avatarUrl?: string;
+    provider?: string;
   };
   orders?: Array<{
     id: string;
@@ -143,7 +175,7 @@ export function UserProfile({ user }: UserProfileProps) {
       } else if (error.response && error.response.status === 404) {
         toast.error("User not found");
       } else {
-         toast.error("Failed to change password");
+        toast.error("Failed to change password");
       }
     } finally {
       setLoading(false);
@@ -369,13 +401,24 @@ export function UserProfile({ user }: UserProfileProps) {
                   <div className="p-3 bg-gray-50 rounded-md text-gray-700">
                     {user.email}
                   </div>
-                  <Button
-                    variant="outline"
-                    className="w-full cursor-pointer"
-                    onClick={() => setEditEmail(true)}
-                  >
-                    Change Email
-                  </Button>
+
+                  {user.provider !== "google" && (
+                    <Button
+                      variant="outline"
+                      className="w-full cursor-pointer"
+                      onClick={() => setEditEmail(true)}
+                    >
+                      Change Email
+                    </Button>
+                  )}
+
+                  {user.provider === "google" && (
+                    <p className="text-sm text-gray-500">
+                      You cannot change your email because you signed up with
+                      Google. Please manage your email through your Google
+                      account settings.
+                    </p>
+                  )}
                 </>
               ) : (
                 <Form {...form}>
@@ -390,15 +433,13 @@ export function UserProfile({ user }: UserProfileProps) {
                         <FormItem>
                           <FormLabel>New email</FormLabel>
                           <FormControl>
-                            <Input
-                              placeholder="Enter new email"
-                              {...field}
-                            />
+                            <Input placeholder="Enter new email" {...field} />
                           </FormControl>
                           <FormMessage />
                         </FormItem>
                       )}
                     />
+
                     <div className="flex gap-2">
                       <Button
                         type="submit"
@@ -407,6 +448,7 @@ export function UserProfile({ user }: UserProfileProps) {
                       >
                         {loading ? "Saving..." : "Save Email"}
                       </Button>
+
                       <Button
                         type="button"
                         variant="outline"
@@ -636,4 +678,3 @@ export function UserProfile({ user }: UserProfileProps) {
     </div>
   );
 }
-

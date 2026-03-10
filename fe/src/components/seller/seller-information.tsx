@@ -3,14 +3,14 @@ import { useParams, useNavigate, useLocation } from "react-router-dom";
 import api from "@/lib/axios";
 import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { 
-  Star, 
-  CheckCircle, 
-  Zap, 
-  ShieldAlert, 
-  Clock, 
-  Package, 
-  Eye, 
+import {
+  Star,
+  CheckCircle,
+  Zap,
+  ShieldAlert,
+  Clock,
+  Package,
+  Eye,
   TrendingUp,
   AlertCircle,
   ShoppingBag,
@@ -21,7 +21,7 @@ import {
   MessageCircle,
   Share2,
   Flag,
-  Loader2
+  Loader2,
 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
@@ -130,7 +130,7 @@ type TrustData = {
 
 // Helper functions
 function getComputedType(
-  review: SellerReviewApi
+  review: SellerReviewApi,
 ): "positive" | "neutral" | "negative" {
   if (review.type) return review.type;
   if (review.rating >= 4) return "positive";
@@ -138,11 +138,34 @@ function getComputedType(
   return "negative";
 }
 
-const TIER_STYLES: Record<string, { bg: string; text: string; border: string; icon: string }> = {
-  TRUSTED: { bg: "bg-emerald-50", text: "text-emerald-700", border: "border-emerald-300", icon: "🛡" },
-  STANDARD: { bg: "bg-blue-50", text: "text-blue-700", border: "border-blue-300", icon: "✓" },
-  RISK: { bg: "bg-amber-50", text: "text-amber-700", border: "border-amber-300", icon: "⚠" },
-  HIGH_RISK: { bg: "bg-red-50", text: "text-red-700", border: "border-red-300", icon: "✗" },
+const TIER_STYLES: Record<
+  string,
+  { bg: string; text: string; border: string; icon: string }
+> = {
+  TRUSTED: {
+    bg: "bg-emerald-50",
+    text: "text-emerald-700",
+    border: "border-emerald-300",
+    icon: "🛡",
+  },
+  STANDARD: {
+    bg: "bg-blue-50",
+    text: "text-blue-700",
+    border: "border-blue-300",
+    icon: "✓",
+  },
+  RISK: {
+    bg: "bg-amber-50",
+    text: "text-amber-700",
+    border: "border-amber-300",
+    icon: "⚠",
+  },
+  HIGH_RISK: {
+    bg: "bg-red-50",
+    text: "text-red-700",
+    border: "border-red-300",
+    icon: "✗",
+  },
 };
 
 export default function SellerInformationPage() {
@@ -152,7 +175,7 @@ export default function SellerInformationPage() {
   const queryParams = new URLSearchParams(location.search);
   const productId = queryParams.get("productId");
   const sellerName = queryParams.get("name") || undefined;
-  const initialTab = queryParams.get("tab") as InfoTab || "feedback";
+  const initialTab = (queryParams.get("tab") as InfoTab) || "feedback";
 
   // State
   const [allData, setAllData] = useState<SellerReviewsResponse | null>(null);
@@ -160,7 +183,7 @@ export default function SellerInformationPage() {
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState<InfoTab>(initialTab);
   const [ratingFilter, setRatingFilter] = useState<RatingFilter>("all");
-  
+
   // Products state
   const [products, setProducts] = useState<SellerProduct[]>([]);
   const [loadingProducts, setLoadingProducts] = useState(false);
@@ -171,13 +194,16 @@ export default function SellerInformationPage() {
   const [sortBy, setSortBy] = useState<ProductSort>("newest");
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedCategory, setSelectedCategory] = useState<string>("all");
-  const [categories, setCategories] = useState<{id: string; name: string; count: number}[]>([]);
-  
+  const [categories, setCategories] = useState<
+    { id: string; name: string; count: number }[]
+  >([]);
+
   // Trust score
   const [trust, setTrust] = useState<TrustData | null>(null);
   const [loadingTrust, setLoadingTrust] = useState(true);
 
-  const displayName = sellerName || (sellerId ? `Seller #${sellerId.slice(-5)}` : "Seller");
+  const displayName =
+    sellerName || (sellerId ? `Seller #${sellerId.slice(-5)}` : "Seller");
 
   // ===== LOAD REVIEWS DATA =====
   useEffect(() => {
@@ -195,14 +221,16 @@ export default function SellerInformationPage() {
 
         const res = await api.get<SellerReviewsResponse>(
           `/api/reviews/seller/${sellerId}`,
-          { params: { page: 1, limit: 50 } }
+          { params: { page: 1, limit: 50 } },
         );
-        
+
         console.log("Reviews data received:", res.data);
         setAllData(res.data);
       } catch (err: any) {
         console.error("Error fetching reviews:", err);
-        setErrorMsg(err.response?.data?.message || "Unable to load seller feedback.");
+        setErrorMsg(
+          err.response?.data?.message || "Unable to load seller feedback.",
+        );
       } finally {
         setLoading(false);
       }
@@ -214,7 +242,7 @@ export default function SellerInformationPage() {
   // ===== LOAD TRUST SCORE =====
   useEffect(() => {
     if (!sellerId) return;
-    
+
     const fetchTrustScore = async () => {
       try {
         const res = await api.get(`/api/trust-score/seller/${sellerId}`);
@@ -237,30 +265,30 @@ export default function SellerInformationPage() {
     const fetchProducts = async () => {
       try {
         setLoadingProducts(true);
-        
+
         const params: any = {
           page: currentPage,
           limit: 12,
           sort: sortBy,
         };
-        
+
         if (searchTerm) {
           params.search = searchTerm;
         }
-        
+
         if (selectedCategory && selectedCategory !== "all") {
           params.categoryId = selectedCategory;
         }
 
-        console.log("Fetching products with params:", params);
-        const res = await api.get(`/api/seller/${sellerId}/products`, { params });
-        console.log("Products data:", res.data);
-        
+        const res = await api.get(`/api/seller/${sellerId}/products`, {
+          params,
+        });
+
         if (res.data.success) {
           setProducts(res.data.data);
           setProductsTotal(res.data.total);
           setTotalPages(res.data.totalPages);
-          
+
           // Extract categories
           if (res.data.data.length > 0) {
             const categoryMap = new Map();
@@ -271,13 +299,13 @@ export default function SellerInformationPage() {
                 if (categoryMap.has(catId)) {
                   categoryMap.set(catId, {
                     ...categoryMap.get(catId),
-                    count: categoryMap.get(catId).count + 1
+                    count: categoryMap.get(catId).count + 1,
                   });
                 } else {
                   categoryMap.set(catId, {
                     id: catId,
                     name: catName,
-                    count: 1
+                    count: 1,
                   });
                 }
               }
@@ -302,7 +330,7 @@ export default function SellerInformationPage() {
 
   // Computed values
   const allReviews = allData?.data ?? [];
-  
+
   const thisItemReviews = useMemo(() => {
     if (!productId) return [];
     return allReviews.filter((r) => r.product._id === productId);
@@ -351,17 +379,19 @@ export default function SellerInformationPage() {
     return "More than a year ago";
   };
 
-  const formatPrice = (price: number) => {
-    return new Intl.NumberFormat('vi-VN', {
-      style: 'currency',
-      currency: 'VND'
-    }).format(price);
-  };
+  // const formatPrice = (price: number) => {
+  //   return new Intl.NumberFormat("vi-VN", {
+  //     style: "currency",
+  //     currency: "VND",
+  //   }).format(price);
+  // };
 
   const getStockStatus = (stock: number, quantity: number) => {
     const total = stock + quantity;
-    if (total <= 0) return { label: "Out of stock", color: "bg-red-100 text-red-800" };
-    if (total < 5) return { label: "Low stock", color: "bg-yellow-100 text-yellow-800" };
+    if (total <= 0)
+      return { label: "Out of stock", color: "bg-red-100 text-red-800" };
+    if (total < 5)
+      return { label: "Low stock", color: "bg-yellow-100 text-yellow-800" };
     return { label: "In stock", color: "bg-green-100 text-green-800" };
   };
 
@@ -429,8 +459,6 @@ export default function SellerInformationPage() {
       {/* Header */}
       <div className="bg-white border-b sticky top-0 z-10">
         <div className="container mx-auto px-4 py-4">
-          
-
           <div className="flex items-center justify-between mt-4">
             <div className="flex items-center gap-4">
               <Button variant="ghost" size="icon" onClick={handleGoBack}>
@@ -441,11 +469,8 @@ export default function SellerInformationPage() {
                   <Store className="h-6 w-6" />
                   {displayName}
                 </h1>
-                
               </div>
             </div>
-
-            
           </div>
         </div>
       </div>
@@ -466,7 +491,8 @@ export default function SellerInformationPage() {
                 <h2 className="text-xl font-semibold">{displayName}</h2>
                 {totalAllItems > 0 && (
                   <p className="text-sm text-muted-foreground mt-1">
-                    {positivePercent.toFixed(0)}% positive feedback · {totalAllItems} feedbacks
+                    {positivePercent.toFixed(0)}% positive feedback ·{" "}
+                    {totalAllItems} feedbacks
                   </p>
                 )}
               </div>
@@ -481,10 +507,18 @@ export default function SellerInformationPage() {
               {/* Detailed Ratings */}
               {totalAllItems > 0 && (
                 <div className="mb-6">
-                  <h3 className="font-semibold mb-3">Detailed seller ratings</h3>
+                  <h3 className="font-semibold mb-3">
+                    Detailed seller ratings
+                  </h3>
                   <div className="space-y-3">
-                    <DetailRatingRow label="Accurate description" value={avg1} />
-                    <DetailRatingRow label="Reasonable shipping cost" value={avg2} />
+                    <DetailRatingRow
+                      label="Accurate description"
+                      value={avg1}
+                    />
+                    <DetailRatingRow
+                      label="Reasonable shipping cost"
+                      value={avg2}
+                    />
                     <DetailRatingRow label="Shipping speed" value={avg3} />
                     <DetailRatingRow label="Communication" value={avg4} />
                   </div>
@@ -497,33 +531,49 @@ export default function SellerInformationPage() {
               {/* Stats */}
               <div className="grid grid-cols-2 gap-3 text-center">
                 <div className="bg-gray-50 rounded-lg p-3">
-                  <p className="text-2xl font-bold text-primary">{productsTotal || 0}</p>
+                  <p className="text-2xl font-bold text-primary">
+                    {productsTotal || 0}
+                  </p>
                   <p className="text-xs text-muted-foreground">Products</p>
                 </div>
                 <div className="bg-gray-50 rounded-lg p-3">
-                  <p className="text-2xl font-bold text-primary">{totalAllItems}</p>
+                  <p className="text-2xl font-bold text-primary">
+                    {totalAllItems}
+                  </p>
                   <p className="text-xs text-muted-foreground">Reviews</p>
                 </div>
               </div>
 
               {/* Product ID if from product page */}
-              
             </div>
           </div>
 
           {/* Right Content - Tabs */}
           <div className="lg:col-span-3">
             <div className="bg-white rounded-lg border">
-              <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as InfoTab)} className="w-full">
-                <div className="px-6 pt-4 border-b">
+              <Tabs
+                value={activeTab}
+                onValueChange={(v) => setActiveTab(v as InfoTab)}
+                className="w-full"
+              >
+                <div className="px-6 py-4 border-b">
                   <TabsList className="w-full justify-start">
-                    <TabsTrigger value="products" className="flex-1 sm:flex-none">
+                    <TabsTrigger
+                      value="products"
+                      className="flex-1 cursor-pointer sm:flex-none"
+                    >
                       Products ({productsTotal})
                     </TabsTrigger>
-                    <TabsTrigger value="feedback" className="flex-1 sm:flex-none">
+                    <TabsTrigger
+                      value="feedback"
+                      className="flex-1 cursor-pointer sm:flex-none"
+                    >
                       Feedback ({totalAllItems})
                     </TabsTrigger>
-                    <TabsTrigger value="about" className="flex-1 sm:flex-none">
+                    <TabsTrigger
+                      value="about"
+                      className="flex-1 cursor-pointer sm:flex-none"
+                    >
                       About Seller
                     </TabsTrigger>
                   </TabsList>
@@ -534,8 +584,13 @@ export default function SellerInformationPage() {
                   {/* Filter */}
                   <div className="flex items-center justify-between mb-4">
                     <div className="flex items-center gap-2">
-                      <span className="text-sm text-muted-foreground">Filter:</span>
-                      <Select value={ratingFilter} onValueChange={(v: RatingFilter) => setRatingFilter(v)}>
+                      <span className="text-sm text-muted-foreground">
+                        Filter:
+                      </span>
+                      <Select
+                        value={ratingFilter}
+                        onValueChange={(v: RatingFilter) => setRatingFilter(v)}
+                      >
                         <SelectTrigger className="w-[140px]">
                           <SelectValue placeholder="All ratings" />
                         </SelectTrigger>
@@ -553,7 +608,7 @@ export default function SellerInformationPage() {
                   <ScrollArea className="h-[600px] pr-4">
                     {loading ? (
                       <div className="space-y-4">
-                        {[1, 2, 3].map(i => (
+                        {[1, 2, 3].map((i) => (
                           <div key={i} className="border-b pb-4">
                             <Skeleton className="h-4 w-32 mb-2" />
                             <Skeleton className="h-16 w-full" />
@@ -567,31 +622,44 @@ export default function SellerInformationPage() {
                       </div>
                     ) : filteredReviews.length === 0 ? (
                       <div className="text-center py-8">
-                        <p className="text-muted-foreground">No feedback yet for this seller.</p>
+                        <p className="text-muted-foreground">
+                          No feedback yet for this seller.
+                        </p>
                       </div>
                     ) : (
                       <div className="space-y-4">
                         {filteredReviews.map((review) => {
                           const type = getComputedType(review);
                           return (
-                            <div key={review._id} className="border-b pb-4 last:border-b-0">
+                            <div
+                              key={review._id}
+                              className="border-b pb-4 last:border-b-0"
+                            >
                               <div className="flex items-start gap-3">
                                 <TypeBadge type={type} rating={review.rating} />
                                 <div className="flex-1">
                                   <div className="flex items-center gap-2 text-sm mb-1">
-                                    <span className="font-medium">{review.reviewer.username}</span>
-                                    <span className="text-xs text-muted-foreground">•</span>
+                                    <span className="font-medium">
+                                      {review.reviewer.username}
+                                    </span>
+                                    <span className="text-xs text-muted-foreground">
+                                      •
+                                    </span>
                                     <span className="text-xs text-muted-foreground">
                                       {calcRelativeTime(review.createdAt)}
                                     </span>
                                   </div>
-                                  <p className="text-sm mb-2">{review.comment}</p>
+                                  <p className="text-sm mb-2">
+                                    {review.comment}
+                                  </p>
                                   <div className="flex items-center gap-2 text-xs text-muted-foreground">
                                     <span>{review.product.title}</span>
                                     {review.verifiedPurchase && (
                                       <>
                                         <span>•</span>
-                                        <span className="text-green-600">Verified purchase</span>
+                                        <span className="text-green-600">
+                                          Verified purchase
+                                        </span>
                                       </>
                                     )}
                                   </div>
@@ -620,18 +688,40 @@ export default function SellerInformationPage() {
                         className="w-full"
                       />
                     </div>
-                    
+
                     <div className="flex gap-2">
-                      <Select value={sortBy} onValueChange={(value: ProductSort) => setSortBy(value)}>
-                        <SelectTrigger className="w-[180px]">
+                      <Select
+                        value={sortBy}
+                        onValueChange={(value: ProductSort) => setSortBy(value)}
+                      >
+                        <SelectTrigger className="w-[180px] cursor-pointer">
                           <SelectValue placeholder="Sort by" />
                         </SelectTrigger>
                         <SelectContent>
-                          <SelectItem value="newest">Newest first</SelectItem>
-                          <SelectItem value="price_asc">Price: Low to High</SelectItem>
-                          <SelectItem value="price_desc">Price: High to Low</SelectItem>
-                          <SelectItem value="popular">Most popular</SelectItem>
-                          <SelectItem value="rating">Top rated</SelectItem>
+                          <SelectItem value="newest" className="cursor-pointer">
+                            Newest first
+                          </SelectItem>
+                          <SelectItem
+                            value="price_asc"
+                            className="cursor-pointer"
+                          >
+                            Price: Low to High
+                          </SelectItem>
+                          <SelectItem
+                            value="price_desc"
+                            className="cursor-pointer"
+                          >
+                            Price: High to Low
+                          </SelectItem>
+                          <SelectItem
+                            value="popular"
+                            className="cursor-pointer"
+                          >
+                            Most popular
+                          </SelectItem>
+                          <SelectItem value="rating" className="cursor-pointer">
+                            Top rated
+                          </SelectItem>
                         </SelectContent>
                       </Select>
 
@@ -639,7 +729,7 @@ export default function SellerInformationPage() {
                         <Button
                           variant={viewMode === "grid" ? "default" : "ghost"}
                           size="icon"
-                          className="rounded-r-none"
+                          className="rounded cursor-pointer"
                           onClick={() => setViewMode("grid")}
                         >
                           <Grid className="h-4 w-4" />
@@ -647,7 +737,7 @@ export default function SellerInformationPage() {
                         <Button
                           variant={viewMode === "list" ? "default" : "ghost"}
                           size="icon"
-                          className="rounded-l-none"
+                          className="rounded cursor-pointer"
                           onClick={() => setViewMode("list")}
                         >
                           <List className="h-4 w-4" />
@@ -660,7 +750,9 @@ export default function SellerInformationPage() {
                   {categories.length > 0 && (
                     <div className="flex flex-wrap gap-2 mb-6">
                       <Badge
-                        variant={selectedCategory === "all" ? "default" : "outline"}
+                        variant={
+                          selectedCategory === "all" ? "default" : "outline"
+                        }
                         className="cursor-pointer"
                         onClick={() => setSelectedCategory("all")}
                       >
@@ -669,7 +761,9 @@ export default function SellerInformationPage() {
                       {categories.map((cat) => (
                         <Badge
                           key={cat.id}
-                          variant={selectedCategory === cat.id ? "default" : "outline"}
+                          variant={
+                            selectedCategory === cat.id ? "default" : "outline"
+                          }
                           className="cursor-pointer"
                           onClick={() => setSelectedCategory(cat.id)}
                         >
@@ -683,7 +777,7 @@ export default function SellerInformationPage() {
                   <ScrollArea className="h-[600px] pr-4">
                     {loadingProducts ? (
                       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                        {[1, 2, 3, 4, 5, 6].map(i => (
+                        {[1, 2, 3, 4, 5, 6].map((i) => (
                           <Card key={i}>
                             <Skeleton className="h-48 w-full" />
                             <CardContent className="p-3">
@@ -697,19 +791,30 @@ export default function SellerInformationPage() {
                       <div className="flex items-center justify-center h-40">
                         <div className="text-center">
                           <Package className="h-8 w-8 text-muted-foreground mx-auto mb-2" />
-                          <p className="text-muted-foreground">No products found</p>
+                          <p className="text-muted-foreground">
+                            No products found
+                          </p>
                         </div>
                       </div>
                     ) : viewMode === "grid" ? (
                       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                         {products.map((product) => {
-                          const stockStatus = getStockStatus(product.stock, product.quantity);
-                          
+                          const stockStatus = getStockStatus(
+                            product.stock,
+                            product.quantity,
+                          );
+
                           return (
-                            <Card key={product._id} className="overflow-hidden hover:shadow-lg transition-shadow">
-                              <div className="aspect-square bg-muted relative group cursor-pointer"
-                                   onClick={() => handleViewProduct(product._id)}>
-                                {product.image || (product.images && product.images[0]) ? (
+                            <Card
+                              key={product._id}
+                              className="overflow-hidden hover:shadow-lg transition-shadow"
+                            >
+                              <div
+                                className="aspect-square bg-muted relative group cursor-pointer"
+                                onClick={() => handleViewProduct(product._id)}
+                              >
+                                {product.image ||
+                                (product.images && product.images[0]) ? (
                                   <img
                                     src={product.image || product.images?.[0]}
                                     alt={product.title}
@@ -720,13 +825,13 @@ export default function SellerInformationPage() {
                                     <Package className="h-12 w-12 text-muted-foreground" />
                                   </div>
                                 )}
-                                
+
                                 {product.promotionType === "sale" && (
                                   <Badge className="absolute top-2 left-2 bg-red-500">
                                     SALE
                                   </Badge>
                                 )}
-                                
+
                                 {product.isAuction && (
                                   <Badge className="absolute top-2 right-2 bg-purple-500">
                                     Auction
@@ -735,14 +840,16 @@ export default function SellerInformationPage() {
                               </div>
 
                               <CardContent className="p-3">
-                                <h3 className="font-medium text-sm line-clamp-2 mb-1 h-10 cursor-pointer hover:text-primary"
-                                    onClick={() => handleViewProduct(product._id)}>
+                                <h3
+                                  className="font-medium text-sm line-clamp-2 mb-1 h-10 cursor-pointer hover:text-primary"
+                                  onClick={() => handleViewProduct(product._id)}
+                                >
                                   {product.title}
                                 </h3>
-                                
+
                                 <div className="flex items-center justify-between mb-2">
                                   <span className="text-lg font-bold text-primary">
-                                    {formatPrice(product.price)}
+                                    $ {product.price.toFixed(2)}
                                   </span>
                                   <Badge className={stockStatus.color}>
                                     {stockStatus.label}
@@ -752,7 +859,9 @@ export default function SellerInformationPage() {
                                 <div className="flex items-center gap-2 text-xs text-muted-foreground mb-2">
                                   <div className="flex items-center gap-1">
                                     <Star className="h-3 w-3 fill-yellow-400 text-yellow-400" />
-                                    <span>{product.averageRating.toFixed(1)}</span>
+                                    <span>
+                                      {product.averageRating.toFixed(1)}
+                                    </span>
                                   </div>
                                   <span>•</span>
                                   <span>{product.ratingCount} reviews</span>
@@ -761,12 +870,16 @@ export default function SellerInformationPage() {
                                 <div className="flex items-center justify-between text-xs text-muted-foreground">
                                   <div className="flex items-center gap-1">
                                     <Eye className="h-3 w-3" />
-                                    <span>{product.watchCount || 0} watching</span>
+                                    <span>
+                                      {product.watchCount || 0} watching
+                                    </span>
                                   </div>
                                   {product.dealQuantitySold > 0 && (
                                     <div className="flex items-center gap-1">
                                       <TrendingUp className="h-3 w-3" />
-                                      <span>{product.dealQuantitySold} sold</span>
+                                      <span>
+                                        {product.dealQuantitySold} sold
+                                      </span>
                                     </div>
                                   )}
                                 </div>
@@ -787,14 +900,23 @@ export default function SellerInformationPage() {
                       // List view
                       <div className="space-y-3">
                         {products.map((product) => {
-                          const stockStatus = getStockStatus(product.stock, product.quantity);
-                          
+                          const stockStatus = getStockStatus(
+                            product.stock,
+                            product.quantity,
+                          );
+
                           return (
-                            <Card key={product._id} className="overflow-hidden hover:shadow-md transition-shadow">
+                            <Card
+                              key={product._id}
+                              className="overflow-hidden hover:shadow-md transition-shadow"
+                            >
                               <div className="flex">
-                                <div className="w-32 h-32 bg-muted flex-shrink-0 cursor-pointer"
-                                     onClick={() => handleViewProduct(product._id)}>
-                                  {product.image || (product.images && product.images[0]) ? (
+                                <div
+                                  className="w-32 h-32 bg-muted flex-shrink-0 cursor-pointer"
+                                  onClick={() => handleViewProduct(product._id)}
+                                >
+                                  {product.image ||
+                                  (product.images && product.images[0]) ? (
                                     <img
                                       src={product.image || product.images?.[0]}
                                       alt={product.title}
@@ -806,49 +928,60 @@ export default function SellerInformationPage() {
                                     </div>
                                   )}
                                 </div>
-                                
+
                                 <CardContent className="flex-1 p-3">
                                   <div className="flex justify-between mb-1">
-                                    <h3 className="font-medium text-sm line-clamp-1 cursor-pointer hover:text-primary"
-                                        onClick={() => handleViewProduct(product._id)}>
+                                    <h3
+                                      className="font-medium text-sm line-clamp-1 cursor-pointer hover:text-primary"
+                                      onClick={() =>
+                                        handleViewProduct(product._id)
+                                      }
+                                    >
                                       {product.title}
                                     </h3>
                                     <Badge className={stockStatus.color}>
                                       {stockStatus.label}
                                     </Badge>
                                   </div>
-                                  
+
                                   <p className="text-xs text-muted-foreground line-clamp-2 mb-2">
                                     {product.description}
                                   </p>
-                                  
+
                                   <div className="flex items-center gap-4 text-xs">
                                     <span className="text-lg font-bold text-primary">
-                                      {formatPrice(product.price)}
+                                      $ {product.price.toFixed(2)}
                                     </span>
-                                    
+
                                     <div className="flex items-center gap-1">
                                       <Star className="h-3 w-3 fill-yellow-400 text-yellow-400" />
-                                      <span>{product.averageRating.toFixed(1)} ({product.ratingCount})</span>
+                                      <span>
+                                        {product.averageRating.toFixed(1)} (
+                                        {product.ratingCount})
+                                      </span>
                                     </div>
-                                    
+
                                     <div className="flex items-center gap-1">
                                       <Eye className="h-3 w-3" />
                                       <span>{product.watchCount || 0}</span>
                                     </div>
-                                    
+
                                     {product.dealQuantitySold > 0 && (
                                       <div className="flex items-center gap-1">
                                         <TrendingUp className="h-3 w-3" />
-                                        <span>{product.dealQuantitySold} sold</span>
+                                        <span>
+                                          {product.dealQuantitySold} sold
+                                        </span>
                                       </div>
                                     )}
                                   </div>
-                                  
+
                                   <Button
                                     className="mt-2"
                                     size="sm"
-                                    onClick={() => handleViewProduct(product._id)}
+                                    onClick={() =>
+                                      handleViewProduct(product._id)
+                                    }
                                   >
                                     View details
                                   </Button>
@@ -866,21 +999,30 @@ export default function SellerInformationPage() {
                         <Button
                           variant="outline"
                           size="sm"
-                          onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
+                          onClick={() =>
+                            setCurrentPage((p) => Math.max(1, p - 1))
+                          }
                           disabled={currentPage === 1}
                         >
                           Previous
                         </Button>
-                        
+
                         {Array.from({ length: totalPages }, (_, i) => i + 1)
-                          .filter(p => p === 1 || p === totalPages || Math.abs(p - currentPage) <= 2)
+                          .filter(
+                            (p) =>
+                              p === 1 ||
+                              p === totalPages ||
+                              Math.abs(p - currentPage) <= 2,
+                          )
                           .map((p, i, arr) => (
                             <React.Fragment key={p}>
                               {i > 0 && arr[i - 1] !== p - 1 && (
                                 <span className="px-2">...</span>
                               )}
                               <Button
-                                variant={currentPage === p ? "default" : "outline"}
+                                variant={
+                                  currentPage === p ? "default" : "outline"
+                                }
                                 size="sm"
                                 onClick={() => setCurrentPage(p)}
                               >
@@ -888,11 +1030,13 @@ export default function SellerInformationPage() {
                               </Button>
                             </React.Fragment>
                           ))}
-                        
+
                         <Button
                           variant="outline"
                           size="sm"
-                          onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
+                          onClick={() =>
+                            setCurrentPage((p) => Math.min(totalPages, p + 1))
+                          }
                           disabled={currentPage === totalPages}
                         >
                           Next
@@ -906,9 +1050,13 @@ export default function SellerInformationPage() {
                 <TabsContent value="about" className="p-6">
                   <div className="space-y-6">
                     <div>
-                      <h3 className="font-semibold mb-2">About {displayName}</h3>
+                      <h3 className="font-semibold mb-2">
+                        About {displayName}
+                      </h3>
                       <p className="text-sm text-muted-foreground">
-                        {sellerName ? `${sellerName} is a seller on our marketplace.` : `This seller has been a member for ${trust ? Math.floor(trust.accountAgeMonths) : 'several'} months.`}
+                        {sellerName
+                          ? `${sellerName} is a seller on our marketplace.`
+                          : `This seller has been a member for ${trust ? Math.floor(trust.accountAgeMonths) : "several"} months.`}
                       </p>
                     </div>
 
@@ -918,22 +1066,36 @@ export default function SellerInformationPage() {
                       <h3 className="font-semibold mb-3">Seller Statistics</h3>
                       <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
                         <div className="bg-gray-50 rounded-lg p-4 text-center">
-                          <p className="text-2xl font-bold text-primary">{productsTotal}</p>
-                          <p className="text-xs text-muted-foreground">Total Products</p>
-                        </div>
-                        <div className="bg-gray-50 rounded-lg p-4 text-center">
-                          <p className="text-2xl font-bold text-primary">{totalAllItems}</p>
-                          <p className="text-xs text-muted-foreground">Total Reviews</p>
-                        </div>
-                        <div className="bg-gray-50 rounded-lg p-4 text-center">
-                          <p className="text-2xl font-bold text-primary">{positivePercent.toFixed(0)}%</p>
-                          <p className="text-xs text-muted-foreground">Positive Feedback</p>
+                          <p className="text-2xl font-bold text-primary">
+                            {productsTotal}
+                          </p>
+                          <p className="text-xs text-muted-foreground">
+                            Total Products
+                          </p>
                         </div>
                         <div className="bg-gray-50 rounded-lg p-4 text-center">
                           <p className="text-2xl font-bold text-primary">
-                            {trust?.completionRate || '0'}%
+                            {totalAllItems}
                           </p>
-                          <p className="text-xs text-muted-foreground">Order Completion</p>
+                          <p className="text-xs text-muted-foreground">
+                            Total Reviews
+                          </p>
+                        </div>
+                        <div className="bg-gray-50 rounded-lg p-4 text-center">
+                          <p className="text-2xl font-bold text-primary">
+                            {positivePercent.toFixed(0)}%
+                          </p>
+                          <p className="text-xs text-muted-foreground">
+                            Positive Feedback
+                          </p>
+                        </div>
+                        <div className="bg-gray-50 rounded-lg p-4 text-center">
+                          <p className="text-2xl font-bold text-primary">
+                            {trust?.completionRate || "0"}%
+                          </p>
+                          <p className="text-xs text-muted-foreground">
+                            Order Completion
+                          </p>
                         </div>
                       </div>
                     </div>
@@ -942,29 +1104,49 @@ export default function SellerInformationPage() {
                       <>
                         <Separator />
                         <div>
-                          <h3 className="font-semibold mb-3">Performance Metrics</h3>
+                          <h3 className="font-semibold mb-3">
+                            Performance Metrics
+                          </h3>
                           <div className="grid grid-cols-2 gap-4">
                             <div className="space-y-2">
                               <div className="flex justify-between text-sm">
-                                <span className="text-muted-foreground">Response Rate</span>
-                                <span className="font-medium">{trust.responseRate}%</span>
+                                <span className="text-muted-foreground">
+                                  Response Rate
+                                </span>
+                                <span className="font-medium">
+                                  {trust.responseRate}%
+                                </span>
                               </div>
                               <div className="flex justify-between text-sm">
-                                <span className="text-muted-foreground">Dispute Rate</span>
-                                <span className="font-medium">{trust.disputeRate}%</span>
+                                <span className="text-muted-foreground">
+                                  Dispute Rate
+                                </span>
+                                <span className="font-medium">
+                                  {trust.disputeRate}%
+                                </span>
                               </div>
                               <div className="flex justify-between text-sm">
-                                <span className="text-muted-foreground">Account Age</span>
-                                <span className="font-medium">{Math.floor(trust.accountAgeMonths)} months</span>
+                                <span className="text-muted-foreground">
+                                  Account Age
+                                </span>
+                                <span className="font-medium">
+                                  {Math.floor(trust.accountAgeMonths)} months
+                                </span>
                               </div>
                             </div>
                             <div className="space-y-2">
                               <div className="flex justify-between text-sm">
-                                <span className="text-muted-foreground">Trust Score</span>
-                                <span className="font-medium">{trust.finalScore.toFixed(1)}/5</span>
+                                <span className="text-muted-foreground">
+                                  Trust Score
+                                </span>
+                                <span className="font-medium">
+                                  {trust.finalScore.toFixed(1)}/5
+                                </span>
                               </div>
                               <div className="flex justify-between text-sm">
-                                <span className="text-muted-foreground">Status</span>
+                                <span className="text-muted-foreground">
+                                  Status
+                                </span>
                                 <Badge className={TIER_STYLES[trust.tier]?.bg}>
                                   {trust.badge}
                                 </Badge>
@@ -986,17 +1168,22 @@ export default function SellerInformationPage() {
                     <div>
                       <h3 className="font-semibold mb-2">Shipping & Returns</h3>
                       <p className="text-sm text-muted-foreground mb-2">
-                        Standard shipping within 3-5 business days. Returns accepted within 30 days of delivery.
+                        Standard shipping within 3-5 business days. Returns
+                        accepted within 30 days of delivery.
                       </p>
                       <p className="text-sm text-muted-foreground">
-                        Contact seller for specific shipping rates and return policies.
+                        Contact seller for specific shipping rates and return
+                        policies.
                       </p>
                     </div>
 
                     <div className="bg-blue-50 p-4 rounded-lg">
-                      <h4 className="font-medium text-blue-700 mb-2">Need help?</h4>
+                      <h4 className="font-medium text-blue-700 mb-2">
+                        Need help?
+                      </h4>
                       <p className="text-sm text-blue-600 mb-3">
-                        If you have questions about this seller or their products, feel free to contact them directly.
+                        If you have questions about this seller or their
+                        products, feel free to contact them directly.
                       </p>
                       <Button size="sm" onClick={handleContactSeller}>
                         <MessageCircle className="h-4 w-4 mr-2" />
@@ -1015,7 +1202,13 @@ export default function SellerInformationPage() {
 }
 
 // Helper Components
-function DetailRatingRow({ label, value }: { label: string; value: number | null | undefined }) {
+function DetailRatingRow({
+  label,
+  value,
+}: {
+  label: string;
+  value: number | null | undefined;
+}) {
   const hasValue = typeof value === "number" && !Number.isNaN(value);
 
   return (
@@ -1024,8 +1217,8 @@ function DetailRatingRow({ label, value }: { label: string; value: number | null
       <div className="flex items-center gap-2">
         <div className="w-16 h-1.5 bg-gray-200 rounded-full overflow-hidden">
           {hasValue && (
-            <div 
-              className="h-full bg-primary rounded-full" 
+            <div
+              className="h-full bg-primary rounded-full"
               style={{ width: `${(value / 5) * 100}%` }}
             />
           )}
@@ -1038,8 +1231,14 @@ function DetailRatingRow({ label, value }: { label: string; value: number | null
   );
 }
 
-function TypeBadge({ type }: { type: "positive" | "neutral" | "negative"; rating: number }) {
-  const baseClass = "flex h-6 w-6 items-center justify-center rounded-full text-xs font-bold text-white";
+function TypeBadge({
+  type,
+}: {
+  type: "positive" | "neutral" | "negative";
+  rating: number;
+}) {
+  const baseClass =
+    "flex h-6 w-6 items-center justify-center rounded-full text-xs font-bold text-white";
 
   if (type === "positive") {
     return <div className={`${baseClass} bg-green-600`}>+</div>;
@@ -1056,15 +1255,21 @@ function SellerTrustScore({ trust }: { trust: TrustData }) {
   const style = TIER_STYLES[trust.tier] ?? TIER_STYLES.STANDARD;
   const scoreBarWidth = Math.min((trust.finalScore / 5) * 100, 100);
   const scoreColor =
-    trust.finalScore >= 4.5 ? "#10b981" :
-      trust.finalScore >= 4.0 ? "#3b82f6" :
-        trust.finalScore >= 3.0 ? "#f59e0b" : "#ef4444";
+    trust.finalScore >= 4.5
+      ? "#10b981"
+      : trust.finalScore >= 4.0
+        ? "#3b82f6"
+        : trust.finalScore >= 3.0
+          ? "#f59e0b"
+          : "#ef4444";
 
   return (
     <div>
       <div className="flex items-center justify-between mb-2">
         <span className="text-sm font-semibold">Trust Score</span>
-        <span className={`inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-xs ${style.bg} ${style.text} ${style.border}`}>
+        <span
+          className={`inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-xs ${style.bg} ${style.text} ${style.border}`}
+        >
           {style.icon} {trust.badge}
         </span>
       </div>
@@ -1074,14 +1279,17 @@ function SellerTrustScore({ trust }: { trust: TrustData }) {
           className="flex h-12 w-12 flex-shrink-0 flex-col items-center justify-center rounded-full border-2"
           style={{ borderColor: scoreColor }}
         >
-          <span className="text-base font-bold leading-none" style={{ color: scoreColor }}>
+          <span
+            className="text-base font-bold leading-none"
+            style={{ color: scoreColor }}
+          >
             {trust.finalScore.toFixed(1)}
           </span>
           <span className="text-[9px] text-muted-foreground">/5</span>
         </div>
         <div className="flex-1">
           <div className="flex items-center gap-0.5 mb-1">
-            {[1, 2, 3, 4, 5].map(s => (
+            {[1, 2, 3, 4, 5].map((s) => (
               <Star
                 key={s}
                 className={`h-3 w-3 ${s <= Math.round(trust.avgRating) ? "fill-yellow-400 text-yellow-400" : "text-gray-200"}`}
@@ -1091,7 +1299,10 @@ function SellerTrustScore({ trust }: { trust: TrustData }) {
           <div className="h-1.5 w-full rounded-full bg-gray-100 overflow-hidden">
             <div
               className="h-full rounded-full transition-all"
-              style={{ width: `${scoreBarWidth}%`, backgroundColor: scoreColor }}
+              style={{
+                width: `${scoreBarWidth}%`,
+                backgroundColor: scoreColor,
+              }}
             />
           </div>
         </div>
