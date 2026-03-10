@@ -1,4 +1,10 @@
-import { type ReactNode, useCallback, useEffect, useMemo, useState } from "react";
+import {
+  type ReactNode,
+  useCallback,
+  useEffect,
+  useMemo,
+  useState,
+} from "react";
 import { Link } from "react-router-dom";
 import api from "@/lib/axios";
 import { Button } from "@/components/ui/button";
@@ -86,7 +92,11 @@ const resolveTier = (tier: string): TrustTier => {
 };
 
 const toPercentNumber = (value: string) =>
-  Number(String(value || "").replace("%", "").trim()) || 0;
+  Number(
+    String(value || "")
+      .replace("%", "")
+      .trim(),
+  ) || 0;
 
 const toDateTimeLabel = (value: string | null) => {
   if (!value) return "N/A";
@@ -187,8 +197,7 @@ export default function SellerTrustScorePage() {
       items.push({
         level: "high",
         title: "Under monitoring",
-        detail:
-          "Recent refund behavior has triggered dynamic risk monitoring.",
+        detail: "Recent refund behavior has triggered dynamic risk monitoring.",
       });
     }
 
@@ -266,12 +275,17 @@ export default function SellerTrustScorePage() {
         <CardContent className="py-6">
           <div className="flex flex-wrap items-start justify-between gap-4">
             <div className="space-y-2">
-              <h1 className="text-2xl font-bold text-gray-900">Seller Score Center</h1>
+              <h1 className="text-2xl font-bold text-gray-900">
+                Seller Score Center
+              </h1>
               <p className="text-sm text-gray-600">
-                Monitor trust score, understand calculation logic, and resolve warnings early.
+                Monitor trust score, understand calculation logic, and resolve
+                warnings early.
               </p>
               <div className="flex flex-wrap items-center gap-2">
-                <Badge className={TIER_STYLE[resolveTier(score.tier)].badgeClass}>
+                <Badge
+                  className={TIER_STYLE[resolveTier(score.tier)].badgeClass}
+                >
                   {TIER_STYLE[resolveTier(score.tier)].label}
                 </Badge>
                 {score.riskFlagged && (
@@ -279,15 +293,21 @@ export default function SellerTrustScorePage() {
                     Under Monitoring
                   </Badge>
                 )}
-                <Badge variant="outline">{moderationLabel(score.productModerationMode)}</Badge>
+                <Badge variant="outline">
+                  {moderationLabel(score.productModerationMode)}
+                </Badge>
               </div>
             </div>
 
             <div className="text-right">
-              <div className={`text-5xl font-extrabold leading-none ${scoreColorClass}`}>
+              <div
+                className={`text-5xl font-extrabold leading-none ${scoreColorClass}`}
+              >
                 {Number(score.finalScore || 0).toFixed(2)}
               </div>
-              <div className="text-xs text-muted-foreground mt-1">out of 5.00</div>
+              <div className="text-xs text-muted-foreground mt-1">
+                out of 5.00
+              </div>
               <div className="text-xs text-muted-foreground mt-3">
                 Last calculated: {toDateTimeLabel(score.lastCalculatedAt)}
               </div>
@@ -297,6 +317,7 @@ export default function SellerTrustScorePage() {
           <div className="mt-4 flex flex-wrap items-center gap-2">
             <Button
               variant="outline"
+              className="cursor-pointer"
               onClick={async () => {
                 setRefreshing(true);
                 await fetchScore(true);
@@ -361,7 +382,8 @@ export default function SellerTrustScorePage() {
             <div className="rounded-lg border border-blue-100 bg-blue-50/50 p-3 text-sm">
               <div className="font-semibold text-blue-800">Formula</div>
               <div className="mt-1 text-blue-700">
-                Final = 0.40*Rating + 0.20*Completion + 0.10*Response + 0.15*Dispute + 0.15*Stability
+                Final = 0.40*Rating + 0.20*Completion + 0.10*Response +
+                0.15*Dispute + 0.15*Stability
               </div>
             </div>
 
@@ -372,8 +394,12 @@ export default function SellerTrustScorePage() {
                 <div key={row.key} className="rounded-lg border p-3 space-y-2">
                   <div className="flex items-start justify-between gap-3">
                     <div>
-                      <div className="text-sm font-semibold text-gray-900">{row.label}</div>
-                      <div className="text-xs text-muted-foreground">{row.hint}</div>
+                      <div className="text-sm font-semibold text-gray-900">
+                        {row.label}
+                      </div>
+                      <div className="text-xs text-muted-foreground">
+                        {row.hint}
+                      </div>
                     </div>
                     <div className="text-right text-xs">
                       <div className="font-semibold text-gray-800">
@@ -391,7 +417,8 @@ export default function SellerTrustScorePage() {
                     />
                   </div>
                   <div className="text-xs text-muted-foreground">
-                    Contribution: <strong>{contribution.toFixed(2)}</strong> points
+                    Contribution: <strong>{contribution.toFixed(2)}</strong>{" "}
+                    points
                   </div>
                 </div>
               );
@@ -444,27 +471,37 @@ export default function SellerTrustScorePage() {
         </CardHeader>
         <CardContent className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
           <div className="rounded-lg border p-3">
-            <div className="font-semibold text-gray-900">Improve rating quality</div>
+            <div className="font-semibold text-gray-900">
+              Improve rating quality
+            </div>
             <div className="text-muted-foreground mt-1">
-              Deliver exactly as described, proactively communicate, and request feedback after successful delivery.
+              Deliver exactly as described, proactively communicate, and request
+              feedback after successful delivery.
             </div>
           </div>
           <div className="rounded-lg border p-3">
-            <div className="font-semibold text-gray-900">Keep completion high</div>
+            <div className="font-semibold text-gray-900">
+              Keep completion high
+            </div>
             <div className="text-muted-foreground mt-1">
-              Avoid avoidable cancellations and keep inventory synced to prevent failed orders.
+              Avoid avoidable cancellations and keep inventory synced to prevent
+              failed orders.
             </div>
           </div>
           <div className="rounded-lg border p-3">
-            <div className="font-semibold text-gray-900">Lower disputes & refunds</div>
+            <div className="font-semibold text-gray-900">
+              Lower disputes & refunds
+            </div>
             <div className="text-muted-foreground mt-1">
-              Improve packaging quality, shipping accuracy, and return handling speed.
+              Improve packaging quality, shipping accuracy, and return handling
+              speed.
             </div>
           </div>
           <div className="rounded-lg border p-3">
             <div className="font-semibold text-gray-900">Respond quickly</div>
             <div className="text-muted-foreground mt-1">
-              Keep response rate above 80% and answer buyer questions within 24 hours.
+              Keep response rate above 80% and answer buyer questions within 24
+              hours.
             </div>
           </div>
         </CardContent>
@@ -486,7 +523,7 @@ function StatCard({
 }) {
   return (
     <Card>
-      <CardContent className="pt-5">
+      <CardContent>
         <div className="flex items-center gap-2 text-sm text-muted-foreground">
           {icon}
           {label}

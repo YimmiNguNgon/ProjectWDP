@@ -58,7 +58,9 @@ exports.register = async (req, res, next) => {
         status: "active",
       });
       await newUser.save();
-      return res.status(201).json({ ok: true, message: "Staff account created successfully" });
+      return res
+        .status(201)
+        .json({ ok: true, message: "Staff account created successfully" });
     }
 
     // Người dùng thông thường: gửi email xác thực
@@ -108,7 +110,6 @@ exports.register = async (req, res, next) => {
 
 exports.login = async (req, res, next) => {
   try {
-    console.log("Login request body:", req.body); // Debug log
     const { username, password } = req.body;
 
     if (!username || !password) {

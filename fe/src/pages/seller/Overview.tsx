@@ -42,22 +42,26 @@ const STATUS_STYLE: Record<string, string> = {
   delivered: "bg-green-100 text-green-800",
   paid: "bg-blue-100 text-blue-800",
   processing: "bg-blue-100 text-blue-800",
-  shipped: "bg-cyan-100 text-cyan-800",
+  shipping: "bg-cyan-100 text-cyan-800",
+  ready_to_ship: "bg-yellow-100 text-yellow-800",
   created: "bg-yellow-100 text-yellow-800",
   cancelled: "bg-red-100 text-red-800",
   returned: "bg-orange-100 text-orange-800",
+  completed: "bg-green-100 text-green-800",
   failed: "bg-red-100 text-red-800",
 };
 
 const STATUS_LABEL: Record<string, string> = {
-  delivered: "Hoàn thành",
-  paid: "Đã thanh toán",
-  processing: "Đang xử lý",
-  shipped: "Đang giao",
-  created: "Chờ xác nhận",
-  cancelled: "Đã huỷ",
-  returned: "Đã hoàn",
-  failed: "Thất bại",
+  delivered: "Completed",
+  paid: "Paid",
+  processing: "Processing",
+  shipping: "Shipping",
+  ready_to_ship: "Ready To Ship",
+  created: "Created",
+  cancelled: "Cancelled",
+  returned: "Returned",
+  completed: "Completed",
+  failed: "Failed",
 };
 
 export default function SellerOverview() {
@@ -90,16 +94,20 @@ export default function SellerOverview() {
           // Tính stats từ tất cả đơn (không chỉ 5 đơn đầu)
           const allOrders: RecentOrder[] = data.data ?? [];
           const pending = allOrders.filter((o) =>
-            ["created", "paid", "processing"].includes(o.status)
+            ["created", "paid", "processing"].includes(o.status),
           ).length;
           const completed = allOrders.filter(
-            (o) => o.status === "delivered"
+            (o) => o.status === "delivered",
           ).length;
           const revenue = allOrders
             .filter((o) => o.status === "delivered")
             .reduce((sum: number, o: any) => sum + (o.totalAmount ?? 0), 0);
 
-          setStats({ pendingOrders: pending, completedOrders: completed, totalRevenue: revenue });
+          setStats({
+            pendingOrders: pending,
+            completedOrders: completed,
+            totalRevenue: revenue,
+          });
         }
 
         // Xử lý inventory
@@ -125,7 +133,7 @@ export default function SellerOverview() {
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900">Tổng quan</h1>
+          <h1 className="text-2xl font-bold text-gray-900">Overview</h1>
           <p className="text-gray-600">
             Shop: <strong>{shopName}</strong>
           </p>
@@ -136,7 +144,7 @@ export default function SellerOverview() {
           onClick={() => window.location.reload()}
         >
           <RefreshCw className="h-4 w-4 mr-2" />
-          Làm mới
+          Refresh
         </Button>
       </div>
 
@@ -146,12 +154,13 @@ export default function SellerOverview() {
           <AlertTriangle className="h-5 w-5 text-amber-600 flex-shrink-0 mt-0.5" />
           <div>
             <p className="text-sm font-semibold text-amber-800">
-              Tài khoản đang ở giai đoạn PROBATION
+              Account is in PROBATION stage
             </p>
             <p className="text-xs text-amber-700 mt-0.5">
-              Giới hạn: 5 sản phẩm/ngày · 10 đơn/ngày · Không đăng danh mục rủi ro cao.{" "}
+              Limits: 5 products/day · 10 orders/day · No listing of high-risk
+              categories.{" "}
               <Link to="/seller/my-listings" className="underline font-medium">
-                Xem chi tiết →
+                View details →
               </Link>
             </p>
           </div>
@@ -166,7 +175,9 @@ export default function SellerOverview() {
                 <ShieldCheck className="h-5 w-5 text-blue-600" />
               </div>
               <div>
-                <p className="font-semibold text-gray-900">Seller Score Center</p>
+                <p className="font-semibold text-gray-900">
+                  Seller Score Center
+                </p>
                 <p className="text-xs text-gray-600 mt-1">
                   View score breakdown, moderation impact, and warning signals.
                 </p>
@@ -183,7 +194,7 @@ export default function SellerOverview() {
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Tổng doanh thu</CardTitle>
+            <CardTitle className="text-sm font-medium">Total Revenue</CardTitle>
             <DollarSign className="h-4 w-4 text-green-600" />
           </CardHeader>
           <CardContent>
@@ -195,7 +206,7 @@ export default function SellerOverview() {
                   ${stats.totalRevenue.toFixed(2)}
                 </div>
                 <div className="text-xs text-muted-foreground">
-                  Từ {stats.completedOrders} đơn hoàn thành
+                  From {stats.completedOrders} completed orders
                 </div>
               </>
             )}
@@ -204,7 +215,9 @@ export default function SellerOverview() {
 
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Đơn đang xử lý</CardTitle>
+            <CardTitle className="text-sm font-medium">
+              Pending Orders
+            </CardTitle>
             <ShoppingBag className="h-4 w-4 text-orange-600" />
           </CardHeader>
           <CardContent>
@@ -213,7 +226,9 @@ export default function SellerOverview() {
             ) : (
               <>
                 <div className="text-2xl font-bold">{stats.pendingOrders}</div>
-                <div className="text-xs text-muted-foreground">Cần xử lý</div>
+                <div className="text-xs text-muted-foreground">
+                  Orders awaiting processing
+                </div>
               </>
             )}
           </CardContent>
@@ -221,7 +236,9 @@ export default function SellerOverview() {
 
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Sản phẩm đang bán</CardTitle>
+            <CardTitle className="text-sm font-medium">
+              Active Products
+            </CardTitle>
             <Package className="h-4 w-4 text-blue-600" />
           </CardHeader>
           <CardContent>
@@ -232,7 +249,9 @@ export default function SellerOverview() {
                 <div className="text-2xl font-bold">
                   {inventory.activeProducts}/{inventory.totalProducts}
                 </div>
-                <div className="text-xs text-muted-foreground">Đang hoạt động</div>
+                <div className="text-xs text-muted-foreground">
+                  Active Products
+                </div>
               </>
             )}
           </CardContent>
@@ -240,7 +259,9 @@ export default function SellerOverview() {
 
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Đánh giá trung bình</CardTitle>
+            <CardTitle className="text-sm font-medium">
+              Average Rating
+            </CardTitle>
             <Star className="h-4 w-4 text-yellow-600 fill-yellow-600" />
           </CardHeader>
           <CardContent>
@@ -248,7 +269,7 @@ export default function SellerOverview() {
               {avgRating > 0 ? avgRating.toFixed(1) : "--"}/5
             </div>
             <div className="text-xs text-muted-foreground">
-              {avgRating > 0 ? "Điểm đánh giá" : "Chưa có đánh giá"}
+              {avgRating > 0 ? "Average Rating" : "No Ratings Yet"}
             </div>
           </CardContent>
         </Card>
@@ -260,21 +281,21 @@ export default function SellerOverview() {
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
               <TrendingUp className="h-5 w-5 text-primary" />
-              Tiến độ nâng cấp lên NORMAL
+              Upgrade Progress to NORMAL stage
             </CardTitle>
           </CardHeader>
           <CardContent>
             <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
               {[
                 {
-                  label: "Đơn thành công",
+                  label: "Completed Orders",
                   value: user.sellerInfo.successOrders ?? 0,
                   target: 20,
                   unit: "",
                   suffix: "/20",
                 },
                 {
-                  label: "Rating TB",
+                  label: "Average Rating",
                   value: avgRating,
                   target: 4.5,
                   unit: "⭐",
@@ -297,9 +318,13 @@ export default function SellerOverview() {
                     key={item.label}
                     className="flex flex-col gap-1 p-3 rounded-lg border bg-muted/30"
                   >
-                    <span className="text-xs text-muted-foreground">{item.label}</span>
+                    <span className="text-xs text-muted-foreground">
+                      {item.label}
+                    </span>
                     <div className="flex items-center gap-1.5">
-                      <span className={`text-lg font-bold ${ok ? "text-green-600" : "text-amber-600"}`}>
+                      <span
+                        className={`text-lg font-bold ${ok ? "text-green-600" : "text-amber-600"}`}
+                      >
                         {typeof item.value === "number"
                           ? item.value % 1 === 0
                             ? item.value
@@ -325,20 +350,25 @@ export default function SellerOverview() {
       {/* Recent orders */}
       <Card>
         <CardHeader>
-          <CardTitle>Đơn hàng gần đây</CardTitle>
+          <CardTitle>Recent Orders</CardTitle>
         </CardHeader>
         <CardContent>
           {loading ? (
             <div className="space-y-3">
               {[...Array(3)].map((_, i) => (
-                <div key={i} className="h-14 bg-muted animate-pulse rounded-lg" />
+                <div
+                  key={i}
+                  className="h-14 bg-muted animate-pulse rounded-lg"
+                />
               ))}
             </div>
           ) : recentOrders.length === 0 ? (
             <div className="text-center py-10 text-muted-foreground">
               <ShoppingBag className="h-10 w-10 mx-auto mb-2 opacity-30" />
-              <p className="text-sm">Chưa có đơn hàng nào</p>
-              <p className="text-xs mt-1">Đơn hàng sẽ xuất hiện tại đây khi khách mua sản phẩm</p>
+              <p className="text-sm">No orders yet</p>
+              <p className="text-xs mt-1">
+                Orders will appear here when customers purchase your products
+              </p>
             </div>
           ) : (
             <div className="space-y-3">
@@ -348,11 +378,18 @@ export default function SellerOverview() {
                   className="flex items-center justify-between p-3 border rounded-lg hover:bg-muted/30 transition-colors"
                 >
                   <div>
-                    <div className="font-medium text-sm">{order.orderId || `#${String(order._id).slice(-6).toUpperCase()}`}</div>
-                    <div className="text-xs text-muted-foreground">{order.customer}</div>
+                    <div className="font-medium text-sm">
+                      {order.orderId ||
+                        `#${String(order._id).slice(-6).toUpperCase()}`}
+                    </div>
+                    <div className="text-xs text-muted-foreground">
+                      {order.customer}
+                    </div>
                   </div>
                   <div className="text-right">
-                    <div className="font-medium text-sm">${(order.totalAmount ?? 0).toFixed(2)}</div>
+                    <div className="font-medium text-sm">
+                      ${(order.totalAmount ?? 0).toFixed(2)}
+                    </div>
                     <span
                       className={`text-xs px-2 py-0.5 rounded-full inline-block ${STATUS_STYLE[order.status] ?? "bg-gray-100 text-gray-700"}`}
                     >
@@ -365,7 +402,7 @@ export default function SellerOverview() {
                 to="/seller/orders"
                 className="block text-center text-primary hover:text-primary/80 text-sm mt-2"
               >
-                Xem tất cả đơn hàng →
+                View All Orders →
               </Link>
             </div>
           )}

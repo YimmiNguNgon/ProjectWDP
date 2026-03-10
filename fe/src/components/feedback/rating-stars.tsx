@@ -36,7 +36,9 @@ export function RatingStars({
             <Star
               size={size}
               className={
-                active ? "fill-black text-black" : "text-muted-foreground"
+                active
+                  ? "fill-yellow-500 text-yellow-500"
+                  : "text-muted-foreground"
               }
             />
           </button>
