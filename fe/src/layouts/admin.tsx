@@ -17,6 +17,7 @@ const navigation = [
   { name: 'Global Vouchers', href: '/admin/global-vouchers', icon: TicketPercent },
   { name: 'Order Management', href: '/admin/orders', icon: PackageSearch },
   { name: 'Refund Disputes', href: '/admin/refunds', icon: RefreshCcw },
+  { name: 'Complaints', href: '/admin/complaints', icon: AlertTriangle },
   { name: 'Buyer Reports', href: '/admin/reports', icon: Flag },
   { name: 'Shipper Management', href: '/admin/shippers', icon: Truck },
   { name: 'Delivery Reports', href: '/admin/delivery-reports', icon: AlertTriangle },

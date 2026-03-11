@@ -103,9 +103,9 @@ async function computeTrustMetrics(sellerId, seller) {
     const responseRateScore = rawResponseRate * 5;
 
     // 4. Dispute Score = (1 - disputeRate) × 5
-    //    totalComplaints = Complaint docs + VALID Report docs
+    //    totalComplaints = APPROVED Complaint docs + VALID Report docs
     const [complaintCount, validReportCount] = await Promise.all([
-        Complaint.countDocuments({ seller: sellerId }),
+        Complaint.countDocuments({ seller: sellerId, resolution: "APPROVED" }),
         Report.countDocuments({ seller: sellerId, status: "VALID" }),
     ]);
     const totalComplaints = complaintCount + validReportCount;

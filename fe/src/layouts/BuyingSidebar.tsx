@@ -33,7 +33,7 @@ export default function BuyingSidebar() {
         >
           Bids &amp; offers
         </Link>
-        <Link to="/coming-soon" className={linkClass("/complaints")}>
+        <Link to="/my-ebay/complaints" className={linkClass("/my-ebay/complaints")}>
           Returns &amp; complaints
         </Link>
         <Link

@@ -29,15 +29,14 @@ const complaintSchema = new Schema(
       required: true,
       trim: true,
     },
-    // attachments: optional
-    attachments: {
+    images: {
       type: [{ url: String }],
       default: [],
     },
     status: {
       type: String,
-      enum: ['open', 'in_review', 'agreed', 'rejected', 'sent_to_admin'],
-      default: 'open',
+      enum: ['OPEN', 'SENT_TO_ADMIN', 'RESOLVED', 'CLOSED'],
+      default: 'OPEN',
     },
     history: {
       type: [
@@ -60,7 +59,7 @@ const complaintSchema = new Schema(
     },
     resolution: {
       type: String,
-      enum: ['approved', 'rejected'],
+      enum: ['APPROVED', 'REJECTED'],
     },
     resolutionNote: {
       type: String,

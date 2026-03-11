@@ -78,14 +78,10 @@ import AdminRefunds from "@/pages/admin/orders/refunds";
 import AdminReportManagement from "@/pages/admin/reports/report-management";
 import BuyerReportPage from "@/pages/buyer/reports/submit-report";
 import RecentlyViewedPage from "@/pages/buyer/recently-viewed-page";
+import ComplaintsReturnsPage from "@/pages/buyer/complaints-returns-page";
 
-// Placeholder components for admin pages
-const AdminComplaints = () => (
-  <div className="p-8">
-    <h1 className="text-2xl font-bold mb-4">Admin Complaints</h1>
-    <p className="text-gray-600">This page is under development.</p>
-  </div>
-);
+import SellerComplaintsPage from "@/pages/seller/orders/Complaints";
+import AdminComplaintsPage from "@/pages/admin/orders/complaints";
 
 const AdminReviews = () => (
   <div className="p-8">
@@ -178,6 +174,10 @@ export const AppRouter = () => {
               element: <SavedSellersPage />,
             },
             {
+              path: "complaints",
+              element: <ComplaintsReturnsPage />,
+            },
+            {
               path: "recently-viewed",
               element: <RecentlyViewedPage />,
             },
@@ -253,7 +253,7 @@ export const AppRouter = () => {
         },
         {
           path: "complaints",
-          element: <AdminComplaints />,
+          element: <AdminComplaintsPage />,
         },
         {
           path: "reviews",
@@ -340,6 +340,10 @@ export const AppRouter = () => {
         {
           path: "refunds",
           element: <SellerRefunds />,
+        },
+        {
+          path: "complaints",
+          element: <SellerComplaintsPage />,
         },
         {
           path: "products",

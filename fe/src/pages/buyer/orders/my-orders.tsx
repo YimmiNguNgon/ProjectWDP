@@ -1,5 +1,5 @@
-﻿import { useEffect, useMemo, useState } from 'react';
-import { createComplaint, getMyComplaints, getMyOrders } from '@/api/complaint';
+import { useEffect, useMemo, useState } from 'react';
+import { createComplaint, getMyComplaints, getMyOrders, type ComplaintPayload } from '@/api/complaint';
 import {
   Table,
   TableBody,
@@ -45,7 +45,7 @@ import { formatDateTime, formatUsd } from '@/lib/utils';
 export default function MyOrdersPage() {
   const [orders, setOrders] = useState<any[]>([]);
   const [complaints, setComplaints] = useState<any[]>([]);
-  const [complaintForm, setComplaintForm] = useState<any>(null);
+  const [complaintForm, setComplaintForm] = useState<Partial<ComplaintPayload> | null>(null);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const navigate = useNavigate();
 
@@ -126,7 +126,7 @@ export default function MyOrdersPage() {
     setComplaintForm({
       orderId: order._id,
       sellerId: order.seller._id,
-      reason: 'product_issue',
+      reason: 'question',
       content: '',
     });
     setIsDialogOpen(true);
@@ -137,11 +137,11 @@ export default function MyOrdersPage() {
       return;
     }
     try {
-      await createComplaint(complaintForm);
+      await createComplaint(complaintForm as ComplaintPayload);
       setIsDialogOpen(false);
       setComplaintForm(null);
       toast.success('Complaint sent successfully');
-      navigate('/complaints');
+      navigate('/my-ebay/complaints');
     } catch (e) {
       toast.error('Failed to send complaint');
       console.error(e);
@@ -288,10 +288,11 @@ export default function MyOrdersPage() {
                   <SelectValue placeholder='Select Reason' />
                 </SelectTrigger>
                 <SelectContent align='start'>
-                  <SelectItem value='product_issue'>Product Issue</SelectItem>
-                  <SelectItem value='late_delivery'>Late Delivery</SelectItem>
+                  <SelectItem value='question'>Question about order</SelectItem>
+                  <SelectItem value='late'>Late Delivery</SelectItem>
+                  <SelectItem value='return'>Return / Refund</SelectItem>
                   <SelectItem value='fraud'>Fraud</SelectItem>
-                  <SelectItem value='other'>Other</SelectItem>
+                  <SelectItem value='cancel'>Request Cancellation</SelectItem>
                 </SelectContent>
               </Select>
             </div>

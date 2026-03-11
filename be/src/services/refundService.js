@@ -134,10 +134,10 @@ async function adminReviewDispute(
     seller: refund.seller,
     reason: "return",
     content: `Admin resolution for refund dispute: ${adminNote}`,
-    status: "sent_to_admin",
+    status: "RESOLVED",
     resolvedBy: adminId,
     resolvedAt: new Date(),
-    resolution: resolutionStatus === "ADMIN_APPROVED" ? "approved" : "rejected",
+    resolution: resolutionStatus === "ADMIN_APPROVED" ? "APPROVED" : "REJECTED",
   });
   await complaint.save();
 
