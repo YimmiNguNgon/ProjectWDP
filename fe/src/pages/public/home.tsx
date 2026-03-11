@@ -1,4 +1,4 @@
-﻿import { Button } from "@/components/ui/button";
+import { Button } from "@/components/ui/button";
 import {
   Carousel,
   CarouselContent,
@@ -17,6 +17,7 @@ import { CategoryShowcase } from "@/components/category-showcase";
 import { Banner } from "@/components/banner";
 import { SaleTimeShowcase } from "@/components/sale-time-showcase";
 import { ThreeDMarqueeSection } from "@/components/three-d-marquee-section";
+import { RecentlyViewedSection } from "@/components/recently-viewed";
 
 export default function HomePage() {
   const banners = [
@@ -131,6 +132,8 @@ export default function HomePage() {
       </Item>
 
       <SaleTimeShowcase />
+
+      <RecentlyViewedSection displayLimit={10} showClearAll />
 
       <CategoryShowcase title="Trending on eBay" />
     </div>

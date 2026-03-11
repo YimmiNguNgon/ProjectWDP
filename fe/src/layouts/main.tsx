@@ -19,6 +19,7 @@ import {
 import { WatchlistPreview } from "@/components/watchlist/watchlist-preview";
 import CartDropdown from "@/components/cart/cart-dropdown";
 import NotificationBell from "@/components/notification-bell";
+import { RecentlyViewedDropdown } from "@/components/recently-viewed-dropdown";
 
 const LEFT_NAV_ITEMS = [
   { name: "Browse Products", to: "/products" },
@@ -77,6 +78,8 @@ export function MainLayout() {
               </Link>
               {/* Watchlist Dropdown */}
               <WatchlistPreview />
+              {/* Recently Viewed Dropdown */}
+              <RecentlyViewedDropdown />
               {/* My eBay dropdown */}
               <MyEbayMenu />
               {/* Admin Menu - only show for admin users */}
@@ -312,7 +315,7 @@ export const SocketProvider = ({ children }: PropsWithChildren) => {
 
 const MY_EBAY_ITEMS = [
   { label: "Summary", to: "#" },
-  { label: "Recently Viewed", to: "#" },
+  { label: "Recently Viewed", to: "/my-ebay/recently-viewed" },
   { label: "Bids/Offers", to: "#" },
   { label: "Watchlist", to: "activity/watchlist" },
   { label: "Purchase History", to: "activity/purchases" },

@@ -77,6 +77,7 @@ import AdminOrders from "@/pages/admin/orders/orders";
 import AdminRefunds from "@/pages/admin/orders/refunds";
 import AdminReportManagement from "@/pages/admin/reports/report-management";
 import BuyerReportPage from "@/pages/buyer/reports/submit-report";
+import RecentlyViewedPage from "@/pages/buyer/recently-viewed-page";
 
 // Placeholder components for admin pages
 const AdminComplaints = () => (
@@ -175,6 +176,10 @@ export const AppRouter = () => {
             {
               path: "saved-sellers",
               element: <SavedSellersPage />,
+            },
+            {
+              path: "recently-viewed",
+              element: <RecentlyViewedPage />,
             },
           ],
         },

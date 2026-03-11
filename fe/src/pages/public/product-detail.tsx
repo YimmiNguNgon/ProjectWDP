@@ -38,6 +38,7 @@ import {
 } from "lucide-react";
 import { useEffect, useState } from "react";
 import { toggleWatchlist, getUserWatchlist } from "@/api/watchlist";
+import { trackRecentlyViewed } from "@/api/recently-viewed";
 import { cn } from "@/lib/utils";
 import { Link, useNavigate, useParams } from "react-router-dom";
 import { toast } from "sonner";
@@ -135,35 +136,45 @@ export default function ProductDetailPage() {
       ? ""
       : (product?.sellerId?.sellerInfo?.shopName || product?.sellerId?.username || "").trim();
 
+  // Load product data
   useEffect(() => {
     api.get(`/api/products/${productId}`).then((res) => {
       setProduct(res.data.data);
       setWatchCount(res.data.data.watchCount || 0);
     });
+  }, [productId]);
 
-    if (accessToken) {
-      getUserWatchlist()
+  // Track recently viewed – run whenever productId or accessToken become available
+  useEffect(() => {
+    if (accessToken && productId) {
+      trackRecentlyViewed(productId).catch(() => {});
+    }
+  }, [productId, accessToken]);
+
+  // Watchlist & follow-seller state (depends on accessToken + sellerIdValue)
+  useEffect(() => {
+    if (!accessToken) return;
+
+    getUserWatchlist()
+      .then((res) => {
+        const watched = res.data.data.some(
+          (item: any) => item.product._id === productId,
+        );
+        setIsWatched(watched);
+      })
+      .catch((err) => console.error(err));
+
+    if (sellerIdValue) {
+      axios
+        .get("/api/saved-sellers")
         .then((res) => {
-          const watched = res.data.data.some(
-            (item: any) => item.product._id === productId,
+          const savedSellers = res.data.data || [];
+          const isFollowing = savedSellers.some(
+            (seller: any) => seller._id === sellerIdValue,
           );
-          setIsWatched(watched);
+          setIsFollowingSeller(isFollowing);
         })
         .catch((err) => console.error(err));
-
-      // Check if following seller
-      if (sellerIdValue) {
-        axios
-          .get("/api/saved-sellers")
-          .then((res) => {
-            const savedSellers = res.data.data || [];
-            const isFollowing = savedSellers.some(
-              (seller: any) => seller._id === sellerIdValue,
-            );
-            setIsFollowingSeller(isFollowing);
-          })
-          .catch((err) => console.error(err));
-      }
     }
   }, [productId, sellerIdValue, accessToken]);
 

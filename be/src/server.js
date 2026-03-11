@@ -131,6 +131,10 @@ app.use("/api/refund", refundRoutes);
 const reportRoutes = require("./routes/reportRoutes");
 app.use("/api/reports", reportRoutes);
 
+// Recently Viewed Products routes
+const recentlyViewedRoutes = require("./routes/recentlyViewedRoutes");
+app.use("/api/recently-viewed", recentlyViewedRoutes);
+
 // health check
 app.get("/health", (req, res) => res.json({ ok: true }));
 
