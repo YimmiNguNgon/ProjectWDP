@@ -1,7 +1,5 @@
 import { useEffect, useState } from "react";
-import { toast } from "sonner";
 import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
 import {
   Select,
   SelectContent,
@@ -41,7 +39,6 @@ export default function AdminShipperManagement() {
   const [orderStatus, setOrderStatus] = useState("all");
   const [shipperId, setShipperId] = useState("all");
   const [loading, setLoading] = useState(false);
-  const [banProcessing, setBanProcessing] = useState<string | null>(null);
 
   const fetchShippers = () => {
     api
@@ -53,33 +50,6 @@ export default function AdminShipperManagement() {
   useEffect(() => {
     fetchShippers();
   }, []);
-
-  const handleBan = async (id: string, username: string) => {
-    if (!confirm(`Ban shipper "${username}"?`)) return;
-    setBanProcessing(id);
-    try {
-      await api.patch(`/api/admin/users/${id}/ban`, { reason: "Banned by admin" });
-      toast.success(`Shipper "${username}" has been banned`);
-      fetchShippers();
-    } catch {
-      toast.error("Failed to ban shipper");
-    } finally {
-      setBanProcessing(null);
-    }
-  };
-
-  const handleUnban = async (id: string, username: string) => {
-    setBanProcessing(id);
-    try {
-      await api.patch(`/api/admin/users/${id}/unban`);
-      toast.success(`Shipper "${username}" has been unbanned`);
-      fetchShippers();
-    } catch {
-      toast.error("Failed to unban shipper");
-    } finally {
-      setBanProcessing(null);
-    }
-  };
 
   useEffect(() => {
     if (activeTab === "orders") {
@@ -139,13 +109,12 @@ export default function AdminShipperManagement() {
                   <th className="text-right px-4 py-3 font-medium text-gray-600">Total Accepted</th>
                   <th className="text-right px-4 py-3 font-medium text-gray-600">Delivered</th>
                   <th className="text-right px-4 py-3 font-medium text-gray-600">In Transit</th>
-                  <th className="text-left px-4 py-3 font-medium text-gray-600">Actions</th>
                 </tr>
               </thead>
               <tbody>
                 {shippers.length === 0 ? (
                   <tr>
-                    <td colSpan={7} className="text-center py-8 text-gray-500">
+                    <td colSpan={6} className="text-center py-8 text-gray-500">
                       No shippers found
                     </td>
                   </tr>
@@ -162,29 +131,6 @@ export default function AdminShipperManagement() {
                       <td className="px-4 py-3 text-right">{s.totalAccepted}</td>
                       <td className="px-4 py-3 text-right text-green-600">{s.delivered}</td>
                       <td className="px-4 py-3 text-right text-purple-600">{s.inTransit}</td>
-                      <td className="px-4 py-3">
-                        {s.status === "banned" ? (
-                          <Button
-                            size="sm"
-                            variant="outline"
-                            className="text-green-700 border-green-300 hover:bg-green-50"
-                            disabled={banProcessing === s._id}
-                            onClick={() => handleUnban(s._id, s.username)}
-                          >
-                            {banProcessing === s._id ? "Processing..." : "Unban"}
-                          </Button>
-                        ) : (
-                          <Button
-                            size="sm"
-                            variant="outline"
-                            className="text-red-700 border-red-300 hover:bg-red-50"
-                            disabled={banProcessing === s._id}
-                            onClick={() => handleBan(s._id, s.username)}
-                          >
-                            {banProcessing === s._id ? "Processing..." : "Ban"}
-                          </Button>
-                        )}
-                      </td>
                     </tr>
                   ))
                 )}
