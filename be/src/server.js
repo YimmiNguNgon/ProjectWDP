@@ -127,6 +127,18 @@ app.use("/api/verified-badge", verifiedBadgeRoutes);
 const refundRoutes = require("./routes/refundRoutes");
 app.use("/api/refund", refundRoutes);
 
+// Buyer Report System routes
+const reportRoutes = require("./routes/reportRoutes");
+app.use("/api/reports", reportRoutes);
+
+// Complaints System routes
+const complaintRoutes = require("./routes/complaints");
+app.use("/api/complaints", complaintRoutes);
+
+// Recently Viewed Products routes
+const recentlyViewedRoutes = require("./routes/recentlyViewedRoutes");
+app.use("/api/recently-viewed", recentlyViewedRoutes);
+
 // health check
 app.get("/health", (req, res) => res.json({ ok: true }));
 
@@ -322,6 +334,10 @@ async function start() {
   // Initialize refund auto-approve cron job
   const { initRefundJob } = require("./jobs/refundJob");
   initRefundJob();
+
+  // Initialize complaint auto-escalate cron job
+  const { initComplaintJob } = require("./jobs/complaintJob");
+  initComplaintJob();
 
   // Create HTTP server from Express app
   const http = require("http");

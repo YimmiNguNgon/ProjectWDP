@@ -66,6 +66,7 @@ const refundRequestSchema = new mongoose.Schema(
                 "ADMIN_APPROVED",  // Admin duyệt dispute
                 "ADMIN_REJECTED",  // Admin từ chối dispute
                 "CANCELLED",       // Buyer huỷ request
+                "SELLER_RECEIVED_RETURN", // Seller đã nhận lại hàng
             ],
             default: "PENDING",
             index: true,

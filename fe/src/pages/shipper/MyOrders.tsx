@@ -8,6 +8,8 @@ import { getMyOrders, markDelivered, type ShipperOrder } from "@/api/shipper";
 const STATUS_CONFIG: Record<string, { label: string; className: string }> = {
   shipping: { label: "In Transit", className: "text-purple-700 border-purple-300 bg-purple-50" },
   delivered: { label: "Delivered", className: "text-green-700 border-green-300 bg-green-50" },
+  return_shipping: { label: "Returning to Seller", className: "text-orange-700 border-orange-300 bg-orange-50" },
+  delivered_to_seller: { label: "Returned to Seller", className: "text-emerald-700 border-emerald-300 bg-emerald-50" },
 };
 
 type StatusFilter = "all" | "shipping" | "delivered";
@@ -138,14 +140,14 @@ export default function ShipperMyOrders() {
                       </p>
                     </div>
                   </div>
-                  {order.status === "shipping" && (
+                  {(order.status === "shipping" || order.status === "return_shipping") && (
                     <Button
                       size="sm"
                       className="bg-green-600 hover:bg-green-700 text-white"
                       disabled={busy}
                       onClick={() => handleMarkDelivered(order._id)}
                     >
-                      {busy ? "..." : "Mark Delivered"}
+                      {busy ? "..." : order.status === "return_shipping" ? "Mark Returned to Seller" : "Mark Delivered"}
                     </Button>
                   )}
                 </CardContent>

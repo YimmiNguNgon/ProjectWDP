@@ -16,16 +16,22 @@ exports.getAvailableOrders = async (req, res, next) => {
     const limit = Math.min(100, parseInt(req.query.limit) || PAGE_SIZE);
     const skip = (page - 1) * limit;
 
-    // Shipper có thể xem cả đơn ready_to_ship và queued chưa được nhận
+    const query = {
+      $or: [
+        { status: { $in: ["ready_to_ship", "queued"] }, shipper: null },
+        { status: "waiting_return_shipment", returnShipper: null },
+      ],
+    };
+
     const [orders, total] = await Promise.all([
-      Order.find({ status: { $in: ["ready_to_ship", "queued"] }, shipper: null })
+      Order.find(query)
         .populate("buyer", "username email")
         .populate("seller", "username sellerInfo")
         .sort({ createdAt: -1 })
         .skip(skip)
         .limit(limit)
         .lean(),
-      Order.countDocuments({ status: { $in: ["ready_to_ship", "queued"] }, shipper: null }),
+      Order.countDocuments(query),
     ]);
 
     res.json({ orders, total, page, pages: Math.ceil(total / limit) });
@@ -40,7 +46,12 @@ exports.getMyOrders = async (req, res, next) => {
     const limit = Math.min(100, parseInt(req.query.limit) || PAGE_SIZE);
     const skip = (page - 1) * limit;
 
-    const filter = { shipper: req.user._id };
+    const filter = {
+      $or: [
+        { shipper: req.user._id },
+        { returnShipper: req.user._id },
+      ]
+    };
     if (req.query.status) filter.status = req.query.status;
 
     const [orders, total] = await Promise.all([
@@ -62,9 +73,13 @@ exports.getMyOrders = async (req, res, next) => {
 
 exports.acceptOrder = async (req, res, next) => {
   try {
-    // Kiểm tra giới hạn slot trước khi gán
     const [activeCount, shipperDoc] = await Promise.all([
-      Order.countDocuments({ shipper: req.user._id, status: "shipping" }),
+      Order.countDocuments({
+        $or: [
+          { shipper: req.user._id, status: "shipping" },
+          { returnShipper: req.user._id, status: "return_shipping" },
+        ],
+      }),
       User.findById(req.user._id).select("shipperInfo").lean(),
     ]);
     const maxOrders = shipperDoc?.shipperInfo?.maxOrders ?? 3;
@@ -74,27 +89,52 @@ exports.acceptOrder = async (req, res, next) => {
       });
     }
 
-    // Atomic update: chấp nhận cả đơn ready_to_ship lẫn queued
-    const order = await Order.findOneAndUpdate(
+    const pickupUpdate = {
+      status: "shipping",
+      shipper: req.user._id,
+      queuedAt: null,
+      $push: {
+        statusHistory: {
+          status: "shipping",
+          timestamp: new Date(),
+          note: `Accepted by shipper ${req.user.username}`,
+        },
+      },
+    };
+
+    const returnUpdate = {
+      status: "return_shipping",
+      returnShipper: req.user._id,
+      $push: {
+        statusHistory: {
+          status: "return_shipping",
+          timestamp: new Date(),
+          note: `Accepted by shipper ${req.user.username}`,
+        },
+      },
+    };
+
+    let order = await Order.findOneAndUpdate(
       {
         _id: req.params.id,
         status: { $in: ["ready_to_ship", "queued"] },
         shipper: null,
       },
-      {
-        status: "shipping",
-        shipper: req.user._id,
-        queuedAt: null,
-        $push: {
-          statusHistory: {
-            status: "shipping",
-            timestamp: new Date(),
-            note: `Accepted by shipper ${req.user.username}`,
-          },
-        },
-      },
+      pickupUpdate,
       { new: true },
     );
+
+    if (!order) {
+      order = await Order.findOneAndUpdate(
+        {
+          _id: req.params.id,
+          status: "waiting_return_shipment",
+          returnShipper: null,
+        },
+        returnUpdate,
+        { new: true },
+      );
+    }
 
     if (!order) {
       return res.status(409).json({ message: "Order no longer available" });
@@ -179,24 +219,31 @@ exports.markDelivered = async (req, res, next) => {
   try {
     const order = await Order.findOne({
       _id: req.params.id,
-      shipper: req.user._id,
-      status: "shipping",
+      $or: [
+        { shipper: req.user._id, status: "shipping" },
+        { returnShipper: req.user._id, status: "return_shipping" }
+      ]
     });
 
     if (!order) {
       return res.status(404).json({ message: "Order not found or not yours" });
     }
 
-    order.status = "delivered";
-    order.deliveredAt = new Date();
+    const isReturn = order.status === "return_shipping";
+    const nextStatus = isReturn ? "delivered_to_seller" : "delivered";
+
+    order.status = nextStatus;
+    if (!isReturn) {
+      order.deliveredAt = new Date();
+    }
     order.statusHistory.push({
-      status: "delivered",
+      status: nextStatus,
       timestamp: new Date(),
       note: `Delivered by shipper ${req.user.username}`,
     });
     await order.save();
 
-    // Sau khi delivered, tự động dispatch đơn tiếp theo từ queue (fire-and-forget)
+    // After delivery, dispatch the next queued order (fire-and-forget)
     setImmediate(() => dispatchNextFromQueue(req.user._id).catch(() => { }));
 
     // Populate items to get product names
@@ -278,13 +325,28 @@ exports.getShipperStats = async (req, res, next) => {
     const shipperId = req.user._id;
 
     const [delivered, inTransit, totalAccepted, queued] = await Promise.all([
-      Order.countDocuments({ shipper: shipperId, status: "delivered" }),
-      Order.countDocuments({ shipper: shipperId, status: "shipping" }),
-      Order.countDocuments({ shipper: shipperId }),
+      Order.countDocuments({
+        $or: [
+          { shipper: shipperId, status: "delivered" },
+          { returnShipper: shipperId, status: "delivered_to_seller" }
+        ]
+      }),
+      Order.countDocuments({
+        $or: [
+          { shipper: shipperId, status: "shipping" },
+          { returnShipper: shipperId, status: "return_shipping" }
+        ]
+      }),
+      Order.countDocuments({
+        $or: [
+          { shipper: shipperId },
+          { returnShipper: shipperId }
+        ]
+      }),
       Order.countDocuments({ status: "queued", shipper: null }),
     ]);
 
-    // Lấy thông tin giới hạn slot
+    // Load shipper limits
     const shipperDoc = await User.findById(shipperId)
       .select("shipperInfo")
       .lean();

@@ -45,6 +45,20 @@ router.post(
   refundController.rejectRefund,
 );
 
+router.post(
+  "/:id/confirm-receipt",
+  protectedRoute,
+  checkRole("seller"),
+  withAuditLog({
+    resourceType: "refund_request",
+    model: RefundRequest,
+    resourceIdParam: "id",
+    actorRoles: ["seller"],
+    action: "confirm_return_receipt",
+  }),
+  refundController.confirmReturnReceived,
+);
+
 // Admin endpoints
 router.post(
   "/:id/admin-review",

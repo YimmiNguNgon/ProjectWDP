@@ -75,14 +75,13 @@ import AdminShipperManagement from "@/pages/admin/shippers/shipper-management";
 import AdminDeliveryReports from "@/pages/admin/shippers/delivery-reports";
 import AdminOrders from "@/pages/admin/orders/orders";
 import AdminRefunds from "@/pages/admin/orders/refunds";
+import AdminReportManagement from "@/pages/admin/reports/report-management";
+import BuyerReportPage from "@/pages/buyer/reports/submit-report";
+import RecentlyViewedPage from "@/pages/buyer/recently-viewed-page";
+import ComplaintsReturnsPage from "@/pages/buyer/complaints-returns-page";
 
-// Placeholder components for admin pages
-const AdminComplaints = () => (
-  <div className="p-8">
-    <h1 className="text-2xl font-bold mb-4">Admin Complaints</h1>
-    <p className="text-gray-600">This page is under development.</p>
-  </div>
-);
+import SellerComplaintsPage from "@/pages/seller/orders/Complaints";
+import AdminComplaintsPage from "@/pages/admin/orders/complaints";
 
 const AdminReviews = () => (
   <div className="p-8">
@@ -125,6 +124,10 @@ export const AppRouter = () => {
               element: <CheckoutPage />,
             },
           ],
+        },
+        {
+          path: "/seller/:sellerId",
+          element: <SellerInformationPage />,
         },
         {
           path: "products",
@@ -170,6 +173,14 @@ export const AppRouter = () => {
               path: "saved-sellers",
               element: <SavedSellersPage />,
             },
+            {
+              path: "complaints",
+              element: <ComplaintsReturnsPage />,
+            },
+            {
+              path: "recently-viewed",
+              element: <RecentlyViewedPage />,
+            },
           ],
         },
         {
@@ -203,6 +214,10 @@ export const AppRouter = () => {
         {
           path: "become-seller/apply",
           element: <SellerApplyPage />,
+        },
+        {
+          path: "report",
+          element: <BuyerReportPage />,
         },
       ],
     },
@@ -238,7 +253,7 @@ export const AppRouter = () => {
         },
         {
           path: "complaints",
-          element: <AdminComplaints />,
+          element: <AdminComplaintsPage />,
         },
         {
           path: "reviews",
@@ -275,6 +290,10 @@ export const AppRouter = () => {
         {
           path: "refunds",
           element: <AdminRefunds />,
+        },
+        {
+          path: "reports",
+          element: <AdminReportManagement />,
         },
         {
           path: "shippers",
@@ -323,6 +342,10 @@ export const AppRouter = () => {
           element: <SellerRefunds />,
         },
         {
+          path: "complaints",
+          element: <SellerComplaintsPage />,
+        },
+        {
           path: "products",
           element: <SellerProducts />,
         },
@@ -363,10 +386,6 @@ export const AppRouter = () => {
           element: <SellerVouchersPage />,
         },
       ],
-    },
-    {
-      path: "/seller/:sellerId",
-      element: <SellerInformationPage />,
     },
     {
       path: "/verify-email",

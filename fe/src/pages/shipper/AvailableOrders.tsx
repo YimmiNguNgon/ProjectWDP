@@ -82,9 +82,15 @@ export default function ShipperAvailableOrders() {
                     <CardTitle className="text-sm font-mono text-gray-600">
                       #{order._id.slice(-8).toUpperCase()}
                     </CardTitle>
-                    <Badge variant="outline" className="text-blue-700 border-blue-300 bg-blue-50">
-                      Ready to Ship
-                    </Badge>
+                    {order.status === "waiting_return_shipment" ? (
+                      <Badge variant="outline" className="text-orange-700 border-orange-300 bg-orange-50">
+                        Return Pick-up
+                      </Badge>
+                    ) : (
+                      <Badge variant="outline" className="text-blue-700 border-blue-300 bg-blue-50">
+                        Ready to Ship
+                      </Badge>
+                    )}
                   </div>
                 </CardHeader>
                 <CardContent>

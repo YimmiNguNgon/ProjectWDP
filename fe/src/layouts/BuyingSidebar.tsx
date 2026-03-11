@@ -22,8 +22,8 @@ export default function BuyingSidebar() {
           Summary
         </Link>
         <Link
-          to="/coming-soon"
-          className={linkClass("/coming-soon/recently-viewed")}
+          to="/my-ebay/recently-viewed"
+          className={linkClass("/my-ebay/recently-viewed")}
         >
           Recently viewed
         </Link>
@@ -33,7 +33,7 @@ export default function BuyingSidebar() {
         >
           Bids &amp; offers
         </Link>
-        <Link to="/coming-soon" className={linkClass("/complaints")}>
+        <Link to="/my-ebay/complaints" className={linkClass("/my-ebay/complaints")}>
           Returns &amp; complaints
         </Link>
         <Link

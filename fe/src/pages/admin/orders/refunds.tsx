@@ -29,13 +29,14 @@ type RefundRequest = {
     | "DISPUTED"
     | "ADMIN_APPROVED"
     | "ADMIN_REJECTED"
-    | "CANCELLED";
+    | "CANCELLED"
+    | "SELLER_RECEIVED_RETURN";
   requestedAt: string;
   sellerNote?: string;
   adminNote?: string;
 };
 
-const STATUSES = ["DISPUTED", "PENDING", "REJECTED", "APPROVED", "ALL"];
+const STATUSES = ["DISPUTED", "PENDING", "REJECTED", "APPROVED", "SELLER_RECEIVED_RETURN", "ALL"];
 
 export default function AdminRefunds() {
   const [refunds, setRefunds] = useState<RefundRequest[]>([]);
@@ -105,7 +106,7 @@ export default function AdminRefunds() {
   };
 
   const getStatusVariant = (value: string) => {
-    if (["APPROVED", "AUTO_APPROVED", "ADMIN_APPROVED"].includes(value)) {
+    if (["APPROVED", "AUTO_APPROVED", "ADMIN_APPROVED", "SELLER_RECEIVED_RETURN"].includes(value)) {
       return "default";
     }
     if (["REJECTED", "ADMIN_REJECTED"].includes(value)) {

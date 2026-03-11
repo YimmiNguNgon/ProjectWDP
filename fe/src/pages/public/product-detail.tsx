@@ -1,4 +1,4 @@
-﻿"use client";
+"use client";
 
 import { SellerFeedbackSection } from "@/components/feedback/seller-feedback-section";
 import { Button } from "@/components/ui/button";
@@ -34,9 +34,11 @@ import {
   Heart,
   UserPlus,
   UserCheck,
+  Flag,
 } from "lucide-react";
 import { useEffect, useState } from "react";
 import { toggleWatchlist, getUserWatchlist } from "@/api/watchlist";
+import { trackRecentlyViewed } from "@/api/recently-viewed";
 import { cn } from "@/lib/utils";
 import { Link, useNavigate, useParams } from "react-router-dom";
 import { toast } from "sonner";
@@ -134,35 +136,45 @@ export default function ProductDetailPage() {
       ? ""
       : (product?.sellerId?.sellerInfo?.shopName || product?.sellerId?.username || "").trim();
 
+  // Load product data
   useEffect(() => {
     api.get(`/api/products/${productId}`).then((res) => {
       setProduct(res.data.data);
       setWatchCount(res.data.data.watchCount || 0);
     });
+  }, [productId]);
 
-    if (accessToken) {
-      getUserWatchlist()
+  // Track recently viewed – run whenever productId or accessToken become available
+  useEffect(() => {
+    if (accessToken && productId) {
+      trackRecentlyViewed(productId).catch(() => {});
+    }
+  }, [productId, accessToken]);
+
+  // Watchlist & follow-seller state (depends on accessToken + sellerIdValue)
+  useEffect(() => {
+    if (!accessToken) return;
+
+    getUserWatchlist()
+      .then((res) => {
+        const watched = res.data.data.some(
+          (item: any) => item.product._id === productId,
+        );
+        setIsWatched(watched);
+      })
+      .catch((err) => console.error(err));
+
+    if (sellerIdValue) {
+      axios
+        .get("/api/saved-sellers")
         .then((res) => {
-          const watched = res.data.data.some(
-            (item: any) => item.product._id === productId,
+          const savedSellers = res.data.data || [];
+          const isFollowing = savedSellers.some(
+            (seller: any) => seller._id === sellerIdValue,
           );
-          setIsWatched(watched);
+          setIsFollowingSeller(isFollowing);
         })
         .catch((err) => console.error(err));
-
-      // Check if following seller
-      if (sellerIdValue) {
-        axios
-          .get("/api/saved-sellers")
-          .then((res) => {
-            const savedSellers = res.data.data || [];
-            const isFollowing = savedSellers.some(
-              (seller: any) => seller._id === sellerIdValue,
-            );
-            setIsFollowingSeller(isFollowing);
-          })
-          .catch((err) => console.error(err));
-      }
     }
   }, [productId, sellerIdValue, accessToken]);
 
@@ -742,6 +754,25 @@ export default function ProductDetailPage() {
             />
             {isWatched ? "Remove from Watchlist" : "Add to Watchlist"}
           </Button>
+
+          {/* Report Seller button – only visible when buyer is logged in (not own product) */}
+          {accessToken &&
+            sellerIdValue &&
+            String(sellerIdValue) !== String(payload?.userId) && (
+              <Button
+                variant="ghost"
+                size="sm"
+                className="w-full gap-2 text-muted-foreground hover:text-red-600 hover:bg-red-50"
+                onClick={() =>
+                  navigate(
+                    `/report?sellerId=${sellerIdValue}&productId=${product?._id}`,
+                  )
+                }
+              >
+                <Flag className="h-4 w-4" />
+                Report this listing
+              </Button>
+            )}
         </div>
       </div>
 

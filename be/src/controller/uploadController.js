@@ -17,6 +17,7 @@ const upload = multer({
   },
 });
 
+
 /**
  * Upload avatar to Cloudinary
  * @route POST /api/upload/avatar
@@ -194,10 +195,50 @@ const uploadDisputeImages = async (req, res) => {
   }
 };
 
+/**
+ * Upload report evidence image to Cloudinary (buyer uploads proof)
+ * @route POST /api/upload/report-evidence
+ * @access Private (Buyer)
+ */
+const uploadReportEvidence = async (req, res) => {
+  try {
+    if (!req.file) {
+      return res.status(400).json({ message: "No file uploaded" });
+    }
+
+    const result = await new Promise((resolve, reject) => {
+      const uploadStream = cloudinary.uploader.upload_stream(
+        {
+          folder: "report-evidence",
+          transformation: [
+            { width: 1600, height: 1600, crop: "limit" },
+            { quality: "auto" },
+          ],
+        },
+        (error, result) => {
+          if (error) reject(error);
+          else resolve(result);
+        },
+      );
+      uploadStream.end(req.file.buffer);
+    });
+
+    res.status(200).json({
+      message: "Evidence uploaded successfully",
+      url: result.secure_url,
+      publicId: result.public_id,
+    });
+  } catch (error) {
+    console.error("Cloudinary upload error:", error);
+    res.status(500).json({ message: "Failed to upload evidence", error: error.message });
+  }
+};
+
 module.exports = {
   upload,
   uploadAvatar,
   uploadProductImages,
   uploadChatFile,
   uploadDisputeImages,
+  uploadReportEvidence,
 };

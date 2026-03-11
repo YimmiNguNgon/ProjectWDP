@@ -15,6 +15,7 @@ import {
   AlertTriangle,
   MessageSquare,
   XCircle,
+  Flag,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
@@ -309,11 +310,16 @@ export default function OrderDetailsPage() {
   const STATUS_RANK: Record<string, number> = {
     created: 0,
     cancelled: 0,
+    failed: 0,
     packaging: 1,
     ready_to_ship: 2,
     shipping: 3,
     delivered: 4,
     completed: 5,
+    waiting_return_shipment: 5, // We treat returns as a completed lifecycle exception
+    return_shipping: 5,
+    delivered_to_seller: 5,
+    returned: 5,
   };
 
   // Overall status = the minimum rank among all sub-orders (all must reach a state before the group advances)
@@ -356,8 +362,29 @@ export default function OrderDetailsPage() {
             ORDER STATUS
           </p>
 
-          {/* Check if ALL sub-orders are cancelled or failed */}
           {orders.every(
+            (o) =>
+              [
+                "waiting_return_shipment",
+                "return_shipping",
+                "delivered_to_seller",
+                "returned",
+              ].includes(o.status.toLowerCase()),
+          ) ? (
+            <div className="flex items-center gap-4 p-4 bg-orange-50 border border-orange-200 rounded-xl">
+              <div className="h-14 w-14 rounded-full bg-orange-100 border-2 border-orange-500 flex items-center justify-center shadow-md shrink-0">
+                <Truck className="h-7 w-7 text-orange-600" />
+              </div>
+              <div>
+                <p className="font-bold text-orange-700 text-base">
+                  {orders.every((o) => o.status === "returned") ? "Order Returned" : "Return in Progress"}
+                </p>
+                <p className="text-sm text-orange-600 mt-0.5">
+                  {orders.every((o) => o.status === "returned") ? "This order has been returned and refunded." : "This order is currently being returned to the seller."}
+                </p>
+              </div>
+            </div>
+          ) : orders.every(
             (o) => o.status === "cancelled" || o.status === "failed",
           ) ? (
             <div className="flex items-center gap-4 p-4 bg-red-50 border border-red-200 rounded-xl">
@@ -540,12 +567,14 @@ export default function OrderDetailsPage() {
                           ? "text-blue-600 bg-blue-50"
                           : STATUS_RANK[subOrder.status.toLowerCase()] >= 1
                             ? "text-cyan-600 bg-cyan-50"
-                            : subOrder.status.toLowerCase() === "cancelled"
+                            : subOrder.status.toLowerCase() === "cancelled" || subOrder.status.toLowerCase() === "failed"
                               ? "text-red-600 bg-red-50"
-                              : "text-blue-600 bg-blue-50"
+                              : ["waiting_return_shipment", "return_shipping", "delivered_to_seller", "returned"].includes(subOrder.status.toLowerCase())
+                                ? "text-orange-600 bg-orange-50"
+                                : "text-blue-600 bg-blue-50"
                   }`}
                 >
-                  {subOrder.status.toUpperCase()}
+                  {subOrder.status.toUpperCase().replace(/_/g, " ")}
                 </div>
               </div>
 
@@ -943,6 +972,15 @@ export default function OrderDetailsPage() {
                   >
                     Request Return/Refund
                   </Link>
+                  {subOrder.seller?._id && (
+                    <Link
+                      to={`/report?sellerId=${subOrder.seller._id}&orderId=${subOrder._id}`}
+                      className="inline-flex items-center gap-1.5 text-sm text-red-500 hover:underline"
+                    >
+                      <Flag className="h-3.5 w-3.5" />
+                      Report Seller
+                    </Link>
+                  )}
                 </div>
               )}
             </div>

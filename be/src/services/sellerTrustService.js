@@ -20,6 +20,7 @@ const User = require("../models/User");
 const Order = require("../models/Order");
 const Review = require("../models/Review");
 const Complaint = require("../models/Complaint");
+const Report = require("../models/Report");
 const SellerTrustScore = require("../models/SellerTrustScore");
 const notificationService = require("./notificationService");
 
@@ -102,9 +103,14 @@ async function computeTrustMetrics(sellerId, seller) {
     const responseRateScore = rawResponseRate * 5;
 
     // 4. Dispute Score = (1 - disputeRate) × 5
-    const disputeCount = await Complaint.countDocuments({ seller: sellerId });
+    //    totalComplaints = APPROVED Complaint docs + VALID Report docs
+    const [complaintCount, validReportCount] = await Promise.all([
+        Complaint.countDocuments({ seller: sellerId, resolution: "APPROVED" }),
+        Report.countDocuments({ seller: sellerId, status: "VALID" }),
+    ]);
+    const totalComplaints = complaintCount + validReportCount;
     const totalOrders = await Order.countDocuments({ seller: sellerId });
-    const disputeRate = totalOrders > 0 ? disputeCount / totalOrders : 0;
+    const disputeRate = totalOrders > 0 ? totalComplaints / totalOrders : 0;
     const disputeScore = (1 - Math.min(disputeRate, 1)) * 5;
 
     // 5. Stability = min(accountAgeMonths / 24, 1) × 5

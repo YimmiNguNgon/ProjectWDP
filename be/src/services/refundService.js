@@ -60,7 +60,14 @@ async function approveRefund(sellerId, refundId, sellerNote) {
   await refund.save();
 
   await Order.findByIdAndUpdate(refund.order, {
-    status: "returned",
+    status: "waiting_return_shipment",
+    $push: {
+      statusHistory: {
+        status: "waiting_return_shipment",
+        timestamp: new Date(),
+        note: "Refund approved, waiting for shipper to pick up return",
+      },
+    },
     updatedAt: new Date(),
   });
 
@@ -109,7 +116,14 @@ async function adminReviewDispute(
 
   if (resolutionStatus === "ADMIN_APPROVED") {
     await Order.findByIdAndUpdate(refund.order, {
-      status: "returned",
+      status: "waiting_return_shipment",
+      $push: {
+        statusHistory: {
+          status: "waiting_return_shipment",
+          timestamp: new Date(),
+          note: "Admin approved dispute, waiting for shipper to pick up return",
+        },
+      },
       updatedAt: new Date(),
     });
   }
@@ -120,10 +134,10 @@ async function adminReviewDispute(
     seller: refund.seller,
     reason: "return",
     content: `Admin resolution for refund dispute: ${adminNote}`,
-    status: "sent_to_admin",
+    status: "RESOLVED",
     resolvedBy: adminId,
     resolvedAt: new Date(),
-    resolution: resolutionStatus === "ADMIN_APPROVED" ? "approved" : "rejected",
+    resolution: resolutionStatus === "ADMIN_APPROVED" ? "APPROVED" : "REJECTED",
   });
   await complaint.save();
 
@@ -164,7 +178,14 @@ async function runAutoApproveRefunds() {
     await refund.save();
 
     await Order.findByIdAndUpdate(refund.order, {
-      status: "returned",
+      status: "waiting_return_shipment",
+      $push: {
+        statusHistory: {
+          status: "waiting_return_shipment",
+          timestamp: new Date(),
+          note: "Refund auto-approved, waiting for shipper to pick up return",
+        },
+      },
       updatedAt: new Date(),
     });
 
@@ -181,6 +202,37 @@ async function runAutoApproveRefunds() {
   return { approvedCount };
 }
 
+async function confirmReturnReceived(sellerId, refundId) {
+  const refund = await RefundRequest.findOne({ _id: refundId, seller: sellerId });
+  if (!refund) throw createHttpError("Refund request not found", 404);
+  
+  if (!["APPROVED", "AUTO_APPROVED", "ADMIN_APPROVED"].includes(refund.status)) {
+    throw createHttpError("Refund request is not in an approved state", 409);
+  }
+
+  const order = await Order.findOne({ _id: refund.order, seller: sellerId });
+  if (!order || order.status !== "delivered_to_seller") {
+    throw createHttpError("Order has not been delivered back to the seller yet", 400);
+  }
+
+  refund.status = "SELLER_RECEIVED_RETURN";
+  await refund.save();
+
+  await Order.findByIdAndUpdate(order._id, {
+    status: "returned",
+    $push: {
+      statusHistory: {
+        status: "returned",
+        timestamp: new Date(),
+        note: "Seller confirmed receipt of returned item, refund completed",
+      },
+    },
+    updatedAt: new Date(),
+  });
+
+  return refund;
+}
+
 module.exports = {
   createRefundRequest,
   approveRefund,
@@ -188,4 +240,5 @@ module.exports = {
   adminReviewDispute,
   buyerDisputeRefund,
   runAutoApproveRefunds,
+  confirmReturnReceived,
 };
