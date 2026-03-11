@@ -34,7 +34,7 @@ const sellerRiskHistorySchema = new mongoose.Schema(
         reason: { type: String },
         triggeredBy: {
             type: String,
-            enum: ["ORDER_DELIVERED", "DISPUTE_CREATED", "REFUND_CREATED", "CRON_JOB", "MANUAL"],
+            enum: ["ORDER_DELIVERED", "DISPUTE_CREATED", "REFUND_CREATED", "REPORT_VERIFIED", "CRON_JOB", "MANUAL"],
             default: "CRON_JOB",
         },
     },

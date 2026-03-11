@@ -34,6 +34,7 @@ import {
   Heart,
   UserPlus,
   UserCheck,
+  Flag,
 } from "lucide-react";
 import { useEffect, useState } from "react";
 import { toggleWatchlist, getUserWatchlist } from "@/api/watchlist";
@@ -742,6 +743,25 @@ export default function ProductDetailPage() {
             />
             {isWatched ? "Remove from Watchlist" : "Add to Watchlist"}
           </Button>
+
+          {/* Report Seller button – only visible when buyer is logged in (not own product) */}
+          {accessToken &&
+            sellerIdValue &&
+            String(sellerIdValue) !== String(payload?.userId) && (
+              <Button
+                variant="ghost"
+                size="sm"
+                className="w-full gap-2 text-muted-foreground hover:text-red-600 hover:bg-red-50"
+                onClick={() =>
+                  navigate(
+                    `/report?sellerId=${sellerIdValue}&productId=${product?._id}`,
+                  )
+                }
+              >
+                <Flag className="h-4 w-4" />
+                Report this listing
+              </Button>
+            )}
         </div>
       </div>
 

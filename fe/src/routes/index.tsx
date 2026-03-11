@@ -75,6 +75,8 @@ import AdminShipperManagement from "@/pages/admin/shippers/shipper-management";
 import AdminDeliveryReports from "@/pages/admin/shippers/delivery-reports";
 import AdminOrders from "@/pages/admin/orders/orders";
 import AdminRefunds from "@/pages/admin/orders/refunds";
+import AdminReportManagement from "@/pages/admin/reports/report-management";
+import BuyerReportPage from "@/pages/buyer/reports/submit-report";
 
 // Placeholder components for admin pages
 const AdminComplaints = () => (
@@ -208,6 +210,10 @@ export const AppRouter = () => {
           path: "become-seller/apply",
           element: <SellerApplyPage />,
         },
+        {
+          path: "report",
+          element: <BuyerReportPage />,
+        },
       ],
     },
     {
@@ -279,6 +285,10 @@ export const AppRouter = () => {
         {
           path: "refunds",
           element: <AdminRefunds />,
+        },
+        {
+          path: "reports",
+          element: <AdminReportManagement />,
         },
         {
           path: "shippers",

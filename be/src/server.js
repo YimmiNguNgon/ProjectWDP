@@ -127,6 +127,10 @@ app.use("/api/verified-badge", verifiedBadgeRoutes);
 const refundRoutes = require("./routes/refundRoutes");
 app.use("/api/refund", refundRoutes);
 
+// Buyer Report System routes
+const reportRoutes = require("./routes/reportRoutes");
+app.use("/api/reports", reportRoutes);
+
 // health check
 app.get("/health", (req, res) => res.json({ ok: true }));
 

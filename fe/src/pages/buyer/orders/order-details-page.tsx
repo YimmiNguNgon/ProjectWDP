@@ -15,6 +15,7 @@ import {
   AlertTriangle,
   MessageSquare,
   XCircle,
+  Flag,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
@@ -971,6 +972,15 @@ export default function OrderDetailsPage() {
                   >
                     Request Return/Refund
                   </Link>
+                  {subOrder.seller?._id && (
+                    <Link
+                      to={`/report?sellerId=${subOrder.seller._id}&orderId=${subOrder._id}`}
+                      className="inline-flex items-center gap-1.5 text-sm text-red-500 hover:underline"
+                    >
+                      <Flag className="h-3.5 w-3.5" />
+                      Report Seller
+                    </Link>
+                  )}
                 </div>
               )}
             </div>
