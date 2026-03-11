@@ -1,5 +1,7 @@
 import { useEffect, useState } from "react";
+import { toast } from "sonner";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import {
   Select,
   SelectContent,
@@ -39,13 +41,45 @@ export default function AdminShipperManagement() {
   const [orderStatus, setOrderStatus] = useState("all");
   const [shipperId, setShipperId] = useState("all");
   const [loading, setLoading] = useState(false);
+  const [banProcessing, setBanProcessing] = useState<string | null>(null);
 
-  useEffect(() => {
+  const fetchShippers = () => {
     api
       .get("/api/admin/shippers")
       .then((res) => setShippers(res.data.shippers))
-      .catch(() => {});
+      .catch(() => { });
+  };
+
+  useEffect(() => {
+    fetchShippers();
   }, []);
+
+  const handleBan = async (id: string, username: string) => {
+    if (!confirm(`Ban shipper "${username}"?`)) return;
+    setBanProcessing(id);
+    try {
+      await api.patch(`/api/admin/users/${id}/ban`, { reason: "Banned by admin" });
+      toast.success(`Shipper "${username}" has been banned`);
+      fetchShippers();
+    } catch {
+      toast.error("Failed to ban shipper");
+    } finally {
+      setBanProcessing(null);
+    }
+  };
+
+  const handleUnban = async (id: string, username: string) => {
+    setBanProcessing(id);
+    try {
+      await api.patch(`/api/admin/users/${id}/unban`);
+      toast.success(`Shipper "${username}" has been unbanned`);
+      fetchShippers();
+    } catch {
+      toast.error("Failed to unban shipper");
+    } finally {
+      setBanProcessing(null);
+    }
+  };
 
   useEffect(() => {
     if (activeTab === "orders") {
@@ -56,7 +90,7 @@ export default function AdminShipperManagement() {
       api
         .get("/api/admin/shipper-orders", { params })
         .then((res) => setOrders(res.data.orders))
-        .catch(() => {})
+        .catch(() => { })
         .finally(() => setLoading(false));
     }
   }, [activeTab, orderStatus, shipperId]);
@@ -81,11 +115,10 @@ export default function AdminShipperManagement() {
           <button
             key={tab}
             onClick={() => setActiveTab(tab)}
-            className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
-              activeTab === tab
-                ? "bg-blue-600 text-white"
-                : "bg-gray-100 text-gray-600 hover:bg-gray-200"
-            }`}
+            className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${activeTab === tab
+              ? "bg-blue-600 text-white"
+              : "bg-gray-100 text-gray-600 hover:bg-gray-200"
+              }`}
           >
             {tab === "shippers" ? "Shippers" : "Shipper Orders"}
           </button>
@@ -106,12 +139,13 @@ export default function AdminShipperManagement() {
                   <th className="text-right px-4 py-3 font-medium text-gray-600">Total Accepted</th>
                   <th className="text-right px-4 py-3 font-medium text-gray-600">Delivered</th>
                   <th className="text-right px-4 py-3 font-medium text-gray-600">In Transit</th>
+                  <th className="text-left px-4 py-3 font-medium text-gray-600">Actions</th>
                 </tr>
               </thead>
               <tbody>
                 {shippers.length === 0 ? (
                   <tr>
-                    <td colSpan={6} className="text-center py-8 text-gray-500">
+                    <td colSpan={7} className="text-center py-8 text-gray-500">
                       No shippers found
                     </td>
                   </tr>
@@ -128,6 +162,29 @@ export default function AdminShipperManagement() {
                       <td className="px-4 py-3 text-right">{s.totalAccepted}</td>
                       <td className="px-4 py-3 text-right text-green-600">{s.delivered}</td>
                       <td className="px-4 py-3 text-right text-purple-600">{s.inTransit}</td>
+                      <td className="px-4 py-3">
+                        {s.status === "banned" ? (
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            className="text-green-700 border-green-300 hover:bg-green-50"
+                            disabled={banProcessing === s._id}
+                            onClick={() => handleUnban(s._id, s.username)}
+                          >
+                            {banProcessing === s._id ? "Processing..." : "Unban"}
+                          </Button>
+                        ) : (
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            className="text-red-700 border-red-300 hover:bg-red-50"
+                            disabled={banProcessing === s._id}
+                            onClick={() => handleBan(s._id, s.username)}
+                          >
+                            {banProcessing === s._id ? "Processing..." : "Ban"}
+                          </Button>
+                        )}
+                      </td>
                     </tr>
                   ))
                 )}

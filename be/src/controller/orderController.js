@@ -257,7 +257,7 @@ const resolveVoucherAssignments = async ({
       Math.max(
         0,
         Number(group.subtotalAmount || 0) -
-          Number(globalDiscountAllocation[sellerId] || 0),
+        Number(globalDiscountAllocation[sellerId] || 0),
       ).toFixed(2),
     );
 
@@ -856,40 +856,40 @@ const createOrdersFromPayableItems = async ({
     const voucherGlobal =
       voucherContext.appliedGlobalVoucher && globalAllocated > 0
         ? {
-            voucherId: voucherContext.appliedGlobalVoucher.voucherId,
-            code: voucherContext.appliedGlobalVoucher.code,
-            type: voucherContext.appliedGlobalVoucher.type,
-            value: voucherContext.appliedGlobalVoucher.value,
-            discountAmount: globalAllocated,
-          }
+          voucherId: voucherContext.appliedGlobalVoucher.voucherId,
+          code: voucherContext.appliedGlobalVoucher.code,
+          type: voucherContext.appliedGlobalVoucher.type,
+          value: voucherContext.appliedGlobalVoucher.value,
+          discountAmount: globalAllocated,
+        }
         : undefined;
 
     const voucherSeller = sellerVoucher
       ? {
-          voucherId: sellerVoucher.voucherId,
-          code: sellerVoucher.code,
-          type: sellerVoucher.type,
-          value: sellerVoucher.value,
-          discountAmount: sellerDiscount,
-        }
+        voucherId: sellerVoucher.voucherId,
+        code: sellerVoucher.code,
+        type: sellerVoucher.type,
+        value: sellerVoucher.value,
+        discountAmount: sellerDiscount,
+      }
       : undefined;
 
     const legacyVoucher = sellerVoucher
       ? {
-          voucherId: sellerVoucher.voucherId,
-          code: sellerVoucher.code,
-          type: sellerVoucher.type,
-          value: sellerVoucher.value,
-          discountAmount: sellerDiscount,
-        }
+        voucherId: sellerVoucher.voucherId,
+        code: sellerVoucher.code,
+        type: sellerVoucher.type,
+        value: sellerVoucher.value,
+        discountAmount: sellerDiscount,
+      }
       : voucherGlobal
         ? {
-            voucherId: voucherGlobal.voucherId,
-            code: voucherGlobal.code,
-            type: voucherGlobal.type,
-            value: voucherGlobal.value,
-            discountAmount: voucherGlobal.discountAmount,
-          }
+          voucherId: voucherGlobal.voucherId,
+          code: voucherGlobal.code,
+          type: voucherGlobal.type,
+          value: voucherGlobal.value,
+          discountAmount: voucherGlobal.discountAmount,
+        }
         : undefined;
 
     const orderNote = sellerNotes[sellerId] || note || "";
@@ -967,9 +967,9 @@ getAllOrders = async (req, res) => {
         discountAmount: order.discountAmount ?? 0,
         voucher: order.voucher
           ? {
-              code: order.voucher.code || "",
-              discountAmount: order.voucher.discountAmount || 0,
-            }
+            code: order.voucher.code || "",
+            discountAmount: order.voucher.discountAmount || 0,
+          }
           : null,
         status: order.status,
         paymentStatus: order.paymentStatus || "unpaid",
@@ -1041,9 +1041,9 @@ getOrderById = async (req, res) => {
       const firstOrder = orders[0];
       const isOwner =
         String(firstOrder.buyer?._id || firstOrder.buyer) ===
-          String(req.user._id) ||
+        String(req.user._id) ||
         String(firstOrder.seller?._id || firstOrder.seller) ===
-          String(req.user._id);
+        String(req.user._id);
 
       if (!isOwner && req.user.role !== "admin") {
         return res.status(403).json({
@@ -1176,6 +1176,7 @@ getOrders = async (req, res) => {
       Order.find(filter)
         .populate("buyer", "username email")
         .populate("seller", "username email")
+        .populate("shipper", "username email")
         .populate("orderGroup", "shippingPrice totalAmount")
         .populate("items.productId", "title images image")
         .sort({ createdAt: -1 })
@@ -1198,6 +1199,7 @@ getOrders = async (req, res) => {
         orderGroup: order.orderGroup || null,
         buyer: order.buyer,
         seller: order.seller,
+        shipper: order.shipper || null,
         customer: order.buyer?.username || "Khách hàng",
         email: order.buyer?.email || "",
         totalAmount: order.totalAmount,
@@ -1205,9 +1207,9 @@ getOrders = async (req, res) => {
         discountAmount: order.discountAmount ?? 0,
         voucher: order.voucher
           ? {
-              code: order.voucher.code || "",
-              discountAmount: order.voucher.discountAmount || 0,
-            }
+            code: order.voucher.code || "",
+            discountAmount: order.voucher.discountAmount || 0,
+          }
           : null,
         status: order.status,
         paymentStatus: order.paymentStatus || "unpaid",
@@ -1216,6 +1218,7 @@ getOrders = async (req, res) => {
         date: formatDate(order.createdAt),
         paymentMethod: paymentMethod,
         createdAt: order.createdAt,
+        shippingAddress: order.shippingAddress,
       };
     });
 
@@ -1529,7 +1532,7 @@ confirmCheckout = async (req, res) => {
             link: `/seller/orders`,
             metadata: { orderId: order._id },
           })
-          .catch(() => {});
+          .catch(() => { });
       }
     }
 
@@ -1589,7 +1592,7 @@ confirmCheckout = async (req, res) => {
               totalAmount: orderGroup
                 ? orderGroup.totalAmount
                 : orders.reduce((sum, o) => sum + (o.totalAmount || 0), 0) +
-                  Number(shippingPrice || 0),
+                Number(shippingPrice || 0),
               paymentMethod: paymentMethod || "COD",
               shippingAddress: shippingAddress,
               orderUrl: `${process.env.CLIENT_URL}/my-ebay/activity/purchases`,

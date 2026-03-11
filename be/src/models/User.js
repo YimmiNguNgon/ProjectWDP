@@ -96,6 +96,13 @@ const userSchema = new mongoose.Schema(
       reportRate: { type: Number, default: 0 }, // 0-100 (%)
       isVerifiedSeller: { type: Boolean, default: false }, // Cached từ VerifiedBadge
     },
+
+    // ─── Shipper info ──────────────────────────────────────────────────────────
+    // Chỉ có giá trị khi role === "shipper"
+    shipperInfo: {
+      maxOrders: { type: Number, default: 3 },     // Giới hạn đơn đồng thời
+      isAvailable: { type: Boolean, default: true }, // Shipper có sẵn sàng nhận đơn không
+    },
   },
   { timestamps: true },
 );

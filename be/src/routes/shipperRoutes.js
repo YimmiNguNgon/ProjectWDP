@@ -18,5 +18,6 @@ router.get("/stats", shipperController.getShipperStats);
 router.patch("/orders/:id/accept", shipperController.acceptOrder);
 router.patch("/orders/:id/reject", shipperController.rejectOrder);
 router.patch("/orders/:id/delivered", shipperController.markDelivered);
+router.patch("/availability", shipperController.toggleAvailability);
 
 module.exports = router;

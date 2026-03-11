@@ -1,0 +1,198 @@
+const Order = require("../models/Order");
+const User = require("../models/User");
+const notificationService = require("./notificationService");
+
+const DEFAULT_MAX_ORDERS = 3;
+
+/**
+ * Tìm shipper phù hợp nhất để nhận đơn.
+ * Ưu tiên shipper có ít đơn đang shipping nhất mà chưa đạt giới hạn.
+ * @returns {Promise<Object|null>} shipper document hoặc null nếu tất cả đều đầy
+ */
+async function findBestShipper() {
+    const shippers = await User.find({
+        role: "shipper",
+        status: "active",
+        // Dùng $ne: false để vẫn match shipper cũ chưa có field isAvailable trong DB
+        "shipperInfo.isAvailable": { $ne: false },
+    })
+        .select("_id username shipperInfo")
+        .lean();
+
+    if (!shippers.length) return null;
+
+    // Đếm số đơn đang shipping của từng shipper
+    const shipperIds = shippers.map((s) => s._id);
+    const counts = await Order.aggregate([
+        { $match: { shipper: { $in: shipperIds }, status: "shipping" } },
+        { $group: { _id: "$shipper", count: { $sum: 1 } } },
+    ]);
+
+    const countMap = {};
+    for (const c of counts) {
+        countMap[c._id.toString()] = c.count;
+    }
+
+    // Lọc shipper còn slot và sắp xếp theo số đơn tăng dần (load balancing)
+    const available = shippers.filter((s) => {
+        const max = s.shipperInfo?.maxOrders ?? DEFAULT_MAX_ORDERS;
+        const current = countMap[s._id.toString()] ?? 0;
+        return current < max;
+    });
+
+    if (!available.length) return null;
+
+    available.sort((a, b) => {
+        const ca = countMap[a._id.toString()] ?? 0;
+        const cb = countMap[b._id.toString()] ?? 0;
+        return ca - cb;
+    });
+
+    return available[0];
+}
+
+/**
+ * Tự động phân đơn cho shipper khi đơn chuyển sang ready_to_ship.
+ * Nếu không có shipper rảnh thì đưa đơn vào queue (status: "queued").
+ * @param {Object} order - Mongoose order document
+ */
+async function autoAssignOrder(order) {
+    const shipper = await findBestShipper();
+
+    if (shipper) {
+        // Atomic update: chỉ gán nếu đơn vẫn còn ở ready_to_ship và chưa có shipper
+        const updated = await Order.findOneAndUpdate(
+            { _id: order._id, status: "ready_to_ship", shipper: null },
+            {
+                shipper: shipper._id,
+                status: "shipping",
+                queuedAt: null,
+                $push: {
+                    statusHistory: {
+                        status: "shipping",
+                        timestamp: new Date(),
+                        note: `Auto-assigned to shipper ${shipper.username}`,
+                    },
+                },
+            },
+            { new: true },
+        );
+
+        if (!updated) return; // Đơn đã bị nhận bởi thao tác khác, bỏ qua
+
+        // Thông báo shipper được assign
+        notificationService
+            .sendNotification({
+                recipientId: shipper._id,
+                type: "order_assigned",
+                title: "New order assigned to you",
+                body: `Order #${updated._id} has been auto-assigned to you.`,
+                link: `/shipper/orders`,
+                metadata: { orderId: updated._id },
+            })
+            .catch(() => { });
+    } else {
+        // Không có shipper rảnh → đưa vào queue
+        await Order.findOneAndUpdate(
+            { _id: order._id, status: "ready_to_ship", shipper: null },
+            {
+                status: "queued",
+                queuedAt: new Date(),
+                $push: {
+                    statusHistory: {
+                        status: "queued",
+                        timestamp: new Date(),
+                        note: "All shippers are at full capacity. Order queued.",
+                    },
+                },
+            },
+        );
+    }
+}
+
+/**
+ * Sau khi shipper hoàn thành đơn, lấy đơn cũ nhất trong queue (FIFO)
+ * và gán cho shipper đó nếu shipper còn slot.
+ * @param {string|ObjectId} shipperId
+ */
+async function dispatchNextFromQueue(shipperId) {
+    const shipper = await User.findById(shipperId)
+        .select("_id username shipperInfo status")
+        .lean();
+
+    if (!shipper || shipper.status !== "active") return;
+    if (shipper.shipperInfo?.isAvailable === false) return;
+
+    const max = shipper.shipperInfo?.maxOrders ?? DEFAULT_MAX_ORDERS;
+    const activeCount = await Order.countDocuments({
+        shipper: shipperId,
+        status: "shipping",
+    });
+
+    if (activeCount >= max) return; // Vẫn đầy slot
+
+    // Lấy đơn queued cũ nhất (FIFO theo queuedAt)
+    const nextOrder = await Order.findOneAndUpdate(
+        { status: "queued", shipper: null },
+        {
+            shipper: shipperId,
+            status: "shipping",
+            queuedAt: null,
+            $push: {
+                statusHistory: {
+                    status: "shipping",
+                    timestamp: new Date(),
+                    note: `Auto-assigned from queue to shipper ${shipper.username}`,
+                },
+            },
+        },
+        {
+            sort: { queuedAt: 1 }, // FIFO
+            new: true,
+        },
+    );
+
+    if (!nextOrder) return; // Queue trống
+
+    // Thông báo shipper
+    notificationService
+        .sendNotification({
+            recipientId: shipperId,
+            type: "order_assigned",
+            title: "New order assigned to you",
+            body: `Order #${nextOrder._id} from queue has been assigned to you.`,
+            link: `/shipper/orders`,
+            metadata: { orderId: nextOrder._id },
+        })
+        .catch(() => { });
+}
+
+/**
+ * Toggle trạng thái available của shipper.
+ * Khi bật lại (isAvailable = true), tự động dispatch đơn từ queue nếu còn slot.
+ * @param {string|ObjectId} shipperId
+ * @param {boolean} isAvailable
+ */
+async function toggleShipperAvailability(shipperId, isAvailable) {
+    const shipper = await User.findByIdAndUpdate(
+        shipperId,
+        { "shipperInfo.isAvailable": isAvailable },
+        { new: true },
+    ).select("_id username shipperInfo status");
+
+    if (!shipper) throw new Error("Shipper not found");
+
+    // Nếu vừa bật available, thử dispatch từ queue
+    if (isAvailable) {
+        setImmediate(() => dispatchNextFromQueue(shipperId).catch(() => { }));
+    }
+
+    return shipper;
+}
+
+module.exports = {
+    autoAssignOrder,
+    dispatchNextFromQueue,
+    toggleShipperAvailability,
+    findBestShipper,
+};

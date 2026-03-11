@@ -5,6 +5,7 @@ const mongoose = require("mongoose");
 const { evaluateSellerTrust } = require("../services/sellerTrustService");
 const sendEmail = require("../utils/sendEmail");
 const notificationService = require("../services/notificationService");
+const { autoAssignOrder } = require("../services/orderDispatchService");
 
 /**
  * Update order status
@@ -203,6 +204,11 @@ exports.updateOrderStatus = async (req, res, next) => {
 
     await order.save();
 
+    // Nếu seller set ready_to_ship, thử auto-assign cho shipper (fire-and-forget)
+    if (status === "ready_to_ship") {
+      setImmediate(() => autoAssignOrder(order).catch(() => { }));
+    }
+
     // ── Trigger Trust Score recalc (fire-and-forget, không block response) ──
     if (
       status === "delivered" ||
@@ -248,9 +254,8 @@ exports.updateOrderStatus = async (req, res, next) => {
         failed: `Order for "${productLabel}" failed`,
         returned: `Order for "${productLabel}" returned`,
       };
-      const notificationBody = `Status: ${status.replace(/_/g, " ")}${
-        note ? `\nReason: ${note}` : ""
-      }`;
+      const notificationBody = `Status: ${status.replace(/_/g, " ")}${note ? `\nReason: ${note}` : ""
+        }`;
       notificationService
         .sendNotification({
           recipientId: updated.buyer._id,
@@ -260,7 +265,7 @@ exports.updateOrderStatus = async (req, res, next) => {
           link: `/purchases/${updated._id}`,
           metadata: { orderId: updated._id, status, note },
         })
-        .catch(() => {});
+        .catch(() => { });
     }
 
     // Send email to buyer asynchronously (fire-and-forget)

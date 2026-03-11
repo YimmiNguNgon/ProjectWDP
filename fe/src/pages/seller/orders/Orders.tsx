@@ -61,6 +61,13 @@ const STATUS_CONFIG = {
     text: "#1E40AF",
     border: "#BFDBFE",
   },
+  queued: {
+    label: "Queued",
+    dot: "#F97316",
+    bg: "#FFF7ED",
+    text: "#9A3412",
+    border: "#FED7AA",
+  },
   shipping: {
     label: "Shipping",
     dot: "#8B5CF6",
@@ -480,12 +487,34 @@ function OrderDetailsPopup({
               )}
 
               <InfoBlock
-                icon={<Package size={16} color="#F59E0B" />}
+                icon={<Package size={16} color="#F59E0B" />
+                }
                 label="Status"
               >
                 <div style={{ marginTop: 2 }}>
                   <StatusPill status={order.status} />
                 </div>
+              </InfoBlock>
+
+              {/* Shipper */}
+              <InfoBlock
+                icon={<Truck size={16} color="#8B5CF6" />}
+                label="Shipper"
+              >
+                {order.shipper ? (
+                  <>
+                    <p style={{ fontWeight: 700, color: "#0F172A", fontSize: 15, margin: "0 0 2px" }}>
+                      {order.shipper.username}
+                    </p>
+                    <p style={{ color: "#64748B", fontSize: 13, margin: 0 }}>
+                      {order.shipper.email}
+                    </p>
+                  </>
+                ) : (
+                  <p style={{ color: "#94A3B8", fontSize: 13, margin: 0, fontStyle: "italic" }}>
+                    Not assigned yet
+                  </p>
+                )}
               </InfoBlock>
 
               {/* Payment + Status */}
@@ -1259,30 +1288,15 @@ export default function SellerOrders() {
             <table className="w-full">
               <thead>
                 <tr className="border-b">
-                  <th className="text-left p-4 font-medium text-gray-600">
-                    Order ID
-                  </th>
-                  <th className="text-left p-4 font-medium text-gray-600">
-                    Product
-                  </th>
-                  <th className="text-left p-4 font-medium text-gray-600">
-                    Customer
-                  </th>
-                  <th className="text-left p-4 font-medium text-gray-600">
-                    Quantity
-                  </th>
-                  <th className="text-left p-4 font-medium text-gray-600">
-                    Total
-                  </th>
-                  <th className="text-left p-4 font-medium text-gray-600">
-                    Payment Status
-                  </th>
-                  <th className="text-left p-4 font-medium text-gray-600">
-                    Status
-                  </th>
-                  <th className="text-left p-4 font-medium text-gray-600">
-                    Actions
-                  </th>
+                  <th className="text-left p-4 font-medium text-gray-600">Order ID</th>
+                  <th className="text-left p-4 font-medium text-gray-600">Product</th>
+                  <th className="text-left p-4 font-medium text-gray-600">Customer</th>
+                  <th className="text-left p-4 font-medium text-gray-600">Shipper</th>
+                  <th className="text-left p-4 font-medium text-gray-600">Quantity</th>
+                  <th className="text-left p-4 font-medium text-gray-600">Total</th>
+                  <th className="text-left p-4 font-medium text-gray-600">Payment Status</th>
+                  <th className="text-left p-4 font-medium text-gray-600">Status</th>
+                  <th className="text-left p-4 font-medium text-gray-600">Actions</th>
                 </tr>
               </thead>
               <tbody>
@@ -1305,6 +1319,13 @@ export default function SellerOrders() {
                       <div className="font-medium">{order.username}</div>
                       <div className="text-sm text-gray-500">{order.email}</div>
                     </td>
+                    <td className="p-4">
+                      {order.shipper ? (
+                        <div className="font-medium text-sm">{order.shipper.username}</div>
+                      ) : (
+                        <span className="text-xs text-gray-400 italic">Not assigned</span>
+                      )}
+                    </td>
                     <td className="p-4">{order.items} products</td>
                     <td className="p-4 font-medium">
                       ${order.total.toFixed(2)}
@@ -1323,7 +1344,7 @@ export default function SellerOrders() {
                           className="cursor-pointer"
                         >
                           {loadingDetails &&
-                          selectedOrder?._id === order._id ? (
+                            selectedOrder?._id === order._id ? (
                             <div className="h-4 w-4 border-2 border-gray-300 border-t-gray-600 rounded-full animate-spin" />
                           ) : (
                             <Eye className="h-4 w-4" />
@@ -1367,14 +1388,14 @@ export default function SellerOrders() {
                             {["created", "packaging", "ready_to_ship"].includes(
                               order.status,
                             ) && (
-                              <DropdownMenuItem
-                                className="cursor-pointer text-red-600"
-                                onClick={() => openCancelDialog(order._id)}
-                              >
-                                <XCircle className="h-4 w-4 mr-2" />
-                                Cancel Order
-                              </DropdownMenuItem>
-                            )}
+                                <DropdownMenuItem
+                                  className="cursor-pointer text-red-600"
+                                  onClick={() => openCancelDialog(order._id)}
+                                >
+                                  <XCircle className="h-4 w-4 mr-2" />
+                                  Cancel Order
+                                </DropdownMenuItem>
+                              )}
                           </DropdownMenuContent>
                         </DropdownMenu>
                       </div>

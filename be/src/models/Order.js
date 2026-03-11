@@ -107,6 +107,7 @@ const orderSchema = new mongoose.Schema({
       "created",
       "packaging",
       "ready_to_ship",
+      "queued",      // Đang chờ shipper (tất cả shipper đầy slot)
       "shipping",
       "delivered",
       "completed",
@@ -117,6 +118,9 @@ const orderSchema = new mongoose.Schema({
     default: "created",
     index: true,
   },
+
+  // Thời điểm đưa vào queue – dùng để FIFO khi auto-assign
+  queuedAt: { type: Date, default: null },
   paymentStatus: {
     type: String,
     enum: ["unpaid", "paid", "failed", "refunded"],
@@ -154,6 +158,7 @@ const orderSchema = new mongoose.Schema({
           "created",
           "packaging",
           "ready_to_ship",
+          "queued",
           "shipping",
           "delivered",
           "completed",

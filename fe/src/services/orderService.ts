@@ -39,6 +39,7 @@ interface ApiOrder {
   note?: string;
   statusHistory?: Array<{ status: string; timestamp: string; note: string }>;
   orderDetails?: any[];
+  shipper?: { _id: string; username: string; email: string } | null;
 }
 
 export interface Order {
@@ -48,15 +49,16 @@ export interface Order {
   email: string;
   total: number;
   status:
-    | "created"
-    | "packaging"
-    | "ready_to_ship"
-    | "shipping"
-    | "delivered"
-    | "completed"
-    | "cancelled"
-    | "failed"
-    | "returned";
+  | "created"
+  | "packaging"
+  | "ready_to_ship"
+  | "queued"
+  | "shipping"
+  | "delivered"
+  | "completed"
+  | "cancelled"
+  | "failed"
+  | "returned";
   paymentStatus: "unpaid" | "paid" | "failed" | "refunded";
   items: number;
   date: string;
@@ -64,6 +66,7 @@ export interface Order {
   phone?: string;
   address?: string;
   note?: string;
+  shipper?: { _id: string; username: string; email: string } | null;
   statusHistory?: Array<{ status: string; timestamp: string; note: string }>;
   orderDetails?: Array<{
     productId: string;
@@ -89,6 +92,8 @@ const mapStatus = (status: string): Order["status"] => {
       return "packaging";
     case "ready_to_ship":
       return "ready_to_ship";
+    case "queued":
+      return "queued";
     case "shipped":
     case "shipping":
       return "shipping";
@@ -157,14 +162,14 @@ const transformOrder = (apiOrder: ApiOrder): Order => {
   const address = apiOrder.shippingAddress;
   const addressString = address
     ? [
-        address.detail,
-        address.street,
-        address.ward,
-        address.district,
-        address.city,
-      ]
-        .filter(Boolean)
-        .join(", ")
+      address.detail,
+      address.street,
+      address.ward,
+      address.district,
+      address.city,
+    ]
+      .filter(Boolean)
+      .join(", ")
     : "";
 
   return {
@@ -184,6 +189,7 @@ const transformOrder = (apiOrder: ApiOrder): Order => {
     phone: address?.phone || apiOrder.shippingAddress?.phone || "",
     address: addressString || "",
     note: apiOrder.note || "",
+    shipper: apiOrder.shipper || null,
     statusHistory: apiOrder.statusHistory || [],
     orderDetails: (apiOrder.items || []).map((item) => ({
       productId:
@@ -300,6 +306,7 @@ export const orderService = {
         created: "created",
         packaging: "packaging",
         ready_to_ship: "ready_to_ship",
+        queued: "queued",
         shipping: "shipping",
         delivered: "delivered",
         completed: "completed",
