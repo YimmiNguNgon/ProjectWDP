@@ -34,19 +34,11 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import {
-  Breadcrumb,
-  BreadcrumbItem,
-  BreadcrumbLink,
-  BreadcrumbList,
-  BreadcrumbPage,
-  BreadcrumbSeparator,
-} from "@/components/ui/breadcrumb";
 import { Separator } from "@/components/ui/separator";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Skeleton } from "@/components/ui/skeleton";
 
-// Types (giữ nguyên như cũ)
+// Types (giữ nguyên)
 type SellerReviewApi = {
   _id: string;
   order: string;
@@ -108,6 +100,12 @@ type SellerProduct = {
   isAuction: boolean;
   promotionType: string;
   variants: any[];
+};
+
+type Category = {
+  id: string;
+  name: string;
+  count: number;
 };
 
 type RatingFilter = "all" | "positive" | "neutral" | "negative";
@@ -187,16 +185,20 @@ export default function SellerInformationPage() {
   // Products state
   const [products, setProducts] = useState<SellerProduct[]>([]);
   const [loadingProducts, setLoadingProducts] = useState(false);
-  const [productsTotal, setProductsTotal] = useState(0);
+  const [filteredProductsTotal, setFilteredProductsTotal] = useState(0);
   const [currentPage, setCurrentPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
   const [viewMode, setViewMode] = useState<ProductViewMode>("grid");
   const [sortBy, setSortBy] = useState<ProductSort>("newest");
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedCategory, setSelectedCategory] = useState<string>("all");
-  const [categories, setCategories] = useState<
-    { id: string; name: string; count: number }[]
-  >([]);
+  
+  // Tổng số sản phẩm thực tế (không bị ảnh hưởng bởi filter)
+  const [totalProductsCount, setTotalProductsCount] = useState(0);
+  
+  // Categories state
+  const [allCategories, setAllCategories] = useState<Category[]>([]);
+  const [loadingCategories, setLoadingCategories] = useState(false);
 
   // Trust score
   const [trust, setTrust] = useState<TrustData | null>(null);
@@ -217,14 +219,12 @@ export default function SellerInformationPage() {
       try {
         setLoading(true);
         setErrorMsg(null);
-        console.log("Fetching reviews for seller:", sellerId);
 
         const res = await api.get<SellerReviewsResponse>(
           `/api/reviews/seller/${sellerId}`,
           { params: { page: 1, limit: 50 } },
         );
 
-        console.log("Reviews data received:", res.data);
         setAllData(res.data);
       } catch (err: any) {
         console.error("Error fetching reviews:", err);
@@ -246,7 +246,6 @@ export default function SellerInformationPage() {
     const fetchTrustScore = async () => {
       try {
         const res = await api.get(`/api/trust-score/seller/${sellerId}`);
-        console.log("Trust score data:", res.data);
         setTrust(res.data.data);
       } catch (err) {
         console.error("Error fetching trust score:", err);
@@ -257,6 +256,95 @@ export default function SellerInformationPage() {
 
     fetchTrustScore();
   }, [sellerId]);
+
+  // ===== LOAD TOTAL PRODUCTS COUNT =====
+  useEffect(() => {
+    if (!sellerId) return;
+
+    const fetchTotalProducts = async () => {
+      try {
+        // Thử gọi API stats trước
+        const res = await api.get(`/api/seller/${sellerId}/products/stats`);
+        if (res.data.success) {
+          setTotalProductsCount(res.data.data.totalProducts);
+        } else {
+          // Fallback: gọi API products với limit=1 để lấy total
+          const fallbackRes = await api.get(`/api/seller/${sellerId}/products`, {
+            params: { limit: 1 }
+          });
+          if (fallbackRes.data.success) {
+            setTotalProductsCount(fallbackRes.data.total);
+          }
+        }
+      } catch (err) {
+        console.error("Error fetching total products:", err);
+        // Set mặc định là 0 nếu lỗi
+        setTotalProductsCount(0);
+      }
+    };
+
+    fetchTotalProducts();
+  }, [sellerId]);
+
+  // ===== LOAD ALL CATEGORIES =====
+  useEffect(() => {
+    if (!sellerId || activeTab !== "products") return;
+
+    const fetchAllCategories = async () => {
+      try {
+        setLoadingCategories(true);
+        
+        // Gọi API riêng để lấy tất cả categories của seller
+        const res = await api.get(`/api/seller/${sellerId}/categories`);
+        
+        if (res.data.success) {
+          setAllCategories(res.data.data);
+        }
+      } catch (err) {
+        console.error("Error fetching categories:", err);
+        
+        // Fallback: Nếu API không có, fetch 1 trang lớn để lấy categories
+        try {
+          const fallbackRes = await api.get(`/api/seller/${sellerId}/products`, {
+            params: { limit: 100 }
+          });
+          
+          if (fallbackRes.data.success) {
+            const categoryMap = new Map<string, Category>();
+            
+            fallbackRes.data.data.forEach((product: any) => {
+              if (product.categoryId && product.categoryId._id) {
+                const catId = product.categoryId._id;
+                const catName = product.categoryId.name;
+                
+                if (categoryMap.has(catId)) {
+                  const existing = categoryMap.get(catId)!;
+                  categoryMap.set(catId, {
+                    ...existing,
+                    count: existing.count + 1
+                  });
+                } else {
+                  categoryMap.set(catId, {
+                    id: catId,
+                    name: catName,
+                    count: 1
+                  });
+                }
+              }
+            });
+            
+            setAllCategories(Array.from(categoryMap.values()));
+          }
+        } catch (fallbackErr) {
+          console.error("Error in fallback categories fetch:", fallbackErr);
+        }
+      } finally {
+        setLoadingCategories(false);
+      }
+    };
+
+    fetchAllCategories();
+  }, [sellerId, activeTab]);
 
   // ===== LOAD PRODUCTS =====
   useEffect(() => {
@@ -286,32 +374,8 @@ export default function SellerInformationPage() {
 
         if (res.data.success) {
           setProducts(res.data.data);
-          setProductsTotal(res.data.total);
+          setFilteredProductsTotal(res.data.total);
           setTotalPages(res.data.totalPages);
-
-          // Extract categories
-          if (res.data.data.length > 0) {
-            const categoryMap = new Map();
-            res.data.data.forEach((product: any) => {
-              if (product.categoryId && product.categoryId._id) {
-                const catId = product.categoryId._id;
-                const catName = product.categoryId.name;
-                if (categoryMap.has(catId)) {
-                  categoryMap.set(catId, {
-                    ...categoryMap.get(catId),
-                    count: categoryMap.get(catId).count + 1,
-                  });
-                } else {
-                  categoryMap.set(catId, {
-                    id: catId,
-                    name: catName,
-                    count: 1,
-                  });
-                }
-              }
-            });
-            setCategories(Array.from(categoryMap.values()));
-          }
         }
       } catch (err: any) {
         console.error("Error fetching products:", err);
@@ -337,24 +401,20 @@ export default function SellerInformationPage() {
   }, [allReviews, productId]);
 
   const totalAllItems = allData?.total ?? 0;
-  const totalThisItem = thisItemReviews.length;
-
-  const baseReviews = allReviews;
 
   const filteredReviews: SellerReviewApi[] = useMemo(() => {
-    if (ratingFilter === "all") return baseReviews;
+    if (ratingFilter === "all") return allReviews;
 
-    return baseReviews.filter((r) => {
+    return allReviews.filter((r) => {
       const t = getComputedType(r);
       if (ratingFilter === "positive") return t === "positive";
       if (ratingFilter === "neutral") return t === "neutral";
       if (ratingFilter === "negative") return t === "negative";
       return true;
     });
-  }, [baseReviews, ratingFilter]);
+  }, [allReviews, ratingFilter]);
 
   const positivePercent = allData?.positiveRate ?? 0;
-  const positiveCount = allData?.positiveCount ?? 0;
 
   const avg1 = allData?.averageRate1 ?? null;
   const avg2 = allData?.averageRate2 ?? null;
@@ -379,13 +439,6 @@ export default function SellerInformationPage() {
     return "More than a year ago";
   };
 
-  // const formatPrice = (price: number) => {
-  //   return new Intl.NumberFormat("vi-VN", {
-  //     style: "currency",
-  //     currency: "VND",
-  //   }).format(price);
-  // };
-
   const getStockStatus = (stock: number, quantity: number) => {
     const total = stock + quantity;
     if (total <= 0)
@@ -404,15 +457,18 @@ export default function SellerInformationPage() {
   };
 
   const handleContactSeller = () => {
-    console.log("Contact seller", sellerId);
+    navigate(`/chat?sellerId=${sellerId}`);
   };
 
   const handleShare = () => {
-    console.log("Share seller page");
+    navigator.clipboard.writeText(window.location.href);
   };
 
-  const handleReport = () => {
-    console.log("Report seller", sellerId);
+  const clearAllFilters = () => {
+    setSearchTerm("");
+    setSelectedCategory("all");
+    setSortBy("newest");
+    setCurrentPage(1);
   };
 
   // Loading state
@@ -428,26 +484,13 @@ export default function SellerInformationPage() {
   }
 
   // Error state
-  if (errorMsg) {
+  if (errorMsg || !sellerId) {
     return (
       <div className="min-h-screen bg-gray-50 flex items-center justify-center">
         <div className="text-center max-w-md mx-auto p-6">
           <AlertCircle className="h-12 w-12 text-destructive mx-auto mb-4" />
           <h1 className="text-2xl font-bold mb-2">Error</h1>
-          <p className="text-muted-foreground mb-4">{errorMsg}</p>
-          <Button onClick={handleGoBack}>Go Back</Button>
-        </div>
-      </div>
-    );
-  }
-
-  if (!sellerId) {
-    return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
-        <div className="text-center">
-          <AlertCircle className="h-12 w-12 text-destructive mx-auto mb-4" />
-          <h1 className="text-2xl font-bold mb-2">Seller Not Found</h1>
-          <p className="text-muted-foreground mb-4">No seller ID provided</p>
+          <p className="text-muted-foreground mb-4">{errorMsg || "Seller not found"}</p>
           <Button onClick={handleGoBack}>Go Back</Button>
         </div>
       </div>
@@ -459,7 +502,7 @@ export default function SellerInformationPage() {
       {/* Header */}
       <div className="bg-white border-b sticky top-0 z-10">
         <div className="container mx-auto px-4 py-4">
-          <div className="flex items-center justify-between mt-4">
+          <div className="flex items-center justify-between">
             <div className="flex items-center gap-4">
               <Button variant="ghost" size="icon" onClick={handleGoBack}>
                 <ArrowLeft className="h-5 w-5" />
@@ -470,6 +513,15 @@ export default function SellerInformationPage() {
                   {displayName}
                 </h1>
               </div>
+            </div>
+            <div className="flex items-center gap-2">
+              <Button variant="outline" size="sm" onClick={handleContactSeller}>
+                <MessageCircle className="h-4 w-4 mr-2" />
+                Contact
+              </Button>
+              <Button variant="outline" size="sm" onClick={handleShare}>
+                <Share2 className="h-4 w-4" />
+              </Button>
             </div>
           </div>
         </div>
@@ -532,19 +584,17 @@ export default function SellerInformationPage() {
               <div className="grid grid-cols-2 gap-3 text-center">
                 <div className="bg-gray-50 rounded-lg p-3">
                   <p className="text-2xl font-bold text-primary">
-                    {productsTotal || 0}
+                    {products.length}
                   </p>
                   <p className="text-xs text-muted-foreground">Products</p>
                 </div>
                 <div className="bg-gray-50 rounded-lg p-3">
                   <p className="text-2xl font-bold text-primary">
-                    {totalAllItems}
+                    {totalProductsCount}
                   </p>
                   <p className="text-xs text-muted-foreground">Reviews</p>
                 </div>
               </div>
-
-              {/* Product ID if from product page */}
             </div>
           </div>
 
@@ -562,13 +612,13 @@ export default function SellerInformationPage() {
                       value="products"
                       className="flex-1 cursor-pointer sm:flex-none"
                     >
-                      Products ({productsTotal})
+                      Products 
                     </TabsTrigger>
                     <TabsTrigger
                       value="feedback"
                       className="flex-1 cursor-pointer sm:flex-none"
                     >
-                      Feedback ({totalAllItems})
+                      Feedback 
                     </TabsTrigger>
                     <TabsTrigger
                       value="about"
@@ -581,7 +631,6 @@ export default function SellerInformationPage() {
 
                 {/* Feedback Tab */}
                 <TabsContent value="feedback" className="p-6">
-                  {/* Filter */}
                   <div className="flex items-center justify-between mb-4">
                     <div className="flex items-center gap-2">
                       <span className="text-sm text-muted-foreground">
@@ -604,7 +653,6 @@ export default function SellerInformationPage() {
                     </div>
                   </div>
 
-                  {/* Feedback List */}
                   <ScrollArea className="h-[600px] pr-4">
                     {loading ? (
                       <div className="space-y-4">
@@ -614,11 +662,6 @@ export default function SellerInformationPage() {
                             <Skeleton className="h-16 w-full" />
                           </div>
                         ))}
-                      </div>
-                    ) : errorMsg ? (
-                      <div className="text-center py-8">
-                        <AlertCircle className="h-8 w-8 text-destructive mx-auto mb-2" />
-                        <p className="text-destructive">{errorMsg}</p>
                       </div>
                     ) : filteredReviews.length === 0 ? (
                       <div className="text-center py-8">
@@ -729,7 +772,7 @@ export default function SellerInformationPage() {
                         <Button
                           variant={viewMode === "grid" ? "default" : "ghost"}
                           size="icon"
-                          className="rounded cursor-pointer"
+                          className="rounded-l-md rounded-r-none cursor-pointer"
                           onClick={() => setViewMode("grid")}
                         >
                           <Grid className="h-4 w-4" />
@@ -737,7 +780,7 @@ export default function SellerInformationPage() {
                         <Button
                           variant={viewMode === "list" ? "default" : "ghost"}
                           size="icon"
-                          className="rounded cursor-pointer"
+                          className="rounded-r-md rounded-l-none cursor-pointer"
                           onClick={() => setViewMode("list")}
                         >
                           <List className="h-4 w-4" />
@@ -747,34 +790,66 @@ export default function SellerInformationPage() {
                   </div>
 
                   {/* Category filters */}
-                  {categories.length > 0 && (
+                  {allCategories.length > 0 && (
                     <div className="flex flex-wrap gap-2 mb-6">
                       <Badge
-                        variant={
-                          selectedCategory === "all" ? "default" : "outline"
-                        }
-                        className="cursor-pointer"
-                        onClick={() => setSelectedCategory("all")}
+                        variant={selectedCategory === "all" ? "default" : "outline"}
+                        className="cursor-pointer hover:bg-primary/90 transition-colors px-4 py-1"
+                        onClick={() => {
+                          setSelectedCategory("all");
+                          setCurrentPage(1);
+                        }}
                       >
-                        All
+                        All Products 
                       </Badge>
-                      {categories.map((cat) => (
+                      {allCategories.map((cat) => (
                         <Badge
                           key={cat.id}
-                          variant={
-                            selectedCategory === cat.id ? "default" : "outline"
-                          }
-                          className="cursor-pointer"
-                          onClick={() => setSelectedCategory(cat.id)}
+                          variant={selectedCategory === cat.id ? "default" : "outline"}
+                          className="cursor-pointer hover:bg-primary/90 transition-colors px-4 py-1"
+                          onClick={() => {
+                            setSelectedCategory(cat.id);
+                            setCurrentPage(1);
+                          }}
                         >
-                          {cat.name} ({cat.count})
+                          {cat.name} 
                         </Badge>
                       ))}
                     </div>
                   )}
 
+                  {/* Loading categories indicator */}
+                  {loadingCategories && (
+                    <div className="flex items-center gap-2 mb-4">
+                      <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />
+                      <span className="text-sm text-muted-foreground">
+                        Loading categories...
+                      </span>
+                    </div>
+                  )}
+
+                  {/* Results info and filters */}
+                  <div className="flex items-center justify-between mb-4">
+                    <div className="flex items-center gap-4">
+                      
+                      {(searchTerm || selectedCategory !== "all") && (
+                        <Button
+                          variant="link"
+                          size="sm"
+                          onClick={clearAllFilters}
+                          className="h-auto p-0 text-xs"
+                        >
+                          Clear all filters
+                        </Button>
+                      )}
+                    </div>
+                    {loadingProducts && (
+                      <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />
+                    )}
+                  </div>
+
                   {/* Products grid/list */}
-                  <ScrollArea className="h-[600px] pr-4">
+                  <ScrollArea className="h-[500px] pr-4">
                     {loadingProducts ? (
                       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                         {[1, 2, 3, 4, 5, 6].map((i) => (
@@ -791,9 +866,16 @@ export default function SellerInformationPage() {
                       <div className="flex items-center justify-center h-40">
                         <div className="text-center">
                           <Package className="h-8 w-8 text-muted-foreground mx-auto mb-2" />
-                          <p className="text-muted-foreground">
-                            No products found
-                          </p>
+                          <p className="text-muted-foreground">No products found</p>
+                          {(searchTerm || selectedCategory !== "all") && (
+                            <Button
+                              variant="link"
+                              className="mt-2"
+                              onClick={clearAllFilters}
+                            >
+                              Clear filters
+                            </Button>
+                          )}
                         </div>
                       </div>
                     ) : viewMode === "grid" ? (
@@ -849,7 +931,7 @@ export default function SellerInformationPage() {
 
                                 <div className="flex items-center justify-between mb-2">
                                   <span className="text-lg font-bold text-primary">
-                                    $ {product.price.toFixed(2)}
+                                    ${product.price.toFixed(2)}
                                   </span>
                                   <Badge className={stockStatus.color}>
                                     {stockStatus.label}
@@ -950,7 +1032,7 @@ export default function SellerInformationPage() {
 
                                   <div className="flex items-center gap-4 text-xs">
                                     <span className="text-lg font-bold text-primary">
-                                      $ {product.price.toFixed(2)}
+                                      ${product.price.toFixed(2)}
                                     </span>
 
                                     <div className="flex items-center gap-1">
@@ -995,53 +1077,59 @@ export default function SellerInformationPage() {
 
                     {/* Pagination */}
                     {totalPages > 1 && (
-                      <div className="flex items-center justify-center gap-2 mt-6">
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={() =>
-                            setCurrentPage((p) => Math.max(1, p - 1))
-                          }
-                          disabled={currentPage === 1}
-                        >
-                          Previous
-                        </Button>
+                      <>
+                        <div className="flex items-center justify-center gap-2 mt-8 pt-4 border-t">
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
+                            disabled={currentPage === 1}
+                            className="cursor-pointer"
+                          >
+                            Previous
+                          </Button>
 
-                        {Array.from({ length: totalPages }, (_, i) => i + 1)
-                          .filter(
-                            (p) =>
-                              p === 1 ||
-                              p === totalPages ||
-                              Math.abs(p - currentPage) <= 2,
-                          )
-                          .map((p, i, arr) => (
-                            <React.Fragment key={p}>
-                              {i > 0 && arr[i - 1] !== p - 1 && (
-                                <span className="px-2">...</span>
-                              )}
-                              <Button
-                                variant={
-                                  currentPage === p ? "default" : "outline"
-                                }
-                                size="sm"
-                                onClick={() => setCurrentPage(p)}
-                              >
-                                {p}
-                              </Button>
-                            </React.Fragment>
-                          ))}
+                          <div className="flex items-center gap-1">
+                            {Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
+                              let pageNum;
+                              if (totalPages <= 5) {
+                                pageNum = i + 1;
+                              } else if (currentPage <= 3) {
+                                pageNum = i + 1;
+                              } else if (currentPage >= totalPages - 2) {
+                                pageNum = totalPages - 4 + i;
+                              } else {
+                                pageNum = currentPage - 2 + i;
+                              }
 
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={() =>
-                            setCurrentPage((p) => Math.min(totalPages, p + 1))
-                          }
-                          disabled={currentPage === totalPages}
-                        >
-                          Next
-                        </Button>
-                      </div>
+                              return (
+                                <Button
+                                  key={pageNum}
+                                  variant={currentPage === pageNum ? "default" : "outline"}
+                                  size="sm"
+                                  onClick={() => setCurrentPage(pageNum)}
+                                  className="cursor-pointer min-w-[32px]"
+                                >
+                                  {pageNum}
+                                </Button>
+                              );
+                            })}
+                          </div>
+
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
+                            disabled={currentPage === totalPages}
+                            className="cursor-pointer"
+                          >
+                            Next
+                          </Button>
+                        </div>
+                        <div className="text-center text-xs text-muted-foreground mt-2">
+                          Page {currentPage} of {totalPages}
+                        </div>
+                      </>
                     )}
                   </ScrollArea>
                 </TabsContent>
@@ -1067,7 +1155,7 @@ export default function SellerInformationPage() {
                       <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
                         <div className="bg-gray-50 rounded-lg p-4 text-center">
                           <p className="text-2xl font-bold text-primary">
-                            {productsTotal}
+                            {totalProductsCount}
                           </p>
                           <p className="text-xs text-muted-foreground">
                             Total Products
