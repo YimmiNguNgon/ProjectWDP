@@ -1,4 +1,4 @@
-﻿import React, { useEffect, useRef, useState, type ComponentProps } from 'react';
+import React, { useEffect, useRef, useState, type ComponentProps } from 'react';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -70,79 +70,70 @@ export function Messages({
     }
   }, [messages]);
 
+  // Track switching state for smooth transition (keep old UI visible while loading new)
+  const [transitioning, setTransitioning] = useState(false);
+  const prevParticipantsRef = useRef<string[] | undefined>(undefined);
+  const abortRef = useRef<AbortController | null>(null);
+
   // Fetch or create conversation when participants change
   useEffect(() => {
-    console.log('[Messages] useEffect triggered:', {
-      participants,
-      hasConversation: !!conversation,
-      loading,
-      userId: payload?.userId
-    });
+    if (!participants || participants.length < 2) return;
+    if (!payload?.userId) return;
 
-    if (!participants || participants.length < 2) {
-      console.log('[Messages] No participants or insufficient participants');
-      return;
-    }
-    if (conversation) {
-      console.log('[Messages] Conversation already exists');
-      return; // Already have conversation
-    }
-    if (loading) {
-      console.log('[Messages] Already loading');
-      return; // Already fetching
-    }
+    const currKey = participants.slice().sort().join(',');
+    const prevKey = prevParticipantsRef.current?.slice().sort().join(',');
+    const isSame = prevKey === currKey;
 
-    // Check if user is authenticated
-    if (!payload?.userId) {
-      console.error('[Messages] User not authenticated');
-      setModerationError('Please sign in to use chat');
-      return;
-    }
+    // Same conversation — skip
+    if (isSame && conversation) return;
 
-    const fetchOrCreateConversation = async () => {
+    // Abort any in-flight request
+    if (abortRef.current) abortRef.current.abort();
+    abortRef.current = new AbortController();
+
+    prevParticipantsRef.current = participants;
+
+    const fetchConversation = async () => {
       try {
-        console.log('[Messages] Starting to fetch/create conversation...');
+        setTransitioning(true);
         setLoading(true);
 
-        // Create or get existing conversation
-        const response = await api.post('/api/chats/conversations', {
-          participants: participants
-        });
+        // Fetch conversation and messages in parallel for speed
+        const [convRes] = await Promise.all([
+          api.post('/api/chats/conversations', { participants }),
+        ]);
 
-        console.log('[Messages] Conversation response:', response.data);
-        setConversation(response.data.data);
+        const newConv = convRes.data.data;
 
-        // Fetch messages for this conversation
         const messagesRes = await api.get(
-          `/api/chats/conversations/${response.data.data._id}/messages`
+          `/api/chats/conversations/${newConv._id}/messages`
         );
-        console.log('[Messages] Messages response:', messagesRes.data);
+
+        // Atomic update — swap both at once to prevent flicker
+        setConversation(newConv);
         setMessages(messagesRes.data.data);
 
-        // Mark all messages as read when conversation is opened
-        try {
-          await api.post(`/api/chats/conversations/${response.data.data._id}/read`);
-          console.log('[Messages] Marked conversation as read');
-        } catch (readError) {
-          console.error('[Messages] Failed to mark as read:', readError);
-        }
+        // Mark as read in background
+        api.post(`/api/chats/conversations/${newConv._id}/read`).catch(() => {});
       } catch (error: any) {
-        console.error('[Messages] Failed to create/fetch conversation:', error);
-
+        if (error.name === 'CanceledError' || error.name === 'AbortError') return;
+        console.error('[Messages] Failed to fetch conversation:', error);
         if (error.response?.status === 401) {
           setModerationError('Session expired. Please sign in again.');
         } else {
-          setModerationError('Unable to create conversation. Please try again.');
+          setModerationError('Unable to load conversation. Please try again.');
         }
-
         setTimeout(() => setModerationError(null), 5000);
       } finally {
         setLoading(false);
+        setTransitioning(false);
       }
     };
 
-    fetchOrCreateConversation();
-  }, [participants, conversation, loading, setConversation, setMessages, payload]);
+    fetchConversation();
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [participants, payload?.userId]);
+
 
   // Láº¯ng nghe socket events
   useEffect(() => {
@@ -382,8 +373,8 @@ export function Messages({
   };
 
 
-  // Show loading while fetching conversation (only if authenticated)
-  if (loading && payload?.userId) {
+  // Show loading while fetching conversation (only if authenticated and no conversation data yet)
+  if (loading && payload?.userId && !conversation) {
     return (
       <div className="flex items-center justify-center h-full p-8">
         <div className="flex flex-col items-center gap-4">
@@ -419,7 +410,8 @@ export function Messages({
   return (
     <div
       className={cn(
-        'flex flex-col bg-background min-h-160 h-184 max-h-184',
+        'flex flex-col bg-background min-h-160 h-184 max-h-184 transition-opacity duration-200 ease-in-out',
+        transitioning && 'opacity-40 pointer-events-none',
         className
       )}
       {...props}

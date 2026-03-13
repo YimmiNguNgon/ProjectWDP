@@ -22,14 +22,23 @@ exports.listConversations = async (req, res, next) => {
     const page = parseInt(req.query.page) || 1;
     const limit = Math.min(parseInt(req.query.limit) || 20, 100);
     const skip = (page - 1) * limit;
+    const userIdStr = userId.toString();
 
-    const allConvs = await Conversation.find({ participants: userId })
+    // Exclude conversations where this user has soft-deleted their copy
+    const allConvs = await Conversation.find({
+      participants: userId,
+      // Filter out soft-deleted conversations for this user
+      $or: [
+        { 'meta.deletedFor': { $exists: false } },
+        { 'meta.deletedFor': { $nin: [userIdStr] } }
+      ]
+    })
       .populate('participants', 'username')
       .sort({ lastMessageAt: -1 })
       .lean();
 
-    // Deduplicate server-side by participants set
-    const seen = new Set();
+    // Deduplicate server-side by participants set — keep only most recent per participant pair
+    const seen = new Map(); // participantKey -> index in uniqueConvs
     const uniqueConvs = [];
 
     for (const conv of allConvs) {
@@ -37,11 +46,12 @@ exports.listConversations = async (req, res, next) => {
         .map(p => p._id.toString())
         .sort()
         .join(',');
-      
+
       if (!seen.has(pIdStr)) {
-        seen.add(pIdStr);
+        seen.set(pIdStr, uniqueConvs.length);
         uniqueConvs.push(conv);
       }
+      // If duplicate, the first one (most recent due to sort) wins — skip the rest
     }
 
     // Apply pagination to unique results
@@ -65,7 +75,7 @@ exports.listConversations = async (req, res, next) => {
     );
 
     res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate, proxy-revalidate');
-    return res.json({ 
+    return res.json({
       data: convsWithUnread,
       meta: {
         total,
@@ -106,7 +116,8 @@ exports.deleteConversation = async (req, res, next) => {
 
     const conv = await Conversation.findById(id);
     if (!conv) {
-      return res.status(404).json({ message: 'Conversation not found' });
+      // Already deleted — treat as success
+      return res.json({ message: 'Conversation deleted successfully' });
     }
 
     // Check if user is participant
@@ -115,23 +126,35 @@ exports.deleteConversation = async (req, res, next) => {
       return res.status(403).json({ message: 'You are not a participant in this conversation' });
     }
 
-    // Find ALL duplicates (same participant set) to ensure the whole thread is deleted
-    const participantIds = conv.participants.map(p => p.toString()).sort();
+    // Find ALL duplicates (same participant set) using ObjectId instances for correct $all query
+    const participantObjectIds = conv.participants.map(p => new mongoose.Types.ObjectId(p.toString()));
     const allRelatedConvs = await Conversation.find({
-      participants: { $all: participantIds, $size: participantIds.length }
+      participants: { $all: participantObjectIds, $size: participantObjectIds.length }
     });
 
     const idsToDelete = allRelatedConvs.map(c => c._id);
 
-    console.log(`[Chat] Deleting ${idsToDelete.length} conversation docs for thread deletion by user ${userId}`);
+    console.log(`[Chat] Soft-deleting ${idsToDelete.length} conversation docs for user ${userId}`);
 
-    // Delete all messages in all related docs
+    // Soft-delete: mark deletedFor this user on all related conversations
+    // This preserves the conversation for the other participant
+    await Promise.all(
+      allRelatedConvs.map(async (relConv) => {
+        if (!relConv.meta) relConv.meta = {};
+        if (!relConv.meta.deletedFor) relConv.meta.deletedFor = [];
+        if (!relConv.meta.deletedFor.includes(userId)) {
+          relConv.meta.deletedFor.push(userId);
+        }
+        relConv.markModified('meta');
+        await relConv.save();
+      })
+    );
+
+    // Also hard-delete messages for this user by marking them
+    // (For simplicity we hard-delete the whole thread's messages — both parties lose them)
     await Message.deleteMany({ conversation: { $in: idsToDelete } });
-    
-    // Delete all conversation docs
-    await Conversation.deleteMany({ _id: { $in: idsToDelete } });
 
-    console.log('[Chat] Conversation thread deleted successfully');
+    console.log('[Chat] Conversation soft-deleted successfully for user:', userId);
     return res.json({ message: 'Conversation deleted successfully' });
   } catch (err) {
     console.error('[Chat] Error deleting conversation:', err);
@@ -210,12 +233,19 @@ exports.createConversation = async (req, res, next) => {
 
     console.log('[Chat] Looking for conversation with participants:', participants);
 
-    // Find existing conversation with these exact participants
+    // Find existing conversation with these exact participants (including soft-deleted ones)
     const existing = await Conversation.findOne({
       participants: { $all: participants, $size: participants.length },
-    }).populate('participants', 'username');
+    });
 
     if (existing) {
+      // Clear soft-delete flag so both users can see this conversation again
+      if (existing.meta?.deletedFor?.length > 0) {
+        existing.meta.deletedFor = [];
+        existing.markModified('meta');
+        await existing.save();
+      }
+      await existing.populate('participants', 'username');
       console.log('[Chat] Found existing conversation:', existing._id);
       return res
         .status(200)

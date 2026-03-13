@@ -112,7 +112,7 @@ export default function ConversationList() {
   };
 
   const handleConversationClick = (conversation: Conversation) => {
-    // Set participants to open conversation
+    // Set new participants → triggers fetch in Messages component
     setParticipants(conversation.participants.map((p) => p._id));
 
     // Immediately clear unread count in local state for instant feedback

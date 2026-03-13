@@ -205,6 +205,12 @@ class FeedbackRevisionService {
                     });
                     console.log(`Created new conversation for revision request: ${conversation._id}`);
                 } else {
+                    // Clear soft-delete flag so conversation reappears for both users after new message
+                    if (conversation.meta?.deletedFor?.length > 0) {
+                        conversation.meta.deletedFor = [];
+                        conversation.markModified('meta');
+                        await conversation.save();
+                    }
                     console.log(`Using existing conversation: ${conversation._id}`);
                 }
 
