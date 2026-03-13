@@ -34,6 +34,7 @@ const TYPE_ICONS: Record<string, string> = {
     delivery_dispute_responded: "\uD83D\uDCAC",
     delivery_dispute_admin: "\uD83D\uDEA8",
     delivery_dispute_admin_replied: "\uD83D\uDCDD",
+    feedback_revision_request: "\u2B50", // Star icon for feedback
 };
 
 function timeAgo(dateStr: string): string {

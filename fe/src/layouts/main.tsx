@@ -319,7 +319,7 @@ const MY_EBAY_ITEMS = [
   { label: "Bids/Offers", to: "#" },
   { label: "Watchlist", to: "activity/watchlist" },
   { label: "Purchase History", to: "activity/purchases" },
-  { label: "Feedback Requests", to: "/buyer/feedback-requests" },
+  { label: "Feedback Requests", to: "feedback-requests" },
   { label: "Buy Again", to: "#" },
   { label: "--- Selling ---", to: "", disabled: true }, // Section divider
   { label: "My Listings", to: "/seller/my-listings" },

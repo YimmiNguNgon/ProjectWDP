@@ -1,5 +1,4 @@
 import { useEffect, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -27,7 +26,6 @@ import { getBuyerRequests, respondToRequest, applyRevision } from '@/api/feedbac
 import { formatDateTime } from '@/lib/utils';
 
 export default function BuyerFeedbackRequestsPage() {
-    const navigate = useNavigate();
     const [requests, setRequests] = useState<any[]>([]);
     const [loading, setLoading] = useState(true);
 
@@ -38,6 +36,7 @@ export default function BuyerFeedbackRequestsPage() {
 
     // Edit feedback state
     const [editDialogOpen, setEditDialogOpen] = useState(false);
+    const [editingRequestId, setEditingRequestId] = useState<string | null>(null);
     const [newRating, setNewRating] = useState(5);
     const [newComment, setNewComment] = useState('');
 
@@ -72,21 +71,32 @@ export default function BuyerFeedbackRequestsPage() {
                 message: 'I will revise my feedback'
             });
 
-            toast.success('Request accepted');
+            toast.success('Request accepted! Please revise your feedback below.');
+
+            // Save the requestId before closing/reloading so edit dialog can use it
+            const reqId = selectedRequest._id;
+            const currentReview = selectedRequest.review;
             setDialogOpen(false);
+            await loadRequests();
 
-            // Open edit dialog
-            setNewRating(selectedRequest.review?.rating || 5);
-            setNewComment(selectedRequest.review?.comment || '');
+            // Open edit dialog with saved state
+            setEditingRequestId(reqId);
+            setNewRating(currentReview?.rating || 5);
+            setNewComment(currentReview?.comment || '');
             setEditDialogOpen(true);
-
-            loadRequests();
         } catch (err: any) {
             console.error(err);
             toast.error(err.response?.data?.message || 'Failed to accept request');
         } finally {
             setResponding(false);
         }
+    };
+
+    const openEditDialog = (request: any) => {
+        setEditingRequestId(request._id);
+        setNewRating(request.review?.rating || 5);
+        setNewComment(request.review?.comment || '');
+        setEditDialogOpen(true);
     };
 
     const handleDecline = async () => {
@@ -111,7 +121,7 @@ export default function BuyerFeedbackRequestsPage() {
     };
 
     const handleSubmitRevision = async () => {
-        if (!selectedRequest) return;
+        if (!editingRequestId) return;
 
         if (newRating < 1 || newRating > 5) {
             toast.error('Rating must be between 1 and 5');
@@ -119,13 +129,14 @@ export default function BuyerFeedbackRequestsPage() {
         }
 
         try {
-            await applyRevision(selectedRequest._id, {
+            await applyRevision(editingRequestId, {
                 rating: newRating,
                 comment: newComment
             });
 
-            toast.success('Feedback revised successfully');
+            toast.success('Feedback revised successfully!');
             setEditDialogOpen(false);
+            setEditingRequestId(null);
             loadRequests();
         } catch (err: any) {
             console.error(err);
@@ -218,13 +229,25 @@ export default function BuyerFeedbackRequestsPage() {
                                                 )}
                                             </TableCell>
                                             <TableCell>
-                                                <Button
-                                                    variant="outline"
-                                                    size="sm"
-                                                    onClick={() => handleViewRequest(request)}
-                                                >
-                                                    View
-                                                </Button>
+                                                <div className="flex gap-2">
+                                                    <Button
+                                                        variant="outline"
+                                                        size="sm"
+                                                        onClick={() => handleViewRequest(request)}
+                                                    >
+                                                        View
+                                                    </Button>
+                                                    {request.status === 'accepted' && (
+                                                        <Button
+                                                            size="sm"
+                                                            className="bg-yellow-500 hover:bg-yellow-600 text-white"
+                                                            onClick={() => openEditDialog(request)}
+                                                        >
+                                                            <Star className="w-3 h-3 mr-1" />
+                                                            Revise
+                                                        </Button>
+                                                    )}
+                                                </div>
                                             </TableCell>
                                         </TableRow>
                                     ))}

@@ -190,7 +190,7 @@ export default function SellerFeedbackPage() {
                             <TableHead>Buyer</TableHead>
                             <TableHead>Rating</TableHead>
                             <TableHead>Type</TableHead>
-                            <TableHead>Comment</TableHead>
+                            <TableHead>Comment & Response</TableHead>
                             <TableHead>Date</TableHead>
                             <TableHead>Status</TableHead>
                             <TableHead>Actions</TableHead>
@@ -219,7 +219,7 @@ export default function SellerFeedbackPage() {
                                         {review.type}
                                     </Badge>
                                 </TableCell>
-                                <TableCell className="max-w-md">
+                                <TableCell className="max-w-xs">
                                     <div className="truncate" title={review.comment}>
                                         {review.comment || 'No comment'}
                                     </div>
@@ -227,6 +227,13 @@ export default function SellerFeedbackPage() {
                                         <Badge variant="outline" className="mt-1 text-xs">
                                             Revised
                                         </Badge>
+                                    )}
+                                    {/* Show seller reply if exists */}
+                                    {review.sellerResponse && (
+                                        <div className="mt-2 p-2 bg-blue-50 border border-blue-100 rounded text-xs">
+                                            <span className="font-semibold text-blue-700 block mb-0.5">Your reply:</span>
+                                            <span className="text-gray-700 line-clamp-2">{review.sellerResponse}</span>
+                                        </div>
                                     )}
                                 </TableCell>
                                 <TableCell className="text-sm text-gray-600">
@@ -243,18 +250,16 @@ export default function SellerFeedbackPage() {
                                 </TableCell>
                                 <TableCell>
                                     <div className="flex gap-2">
-                                        {/* Reply Button - Always show for neutral/negative */}
-                                        {(review.type === 'neutral' || review.type === 'negative') && (
-                                            <Button
-                                                size="sm"
-                                                variant={review.sellerResponse ? "secondary" : "default"}
-                                                onClick={() => handleReply(review)}
-                                                className="gap-1"
-                                            >
-                                                <MessageCircle className="w-3 h-3" />
-                                                {review.sellerResponse ? 'Edit Reply' : 'Reply'}
-                                            </Button>
-                                        )}
+                                        {/* Reply Button - show for all reviews */}
+                                        <Button
+                                            size="sm"
+                                            variant={review.sellerResponse ? "secondary" : "default"}
+                                            onClick={() => handleReply(review)}
+                                            className="gap-1"
+                                        >
+                                            <MessageCircle className="w-3 h-3" />
+                                            {review.sellerResponse ? 'Edit Reply' : 'Reply'}
+                                        </Button>
 
                                         {/* Request Revision Button */}
                                         {!review.revisionRequested && (

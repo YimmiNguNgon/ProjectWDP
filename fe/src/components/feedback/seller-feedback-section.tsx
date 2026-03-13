@@ -1,4 +1,4 @@
-﻿import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import api from "@/lib/axios";
 import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
@@ -64,6 +64,8 @@ type SellerReviewApi = {
   rating2?: number;
   rating3?: number;
   rating4?: number;
+  sellerResponse?: string;
+  sellerResponseAt?: string;
 };
 
 type SellerReviewsResponse = {
@@ -508,7 +510,14 @@ export function SellerFeedbackSection({
 
                               <p className="mt-1 leading-snug">{fb.comment}</p>
 
-                              <p className="mt-1 text-[11px] text-muted-foreground">
+                              {fb.sellerResponse && (
+                                <div className="mt-2 bg-muted/50 p-2 border-l-2 border-primary rounded-sm">
+                                  <p className="text-[11px] font-semibold text-primary mb-1">Seller reply:</p>
+                                  <p className="text-xs text-muted-foreground italic leading-snug">{fb.sellerResponse}</p>
+                                </div>
+                              )}
+
+                              <p className="mt-2 text-[11px] text-muted-foreground">
                                 {fb.product.title}
                               </p>
 
@@ -518,8 +527,8 @@ export function SellerFeedbackSection({
                             </div>
                           </div>
 
-                          <div className="whitespace-nowrap text-[11px] text-muted-foreground">
-                            {fb.verifiedPurchase && "Verified purchase"}
+                          <div className="whitespace-nowrap text-[11px] text-muted-foreground flex flex-col items-end gap-1">
+                            {fb.verifiedPurchase && <span>Verified purchase</span>}
                           </div>
                         </div>
                       </div>

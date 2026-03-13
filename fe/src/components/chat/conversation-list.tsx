@@ -79,9 +79,13 @@ export default function ConversationList() {
     };
 
     socket.on('conversation_read', handleReadUpdate);
+    socket.on('new_message', () => {
+      fetchConversations(); // Refresh list when new message arrives
+    });
 
     return () => {
       socket.off('conversation_read', handleReadUpdate);
+      socket.off('new_message');
     };
   }, [fetchConversations]);
 

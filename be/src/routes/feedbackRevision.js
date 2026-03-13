@@ -102,10 +102,7 @@ router.delete('/request/:id', auth, async (req, res) => {
  */
 router.get('/buyer/requests', auth, async (req, res) => {
     try {
-        if (req.user.role !== 'buyer') {
-            return res.status(403).json({ message: 'Forbidden' });
-        }
-
+        // Any authenticated user can view their requests as a buyer
         const { status, limit, skip } = req.query;
 
         const requests = await feedbackRevisionService.getBuyerRequests(req.user._id, {
@@ -127,10 +124,7 @@ router.get('/buyer/requests', auth, async (req, res) => {
  */
 router.post('/request/:id/respond', auth, async (req, res) => {
     try {
-        if (req.user.role !== 'buyer') {
-            return res.status(403).json({ message: 'Forbidden' });
-        }
-
+        // Any authenticated user can respond to their requests as a buyer
         const { responseType, message } = req.body;
 
         if (!responseType || !['accepted', 'declined'].includes(responseType)) {
@@ -160,10 +154,7 @@ router.post('/request/:id/respond', auth, async (req, res) => {
  */
 router.post('/request/:id/apply', auth, async (req, res) => {
     try {
-        if (req.user.role !== 'buyer') {
-            return res.status(403).json({ message: 'Forbidden' });
-        }
-
+        // Any authenticated user can apply revisions to their reviews
         const { rating, comment } = req.body;
 
         if (!rating || rating < 1 || rating > 5) {

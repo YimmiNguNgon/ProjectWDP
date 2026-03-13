@@ -360,6 +360,10 @@ async function start() {
   const notificationService = require("./services/notificationService");
   notificationService.setIO(io);
 
+  // Pass io to feedbackRevisionService
+  const feedbackRevisionService = require("./services/feedbackRevisionService");
+  feedbackRevisionService.setIO(io);
+
   server.listen(PORT, () => {
     console.log(`✅ Server is running on port ${PORT}`);
     console.log(`✅ Socket.IO is ready for real-time messaging`);

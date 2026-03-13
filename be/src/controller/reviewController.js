@@ -577,7 +577,7 @@ exports.getMySellerReviews = async (req, res, next) => {
     const limit = Math.min(parseInt(req.query.limit) || 50, 200);
     const skip = (page - 1) * limit;
 
-    const rows = await Review.find({ seller: sellerId, deletedAt: { $exists: false } })
+    const rows = await Review.find({ seller: sellerId, deletedAt: null })
       .sort({ createdAt: -1 })
       .skip(skip)
       .limit(limit)
@@ -585,7 +585,7 @@ exports.getMySellerReviews = async (req, res, next) => {
       .populate('reviewer', 'username avatarUrl')
       .lean();
 
-    const total = await Review.countDocuments({ seller: sellerId, deletedAt: { $exists: false } });
+    const total = await Review.countDocuments({ seller: sellerId, deletedAt: null });
 
     return res.json({ data: rows, total, page, limit });
   } catch (err) {
@@ -593,6 +593,31 @@ exports.getMySellerReviews = async (req, res, next) => {
   }
 };
 
+// ----------------- SELLER: XÓA PHẢN HỒI REVIEW -----------------
+exports.deleteSellerResponse = async (req, res, next) => {
+  try {
+    const { reviewId } = req.params;
+    const sellerId = req.user._id;
+
+    if (!mongoose.isValidObjectId(reviewId)) {
+      return res.status(400).json({ message: 'Invalid review id' });
+    }
+
+    const review = await Review.findById(reviewId);
+    if (!review) return res.status(404).json({ message: 'Review not found' });
+    if (!review.seller || review.seller.toString() !== sellerId.toString()) {
+      return res.status(403).json({ message: 'Bạn không có quyền xóa phản hồi này' });
+    }
+
+    review.sellerResponse = undefined;
+    review.sellerResponseAt = undefined;
+    await review.save();
+
+    return res.json({ message: 'Đã xóa phản hồi' });
+  } catch (err) {
+    return next(err);
+  }
+};
 // ----------------- SELLER: PHẢN HỒI REVIEW -----------------
 exports.addSellerResponse = async (req, res, next) => {
   try {

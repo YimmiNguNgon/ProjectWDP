@@ -55,6 +55,12 @@ export default function BuyingSidebar() {
           Saved searches
         </Link>
         <Link
+          to="/my-ebay/feedback-requests"
+          className={linkClass("/my-ebay/feedback-requests")}
+        >
+          Feedback requests
+        </Link>
+        <Link
           to="/my-ebay/saved-sellers"
           className={linkClass("/my-ebay/saved-sellers")}
         >

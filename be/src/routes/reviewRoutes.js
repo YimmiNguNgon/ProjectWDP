@@ -15,6 +15,7 @@ router.get("/admin/all", protectedRoute, reviewController.getAdminReviews);
 
 // Seller: phản hồi review
 router.post("/:reviewId/seller-response", protectedRoute, reviewController.addSellerResponse);
+router.delete("/:reviewId/seller-response", protectedRoute, reviewController.deleteSellerResponse);
 
 // Protected routes
 router.post("/", protectedRoute, reviewController.createReview);

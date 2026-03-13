@@ -2,12 +2,25 @@ const FeedbackRevisionRequest = require('../models/FeedbackRevisionRequest');
 const Review = require('../models/Review');
 const User = require('../models/User');
 const Order = require('../models/Order');
+const notificationService = require('./notificationService');
+const Conversation = require('../models/Conversation');
+const Message = require('../models/Message');
 
 /**
  * Feedback Revision Service (eBay-style)
  * Handles seller requests to revise buyer feedback
  */
 class FeedbackRevisionService {
+    constructor() {
+        this.io = null;
+    }
+
+    /**
+     * Set Socket.IO instance for real-time updates
+     */
+    setIO(io) {
+        this.io = io;
+    }
 
     /**
      * Extortion/Violation keywords
@@ -151,9 +164,86 @@ class FeedbackRevisionService {
             review.revisionRequest = request._id;
             await review.save();
 
+            // 7. Notify buyer via in-app notification
+            const seller = await User.findById(sellerId).select('username').lean();
+            try {
+                await notificationService.sendNotification({
+                    recipientId: review.reviewer,
+                    type: 'feedback_revision_request',
+                    title: 'A seller requests you to revise your feedback',
+                    body: `${seller?.username || 'A seller'} is requesting you to revise your rating/comment on your order. Reason: ${reason.replace(/_/g, ' ')}`,
+                    link: '/my-ebay/feedback-requests',
+                    metadata: {
+                        requestId: request._id,
+                        reviewId: reviewId
+                    }
+                });
+            } catch (notifyErr) {
+                console.error('Failed to send revision notification to buyer:', notifyErr.message);
+            }
+
             console.log(`Revision request created: ${request._id}`);
             if (!validation.isValid) {
                 console.warn(`Request flagged for review: ${validation.flagReason}`);
+            }
+
+            // 8. Also send a Message via chat
+            try {
+                // Find or create conversation
+                const participants = [sellerId.toString(), review.reviewer.toString()].sort();
+                let conversation = await Conversation.findOne({
+                    participants: { $all: participants, $size: participants.length }
+                });
+
+                if (!conversation) {
+                    conversation = await Conversation.create({ participants });
+                }
+
+                // Create message text
+                const messageText = `SYSTEM: I've sent a feedback revision request for your order. Reason: ${reason.replace(/_/g, ' ')}. Message: ${message}`;
+
+                const chatMsg = await Message.create({
+                    conversation: conversation._id,
+                    sender: sellerId,
+                    text: messageText,
+                    productRef: review.product
+                });
+
+                // Update conversation metadata
+                await Conversation.findByIdAndUpdate(conversation._id, {
+                    lastMessageAt: chatMsg.createdAt,
+                    lastMessage: chatMsg._id
+                });
+
+                // Populate productRef for consistent socket payload
+                await chatMsg.populate('productRef');
+
+                // Emit via socket if available
+                if (this.io) {
+                    this.io.to(conversation._id.toString()).emit('new_message', {
+                        id: chatMsg._id,
+                        conversationId: conversation._id,
+                        sender: sellerId,
+                        text: messageText,
+                        productRef: chatMsg.productRef,
+                        createdAt: chatMsg.createdAt
+                    });
+                }
+                
+                // Also notify the user via notificationService (persistent + realtime)
+                await notificationService.sendNotification({
+                    recipientId: review.reviewer,
+                    type: 'new_message',
+                    title: 'New message from seller',
+                    body: messageText.substring(0, 100),
+                    link: '/my-ebay/messages',
+                    metadata: { 
+                        conversationId: conversation._id, 
+                        senderId: sellerId 
+                    }
+                });
+            } catch (msgErr) {
+                console.error('Failed to send revision message to chat:', msgErr.message);
             }
 
             return request;
