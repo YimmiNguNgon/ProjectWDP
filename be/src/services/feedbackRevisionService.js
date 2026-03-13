@@ -136,12 +136,13 @@ class FeedbackRevisionService {
             // 4. Validate message for violations
             const validation = this.validateMessage(message);
 
-            // 5. Create request
+            // 5. Create request — safely access review.order._id (may be null if order deleted)
+            const orderId = review.order?._id || review.order || null;
             const requestData = {
                 review: reviewId,
                 seller: sellerId,
                 buyer: review.reviewer,
-                order: review.order._id,
+                order: orderId,
                 reason,
                 message,
                 resolutionType,
@@ -189,24 +190,32 @@ class FeedbackRevisionService {
 
             // 8. Also send a Message via chat
             try {
-                // Find or create conversation
-                const participants = [sellerId.toString(), review.reviewer.toString()].sort();
+                // Find or create conversation — use ObjectId instances for correct $all query
+                const mongoose = require('mongoose');
+                const sellerObjId = new mongoose.Types.ObjectId(sellerId.toString());
+                const reviewerObjId = new mongoose.Types.ObjectId(review.reviewer.toString());
+
                 let conversation = await Conversation.findOne({
-                    participants: { $all: participants, $size: participants.length }
+                    participants: { $all: [sellerObjId, reviewerObjId], $size: 2 }
                 });
 
                 if (!conversation) {
-                    conversation = await Conversation.create({ participants });
+                    conversation = await Conversation.create({
+                        participants: [sellerObjId, reviewerObjId]
+                    });
+                    console.log(`Created new conversation for revision request: ${conversation._id}`);
+                } else {
+                    console.log(`Using existing conversation: ${conversation._id}`);
                 }
 
                 // Create message text
-                const messageText = `SYSTEM: I've sent a feedback revision request for your order. Reason: ${reason.replace(/_/g, ' ')}. Message: ${message}`;
+                const messageText = `[Feedback Revision Request] Seller has sent you a revision request. Reason: ${reason.replace(/_/g, ' ')}. Message: ${message}`;
 
                 const chatMsg = await Message.create({
                     conversation: conversation._id,
                     sender: sellerId,
                     text: messageText,
-                    productRef: review.product
+                    productRef: review.product || null
                 });
 
                 // Update conversation metadata
@@ -228,22 +237,26 @@ class FeedbackRevisionService {
                         productRef: chatMsg.productRef,
                         createdAt: chatMsg.createdAt
                     });
+                    console.log(`Socket message emitted to room: ${conversation._id}`);
+                } else {
+                    console.warn('Socket IO not available — message saved but not emitted in realtime');
                 }
-                
-                // Also notify the user via notificationService (persistent + realtime)
+
+                // Also notify the buyer via notificationService (persistent + realtime)
                 await notificationService.sendNotification({
                     recipientId: review.reviewer,
                     type: 'new_message',
                     title: 'New message from seller',
-                    body: messageText.substring(0, 100),
+                    body: `Seller sent a feedback revision request: ${reason.replace(/_/g, ' ')}`,
                     link: '/my-ebay/messages',
-                    metadata: { 
-                        conversationId: conversation._id, 
-                        senderId: sellerId 
+                    metadata: {
+                        conversationId: conversation._id,
+                        senderId: sellerId
                     }
                 });
+                console.log(`Revision chat message sent successfully for request: ${request._id}`);
             } catch (msgErr) {
-                console.error('Failed to send revision message to chat:', msgErr.message);
+                console.error('Failed to send revision message to chat:', msgErr.message, msgErr.stack);
             }
 
             return request;

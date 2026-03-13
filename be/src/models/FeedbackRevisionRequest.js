@@ -31,7 +31,7 @@ const feedbackRevisionRequestSchema = new mongoose.Schema({
     order: {
         type: mongoose.Schema.Types.ObjectId,
         ref: 'Order',
-        required: true
+        required: false
     },
 
     // Request details
