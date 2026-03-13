@@ -16,6 +16,7 @@ import {
   MessageSquare,
   XCircle,
   Flag,
+  ShieldAlert,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
@@ -696,6 +697,20 @@ export default function OrderDetailsPage() {
               </div>
 
               {/* ─── Delivery Confirmation Actions ─── */}
+              <div className="mt-4 flex flex-wrap gap-2">
+                {[ "shipping", "delivered", "completed" ].includes(subOrder.status.toLowerCase()) && (
+                    <Button
+                        variant="outline"
+                        size="sm"
+                        className="text-amber-600 border-amber-200 hover:bg-amber-50 hover:text-amber-700 h-9"
+                        onClick={() => navigate(`/purchases/${subOrder._id}/complaint`)}
+                    >
+                        <ShieldAlert className="h-4 w-4 mr-1.5" />
+                        Report an issue / Complaint
+                    </Button>
+                )}
+              </div>
+
               {subOrder.status === "delivered" &&
                 (() => {
                   const dispute = disputes[subOrder._id];

@@ -19,5 +19,11 @@ router.post('/dispute-images', protectedRoute, upload.array('images', 5), upload
 // Upload report evidence image (buyer, single image)
 router.post('/report-evidence', protectedRoute, upload.single('evidence'), uploadReportEvidence);
 
+// Upload refund request images (buyer, max 5)
+router.post('/refund-images', protectedRoute, upload.array('images', 5), uploadDisputeImages);
+
+// Upload complaint images (buyer/seller, max 3)
+router.post('/complaint-images', protectedRoute, upload.array('images', 3), uploadDisputeImages);
+
 module.exports = router;
 

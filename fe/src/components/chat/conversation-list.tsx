@@ -1,4 +1,4 @@
-﻿import { useMessage, type Conversation } from '@/hooks/use-message';
+import { useMessage, type Conversation } from '@/hooks/use-message';
 import api from '@/lib/axios';
 import React from 'react';
 import { Checkbox } from '@/components/ui/checkbox';
@@ -22,7 +22,7 @@ import { useAuth } from '@/hooks/use-auth';
 import socket from '@/lib/socket';
 
 export default function ConversationList() {
-  const { setParticipants } = useMessage();
+  const { setParticipants, conversation: activeConv, setConversation } = useMessage();
   const [search, setSearch] = React.useState('');
   const [conversations, setConversations] = React.useState<Conversation[]>([]);
   const [selected, setSelected] = React.useState<string[]>([]);
@@ -138,6 +138,12 @@ export default function ConversationList() {
       setConversations((prev) =>
         prev.filter((c) => !selected.includes(c._id))
       );
+      // If the currently active conversation was deleted, clear it
+      if (activeConv && selected.includes(activeConv._id)) {
+        setParticipants([]);
+        setConversation(undefined);
+      }
+
       setSelected([]);
 
       console.log('[ConversationList] Conversations deleted successfully');

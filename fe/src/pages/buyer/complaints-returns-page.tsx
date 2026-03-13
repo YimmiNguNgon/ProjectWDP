@@ -85,7 +85,7 @@ export default function ComplaintsReturnsPage() {
                                     </div>
                                     <div className="flex items-center sm:items-end">
                                         <Link 
-                                            to={`/my-ebay/activity/purchases/${r.order?._id || r.order}/return`}
+                                            to={`/purchases/${typeof r.order === 'object' ? r.order._id : r.order}/return`}
                                             className="text-blue-600 hover:underline text-sm font-medium flex items-center gap-1"
                                         >
                                             View Details <ArrowRight className="h-4 w-4" />

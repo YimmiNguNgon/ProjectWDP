@@ -47,12 +47,22 @@ const refundRequestSchema = new mongoose.Schema(
             required: true,
         },
         description: { type: String, default: "" },
+        images: {
+            type: [String],
+            default: []
+        },
 
         // Ai lỗi → ảnh hưởng Trust Score
         faultType: {
             type: String,
             enum: ["SELLER_FAULT", "BUYER_FAULT", "LOGISTICS_FAULT", "PENDING_REVIEW"],
             default: "PENDING_REVIEW",
+        },
+
+        receivedCondition: {
+            type: String,
+            enum: ["SELLABLE", "OPENED", "DAMAGED", "PENDING"],
+            default: "PENDING",
         },
 
         status: {

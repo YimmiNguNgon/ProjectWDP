@@ -10,6 +10,10 @@ import { Badge } from "@/components/ui/badge";
 import { toast } from "sonner";
 import { ArrowLeft, AlertCircle } from "lucide-react";
 
+import { Input } from "@/components/ui/input";
+import { X, ImagePlus } from "lucide-react";
+
+// Add below imports:
 const RETURN_REASONS = [
     "ITEM_NOT_RECEIVED",
     "ITEM_DAMAGED",
@@ -38,6 +42,9 @@ export default function ReturnItemPage() {
     // Request form state
     const [reason, setReason] = useState("");
     const [description, setDescription] = useState("");
+    const [images, setImages] = useState<File[]>([]);
+    const [imagePreviews, setImagePreviews] = useState<string[]>([]);
+    const [uploadingImages, setUploadingImages] = useState(false);
 
     // Existing refund request state
     const [existingRefund, setExistingRefund] = useState<any>(null);
@@ -61,6 +68,50 @@ export default function ReturnItemPage() {
         }
     };
 
+    const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+        const files = Array.from(e.target.files || []);
+        if (images.length + files.length > 5) {
+            toast.error("You can only upload up to 5 images.");
+            return;
+        }
+
+        const newImages = [...images, ...files];
+        setImages(newImages);
+
+        const newPreviews = files.map((file) => URL.createObjectURL(file));
+        setImagePreviews([...imagePreviews, ...newPreviews]);
+    };
+
+    const removeImage = (index: number) => {
+        const newImages = [...images];
+        newImages.splice(index, 1);
+        setImages(newImages);
+
+        const newPreviews = [...imagePreviews];
+        URL.revokeObjectURL(newPreviews[index]);
+        newPreviews.splice(index, 1);
+        setImagePreviews(newPreviews);
+    };
+
+    const uploadImages = async (): Promise<string[]> => {
+        if (images.length === 0) return [];
+        setUploadingImages(true);
+        const formData = new FormData();
+        images.forEach((img) => formData.append("images", img));
+
+        try {
+            const res = await api.post("/api/upload/refund-images", formData, {
+                headers: { "Content-Type": "multipart/form-data" },
+            });
+            return res.data.urls || [];
+        } catch (error) {
+            console.error("Failed to upload images", error);
+            throw new Error("Failed to upload images. Please try again.");
+        } finally {
+            setUploadingImages(false);
+        }
+    };
+
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
 
@@ -69,18 +120,26 @@ export default function ReturnItemPage() {
             return;
         }
 
+        if (images.length === 0 || images.length > 5) {
+             toast.error("Please upload between 1 and 5 images as evidence");
+             return;
+        }
+
         try {
             setSubmitting(true);
+            const uploadedImageUrls = await uploadImages();
+
             await api.post("/api/refund/request", {
                 orderId,
                 reason,
                 description,
+                images: uploadedImageUrls
             });
             toast.success("Return request submitted successfully!");
             fetchRefundDetails(); // Refresh to show details view
         } catch (err: any) {
             console.error("Failed to submit return:", err);
-            toast.error(err.response?.data?.message || "Failed to submit return request");
+            toast.error(err.response?.data?.message || err.message || "Failed to submit return request");
         } finally {
             setSubmitting(false);
         }
@@ -141,6 +200,40 @@ export default function ReturnItemPage() {
                                 </RadioGroup>
                             </div>
 
+                            <div className="space-y-4">
+                                <Label className="text-base font-semibold">
+                                    Evidence Images (Required, 1-5 images)
+                                </Label>
+                                <div className="flex flex-wrap gap-4 mt-2">
+                                    {imagePreviews.map((preview, idx) => (
+                                        <div key={idx} className="relative w-24 h-24 border rounded-md overflow-hidden bg-muted">
+                                            <img src={preview} alt="Evidence preview" className="object-cover w-full h-full" />
+                                            <button
+                                                type="button"
+                                                onClick={() => removeImage(idx)}
+                                                className="absolute top-1 right-1 bg-black/50 hover:bg-black/70 text-white rounded-full p-1 transition-colors"
+                                            >
+                                                <X className="w-3 h-3" />
+                                            </button>
+                                        </div>
+                                    ))}
+                                    {images.length < 5 && (
+                                        <label className="w-24 h-24 border-2 border-dashed border-muted-foreground/30 rounded-md flex flex-col items-center justify-center cursor-pointer hover:border-primary/50 transition-colors bg-muted/20">
+                                            <ImagePlus className="w-6 h-6 text-muted-foreground mb-1" />
+                                            <span className="text-xs text-muted-foreground font-medium">Add Photo</span>
+                                            <Input
+                                                type="file"
+                                                accept="image/*"
+                                                multiple
+                                                className="hidden"
+                                                onChange={handleImageChange}
+                                            />
+                                        </label>
+                                    )}
+                                </div>
+                                <p className="text-xs text-muted-foreground">Please provide clear photos showing the issue with the item.</p>
+                            </div>
+
                             <div className="space-y-2">
                                 <Label htmlFor="description" className="text-base font-semibold">
                                     Additional details
@@ -170,15 +263,15 @@ export default function ReturnItemPage() {
                                 <Button
                                     type="submit"
                                     className="flex-1"
-                                    disabled={submitting || !reason}
+                                    disabled={submitting || uploadingImages || !reason}
                                 >
-                                    {submitting ? "Submitting..." : "Submit return request"}
+                                    {submitting || uploadingImages ? "Submitting..." : "Submit return request"}
                                 </Button>
                                 <Button
                                     type="button"
                                     variant="outline"
                                     onClick={() => navigate(-1)}
-                                    disabled={submitting}
+                                    disabled={submitting || uploadingImages}
                                 >
                                     Cancel
                                 </Button>
@@ -221,6 +314,15 @@ export default function ReturnItemPage() {
                             <p className="mt-1 bg-muted p-3 rounded-md text-sm">
                                 {existingRefund.description || "No description provided."}
                             </p>
+                            {existingRefund.images && existingRefund.images.length > 0 && (
+                                <div className="mt-3 flex flex-wrap gap-2">
+                                    {existingRefund.images.map((img: string, i: number) => (
+                                        <a href={img} target="_blank" rel="noopener noreferrer" key={i}>
+                                            <img src={img} alt="Evidence" className="h-24 w-24 object-cover rounded border bg-muted" />
+                                        </a>
+                                    ))}
+                                </div>
+                            )}
                         </div>
 
                         {existingRefund.sellerNote && (

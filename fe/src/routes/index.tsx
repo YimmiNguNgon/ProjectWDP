@@ -78,6 +78,7 @@ import AdminRefunds from "@/pages/admin/orders/refunds";
 import AdminReportManagement from "@/pages/admin/reports/report-management";
 import BuyerReportPage from "@/pages/buyer/reports/submit-report";
 import RecentlyViewedPage from "@/pages/buyer/recently-viewed-page";
+import CreateComplaintPage from "@/pages/buyer/orders/CreateComplaint";
 import ComplaintsReturnsPage from "@/pages/buyer/complaints-returns-page";
 
 import SellerComplaintsPage from "@/pages/seller/orders/Complaints";
@@ -198,6 +199,14 @@ export const AppRouter = () => {
         {
           path: "purchases/:orderId/return",
           element: <ReturnItemPage />,
+        },
+        {
+          path: "purchases/:orderId/complaint",
+          element: <CreateComplaintPage />,
+        },
+        {
+          path: "purchases/:orderId/complaint/:productId",
+          element: <CreateComplaintPage />,
         },
         {
           path: "seller/inventory",

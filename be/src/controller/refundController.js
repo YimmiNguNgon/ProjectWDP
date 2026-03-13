@@ -5,7 +5,7 @@ const RefundRequest = require("../models/RefundRequest");
 
 exports.requestRefund = async (req, res, next) => {
     try {
-        const { orderId, reason, description } = req.body;
+        const { orderId, reason, description, images } = req.body;
         const buyerId = req.user._id;
 
         if (!mongoose.isValidObjectId(orderId)) {
@@ -15,7 +15,7 @@ exports.requestRefund = async (req, res, next) => {
             return res.status(400).json({ message: "Reason is required" });
         }
 
-        const refund = await refundService.createRefundRequest(buyerId, orderId, reason, description);
+        const refund = await refundService.createRefundRequest(buyerId, orderId, reason, description, images);
         res.status(201).json({ message: "Refund requested successfully", data: refund });
     } catch (err) {
         next(err);
@@ -63,9 +63,10 @@ exports.disputeRefund = async (req, res, next) => {
 exports.confirmReturnReceived = async (req, res, next) => {
     try {
         const { id } = req.params;
+        const { condition } = req.body;
         const sellerId = req.user._id;
 
-        const refund = await refundService.confirmReturnReceived(sellerId, id);
+        const refund = await refundService.confirmReturnReceived(sellerId, id, condition);
         res.status(200).json({ message: "Return receipt confirmed", data: refund });
     } catch (err) {
         next(err);
@@ -139,7 +140,7 @@ exports.getSellerRefunds = async (req, res, next) => {
     try {
         const sellerId = req.user._id;
         const refunds = await RefundRequest.find({ seller: sellerId })
-            .populate("order")
+            .populate({ path: "order", populate: { path: "items.productId", select: "images title" } })
             .populate("buyer", "username avatarUrl")
             .sort({ requestedAt: -1 })
             .lean();

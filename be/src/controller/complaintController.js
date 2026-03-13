@@ -43,6 +43,8 @@ const createComplaint = async (req, res) => {
       .populate("seller", "username")
       .lean();
 
+    console.log(`[Complaint] Created: ID=${complaint._id}, Order=${orderId}, Seller=${sellerId}, Buyer=${req.user._id}`);
+    
     return res.status(201).json({
       data: {
         id: populated._id,
@@ -169,20 +171,28 @@ const getSellerComplaints = async (req, res) => {
     if (req.query.status) query.status = req.query.status;
 
     const rows = await Complaint.find(query)
-      .sort({ updatedAt: -1 })
+      .sort({ createdAt: -1 }) // Sort by creation time to see newest first
       .skip(skip)
       .limit(limit)
-      .populate("order")
+      .populate({ path: "order", populate: { path: "items.productId", select: "images title" } })
       .populate("buyer", "username")
       .lean();
 
     const data = rows.map((r) => ({
       id: r._id,
       orderId: r.order?._id || null,
+      order: r.order || null,
       buyer: r.buyer || null,
       reason: r.reason,
       content: r.content,
       status: r.status,
+      images: r.images || [],
+      history: r.history ? r.history.map(h => ({
+          actionBy: h.actionBy,
+          action: h.action,
+          note: h.note,
+          at: formatDateTime(h.at)
+      })) : [],
       createdAt: formatDateTime(r.createdAt),
       updatedAt: formatDateTime(r.updatedAt),
     }));
@@ -237,9 +247,15 @@ const adminGetAllFromBuyers = async (req, res) => {
   try {
     if (req.user.role !== "admin") return res.status(403).json({ message: "Forbidden" });
 
-    const rows = await Complaint.find({ status: "SENT_TO_ADMIN" })
+    // Admin can see all complaints, or filter by status
+    const query = {};
+    if (req.query.status) {
+        query.status = req.query.status;
+    }
+
+    const rows = await Complaint.find(query)
       .sort({ updatedAt: -1 })
-      .limit(200)
+      .limit(500)
       .populate("order")
       .populate("buyer", "username")
       .populate("seller", "username")

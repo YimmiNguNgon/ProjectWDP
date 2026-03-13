@@ -23,20 +23,38 @@ exports.listConversations = async (req, res, next) => {
     const limit = Math.min(parseInt(req.query.limit) || 20, 100);
     const skip = (page - 1) * limit;
 
-    const convs = await Conversation.find({ participants: userId })
+    const allConvs = await Conversation.find({ participants: userId })
       .populate('participants', 'username')
       .sort({ lastMessageAt: -1 })
-      .skip(skip)
-      .limit(limit)
       .lean();
 
-    // Calculate unread count for each conversation
+    // Deduplicate server-side by participants set
+    const seen = new Set();
+    const uniqueConvs = [];
+
+    for (const conv of allConvs) {
+      const pIdStr = conv.participants
+        .map(p => p._id.toString())
+        .sort()
+        .join(',');
+      
+      if (!seen.has(pIdStr)) {
+        seen.add(pIdStr);
+        uniqueConvs.push(conv);
+      }
+    }
+
+    // Apply pagination to unique results
+    const total = uniqueConvs.length;
+    const paginated = uniqueConvs.slice(skip, skip + limit);
+
+    // Calculate unread count for each unique conversation
     const convsWithUnread = await Promise.all(
-      convs.map(async (conv) => {
+      paginated.map(async (conv) => {
         const unreadCount = await Message.countDocuments({
           conversation: conv._id,
-          sender: { $ne: userId }, // Not sent by current user
-          readBy: { $nin: [userId] } // Not read by current user
+          sender: { $ne: userId },
+          readBy: { $nin: [userId] }
         });
 
         return {
@@ -46,7 +64,15 @@ exports.listConversations = async (req, res, next) => {
       })
     );
 
-    return res.json({ data: convsWithUnread });
+    res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate, proxy-revalidate');
+    return res.json({ 
+      data: convsWithUnread,
+      meta: {
+        total,
+        page,
+        limit
+      }
+    });
   } catch (err) {
     next(err);
   }
@@ -73,32 +99,39 @@ exports.getConversation = async (req, res, next) => {
 exports.deleteConversation = async (req, res, next) => {
   try {
     const id = req.params.id;
-    console.log('[Chat] Delete conversation request:', id, 'by user:', req.user._id);
+    const userId = req.user._id.toString();
 
     if (!id || !mongoose.isValidObjectId(id))
       return res.status(400).json({ message: 'Invalid conversation id' });
 
     const conv = await Conversation.findById(id);
     if (!conv) {
-      console.log('[Chat] Conversation not found:', id);
       return res.status(404).json({ message: 'Conversation not found' });
     }
 
     // Check if user is participant
-    const userId = req.user._id.toString();
-    if (!conv.participants.some(p => p.toString() === userId)) {
-      console.log('[Chat] User not authorized to delete:', userId);
+    const isParticipant = conv.participants.some(p => p.toString() === userId);
+    if (!isParticipant) {
       return res.status(403).json({ message: 'You are not a participant in this conversation' });
     }
 
-    // Delete all messages in conversation
-    const deletedMessages = await Message.deleteMany({ conversation: id });
-    console.log('[Chat] Deleted messages:', deletedMessages.deletedCount);
+    // Find ALL duplicates (same participant set) to ensure the whole thread is deleted
+    const participantIds = conv.participants.map(p => p.toString()).sort();
+    const allRelatedConvs = await Conversation.find({
+      participants: { $all: participantIds, $size: participantIds.length }
+    });
 
-    // Delete conversation
-    await Conversation.findByIdAndDelete(id);
-    console.log('[Chat] Conversation deleted successfully:', id);
+    const idsToDelete = allRelatedConvs.map(c => c._id);
 
+    console.log(`[Chat] Deleting ${idsToDelete.length} conversation docs for thread deletion by user ${userId}`);
+
+    // Delete all messages in all related docs
+    await Message.deleteMany({ conversation: { $in: idsToDelete } });
+    
+    // Delete all conversation docs
+    await Conversation.deleteMany({ _id: { $in: idsToDelete } });
+
+    console.log('[Chat] Conversation thread deleted successfully');
     return res.json({ message: 'Conversation deleted successfully' });
   } catch (err) {
     console.error('[Chat] Error deleting conversation:', err);

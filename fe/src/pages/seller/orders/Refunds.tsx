@@ -15,7 +15,7 @@ import { Eye, CheckCircle2, AlertTriangle } from "lucide-react";
 
 type RefundRequest = {
     _id: string;
-    order: { _id: string; totalAmount: number; status: string };
+    order: { _id: string; totalAmount: number; status: string; items?: any[] };
     buyer: { _id: string; username: string };
     reason: string;
     description: string;
@@ -24,6 +24,7 @@ type RefundRequest = {
     requestedAt: string;
     sellerNote?: string;
     adminNote?: string;
+    images?: string[];
 };
 
 export default function SellerRefunds() {
@@ -37,6 +38,7 @@ export default function SellerRefunds() {
     const [sellerNote, setSellerNote] = useState("");
     const [pendingAction, setPendingAction] = useState<"APPROVE" | "REJECT" | "CONFIRM_RECEIPT" | null>(null);
     const [submitting, setSubmitting] = useState(false);
+    const [returnCondition, setReturnCondition] = useState<"SELLABLE" | "OPENED" | "DAMAGED">("SELLABLE");
 
     useEffect(() => {
         fetchRefunds();
@@ -85,7 +87,7 @@ export default function SellerRefunds() {
         try {
             setSubmitting(true);
             setPendingAction("CONFIRM_RECEIPT");
-            await api.post(`/api/refund/${selectedRefund._id}/confirm-receipt`);
+            await api.post(`/api/refund/${selectedRefund._id}/confirm-receipt`, { condition: returnCondition });
             toast.success("Return receipt confirmed successfully. Refund completed.");
             setIsDialogOpen(false);
             fetchRefunds();
@@ -135,35 +137,57 @@ export default function SellerRefunds() {
                 <div className="grid gap-4">
                     {refunds.map((refund) => {
                         const theme = getStatusTheme(refund.status);
+                        const firstItem = refund.order?.items?.[0];
+                        const productImg = firstItem?.productId?.images?.[0] || firstItem?.image || "";
+                        const productTitle = firstItem?.productId?.title || firstItem?.title || "Unknown Product";
+
                         return (
-                            <Card key={refund._id}>
-                                <div className="p-4 flex flex-col md:flex-row justify-between md:items-center gap-4">
-                                    <div className="flex-1 space-y-2">
-                                        <div className="flex items-center gap-2">
+                            <Card key={refund._id} className="overflow-hidden border border-gray-200 shadow-sm hover:shadow-md transition-shadow">
+                                <div className="p-5 flex flex-col md:flex-row justify-between md:items-center gap-4">
+                                    <div className="flex-1 space-y-3">
+                                        <div className="flex items-center gap-3">
                                             <Badge variant={theme.badge as any} className={theme.badge === 'warning' ? 'bg-amber-500 hover:bg-amber-600' : ''}>
                                                 {theme.text}
                                             </Badge>
-                                            <span className="text-sm font-medium">
-                                                Order ID: {refund.order?._id?.slice(-8)?.toUpperCase() || "N/A"}
+                                            <span className="text-sm font-semibold">
+                                                Order #{refund.order?._id?.slice(-8)?.toUpperCase() || "N/A"}
                                             </span>
-                                            <span className="text-sm text-muted-foreground whitespace-nowrap">
+                                            <span className="text-sm text-gray-500 whitespace-nowrap hidden sm:inline-block">
                                                 {new Date(refund.requestedAt).toLocaleDateString()}
                                             </span>
                                         </div>
-                                        <div className="text-sm">
-                                            <span className="font-semibold">{refund.buyer.username}</span> requested a return due to <span className="font-semibold">{refund.reason}</span>
+                                        
+                                        <div className="flex items-start gap-3 mt-2 border p-3 rounded-lg bg-gray-50/50">
+                                            {productImg ? (
+                                                <img src={productImg} alt="Product" className="w-12 h-12 rounded object-cover flex-shrink-0 border bg-white" />
+                                            ) : (
+                                                <div className="w-12 h-12 rounded bg-gray-100 flex items-center justify-center flex-shrink-0 border">
+                                                    <span className="text-[10px] text-gray-400">No img</span>
+                                                </div>
+                                            )}
+                                            <div className="flex flex-col">
+                                                <span className="text-sm font-medium line-clamp-1">{productTitle}</span>
+                                                <span className="text-xs text-gray-500 mt-1">
+                                                    <span className="font-semibold text-gray-900">{refund.buyer.username}</span> requested a return due to <span className="font-semibold text-gray-900 capitalize">{refund.reason?.replace(/_/g, ' ')?.toLowerCase()}</span>
+                                                </span>
+                                            </div>
                                         </div>
+
                                         {refund.status === "PENDING" && (
                                             <div className="flex items-center text-xs text-amber-600 font-medium bg-amber-50 w-fit px-2 py-1 rounded">
-                                                <AlertTriangle className="w-3 h-3 justify-center mr-1" />
+                                                <AlertTriangle className="w-3.5 h-3.5 justify-center mr-1" />
                                                 Please respond within 48h to avoid auto-approval impacting trust score.
                                             </div>
                                         )}
                                     </div>
-                                    <div className="flex gap-2 min-w-max">
+                                    <div className="flex flex-col items-end gap-2 min-w-max">
+                                        <span className="text-xs text-gray-400 sm:hidden">
+                                            {new Date(refund.requestedAt).toLocaleDateString()}
+                                        </span>
                                         <Button
                                             variant="outline"
                                             size="sm"
+                                            className="hover:bg-blue-50 hover:text-blue-600 transition-colors"
                                             onClick={() => {
                                                 setSelectedRefund(refund);
                                                 setIsDialogOpen(true);
@@ -204,6 +228,25 @@ export default function SellerRefunds() {
                                     <p className="p-3 bg-background rounded border mt-1 font-medium">{selectedRefund.description}</p>
                                 </div>
                             </div>
+
+                            {selectedRefund.images && selectedRefund.images.length > 0 && (
+                                <div className="space-y-2 mt-4">
+                                    <p className="font-semibold text-sm">Evidence Images</p>
+                                    <div className="flex flex-wrap gap-3">
+                                        {selectedRefund.images.map((url, idx) => (
+                                            <div key={idx} className="w-24 h-24 rounded overflow-hidden border bg-muted group relative">
+                                                <img 
+                                                    src={url} 
+                                                    alt="Evidence" 
+                                                    className="w-full h-full object-cover transition-transform hover:scale-105 cursor-pointer"
+                                                    onClick={() => window.open(url, "_blank")}
+                                                />
+                                            </div>
+                                        ))}
+                                    </div>
+                                    <p className="text-xs text-muted-foreground mt-1">Click on an image to view full size</p>
+                                </div>
+                            )}
 
                             {selectedRefund.status !== "PENDING" && (
                                 <div className="text-sm bg-muted/50 p-4 rounded-lg border">
@@ -256,8 +299,20 @@ export default function SellerRefunds() {
                                         <CheckCircle2 className="w-5 h-5 mt-0.5 flex-shrink-0" />
                                         <div>
                                             <p className="font-medium">Shipper has returned the package to you.</p>
-                                            <p className="text-sm mt-1">Please inspect the item and confirm receipt to process the final refund to the buyer.</p>
+                                            <p className="text-sm mt-1">Please inspect the item and choose its condition to process the final refund. Inventory will only restock if marked as SELLABLE.</p>
                                         </div>
+                                    </div>
+                                    <div className="flex flex-col gap-2">
+                                        <label className="text-sm font-semibold">Received Item Condition</label>
+                                        <select 
+                                            className="w-full xl:w-1/2 p-2 border rounded-md text-sm"
+                                            value={returnCondition}
+                                            onChange={(e) => setReturnCondition(e.target.value as any)}
+                                        >
+                                            <option value="SELLABLE">🟢 SELLABLE (Brand new, sealed - Restocks inventory)</option>
+                                            <option value="OPENED">🟡 OPENED (Used, minor wear - Does NOT restock)</option>
+                                            <option value="DAMAGED">🔴 DAMAGED (Broken, missing parts - Does NOT restock)</option>
+                                        </select>
                                     </div>
                                     <div className="flex justify-end gap-3 pt-2">
                                         <Button
