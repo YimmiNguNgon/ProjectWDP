@@ -37,7 +37,12 @@ exports.updateOrderStatus = async (req, res, next) => {
 
     if (status === "cancelled") {
       const buyerCanCancelStatus = ["created", "packaging"];
-      const sellerCanCancelStatus = ["created", "packaging", "ready_to_ship"];
+      const sellerCanCancelStatus = [
+        "created",
+        "packaging",
+        "ready_to_ship",
+        "cancel_requested",
+      ];
 
       const isBuyer = order.buyer.toString() === userId.toString();
       const isSeller = order.seller.toString() === userId.toString();
@@ -115,36 +120,127 @@ exports.updateOrderStatus = async (req, res, next) => {
         });
       }
 
-      // If buyer is cancelling, handle the full cancellation here and return
+      // If buyer is cancelling, handle the cancellation/request here and return
       if (isBuyer) {
-        // Restore stock
-        for (const item of order.items) {
-          const Product = require("../models/Product");
-          await Product.findByIdAndUpdate(item.productId, {
-            $inc: { stock: item.quantity, quantity: item.quantity },
+        if (order.status === "created") {
+          // Immediate cancellation for 'created' status
+          for (const item of order.items) {
+            const Product = require("../models/Product");
+            await Product.findByIdAndUpdate(item.productId, {
+              $inc: { stock: item.quantity, quantity: item.quantity },
+            });
+          }
+
+          order.status = "cancelled";
+          order.statusHistory.push({
+            status: "cancelled",
+            timestamp: new Date(),
+            note: req.body.note || "Cancelled by buyer",
+          });
+
+          order.updatedAt = new Date();
+          await order.save();
+
+          const updated = await Order.findById(id)
+            .populate("buyer", "username email")
+            .populate("seller", "username email")
+            .populate("items.productId", "title price image images")
+            .lean();
+
+          // Notify seller of immediate cancellation
+          notificationService
+            .sendNotification({
+              recipientId: updated.seller._id,
+              type: "order_cancelled",
+              title: "Order Cancelled",
+              body: `Buyer has cancelled order #${updated._id}`,
+              link: `/seller/orders/${updated._id}`,
+              metadata: { orderId: updated._id },
+            })
+            .catch(() => {});
+
+          // Send email to seller
+          if (updated.seller && updated.seller.email) {
+            sendEmail({
+              to: updated.seller.email,
+              subject: `Order Cancelled - #${updated._id}`,
+              template: "sellerOrderCancelNotification.ejs",
+              data: {
+                username: updated.seller.username,
+                orderId: updated._id,
+                status: "cancelled",
+                statusMessage:
+                  "This order was cancelled by the buyer immediately.",
+                note: req.body.note || "Cancelled by buyer",
+                orderUrl: `${process.env.CLIENT_URL || "http://localhost:5173"}/seller/orders/${updated._id}`,
+              },
+            }).catch((err) =>
+              console.error("[SellerCancelEmail] send failed:", err.message),
+            );
+          }
+
+          return res.json({
+            message: "Order cancelled successfully",
+            data: updated,
+          });
+        } else if (order.status === "packaging") {
+          // Request cancellation for 'packaging' status
+          order.status = "cancel_requested";
+          order.statusHistory.push({
+            status: "cancel_requested",
+            timestamp: new Date(),
+            note: req.body.note || "Cancellation requested by buyer",
+          });
+
+          order.updatedAt = new Date();
+          await order.save();
+
+          const updated = await Order.findById(id)
+            .populate("buyer", "username email")
+            .populate("seller", "username email")
+            .populate("items.productId", "title price image images")
+            .lean();
+
+          // Notify seller of cancel request
+          notificationService
+            .sendNotification({
+              recipientId: updated.seller._id,
+              type: "cancel_requested",
+              title: "Cancellation Request",
+              body: `Buyer has requested to cancel order #${updated._id}`,
+              link: `/seller/orders/${updated._id}`,
+              metadata: { orderId: updated._id },
+            })
+            .catch(() => {});
+
+          // Send email to seller of cancel request
+          if (updated.seller && updated.seller.email) {
+            sendEmail({
+              to: updated.seller.email,
+              subject: `Cancellation Request - #${updated._id}`,
+              template: "sellerOrderCancelNotification.ejs",
+              data: {
+                username: updated.seller.username,
+                orderId: updated._id,
+                status: "cancel_requested",
+                statusMessage:
+                  "The buyer has requested to cancel this order. Please approve or reject it in the seller panel.",
+                note: req.body.note || "Cancellation requested by buyer",
+                orderUrl: `${process.env.CLIENT_URL || "http://localhost:5173"}/seller/orders/${updated._id}`,
+              },
+            }).catch((err) =>
+              console.error(
+                "[SellerCancelRequestEmail] send failed:",
+                err.message,
+              ),
+            );
+          }
+
+          return res.json({
+            message: "Cancellation request sent to seller",
+            data: updated,
           });
         }
-
-        order.status = "cancelled";
-        order.updatedAt = new Date();
-        order.statusHistory.push({
-          status: "cancelled",
-          timestamp: new Date(),
-          note: req.body.note || "Cancelled by buyer",
-        });
-
-        await order.save();
-
-        const updated = await Order.findById(id)
-          .populate("buyer", "username email")
-          .populate("seller", "username")
-          .populate("items.productId", "title price image images")
-          .lean();
-
-        return res.json({
-          message: "Order cancelled successfully",
-          data: updated,
-        });
       }
     }
 
@@ -163,6 +259,7 @@ exports.updateOrderStatus = async (req, res, next) => {
       "delivered",
       "completed",
       "cancelled",
+      "cancel_requested",
       "failed",
       "returned",
     ];
@@ -174,6 +271,21 @@ exports.updateOrderStatus = async (req, res, next) => {
     }
 
     const previousStatus = order.status;
+
+    // Guard: If status is cancel_requested, seller must either approve (cancelled) or reject (packaging)
+    if (previousStatus === "cancel_requested") {
+      if (status !== "cancelled" && status !== "packaging") {
+        return res.status(400).json({
+          message: "Please approve or reject the cancellation request first.",
+        });
+      }
+      if (!note || !note.trim()) {
+        return res.status(400).json({
+          message:
+            "A reason is required when approving or rejecting a cancellation request.",
+        });
+      }
+    }
 
     if (
       (status === "cancelled" || status === "returned") &&
@@ -206,7 +318,7 @@ exports.updateOrderStatus = async (req, res, next) => {
 
     // Nếu seller set ready_to_ship, thử auto-assign cho shipper (fire-and-forget)
     if (status === "ready_to_ship") {
-      setImmediate(() => autoAssignOrder(order).catch(() => { }));
+      setImmediate(() => autoAssignOrder(order).catch(() => {}));
     }
 
     // ── Trigger Trust Score recalc (fire-and-forget, không block response) ──
@@ -251,11 +363,13 @@ exports.updateOrderStatus = async (req, res, next) => {
         delivered: `"${productLabel}" has been delivered`,
         completed: `Order for "${productLabel}" completed`,
         cancelled: `Order for "${productLabel}" cancelled`,
+        cancel_requested: `Cancellation requested for "${productLabel}"`,
         failed: `Order for "${productLabel}" failed`,
         returned: `Order for "${productLabel}" returned`,
       };
-      const notificationBody = `Status: ${status.replace(/_/g, " ")}${note ? `\nReason: ${note}` : ""
-        }`;
+      const notificationBody = `Status: ${status.replace(/_/g, " ")}${
+        note ? `\nReason: ${note}` : ""
+      }`;
       notificationService
         .sendNotification({
           recipientId: updated.buyer._id,
@@ -265,7 +379,7 @@ exports.updateOrderStatus = async (req, res, next) => {
           link: `/purchases/${updated._id}`,
           metadata: { orderId: updated._id, status, note },
         })
-        .catch(() => { });
+        .catch(() => {});
     }
 
     // Send email to buyer asynchronously (fire-and-forget)
@@ -274,6 +388,8 @@ exports.updateOrderStatus = async (req, res, next) => {
         const statusMessages = {
           created: "Your order has been created and is waiting for processing.",
           packaging: "The seller is currently packaging your items.",
+          cancel_requested:
+            "Your cancel request has been sent to the seller. Please wait for the seller to response.",
           ready_to_ship:
             "Your order is packed and waiting for the shipping carrier.",
           shipping:

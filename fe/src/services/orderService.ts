@@ -57,6 +57,7 @@ export interface Order {
   | "delivered"
   | "completed"
   | "cancelled"
+  | "cancel_requested"
   | "failed"
   | "returned";
   paymentStatus: "unpaid" | "paid" | "failed" | "refunded";
@@ -108,6 +109,8 @@ const mapStatus = (status: string): Order["status"] => {
       return "cancelled";
     case "failed":
       return "failed";
+    case "cancel_requested":
+      return "cancel_requested";
     default:
       console.warn("Unknown status:", status);
       return "created";
@@ -312,6 +315,7 @@ export const orderService = {
         completed: "completed",
         returned: "returned",
         cancelled: "cancelled",
+        cancel_requested: "cancel_requested",
         failed: "failed",
       };
 
