@@ -1,0 +1,127 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="UTF-8" />
+    <title>Customer Order Cancellation Notice</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <style>
+      body {
+        margin: 0;
+        padding: 0;
+        background-color: #f2f6f8;
+        font-family: "Segoe UI", Arial, sans-serif;
+      }
+      .wrapper {
+        width: 100%;
+        padding: 30px 12px;
+        background-color: #f2f6f8;
+      }
+      .container {
+        max-width: 600px;
+        margin: 0 auto;
+        background: #ffffff;
+        border-radius: 10px;
+        overflow: hidden;
+        box-shadow: 0 4px 16px rgba(0, 0, 0, 0.06);
+      }
+      .header {
+        background: #e11d48;
+        padding: 24px;
+        text-align: center;
+        color: #ffffff;
+      }
+      .header h1 {
+        margin: 0;
+        font-size: 24px;
+        font-weight: 600;
+        text-transform: uppercase;
+      }
+      .content {
+        padding: 30px 24px;
+        color: #333333;
+        line-height: 1.6;
+      }
+      .content h2 {
+        margin-top: 0;
+        font-size: 20px;
+        color: #1f2937;
+      }
+      .status-box {
+        background: #fff1f2;
+        border-radius: 8px;
+        padding: 20px;
+        margin: 24px 0;
+        border-left: 4px solid #e11d48;
+      }
+      .status-highlight {
+        font-size: 18px;
+        font-weight: 700;
+        color: #9f1239;
+        text-transform: capitalize;
+      }
+      .order-summary p {
+        margin: 8px 0;
+        font-size: 15px;
+      }
+      .btn-wrapper {
+        text-align: center;
+        margin: 30px 0;
+      }
+      .btn {
+        display: inline-block;
+        padding: 14px 28px;
+        background: #e11d48;
+        color: #ffffff !important;
+        text-decoration: none;
+        border-radius: 6px;
+        font-size: 16px;
+        font-weight: 600;
+      }
+      .btn:hover {
+        background: #be123c;
+      }
+      .footer {
+        padding: 20px;
+        background: #f1f5f9;
+        text-align: center;
+        font-size: 13px;
+        color: #64748b;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="wrapper">
+      <div class="container">
+        <div class="header">
+          <h1><%= status === "cancelled" ? "Order Cancelled" : "Cancellation Requested" %></h1>
+        </div>
+        <div class="content">
+          <h2>Hello <%= username %>,</h2>
+          <p>
+            An update has occurred regarding order <strong>#<%= orderId %></strong> from your shop.
+          </p>
+
+          <div class="status-box">
+            <p style="margin: 0;">Update: <span class="status-highlight"><%= status.replace(/_/g, " ") %></span></p>
+            <p style="margin-top: 8px; margin-bottom: 0; color: #475569; font-size: 14px;"><%= statusMessage %></p>
+            <% if (locals.note) { %>
+              <p style="margin-top: 12px; margin-bottom: 0;"><strong>Reason from buyer:</strong> <%= note %></p>
+            <% } %>
+          </div>
+
+          <div class="btn-wrapper">
+            <a href="<%= orderUrl %>" class="btn">View Order in Seller Panel</a>
+          </div>
+
+          <p>
+            Please review this order and take any necessary actions.
+          </p>
+        </div>
+        <div class="footer">
+          <p>© <%= new Date().getFullYear() %> EFPT. All rights reserved.</p>
+          <p>This is an automated email, please do not reply to this email.</p>
+        </div>
+      </div>
+    </div>
+  </body>
+</html>

@@ -13,6 +13,7 @@ import {
   CreditCard,
   MapPin,
   Wallet,
+  AlertTriangle,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -109,6 +110,13 @@ const STATUS_CONFIG = {
     bg: "#FEF2F2",
     text: "#7F1D1D",
     border: "#FECACA",
+  },
+  cancel_requested: {
+    label: "Cancel Requested",
+    dot: "#F59E0B",
+    bg: "#FFFBEB",
+    text: "#92400E",
+    border: "#FDE68A",
   },
 } as const;
 
@@ -487,8 +495,7 @@ function OrderDetailsPopup({
               )}
 
               <InfoBlock
-                icon={<Package size={16} color="#F59E0B" />
-                }
+                icon={<Package size={16} color="#F59E0B" />}
                 label="Status"
               >
                 <div style={{ marginTop: 2 }}>
@@ -503,7 +510,14 @@ function OrderDetailsPopup({
               >
                 {order.shipper ? (
                   <>
-                    <p style={{ fontWeight: 700, color: "#0F172A", fontSize: 15, margin: "0 0 2px" }}>
+                    <p
+                      style={{
+                        fontWeight: 700,
+                        color: "#0F172A",
+                        fontSize: 15,
+                        margin: "0 0 2px",
+                      }}
+                    >
                       {order.shipper.username}
                     </p>
                     <p style={{ color: "#64748B", fontSize: 13, margin: 0 }}>
@@ -511,7 +525,14 @@ function OrderDetailsPopup({
                     </p>
                   </>
                 ) : (
-                  <p style={{ color: "#94A3B8", fontSize: 13, margin: 0, fontStyle: "italic" }}>
+                  <p
+                    style={{
+                      color: "#94A3B8",
+                      fontSize: 13,
+                      margin: 0,
+                      fontStyle: "italic",
+                    }}
+                  >
                     Not assigned yet
                   </p>
                 )}
@@ -962,6 +983,9 @@ export default function SellerOrders() {
   const [cancelDialogOpen, setCancelDialogOpen] = useState(false);
   const [cancelReason, setCancelReason] = useState("");
   const [orderIdToCancel, setOrderIdToCancel] = useState<string | null>(null);
+  const [pendingStatus, setPendingStatus] = useState<Order["status"] | null>(
+    null,
+  );
   const [cancelProcessing, setCancelProcessing] = useState(false);
 
   useEffect(() => {
@@ -1014,6 +1038,7 @@ export default function SellerOrders() {
   const statuses = [
     { value: "all", label: "All", icon: Package },
     { value: "created", label: "New Order", icon: Clock },
+    { value: "cancel_requested", label: "Cancel Request", icon: AlertTriangle },
     { value: "packaging", label: "Packaging", icon: Package },
     { value: "ready_to_ship", label: "Ready to Ship", icon: Package },
     { value: "shipping", label: "Shipping", icon: Truck },
@@ -1116,6 +1141,15 @@ export default function SellerOrders() {
             Failed
           </Badge>
         );
+      case "cancel_requested":
+        return (
+          <Badge
+            variant="outline"
+            className="border-amber-300 text-amber-800 bg-amber-50"
+          >
+            Cancel Requested
+          </Badge>
+        );
       default:
         return <Badge variant="outline">Unknown</Badge>;
     }
@@ -1145,8 +1179,12 @@ export default function SellerOrders() {
     }
   };
 
-  const openCancelDialog = (orderId: string) => {
+  const openResolutionDialog = (
+    orderId: string,
+    targetStatus: Order["status"],
+  ) => {
     setOrderIdToCancel(orderId);
+    setPendingStatus(targetStatus);
     setCancelReason("");
     setCancelDialogOpen(true);
   };
@@ -1157,11 +1195,12 @@ export default function SellerOrders() {
       toast.error("Please provide a reason for cancellation");
       return;
     }
+    const targetStatus = pendingStatus || "cancelled";
     setCancelProcessing(true);
     try {
       const success = await orderService.updateOrderStatus(
         orderIdToCancel,
-        "cancelled",
+        targetStatus,
         cancelReason.trim(),
       );
       if (success) {
@@ -1288,15 +1327,33 @@ export default function SellerOrders() {
             <table className="w-full">
               <thead>
                 <tr className="border-b">
-                  <th className="text-left p-4 font-medium text-gray-600">Order ID</th>
-                  <th className="text-left p-4 font-medium text-gray-600">Product</th>
-                  <th className="text-left p-4 font-medium text-gray-600">Customer</th>
-                  <th className="text-left p-4 font-medium text-gray-600">Shipper</th>
-                  <th className="text-left p-4 font-medium text-gray-600">Quantity</th>
-                  <th className="text-left p-4 font-medium text-gray-600">Total</th>
-                  <th className="text-left p-4 font-medium text-gray-600">Payment Status</th>
-                  <th className="text-left p-4 font-medium text-gray-600">Status</th>
-                  <th className="text-left p-4 font-medium text-gray-600">Actions</th>
+                  <th className="text-left p-4 font-medium text-gray-600">
+                    Order ID
+                  </th>
+                  <th className="text-left p-4 font-medium text-gray-600">
+                    Product
+                  </th>
+                  <th className="text-left p-4 font-medium text-gray-600">
+                    Customer
+                  </th>
+                  <th className="text-left p-4 font-medium text-gray-600">
+                    Shipper
+                  </th>
+                  <th className="text-left p-4 font-medium text-gray-600">
+                    Quantity
+                  </th>
+                  <th className="text-left p-4 font-medium text-gray-600">
+                    Total
+                  </th>
+                  <th className="text-left p-4 font-medium text-gray-600">
+                    Payment Status
+                  </th>
+                  <th className="text-left p-4 font-medium text-gray-600">
+                    Status
+                  </th>
+                  <th className="text-left p-4 font-medium text-gray-600">
+                    Actions
+                  </th>
                 </tr>
               </thead>
               <tbody>
@@ -1311,8 +1368,15 @@ export default function SellerOrders() {
                       </div>
                     </td>
                     <td className="p-4">
-                      <div className="font-medium text-sm truncate max-w-[200px]" title={order.orderDetails?.map(item => item.productName).join(", ")}>
-                        {order.orderDetails?.map(item => item.productName).join(", ") || "—"}
+                      <div
+                        className="font-medium text-sm truncate max-w-[200px]"
+                        title={order.orderDetails
+                          ?.map((item) => item.productName)
+                          .join(", ")}
+                      >
+                        {order.orderDetails
+                          ?.map((item) => item.productName)
+                          .join(", ") || "—"}
                       </div>
                     </td>
                     <td className="p-4">
@@ -1321,9 +1385,13 @@ export default function SellerOrders() {
                     </td>
                     <td className="p-4">
                       {order.shipper ? (
-                        <div className="font-medium text-sm">{order.shipper.username}</div>
+                        <div className="font-medium text-sm">
+                          {order.shipper.username}
+                        </div>
                       ) : (
-                        <span className="text-xs text-gray-400 italic">Not assigned</span>
+                        <span className="text-xs text-gray-400 italic">
+                          Not assigned
+                        </span>
                       )}
                     </td>
                     <td className="p-4">{order.items} products</td>
@@ -1344,14 +1412,18 @@ export default function SellerOrders() {
                           className="cursor-pointer"
                         >
                           {loadingDetails &&
-                            selectedOrder?._id === order._id ? (
+                          selectedOrder?._id === order._id ? (
                             <div className="h-4 w-4 border-2 border-gray-300 border-t-gray-600 rounded-full animate-spin" />
                           ) : (
                             <Eye className="h-4 w-4" />
                           )}
                         </Button>
                         <DropdownMenu>
-                          {["created", "packaging"].includes(order.status) && (
+                          {[
+                            "created",
+                            "packaging",
+                            "cancel_requested",
+                          ].includes(order.status) && (
                             <DropdownMenuTrigger asChild>
                               <Button
                                 variant="ghost"
@@ -1374,6 +1446,28 @@ export default function SellerOrders() {
                                 Mark as Packaging
                               </DropdownMenuItem>
                             )}
+                            {order.status === "cancel_requested" && (
+                              <>
+                                <DropdownMenuItem
+                                  className="cursor-pointer text-green-600 hover:text-green-600"
+                                  onClick={() =>
+                                    openResolutionDialog(order._id, "cancelled")
+                                  }
+                                >
+                                  <CheckCircle className="h-4 w-4 mr-2" />
+                                  Approve Cancellation
+                                </DropdownMenuItem>
+                                <DropdownMenuItem
+                                  className="cursor-pointer text-red-600 hover:text-red-600"
+                                  onClick={() =>
+                                    openResolutionDialog(order._id, "packaging")
+                                  }
+                                >
+                                  <X className="h-4 w-4 mr-2" />
+                                  Reject Cancellation
+                                </DropdownMenuItem>
+                              </>
+                            )}
                             {order.status === "packaging" && (
                               <DropdownMenuItem
                                 className="cursor-pointer"
@@ -1388,14 +1482,16 @@ export default function SellerOrders() {
                             {["created", "packaging", "ready_to_ship"].includes(
                               order.status,
                             ) && (
-                                <DropdownMenuItem
-                                  className="cursor-pointer text-red-600"
-                                  onClick={() => openCancelDialog(order._id)}
-                                >
-                                  <XCircle className="h-4 w-4 mr-2" />
-                                  Cancel Order
-                                </DropdownMenuItem>
-                              )}
+                              <DropdownMenuItem
+                                className="cursor-pointer text-red-600"
+                                onClick={() =>
+                                  openResolutionDialog(order._id, "cancelled")
+                                }
+                              >
+                                <XCircle className="h-4 w-4 mr-2" />
+                                Cancel Order
+                              </DropdownMenuItem>
+                            )}
                           </DropdownMenuContent>
                         </DropdownMenu>
                       </div>
@@ -1424,10 +1520,15 @@ export default function SellerOrders() {
       <AlertDialog open={cancelDialogOpen} onOpenChange={setCancelDialogOpen}>
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>Cancel Order</AlertDialogTitle>
+            <AlertDialogTitle>
+              {pendingStatus === "cancelled" || !pendingStatus
+                ? "Cancel Order"
+                : "Reject Cancellation Request"}
+            </AlertDialogTitle>
             <AlertDialogDescription>
-              Please provide a reason for cancelling this order. The buyer will
-              see it in their order details and in the notification/email.
+              {pendingStatus === "cancelled" || !pendingStatus
+                ? "Please provide a reason for cancelling this order. The buyer will see it in their order details."
+                : "Please provide a reason for rejecting the cancellation request. The order will remain in 'Packaging' status."}
             </AlertDialogDescription>
           </AlertDialogHeader>
           <div className="mt-2">
@@ -1443,16 +1544,25 @@ export default function SellerOrders() {
               onClick={() => {
                 setCancelDialogOpen(false);
                 setOrderIdToCancel(null);
+                setPendingStatus(null);
               }}
             >
               Keep Order
             </AlertDialogCancel>
             <AlertDialogAction
-              className="bg-red-600 hover:bg-red-700 text-white"
+              className={
+                pendingStatus === "packaging"
+                  ? "bg-amber-600 hover:bg-amber-700 text-white"
+                  : "bg-red-600 hover:bg-red-700 text-white"
+              }
               onClick={handleCancelWithReason}
               disabled={cancelProcessing || !cancelReason.trim()}
             >
-              {cancelProcessing ? "Cancelling..." : "Confirm Cancel"}
+              {cancelProcessing
+                ? "Processing..."
+                : pendingStatus === "packaging"
+                  ? "Confirm Reject"
+                  : "Confirm"}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>

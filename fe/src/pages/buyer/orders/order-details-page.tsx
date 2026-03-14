@@ -245,15 +245,19 @@ export default function OrderDetailsPage() {
     }
     setActionLoading(subOrderIdToCancel + "_cancel");
     try {
-      await cancelOrder(
+      const res = await cancelOrder(
         subOrderIdToCancel,
         cancelReason,
         cancelReason === "other" ? cancelOtherText.trim() : undefined,
       );
-      toast.success("Order cancelled successfully.");
+      toast.success(
+        res.data.status === "cancel_requested"
+          ? "Cancellation request sent to seller."
+          : "Order cancelled successfully.",
+      );
       setOrders((prev) =>
         prev.map((o) =>
-          o._id === subOrderIdToCancel ? { ...o, status: "cancelled" } : o,
+          o._id === subOrderIdToCancel ? { ...o, status: res.data.status } : o,
         ),
       );
     } catch (err: any) {
@@ -311,13 +315,14 @@ export default function OrderDetailsPage() {
   const STATUS_RANK: Record<string, number> = {
     created: 0,
     cancelled: 0,
+    cancel_requested: 1,
     failed: 0,
     packaging: 1,
     ready_to_ship: 2,
     shipping: 3,
     delivered: 4,
     completed: 5,
-    waiting_return_shipment: 5, // We treat returns as a completed lifecycle exception
+    waiting_return_shipment: 5,
     return_shipping: 5,
     delivered_to_seller: 5,
     returned: 5,
@@ -363,14 +368,13 @@ export default function OrderDetailsPage() {
             ORDER STATUS
           </p>
 
-          {orders.every(
-            (o) =>
-              [
-                "waiting_return_shipment",
-                "return_shipping",
-                "delivered_to_seller",
-                "returned",
-              ].includes(o.status.toLowerCase()),
+          {orders.every((o) =>
+            [
+              "waiting_return_shipment",
+              "return_shipping",
+              "delivered_to_seller",
+              "returned",
+            ].includes(o.status.toLowerCase()),
           ) ? (
             <div className="flex items-center gap-4 p-4 bg-orange-50 border border-orange-200 rounded-xl">
               <div className="h-14 w-14 rounded-full bg-orange-100 border-2 border-orange-500 flex items-center justify-center shadow-md shrink-0">
@@ -378,16 +382,20 @@ export default function OrderDetailsPage() {
               </div>
               <div>
                 <p className="font-bold text-orange-700 text-base">
-                  {orders.every((o) => o.status === "returned") ? "Order Returned" : "Return in Progress"}
+                  {orders.every((o) => o.status === "returned")
+                    ? "Order Returned"
+                    : "Return in Progress"}
                 </p>
                 <p className="text-sm text-orange-600 mt-0.5">
-                  {orders.every((o) => o.status === "returned") ? "This order has been returned and refunded." : "This order is currently being returned to the seller."}
+                  {orders.every((o) => o.status === "returned")
+                    ? "This order has been returned and refunded."
+                    : "This order is currently being returned to the seller."}
                 </p>
               </div>
             </div>
           ) : orders.every(
-            (o) => o.status === "cancelled" || o.status === "failed",
-          ) ? (
+              (o) => o.status === "cancelled" || o.status === "failed",
+            ) ? (
             <div className="flex items-center gap-4 p-4 bg-red-50 border border-red-200 rounded-xl">
               <div className="h-14 w-14 rounded-full bg-red-100 border-2 border-red-500 flex items-center justify-center shadow-md shrink-0">
                 <XCircle className="h-7 w-7 text-red-600" />
@@ -568,11 +576,20 @@ export default function OrderDetailsPage() {
                           ? "text-blue-600 bg-blue-50"
                           : STATUS_RANK[subOrder.status.toLowerCase()] >= 1
                             ? "text-cyan-600 bg-cyan-50"
-                            : subOrder.status.toLowerCase() === "cancelled" || subOrder.status.toLowerCase() === "failed"
+                            : subOrder.status.toLowerCase() === "cancelled" ||
+                                subOrder.status.toLowerCase() === "failed"
                               ? "text-red-600 bg-red-50"
-                              : ["waiting_return_shipment", "return_shipping", "delivered_to_seller", "returned"].includes(subOrder.status.toLowerCase())
-                                ? "text-orange-600 bg-orange-50"
-                                : "text-blue-600 bg-blue-50"
+                              : subOrder.status.toLowerCase() ===
+                                  "cancel_requested"
+                                ? "text-amber-600 bg-amber-50"
+                                : [
+                                      "waiting_return_shipment",
+                                      "return_shipping",
+                                      "delivered_to_seller",
+                                      "returned",
+                                    ].includes(subOrder.status.toLowerCase())
+                                  ? "text-orange-600 bg-orange-50"
+                                  : "text-blue-600 bg-blue-50"
                   }`}
                 >
                   {subOrder.status.toUpperCase().replace(/_/g, " ")}
@@ -580,22 +597,68 @@ export default function OrderDetailsPage() {
               </div>
 
               {(() => {
-                // show buyer-provided note and/or cancellation reason from status history
-                const cancelEntry = subOrder.statusHistory?.find(
-                  (h) => h.status === "cancelled" && h.note && h.note.trim(),
-                );
-                const cancelNote = cancelEntry?.note;
+                const history = subOrder.statusHistory || [];
+                // Find the latest cancel_requested index
+                const cancelRequestedIndex = [...history]
+                  .reverse()
+                  .findIndex((h) => h.status === "cancel_requested");
+
+                let resolutionType: "approve" | "reject" | "direct" | null =
+                  null;
+                let resolutionNote = "";
+
+                if (cancelRequestedIndex !== -1) {
+                  const actualIndex = history.length - 1 - cancelRequestedIndex;
+                  const nextEntry = history[actualIndex + 1];
+                  if (nextEntry) {
+                    if (nextEntry.status === "cancelled") {
+                      resolutionType = "approve";
+                      resolutionNote = nextEntry.note || "";
+                    } else if (nextEntry.status === "packaging") {
+                      resolutionType = "reject";
+                      resolutionNote = nextEntry.note || "";
+                    }
+                  }
+                }
+
+                // If not a resolution, check for direct cancellation (from 'created')
+                if (!resolutionType) {
+                  const cancelEntry = history.find(
+                    (h) => h.status === "cancelled" && h.note && h.note.trim(),
+                  );
+                  if (cancelEntry) {
+                    resolutionType = "direct";
+                    resolutionNote = cancelEntry.note || "";
+                  }
+                }
+
                 const buyerNote = subOrder.note;
+
                 return (
                   <>
                     {buyerNote && (
-                      <div className="mx-4 mb-4 mt-0 p-3 bg-yellow-50/50 border border-yellow-100 rounded-lg text-sm text-yellow-800 italic">
+                      <div className="mb-4 mt-0 p-3 bg-yellow-50/50 border border-yellow-100 rounded-lg text-sm text-yellow-800 italic">
                         Note: "{buyerNote}"
                       </div>
                     )}
-                    {cancelNote && (
-                      <div className="mx-4 mb-4 mt-0 p-3 bg-red-50/50 border border-red-100 rounded-lg text-sm text-red-800 italic">
-                        <strong>Cancellation reason:</strong> "{cancelNote}"
+                    {resolutionType && resolutionNote && (
+                      <div
+                        className={`mb-4 mt-0 p-3 border rounded-lg text-sm italic ${
+                          resolutionType === "reject"
+                            ? "bg-amber-50/50 border-amber-100 text-amber-800"
+                            : resolutionType === "approve"
+                              ? "bg-green-50/50 border-green-100 text-green-800"
+                              : "bg-red-50/50 border-red-100 text-red-800"
+                        }`}
+                      >
+                        <strong>
+                          {resolutionType === "approve"
+                            ? "Approve Note:"
+                            : resolutionType === "reject"
+                              ? "Reject Note:"
+                              : "Cancellation reason:"}
+                        </strong>{" "}
+                        "{resolutionNote}"
                       </div>
                     )}
                   </>
@@ -698,16 +761,20 @@ export default function OrderDetailsPage() {
 
               {/* ─── Delivery Confirmation Actions ─── */}
               <div className="mt-4 flex flex-wrap gap-2">
-                {[ "shipping", "delivered", "completed" ].includes(subOrder.status.toLowerCase()) && (
-                    <Button
-                        variant="outline"
-                        size="sm"
-                        className="text-amber-600 border-amber-200 hover:bg-amber-50 hover:text-amber-700 h-9"
-                        onClick={() => navigate(`/purchases/${subOrder._id}/complaint`)}
-                    >
-                        <ShieldAlert className="h-4 w-4 mr-1.5" />
-                        Report an issue / Complaint
-                    </Button>
+                {["shipping", "delivered", "completed"].includes(
+                  subOrder.status.toLowerCase(),
+                ) && (
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="text-amber-600 border-amber-200 hover:bg-amber-50 hover:text-amber-700 h-9"
+                    onClick={() =>
+                      navigate(`/purchases/${subOrder._id}/complaint`)
+                    }
+                  >
+                    <ShieldAlert className="h-4 w-4 mr-1.5" />
+                    Report an issue / Complaint
+                  </Button>
                 )}
               </div>
 
@@ -945,8 +1012,7 @@ export default function OrderDetailsPage() {
                 })()}
 
               {/* ─── Cancel Order (buyer, early statuses only) ─── */}
-              {(subOrder.status === "created" ||
-                subOrder.status === "packaging") && (
+              {subOrder.status === "created" && (
                 <div className="mt-4">
                   <Button
                     size="sm"
@@ -964,6 +1030,42 @@ export default function OrderDetailsPage() {
                     {actionLoading === subOrder._id + "_cancel"
                       ? "Cancelling..."
                       : "Cancel Order"}
+                  </Button>
+                </div>
+              )}
+
+              {subOrder.status === "packaging" && (
+                <div className="mt-4">
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    className="border-amber-300 text-amber-600 hover:bg-amber-50 hover:text-amber-600 cursor-pointer"
+                    disabled={!!actionLoading}
+                    onClick={() => {
+                      setSubOrderIdToCancel(subOrder._id);
+                      setCancelReason("");
+                      setCancelOtherText("");
+                      setCancelDialogOpen(true);
+                    }}
+                  >
+                    <XCircle className="h-3.5 w-3.5 mr-1" />
+                    {actionLoading === subOrder._id + "_cancel"
+                      ? "Requesting..."
+                      : "Request Cancellation"}
+                  </Button>
+                </div>
+              )}
+
+              {subOrder.status === "cancel_requested" && (
+                <div className="mt-4">
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    className="border-gray-300 text-gray-500 bg-gray-50"
+                    disabled={true}
+                  >
+                    <XCircle className="h-3.5 w-3.5 mr-1" />
+                    Cancellation Pending
                   </Button>
                 </div>
               )}

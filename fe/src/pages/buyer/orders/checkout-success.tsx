@@ -68,6 +68,7 @@ const PARTICLES = Array.from({ length: 24 }, (_, i) => ({
 const STEPS = [
   { key: "created", label: "Order Placed", Icon: ShoppingBag },
   { key: "packaging", label: "Packaging", Icon: Settings2 },
+  { key: "ready_to_ship", label: "Ready to Ship", Icon: PackageCheck },
   { key: "shipping", label: "Shipping", Icon: Truck },
   { key: "delivered", label: "Delivered", Icon: PackageCheck },
   { key: "completed", label: "Completed", Icon: Star },
@@ -76,9 +77,10 @@ const STEPS = [
 const STATUS_RANK: Record<string, number> = {
   created: 0,
   packaging: 1,
-  shipping: 2,
-  delivered: 3,
-  completed: 4,
+  ready_to_ship: 2,
+  shipping: 3,
+  delivered: 4,
+  completed: 5,
 };
 
 const FadeIn = ({
