@@ -1,10 +1,10 @@
-import { useState, useEffect, useRef } from 'react';
-import { useNavigate } from 'react-router-dom';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Textarea } from '@/components/ui/textarea';
-import { Label } from '@/components/ui/label';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { useState, useEffect, useRef } from "react";
+import { useNavigate } from "react-router-dom";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
+import { Label } from "@/components/ui/label";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import {
   Upload,
   Tag,
@@ -15,12 +15,15 @@ import {
   ImagePlus,
   Loader2,
   Star,
-} from 'lucide-react';
-import { toast } from 'sonner';
-import { createProduct } from '@/api/seller-products';
-import type { ProductVariant, ProductVariantCombination } from '@/api/seller-products';
-import ProductVariantsManager from '@/components/seller/product-variants-manager';
-import api from '@/lib/axios';
+} from "lucide-react";
+import { toast } from "sonner";
+import { createProduct } from "@/api/seller-products";
+import type {
+  ProductVariant,
+  ProductVariantCombination,
+} from "@/api/seller-products";
+import ProductVariantsManager from "@/components/seller/product-variants-manager";
+import api from "@/lib/axios";
 
 interface Category {
   _id: string;
@@ -38,7 +41,7 @@ interface ImageFile {
 
 const MAX_IMAGES = 5;
 const numericInputClass =
-  'h-12 text-lg font-semibold tracking-wide transition-[box-shadow,border-color,background-color] duration-200 focus-visible:shadow-sm focus-visible:ring-2 focus-visible:ring-blue-200';
+  "h-12 text-lg font-semibold tracking-wide transition-[box-shadow,border-color,background-color] duration-200 focus-visible:shadow-sm focus-visible:ring-2 focus-visible:ring-blue-200";
 
 export default function AddProduct() {
   const navigate = useNavigate();
@@ -47,7 +50,9 @@ export default function AddProduct() {
   const [loading, setLoading] = useState(false);
   const [categories, setCategories] = useState<Category[]>([]);
   const [variants, setVariants] = useState<ProductVariant[]>([]);
-  const [variantCombinations, setVariantCombinations] = useState<ProductVariantCombination[]>([]);
+  const [variantCombinations, setVariantCombinations] = useState<
+    ProductVariantCombination[]
+  >([]);
   const [imageFiles, setImageFiles] = useState<ImageFile[]>([]);
 
   const totalVariantStock = variantCombinations.reduce(
@@ -56,33 +61,40 @@ export default function AddProduct() {
   );
 
   const [formData, setFormData] = useState({
-    title: '',
-    description: '',
-    price: '',
+    title: "",
+    description: "",
+    price: "",
     saleEnabled: false,
-    salePrice: '',
-    saleStartDate: '',
-    saleEndDate: '',
-    quantity: '',
-    condition: 'new',
-    categoryId: '',
+    salePrice: "",
+    saleStartDate: "",
+    saleEndDate: "",
+    quantity: "",
+    condition: "new",
+    categoryId: "",
   });
 
   useEffect(() => {
-    api.get('/api/categories').then((res) => {
-      const list = res.data?.data ?? res.data ?? [];
-      setCategories(list);
-    }).catch(() => { });
+    api
+      .get("/api/categories")
+      .then((res) => {
+        const list = res.data?.data ?? res.data ?? [];
+        setCategories(list);
+      })
+      .catch(() => {});
 
     // Cleanup preview URLs khi unmount
     return () => {
-      imageFiles.forEach(img => URL.revokeObjectURL(img.previewUrl));
+      imageFiles.forEach((img) => URL.revokeObjectURL(img.previewUrl));
     };
   }, []);
 
-  const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
+  const handleChange = (
+    e: React.ChangeEvent<
+      HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement
+    >,
+  ) => {
     const { name, value } = e.target;
-    setFormData(prev => ({ ...prev, [name]: value }));
+    setFormData((prev) => ({ ...prev, [name]: value }));
   };
 
   // ── Xử lý chọn file ──────────────────────────────────────────────────────────
@@ -92,44 +104,47 @@ export default function AddProduct() {
 
     const remaining = MAX_IMAGES - imageFiles.length;
     if (remaining <= 0) {
-      toast.error(`Tối đa ${MAX_IMAGES} hình ảnh`);
+      toast.error(`Maximum ${MAX_IMAGES} images`);
       return;
     }
 
     const accepted = files.slice(0, remaining);
-    const newImages: ImageFile[] = accepted.map(file => ({
+    const newImages: ImageFile[] = accepted.map((file) => ({
       file,
       previewUrl: URL.createObjectURL(file),
       uploading: false,
     }));
 
-    setImageFiles(prev => [...prev, ...newImages]);
+    setImageFiles((prev) => [...prev, ...newImages]);
 
     // Reset input để có thể chọn lại cùng file
-    e.target.value = '';
+    e.target.value = "";
   };
 
   // ── Kéo thả ──────────────────────────────────────────────────────────────────
   const handleDrop = (e: React.DragEvent<HTMLDivElement>) => {
     e.preventDefault();
-    const files = Array.from(e.dataTransfer.files).filter(f => f.type.startsWith('image/'));
+    const files = Array.from(e.dataTransfer.files).filter((f) =>
+      f.type.startsWith("image/"),
+    );
     if (!files.length) return;
 
     const remaining = MAX_IMAGES - imageFiles.length;
     const accepted = files.slice(0, remaining);
-    const newImages: ImageFile[] = accepted.map(file => ({
+    const newImages: ImageFile[] = accepted.map((file) => ({
       file,
       previewUrl: URL.createObjectURL(file),
       uploading: false,
     }));
-    setImageFiles(prev => [...prev, ...newImages]);
+    setImageFiles((prev) => [...prev, ...newImages]);
   };
 
-  const handleDragOver = (e: React.DragEvent<HTMLDivElement>) => e.preventDefault();
+  const handleDragOver = (e: React.DragEvent<HTMLDivElement>) =>
+    e.preventDefault();
 
   // ── Xoá ảnh ──────────────────────────────────────────────────────────────────
   const removeImage = (idx: number) => {
-    setImageFiles(prev => {
+    setImageFiles((prev) => {
       URL.revokeObjectURL(prev[idx].previewUrl);
       return prev.filter((_, i) => i !== idx);
     });
@@ -138,13 +153,13 @@ export default function AddProduct() {
   // ── Set ảnh đại diện (đưa lên đầu) ───────────────────────────────────────────
   const setMainImage = (idx: number) => {
     if (idx === 0) return;
-    setImageFiles(prev => {
+    setImageFiles((prev) => {
       const copy = [...prev];
       const [main] = copy.splice(idx, 1);
       copy.unshift(main);
       return copy;
     });
-    toast.success('Đã đặt làm ảnh đại diện');
+    toast.success("Set to main image successfully");
   };
 
   // ── Upload tất cả ảnh lên Cloudinary ─────────────────────────────────────────
@@ -152,22 +167,24 @@ export default function AddProduct() {
     if (imageFiles.length === 0) return [];
 
     // Mark all as uploading
-    setImageFiles(prev => prev.map(img => ({ ...img, uploading: true })));
+    setImageFiles((prev) => prev.map((img) => ({ ...img, uploading: true })));
 
     const formDataUpload = new FormData();
-    imageFiles.forEach(img => formDataUpload.append('images', img.file));
+    imageFiles.forEach((img) => formDataUpload.append("images", img.file));
 
-    const res = await api.post('/api/upload/product-images', formDataUpload, {
-      headers: { 'Content-Type': 'multipart/form-data' },
+    const res = await api.post("/api/upload/product-images", formDataUpload, {
+      headers: { "Content-Type": "multipart/form-data" },
     });
 
     const urls: string[] = res.data.urls ?? [];
 
-    setImageFiles(prev => prev.map((img, i) => ({
-      ...img,
-      uploading: false,
-      uploadedUrl: urls[i],
-    })));
+    setImageFiles((prev) =>
+      prev.map((img, i) => ({
+        ...img,
+        uploading: false,
+        uploadedUrl: urls[i],
+      })),
+    );
 
     return urls;
   };
@@ -177,22 +194,32 @@ export default function AddProduct() {
     e.preventDefault();
 
     if (!formData.title || !formData.price || !formData.categoryId) {
-      toast.error('Vui lòng điền tên sản phẩm, giá bán và danh mục');
+      toast.error("Please enter product's name, price and category");
       return;
     }
     if (formData.saleEnabled) {
       const basePrice = parseFloat(formData.price);
       const dealPrice = parseFloat(formData.salePrice);
-      if (!formData.salePrice || !formData.saleStartDate || !formData.saleEndDate) {
-        toast.error('Vui lòng nhập đầy đủ giá sale, thời gian bắt đầu và kết thúc');
+      if (
+        !formData.salePrice ||
+        !formData.saleStartDate ||
+        !formData.saleEndDate
+      ) {
+        toast.error("Please enter sale price, start time and end time");
         return;
       }
-      if (!Number.isFinite(dealPrice) || dealPrice <= 0 || dealPrice >= basePrice) {
-        toast.error('Giá sale phải lớn hơn 0 và nhỏ hơn giá gốc');
+      if (
+        !Number.isFinite(dealPrice) ||
+        dealPrice <= 0 ||
+        dealPrice >= basePrice
+      ) {
+        toast.error(
+          "Sale price must greater than 0 and lower than original price!",
+        );
         return;
       }
       if (new Date(formData.saleStartDate) >= new Date(formData.saleEndDate)) {
-        toast.error('Thời gian bắt đầu phải nhỏ hơn thời gian kết thúc');
+        toast.error("Start time must placed before end time!");
         return;
       }
     }
@@ -202,7 +229,7 @@ export default function AddProduct() {
       // Upload ảnh trước nếu có
       let imageUrls: string[] = [];
       if (imageFiles.length > 0) {
-        toast.info('Đang tải ảnh lên...');
+        toast.info("Uploading image...");
         imageUrls = await uploadAllImages();
       }
 
@@ -211,73 +238,78 @@ export default function AddProduct() {
         description: formData.description,
         price: parseFloat(formData.price),
         saleEnabled: formData.saleEnabled,
-        salePrice: formData.saleEnabled ? parseFloat(formData.salePrice) : undefined,
-        saleStartDate: formData.saleEnabled ? formData.saleStartDate : undefined,
+        salePrice: formData.saleEnabled
+          ? parseFloat(formData.salePrice)
+          : undefined,
+        saleStartDate: formData.saleEnabled
+          ? formData.saleStartDate
+          : undefined,
         saleEndDate: formData.saleEnabled ? formData.saleEndDate : undefined,
         quantity: parseInt(formData.quantity) || 0,
         condition: formData.condition,
         categoryId: formData.categoryId,
-        image: imageUrls[0] ?? '',
+        image: imageUrls[0] ?? "",
         images: imageUrls,
         variants,
         variantCombinations,
       });
 
-      toast.success('Sản phẩm đã được thêm thành công!');
-      navigate('/seller/products');
+      toast.success("Product add successfully!");
+      navigate("/seller/products");
     } catch (error: any) {
-      const msg = error?.response?.data?.message || 'Có lỗi xảy ra khi thêm sản phẩm';
+      const msg =
+        error?.response?.data?.message || "Error occur when adding product.";
       toast.error(msg);
       // Nếu lỗi xảy ra sau upload thì reset uploading state
-      setImageFiles(prev => prev.map(img => ({ ...img, uploading: false })));
+      setImageFiles((prev) =>
+        prev.map((img) => ({ ...img, uploading: false })),
+      );
     } finally {
       setLoading(false);
     }
   };
 
-  const isUploading = imageFiles.some(img => img.uploading);
+  const isUploading = imageFiles.some((img) => img.uploading);
 
   return (
     <div className="p-6">
       <div className="max-w-7xl mx-auto">
         {/* Header */}
         <div className="mb-8">
-          <h1 className="text-2xl font-bold text-gray-900">Thêm sản phẩm mới</h1>
-          <p className="text-gray-600">Tạo sản phẩm mới cho cửa hàng của bạn</p>
+          <h1 className="text-2xl font-bold text-gray-900">Add Product</h1>
+          <p className="text-gray-600">Creating new product for your shop</p>
         </div>
 
         <form onSubmit={handleSubmit}>
           <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
-
             {/* Left Column */}
             <div className="lg:col-span-3 space-y-6">
-
               {/* Product Info */}
               <Card className="shadow-sm border-0 ring-1 ring-gray-100">
                 <CardHeader>
                   <CardTitle className="text-lg flex items-center gap-2">
                     <Tag className="h-5 w-5" />
-                    Thông tin sản phẩm
+                    Product Information
                   </CardTitle>
                 </CardHeader>
                 <CardContent className="space-y-4">
                   <div className="space-y-2">
-                    <Label htmlFor="title">Tên sản phẩm *</Label>
+                    <Label htmlFor="title">Product Name *</Label>
                     <Input
                       id="title"
                       name="title"
-                      placeholder="Nhập tên sản phẩm"
+                      placeholder="Enter product name here"
                       value={formData.title}
                       onChange={handleChange}
                       required
                     />
                   </div>
                   <div className="space-y-2">
-                    <Label htmlFor="description">Mô tả sản phẩm</Label>
+                    <Label htmlFor="description">Product Description</Label>
                     <Textarea
                       id="description"
                       name="description"
-                      placeholder="Mô tả chi tiết về sản phẩm..."
+                      placeholder="Detail description about the product..."
                       rows={6}
                       value={formData.description}
                       onChange={handleChange}
@@ -291,7 +323,7 @@ export default function AddProduct() {
                 <CardHeader>
                   <CardTitle className="text-lg flex items-center gap-2">
                     <ImagePlus className="h-5 w-5" />
-                    Hình ảnh sản phẩm
+                    Product Images
                     <span className="ml-auto text-sm font-normal text-muted-foreground">
                       {imageFiles.length}/{MAX_IMAGES}
                     </span>
@@ -308,10 +340,11 @@ export default function AddProduct() {
                     >
                       <Upload className="h-10 w-10 text-muted-foreground mx-auto mb-3" />
                       <p className="text-sm font-medium text-foreground mb-1">
-                        Kéo thả ảnh vào đây hoặc click để chọn
+                        Drag image here or click to select image
                       </p>
                       <p className="text-xs text-muted-foreground">
-                        JPG, PNG, WEBP · Tối đa 5MB/ảnh · Tối đa {MAX_IMAGES} ảnh
+                        JPG, PNG, WEBP · Maximum 5MB/image · Maximum{" "}
+                        {MAX_IMAGES} images
                       </p>
                       <input
                         ref={fileInputRef}
@@ -332,10 +365,11 @@ export default function AddProduct() {
                           <img
                             src={img.previewUrl}
                             alt={`product-${idx}`}
-                            className={`w-full h-full object-cover rounded-lg border-2 transition-all ${idx === 0
-                                ? 'border-primary ring-2 ring-primary/30'
-                                : 'border-border'
-                              }`}
+                            className={`w-full h-full object-cover rounded-lg border-2 transition-all ${
+                              idx === 0
+                                ? "border-primary ring-2 ring-primary/30"
+                                : "border-border"
+                            }`}
                           />
 
                           {/* Uploading overlay */}
@@ -348,7 +382,7 @@ export default function AddProduct() {
                           {/* Main label */}
                           {idx === 0 && !img.uploading && (
                             <div className="absolute bottom-1 left-1 right-1 bg-primary/90 text-white text-[10px] font-medium text-center rounded py-0.5">
-                              Ảnh chính
+                              Main Image
                             </div>
                           )}
 
@@ -360,7 +394,7 @@ export default function AddProduct() {
                                 <button
                                   type="button"
                                   onClick={() => setMainImage(idx)}
-                                  title="Đặt làm ảnh chính"
+                                  title="Set to Main Image"
                                   className="w-7 h-7 bg-white/90 rounded-full flex items-center justify-center hover:bg-white"
                                 >
                                   <Star className="h-3.5 w-3.5 text-amber-500" />
@@ -370,7 +404,7 @@ export default function AddProduct() {
                               <button
                                 type="button"
                                 onClick={() => removeImage(idx)}
-                                title="Xoá ảnh"
+                                title="Delete Image"
                                 className="w-7 h-7 bg-white/90 rounded-full flex items-center justify-center hover:bg-red-50"
                               >
                                 <X className="h-3.5 w-3.5 text-red-500" />
@@ -388,7 +422,7 @@ export default function AddProduct() {
                           className="aspect-square rounded-lg border-2 border-dashed border-border flex flex-col items-center justify-center text-muted-foreground hover:border-primary hover:text-primary transition-colors"
                         >
                           <ImagePlus className="h-5 w-5 mb-1" />
-                          <span className="text-xs">Thêm</span>
+                          <span className="text-xs">Add</span>
                         </button>
                       )}
                     </div>
@@ -396,7 +430,8 @@ export default function AddProduct() {
 
                   {imageFiles.length > 0 && (
                     <p className="text-xs text-muted-foreground">
-                      💡 Hover vào ảnh để xoá hoặc đặt làm ảnh chính. Ảnh đầu tiên sẽ được dùng làm ảnh đại diện.
+                      💡 Hover in image to delete or set the image to main
+                      image. The first image will be set to main image.
                     </p>
                   )}
                 </CardContent>
@@ -407,12 +442,13 @@ export default function AddProduct() {
                 <CardHeader>
                   <CardTitle className="text-lg flex items-center gap-2">
                     <Layers className="h-5 w-5" />
-                    Đặc điểm sản phẩm
+                    Product Variants
                   </CardTitle>
                 </CardHeader>
                 <CardContent>
                   <p className="text-sm text-gray-500 mb-4">
-                    Thêm các đặc điểm như Kích thước, Màu sắc... và liệt kê các giá trị tương ứng.
+                    Add characteristics such as Size, Color... and list the
+                    corresponding values.
                   </p>
                   <ProductVariantsManager
                     variants={variants}
@@ -432,14 +468,16 @@ export default function AddProduct() {
                 <CardHeader>
                   <CardTitle className="text-lg flex items-center gap-2">
                     <DollarSign className="h-5 w-5" />
-                    Giá & Tồn kho
+                    Prices & Stock
                   </CardTitle>
                 </CardHeader>
                 <CardContent className="space-y-4">
                   <div className="space-y-2">
-                    <Label htmlFor="price">Giá bán *</Label>
+                    <Label htmlFor="price">Price *</Label>
                     <div className="relative">
-                      <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500">$</span>
+                      <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500">
+                        $
+                      </span>
                       <Input
                         id="price"
                         name="price"
@@ -462,13 +500,16 @@ export default function AddProduct() {
                         type="checkbox"
                         checked={formData.saleEnabled}
                         onChange={(e) =>
-                          setFormData((prev) => ({ ...prev, saleEnabled: e.target.checked }))
+                          setFormData((prev) => ({
+                            ...prev,
+                            saleEnabled: e.target.checked,
+                          }))
                         }
                       />
                     </Label>
                     {formData.saleEnabled && (
                       <div className="space-y-2">
-                        <Label htmlFor="salePrice">Giá sale *</Label>
+                        <Label htmlFor="salePrice">Sale Price *</Label>
                         <Input
                           id="salePrice"
                           name="salePrice"
@@ -478,9 +519,9 @@ export default function AddProduct() {
                           value={formData.salePrice}
                           onChange={handleChange}
                           className={numericInputClass}
-                          placeholder="Giá trong thời gian sale"
+                          placeholder="Enter sale price here"
                         />
-                        <Label htmlFor="saleStartDate">Bắt đầu sale *</Label>
+                        <Label htmlFor="saleStartDate">Start time *</Label>
                         <Input
                           id="saleStartDate"
                           name="saleStartDate"
@@ -488,7 +529,7 @@ export default function AddProduct() {
                           value={formData.saleStartDate}
                           onChange={handleChange}
                         />
-                        <Label htmlFor="saleEndDate">Kết thúc sale *</Label>
+                        <Label htmlFor="saleEndDate">End time *</Label>
                         <Input
                           id="saleEndDate"
                           name="saleEndDate"
@@ -501,16 +542,20 @@ export default function AddProduct() {
                   </div>
 
                   <div className="space-y-2">
-                    <Label htmlFor="quantity">Số lượng tồn kho</Label>
+                    <Label htmlFor="quantity">Stock</Label>
                     <div className="relative">
                       <Package className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-500" />
                       <Input
                         id="quantity"
                         name="quantity"
                         type="number"
-                        placeholder="Số lượng"
+                        placeholder="Stock"
                         className={`pl-10 ${numericInputClass}`}
-                        value={variantCombinations.length > 0 ? String(totalVariantStock) : formData.quantity}
+                        value={
+                          variantCombinations.length > 0
+                            ? String(totalVariantStock)
+                            : formData.quantity
+                        }
                         onChange={handleChange}
                         disabled={variantCombinations.length > 0}
                         min="0"
@@ -519,7 +564,7 @@ export default function AddProduct() {
                   </div>
 
                   <div className="space-y-2">
-                    <Label htmlFor="categoryId">Danh mục *</Label>
+                    <Label htmlFor="categoryId">Category *</Label>
                     <select
                       id="categoryId"
                       name="categoryId"
@@ -528,15 +573,17 @@ export default function AddProduct() {
                       onChange={handleChange}
                       required
                     >
-                      <option value="">Chọn danh mục</option>
-                      {categories.map(cat => (
-                        <option key={cat._id} value={cat._id}>{cat.name}</option>
+                      <option value="">Select category</option>
+                      {categories.map((cat) => (
+                        <option key={cat._id} value={cat._id}>
+                          {cat.name}
+                        </option>
                       ))}
                     </select>
                   </div>
 
                   <div className="space-y-2">
-                    <Label htmlFor="condition">Tình trạng</Label>
+                    <Label htmlFor="condition">Condition</Label>
                     <select
                       id="condition"
                       name="condition"
@@ -544,9 +591,9 @@ export default function AddProduct() {
                       value={formData.condition}
                       onChange={handleChange}
                     >
-                      <option value="new">Mới</option>
-                      <option value="like_new">Như mới</option>
-                      <option value="used">Đã qua sử dụng</option>
+                      <option value="new">New</option>
+                      <option value="like_new">Like New</option>
+                      <option value="used">Used</option>
                     </select>
                   </div>
                 </CardContent>
@@ -562,24 +609,27 @@ export default function AddProduct() {
                       disabled={loading || isUploading}
                     >
                       {loading || isUploading ? (
-                        <><Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                          {isUploading ? 'Đang tải ảnh...' : 'Đang lưu...'}</>
-                      ) : 'Thêm sản phẩm'}
+                        <>
+                          <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                          {isUploading ? "Loading Image..." : "Saving..."}
+                        </>
+                      ) : (
+                        "Create Product"
+                      )}
                     </Button>
                     <Button
                       type="button"
                       variant="outline"
                       className="w-full"
-                      onClick={() => navigate('/seller/products')}
+                      onClick={() => navigate("/seller/products")}
                       disabled={loading || isUploading}
                     >
-                      Hủy bỏ
+                      Cancel
                     </Button>
                   </div>
                 </CardContent>
               </Card>
             </div>
-
           </div>
         </form>
       </div>
