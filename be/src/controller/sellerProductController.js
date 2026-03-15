@@ -159,7 +159,7 @@ exports.createProduct = async (req, res, next) => {
       if (mod.listingStatus === "blocked") {
         // Chỉ block HIGH_RISK seller (score < 3.0) và có riskFlagged
         return res.status(403).json({
-          message: "Tài khoản của bạn hiện bị khóa do điểm uy tín quá thấp. Vui lòng liên hệ hỗ trợ.",
+          message: "Your account has been blocked due to low trust score. Please contact support.",
           tier: mod.tier,
           finalScore: mod.finalScore,
           blocked: true,
@@ -215,8 +215,8 @@ exports.createProduct = async (req, res, next) => {
         score: moderationInfo.finalScore,
         status: initialListingStatus,
         message: initialListingStatus === "pending_review"
-          ? "Sản phẩm đang chờ admin duyệt do chính sách kiểm duyệt."
-          : "Sản phẩm được tự động duyệt.",
+          ? "Your product is pending review by admin due to policy review."
+          : "Your product has been automatically approved.",
       } : null,
     });
   } catch (err) {

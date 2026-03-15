@@ -87,7 +87,7 @@ exports.register = async (req, res, next) => {
 
       await sendEmail({
         to: email,
-        subject: "Xác thực tài khoản của bạn",
+        subject: "Verify your email address",
         template: "verifyEmail.ejs",
         data: {
           username,
@@ -329,7 +329,7 @@ exports.forgotPassword = async (req, res, next) => {
 
       await sendEmail({
         to: email,
-        subject: "Reset mật khẩu của bạn",
+        subject: "Reset your password",
         template: "resetPassword.ejs",
         data: {
           username: user.username,
@@ -481,7 +481,7 @@ exports.resendVerificationEmail = async (req, res, next) => {
 
     await sendEmail({
       to: email,
-      subject: "Xác thực tài khoản của bạn",
+      subject: "Verify your email address",
       template: "verifyEmail.ejs",
       data: {
         username,

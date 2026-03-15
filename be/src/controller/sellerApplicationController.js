@@ -10,27 +10,27 @@ exports.submitApplication = async (req, res, next) => {
 
         // Không cho phép nếu đã là seller hoặc admin
         if (req.user.role === "seller" || req.user.role === "admin") {
-            return res.status(400).json({ message: "Tài khoản của bạn đã có quyền seller hoặc admin" });
+            return res.status(400).json({ message: "You already have seller or admin role" });
         }
 
         // Phải verify email trước
         if (!req.user.isEmailVerified) {
-            return res.status(400).json({ message: "Vui lòng xác thực email trước khi đăng ký seller" });
+            return res.status(400).json({ message: "Please verify your email before applying for seller" });
         }
 
         // Kiểm tra đã có đơn approved trước đó chưa (tránh submit nhiều lần)
         const existing = await SellerApplication.findOne({ user: userId });
         if (existing) {
-            return res.status(400).json({ message: "Bạn đã đăng ký seller rồi" });
+            return res.status(400).json({ message: "You have already applied for seller" });
         }
 
         const { shopName, productDescription } = req.body;
 
         if (!shopName || !productDescription) {
-            return res.status(400).json({ message: "Vui lòng điền đầy đủ thông tin" });
+            return res.status(400).json({ message: "Please fill in all required information" });
         }
         if (productDescription.length < 20) {
-            return res.status(400).json({ message: "Mô tả sản phẩm cần ít nhất 20 ký tự" });
+            return res.status(400).json({ message: "Product description must be at least 20 characters" });
         }
 
         const now = new Date();
@@ -59,8 +59,8 @@ exports.submitApplication = async (req, res, next) => {
             await notificationService.sendNotification({
                 recipientId: userId,
                 type: "seller_application_approved",
-                title: "🎉 Chúc mừng! Bạn đã trở thành Seller",
-                body: `Shop "${shopName}" đã được kích hoạt. Bạn đang ở giai đoạn PROBATION (thử việc). Hãy bắt đầu đăng sản phẩm!`,
+                title: "🎉 Congratulations! Your seller application has been approved",
+                body: `Shop "${shopName}" has been activated. You are now in the PROBATION stage (trial period). Start selling your products!`,
                 link: "/seller",
                 metadata: { shopName, sellerStage: "PROBATION" },
             });
@@ -69,7 +69,7 @@ exports.submitApplication = async (req, res, next) => {
         }
 
         return res.status(201).json({
-            message: "Đăng ký seller thành công! Bạn đang ở giai đoạn PROBATION.",
+            message: "Seller application approved successfully! You are now in the PROBATION stage (trial period). Start selling your products!",
             data: application,
             sellerStage: "PROBATION",
         });
@@ -143,7 +143,7 @@ exports.approveApplication = async (req, res, next) => {
         try {
             await sendEmail({
                 to: application.user.email,
-                subject: "Chúc mừng! Đơn đăng ký seller của bạn đã được duyệt",
+                subject: "🎉 Congratulations! Your seller application has been approved",
                 template: "sellerApproved.ejs",
                 data: {
                     username: application.user.username,
@@ -152,19 +152,19 @@ exports.approveApplication = async (req, res, next) => {
                 },
             });
         } catch (emailErr) {
-            console.error("Gửi email thông báo thất bại:", emailErr.message);
+            console.error("Failed to send email:", emailErr.message);
         }
 
         await notificationService.sendNotification({
             recipientId: application.user._id,
             type: "seller_application_approved",
-            title: "Đơn đăng ký Seller đã được duyệt!",
-            body: `Chúc mừng! Shop "${application.shopName}" của bạn đã được phê duyệt.`,
+            title: "🎉 Congratulations! Your seller application has been approved!",
+            body: `Shop "${application.shopName}" has been activated. You are now in the PROBATION stage (trial period). Start selling your products!`,
             link: "/seller",
             metadata: { shopName: application.shopName },
         });
 
-        return res.status(200).json({ message: "Đã duyệt đơn thành công", data: application });
+        return res.status(200).json({ message: "Seller application approved successfully! You are now in the PROBATION stage (trial period). Start selling your products!", data: application });
     } catch (error) {
         next(error);
     }

@@ -207,13 +207,13 @@ async function evaluateSellerTrust(sellerId, triggeredBy = "CRON_JOB") {
             await notificationService.sendNotification({
                 recipientId: sellerId,
                 type: "trust_score_warning",
-                title: "⚠️ Điểm uy tín của bạn đang giảm",
-                body: `Điểm uy tín hiện tại: ${metrics.finalScore.toFixed(2)}/5.0. Nếu tiếp tục giảm xuống dưới 3.0, sản phẩm mới sẽ cần admin duyệt trước khi hiển thị.`,
+                title: "⚠️ Your trust score is decreasing",
+                body: `Your current trust score: ${metrics.finalScore.toFixed(2)}/5.0. If it continues to drop below 3.0, new products will require admin approval before being displayed.`,
                 link: "/seller/trust-score",
                 metadata: { finalScore: metrics.finalScore, tier },
             });
         } catch (e) {
-            console.error("[TrustScore] Gửi warning notification thất bại:", e.message);
+            console.error("[TrustScore] Failed to send warning notification:", e.message);
         }
     }
 
@@ -223,13 +223,13 @@ async function evaluateSellerTrust(sellerId, triggeredBy = "CRON_JOB") {
             await notificationService.sendNotification({
                 recipientId: sellerId,
                 type: "trust_score_high_risk",
-                title: "🚨 Tài khoản cần chú ý – Sản phẩm sẽ cần duyệt",
-                body: `Điểm uy tín: ${metrics.finalScore.toFixed(2)}/5.0 (dưới 3.0). Tất cả sản phẩm mới đăng sẽ cần admin duyệt trước khi xuất hiện trên sàn.`,
+                title: "🚨 Account needs attention – Products will require approval",
+                body: `Trust score: ${metrics.finalScore.toFixed(2)}/5.0 (below 3.0). All new products will require admin approval before appearing on the platform.`,
                 link: "/seller/trust-score",
                 metadata: { finalScore: metrics.finalScore, tier },
             });
         } catch (e) {
-            console.error("[TrustScore] Gửi high-risk notification thất bại:", e.message);
+            console.error("[TrustScore] Failed to send high-risk notification:", e.message);
         }
     }
 
@@ -248,7 +248,7 @@ async function evaluateSellerTrust(sellerId, triggeredBy = "CRON_JOB") {
 
 // ── Run for all sellers (used by cron job) ────────────────────────────────────
 async function runTrustScoreForAllSellers() {
-    console.log("[TrustScore] Bắt đầu tính điểm uy tín toàn bộ sellers...");
+    console.log("[TrustScore] Starting trust score calculation for all sellers...");
     const sellers = await User.find({ role: "seller", status: "active" })
         .select("_id username")
         .lean();
@@ -259,11 +259,11 @@ async function runTrustScoreForAllSellers() {
             await evaluateSellerTrust(seller._id, "CRON_JOB");
             success++;
         } catch (err) {
-            console.error(`[TrustScore] Lỗi seller ${seller._id}:`, err.message);
+            console.error(`[TrustScore] Error processing seller ${seller._id}:`, err.message);
             failed++;
         }
     }
-    console.log(`[TrustScore] Hoàn tất: ${success} thành công, ${failed} lỗi / ${sellers.length} sellers`);
+    console.log(`[TrustScore] Completed: ${success} success, ${failed} failed / ${sellers.length} sellers`);
     return { success, failed, total: sellers.length };
 }
 

@@ -95,19 +95,19 @@ async function checkAndUpdateSellerStage(seller) {
 
         if (canUpgrade) {
             newStage = "NORMAL";
-            reason = `Nâng cấp tự động: ${metrics.successOrders} đơn thành công, rating ${metrics.avgRating.toFixed(1)}⭐, refund rate ${metrics.refundRate.toFixed(1)}%`;
+            reason = `Automatic upgrade: ${metrics.successOrders} successful orders, rating ${metrics.avgRating.toFixed(1)}⭐, refund rate ${metrics.refundRate.toFixed(1)}%`;
         }
     } else if (currentStage === "NORMAL") {
         // Điều kiện hạ cấp về PROBATION
         if (metrics.avgRating < 3.5) {
             newStage = "PROBATION";
-            reason = `Rating trung bình thấp: ${metrics.avgRating.toFixed(1)} (yêu cầu ≥ 3.5)`;
+            reason = `Low average rating: ${metrics.avgRating.toFixed(1)} (required ≥ 3.5)`;
         } else if (metrics.refundRate > 10) {
             newStage = "PROBATION";
-            reason = `Tỷ lệ hoàn trả cao: ${metrics.refundRate.toFixed(1)}% (yêu cầu < 10%)`;
+            reason = `High refund rate: ${metrics.refundRate.toFixed(1)}% (required < 10%)`;
         } else if (metrics.reportRate > 5) {
             newStage = "PROBATION";
-            reason = `Tỷ lệ khiếu nại cao: ${metrics.reportRate.toFixed(1)}% (yêu cầu < 5%)`;
+            reason = `High report rate: ${metrics.reportRate.toFixed(1)}% (required < 5%)`;
         }
     }
 
@@ -131,14 +131,14 @@ async function checkAndUpdateSellerStage(seller) {
                 recipientId: seller._id,
                 type: newStage === "NORMAL" ? "seller_upgraded" : "seller_downgraded",
                 title: newStage === "NORMAL"
-                    ? "🎉 Tài khoản Seller đã được nâng cấp lên NORMAL"
-                    : "⚠️ Tài khoản Seller bị hạ cấp về PROBATION",
+                    ? "🎉 Your seller account has been upgraded to NORMAL"
+                    : "⚠️ Your seller account has been downgraded to PROBATION",
                 body: reason,
                 link: "/seller",
                 metadata: { oldStage: currentStage, newStage, reason },
             });
         } catch (e) {
-            console.error("[SellerStage] Gửi notification thất bại:", e.message);
+            console.error("[SellerStage] Failed to send notification:", e.message);
         }
     }
 
@@ -149,7 +149,7 @@ async function checkAndUpdateSellerStage(seller) {
 
 // ─── Chạy cho toàn bộ sellers (dùng bởi cron job) ─────────────────────────────
 async function runStageCheckForAllSellers() {
-    console.log("[SellerStage] Bắt đầu kiểm tra stage cho tất cả sellers...");
+    console.log("[SellerStage] Starting stage check for all sellers...");
 
     const sellers = await User.find({ role: "seller", status: "active" })
         .select("_id username sellerStage sellerInfo violationCount")
@@ -165,11 +165,11 @@ async function runStageCheckForAllSellers() {
                 else downgraded++;
             } else unchanged++;
         } catch (err) {
-            console.error(`[SellerStage] Lỗi khi xử lý seller ${seller._id}:`, err.message);
+            console.error(`[SellerStage] Error processing seller ${seller._id}:`, err.message);
         }
     }
 
-    console.log(`[SellerStage] Hoàn tất: ${upgraded} nâng cấp, ${downgraded} hạ cấp, ${unchanged} không thay đổi`);
+    console.log(`[SellerStage] Completed: ${upgraded} upgrades, ${downgraded} downgrades, ${unchanged} unchanged`);
     return { upgraded, downgraded, unchanged, total: sellers.length };
 }
 

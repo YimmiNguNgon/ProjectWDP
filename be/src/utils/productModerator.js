@@ -132,31 +132,31 @@ async function autoModerate({ sellerId, title, description, price, images, categ
 
     // ── HARD REJECT checks ───────────────────────────────────────────────────
     if (!price || price <= 0) {
-        return { decision: "REJECTED", reason: "Giá sản phẩm phải lớn hơn 0", sellerScore: 0 };
+        return { decision: "REJECTED", reason: "Product price must be greater than 0", sellerScore: 0 };
     }
 
     if (!images || images.length === 0) {
-        return { decision: "REJECTED", reason: "Sản phẩm phải có ít nhất 1 hình ảnh", sellerScore: 0 };
+        return { decision: "REJECTED", reason: "Product must have at least 1 image", sellerScore: 0 };
     }
 
     const banned = checkBannedKeywords(fullText);
     if (banned.flagged) {
         return {
             decision: "REJECTED",
-            reason: `Nội dung chứa từ khóa bị cấm: "${banned.keyword}"`,
+            reason: `Content contains banned keywords: "${banned.keyword}"`,
             sellerScore: 0,
         };
     }
 
     if (isSpam(fullText)) {
-        return { decision: "REJECTED", reason: "Nội dung spam hoặc lặp ký tự bất thường", sellerScore: 0 };
+        return { decision: "REJECTED", reason: "Content contains spam or abnormal character repetition", sellerScore: 0 };
     }
 
     const { isDuplicate } = await checkDuplicate(sellerId, title, categoryId, excludeId);
     if (isDuplicate) {
         return {
             decision: "REJECTED",
-            reason: "Bạn đã có sản phẩm trùng tên trong cùng danh mục. Vui lòng chỉnh sửa sản phẩm hiện có.",
+            reason: "You already have a product with the same name in the same category. Please edit the existing product.",
             sellerScore: 0,
         };
     }
@@ -172,11 +172,11 @@ async function autoModerate({ sellerId, title, description, price, images, categ
     if (isFirstProduct || hasViolations || sellerScore < 40) {
         return {
             decision: "PENDING",
-            reason: isFirstProduct
-                ? "Seller đăng sản phẩm lần đầu – chờ admin duyệt"
+            reason: isFirstProduct  
+                ? "Seller is new – waiting for admin approval"
                 : hasViolations
-                    ? "Seller có lịch sử vi phạm – chờ admin duyệt"
-                    : "Điểm uy tín chưa đủ – chờ admin duyệt",
+                    ? "Seller has a history of violations – waiting for admin approval"
+                    : "Seller's trust score is not enough – waiting for admin approval",
             sellerScore,
         };
     }
@@ -184,7 +184,7 @@ async function autoModerate({ sellerId, title, description, price, images, categ
     // ── AUTO APPROVED ────────────────────────────────────────────────────────
     return {
         decision: "APPROVED",
-        reason: "Đã vượt qua kiểm duyệt tự động",
+        reason: "Passed automatic moderation",
         sellerScore,
     };
 }

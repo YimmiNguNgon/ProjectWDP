@@ -168,13 +168,13 @@ async function evaluateVerifiedBadge(sellerId) {
             await notificationService.sendNotification({
                 recipientId: sellerId,
                 type: "verified_badge_granted",
-                title: "✅ Chúc mừng! Bạn đã được cấp Verified Seller Badge",
-                body: "Tài khoản của bạn đã đạt đủ tiêu chí để được gắn nhãn Verified Seller. Badge sẽ xuất hiện trên trang shop và sản phẩm của bạn.",
+                title: "✅ Congratulations! You have been granted the Verified Seller Badge",
+                body: "Your account has met the criteria for the Verified Seller badge. The badge will appear on your shop and product pages.",
                 link: "/seller/trust-score",
                 metadata: { ...metrics },
             });
         } catch (e) {
-            console.error("[VerifiedBadge] Gửi grant notification thất bại:", e.message);
+            console.error("[VerifiedBadge] Failed to send grant notification:", e.message);
         }
     }
 
@@ -183,13 +183,13 @@ async function evaluateVerifiedBadge(sellerId) {
             await notificationService.sendNotification({
                 recipientId: sellerId,
                 type: "verified_badge_revoked",
-                title: "⚠️ Verified Seller Badge của bạn đã bị thu hồi",
-                body: `Lý do: ${revokeReason}. Hãy cải thiện chỉ số để được cấp lại badge.`,
+                title: "⚠️ Your Verified Seller Badge has been revoked",
+                body: `Reason: ${revokeReason}. Please improve your metrics to be eligible for the badge again.`,
                 link: "/seller/trust-score",
                 metadata: { ...metrics, revokeReason },
             });
         } catch (e) {
-            console.error("[VerifiedBadge] Gửi revoke notification thất bại:", e.message);
+            console.error("[VerifiedBadge] Failed to send revoke notification:", e.message);
         }
     }
 
@@ -202,7 +202,7 @@ async function evaluateVerifiedBadge(sellerId) {
 
 // ── Chạy cho toàn bộ seller (dùng bởi cron job) ───────────────────────────────
 async function runVerifiedBadgeCheckForAllSellers() {
-    console.log("[VerifiedBadge] Bắt đầu kiểm tra badge toàn bộ sellers...");
+    console.log("[VerifiedBadge] Starting badge check for all sellers...");
     const sellers = await User.find({ role: "seller", status: "active" })
         .select("_id username")
         .lean();
@@ -217,13 +217,13 @@ async function runVerifiedBadgeCheckForAllSellers() {
                 unchanged++;
             }
         } catch (err) {
-            console.error(`[VerifiedBadge] Lỗi seller ${seller._id}:`, err.message);
+            console.error(`[VerifiedBadge] Error processing seller ${seller._id}:`, err.message);
             failed++;
         }
     }
 
     console.log(
-        `[VerifiedBadge] Hoàn tất: ${granted} cấp mới, ${revoked} thu hồi, ${unchanged} không đổi, ${failed} lỗi / ${sellers.length} sellers`
+        `[VerifiedBadge] Completed: ${granted} granted, ${revoked} revoked, ${unchanged} unchanged, ${failed} failed / ${sellers.length} sellers`
     );
     return { granted, revoked, unchanged, failed, total: sellers.length };
 }

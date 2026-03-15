@@ -3,7 +3,7 @@
 
 <head>
     <meta charset="UTF-8" />
-    <title>Đơn đăng ký Seller đã được duyệt</title>
+    <title>YOUR SELLER APPLICATION HAS BEEN APPROVED</title>
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <style>
         body {
@@ -114,47 +114,44 @@
     <div class="wrapper">
         <div class="container">
             <div class="header">
-                <h1>CHUC MUNG! DON DANG KY SELLER DA DUOC DUYET</h1>
+                <h1>YOUR SELLER APPLICATION HAS BEEN APPROVED</h1>
             </div>
             <div class="content">
-                <h2>Xin chao <%= username %>
+                <h2>Hello <%= username %>
                 </h2>
-                <p>Chung toi rat vui thong bao rang don dang ky tro thanh Seller cua ban da duoc <strong>phe duyet thanh
-                        cong</strong>!</p>
+                <p>We are happy to inform you that your seller application has been approved!</p>
 
                 <div class="highlight-box">
-                    <p>Ten shop: <strong>
+                    <p>Shop name: <strong>
                             <%= shopName %>
                         </strong></p>
-                    <p>Trang thai: DA DUOC DUYET</p>
+                    <p>Status: APPROVED</p>
                 </div>
 
-                <p>Tu bay gio, tai khoan cua ban da duoc cap quyen <strong>Seller</strong>. Ban co the bat dau:</p>
+                <p>From now on, your account has been granted <strong>Seller</strong> permissions. You can now:</p>
                 <ul style="color: #374151; font-size: 15px; line-height: 2;">
-                    <li>Dang ban san pham len san thuong mai</li>
-                    <li>Quan ly don hang cua ban</li>
-                    <li>Theo doi doanh thu va danh gia</li>
+                    <li>Post products on the marketplace</li>
+                    <li>Manage your orders</li>
+                    <li>Track your sales and reviews</li>
                 </ul>
 
                 <% if (adminNote) { %>
                     <div class="note-box">
-                        <p style="margin: 0; font-size: 14px; color: #374151;"><strong>Ghi chu tu Admin:</strong>
+                        <p style="margin: 0; font-size: 14px; color: #374151;"><strong>Admin Note:</strong>
                             <%= adminNote %>
                         </p>
                     </div>
                     <% } %>
 
                         <div class="btn-wrapper">
-                            <a href="<%= process.env.CLIENT_URL || 'http://localhost:5173' %>/seller" class="btn">Di den
-                                Seller Panel</a>
+                            <a href="<%= process.env.CLIENT_URL || 'http://localhost:5173' %>/seller" class="btn">Navigate to Seller Panel</a>
                         </div>
 
-                        <p style="color: #6b7280; font-size: 13px;">Neu ban co bat ky thac mac nao, vui long lien he voi
-                            chung toi qua muc Ho tro.</p>
+                        <p style="color: #6b7280; font-size: 13px;">If you have any questions, please contact us through the Support section.</p>
             </div>
             <div class="footer">
                 <p>&copy; <%= new Date().getFullYear() %> Ebay. All rights reserved.</p>
-                <p>Email nay duoc gui tu dong, vui long khong tra loi.</p>
+                <p>This email was sent automatically, please do not reply.</p>
             </div>
         </div>
     </div>

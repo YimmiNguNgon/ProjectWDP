@@ -405,8 +405,8 @@ const collectCheckoutItems = async ({
         if (!foundCartItemIds.has(String(requestedId))) {
           unavailableItems.push(
             toUnavailableItem({
-              title: "Sản phẩm trong giỏ",
-              message: "Sản phẩm trong giỏ không còn tồn tại hoặc đã bị xóa",
+              title: "Product in Cart",
+              message: "Product in cart does not exist or has been deleted",
               cartItemId: requestedId,
             }),
           );
@@ -423,8 +423,8 @@ const collectCheckoutItems = async ({
       if (!product) {
         unavailableItems.push(
           toUnavailableItem({
-            title: "Sản phẩm trong giỏ",
-            message: "Sản phẩm này không còn tồn tại",
+            title: "Product in Cart",
+            message: "Product does not exist",
             cartItemId: cartItem._id,
             selectedVariants,
           }),
@@ -432,7 +432,7 @@ const collectCheckoutItems = async ({
         continue;
       }
 
-      const title = String(product.title || "Sản phẩm");
+      const title = String(product.title || "Product");
       if (isProductListingUnavailable(product)) {
         unavailableItems.push(
           toUnavailableItem({
@@ -451,7 +451,7 @@ const collectCheckoutItems = async ({
         unavailableItems.push(
           toUnavailableItem({
             title,
-            message: "Bạn không thể mua sản phẩm của chính mình",
+            message: "You cannot buy your own product",
             availableStock: 0,
             productId: product._id,
             cartItemId: cartItem._id,
@@ -536,8 +536,8 @@ const collectCheckoutItems = async ({
     if (!rawProductId || quantity <= 0) {
       unavailableItems.push(
         toUnavailableItem({
-          title: "Sản phẩm",
-          message: "Dữ liệu mua ngay không hợp lệ",
+          title: "Product",
+          message: "Invalid buy now data",
           productId: rawProductId,
           selectedVariants: rawItem?.selectedVariants || [],
         }),
@@ -553,8 +553,8 @@ const collectCheckoutItems = async ({
     if (!product) {
       unavailableItems.push(
         toUnavailableItem({
-          title: "Sản phẩm",
-          message: "Sản phẩm không tồn tại",
+          title: "Product",
+          message: "Product does not exist",
           productId: rawProductId,
           selectedVariants,
         }),
@@ -562,7 +562,7 @@ const collectCheckoutItems = async ({
       continue;
     }
 
-    const title = String(product.title || "Sản phẩm");
+    const title = String(product.title || "Product");
     if (isProductListingUnavailable(product)) {
       unavailableItems.push(
         toUnavailableItem({
@@ -580,7 +580,7 @@ const collectCheckoutItems = async ({
       unavailableItems.push(
         toUnavailableItem({
           title,
-          message: "Bạn không thể mua sản phẩm của chính mình",
+          message: "You cannot buy your own product",
           availableStock: 0,
           productId: product._id,
           selectedVariants,
@@ -660,7 +660,7 @@ const preValidatePayableItemsStock = async (payableItems) => {
       unavailableItems.push(
         toUnavailableItem({
           title: item.title,
-          message: "Sản phẩm không tồn tại",
+          message: "Product does not exist",
           productId: item.productId,
           cartItemId: item.cartItemId,
           selectedVariants,
@@ -669,7 +669,7 @@ const preValidatePayableItemsStock = async (payableItems) => {
       continue;
     }
 
-    const title = String(product.title || item.title || "Sản phẩm");
+    const title = String(product.title || item.title || "Product");
     if (isProductListingUnavailable(product)) {
       unavailableItems.push(
         toUnavailableItem({
@@ -960,7 +960,7 @@ getAllOrders = async (req, res) => {
         _id: order._id, // Hoặc có thể tạo orderId format như #ORD001
         // Nếu muốn format _id thành #ORD001:
         //_id: `#ORD${String(order._id).slice(-6).toUpperCase()}`,
-        customer: order.buyer?.username || "Khách hàng",
+        customer: order.buyer?.username || "Customer",
         email: order.buyer?.email || "",
         total: order.totalAmount,
         subtotal: order.subtotalAmount ?? order.totalAmount,
@@ -988,7 +988,7 @@ getAllOrders = async (req, res) => {
   } catch (error) {
     res.status(500).json({
       success: false,
-      message: "Lỗi khi lấy danh sách đơn hàng",
+      message: "Error fetching order list",
       error: error.message,
     });
   }
@@ -1056,7 +1056,7 @@ getOrderById = async (req, res) => {
     if (orders.length === 0) {
       return res.status(404).json({
         success: false,
-        message: "Không tìm thấy đơn hàng",
+        message: "Order not found",
       });
     }
 
@@ -1111,7 +1111,7 @@ getOrderById = async (req, res) => {
   } catch (error) {
     res.status(500).json({
       success: false,
-      message: "Lỗi khi lấy thông tin đơn hàng",
+      message: "Error fetching order details",
       error: error.message,
     });
   }
@@ -1200,7 +1200,7 @@ getOrders = async (req, res) => {
         buyer: order.buyer,
         seller: order.seller,
         shipper: order.shipper || null,
-        customer: order.buyer?.username || "Khách hàng",
+        customer: order.buyer?.username || "Customer",
         email: order.buyer?.email || "",
         totalAmount: order.totalAmount,
         subtotalAmount: order.subtotalAmount ?? order.totalAmount,
@@ -1235,7 +1235,7 @@ getOrders = async (req, res) => {
   } catch (error) {
     res.status(500).json({
       success: false,
-      message: "Lỗi khi lấy danh sách đơn hàng",
+      message: "Error fetching order list",
       error: error.message,
     });
   }
@@ -1315,7 +1315,7 @@ getOrderStats = async (req, res) => {
   } catch (error) {
     res.status(500).json({
       success: false,
-      message: "Lỗi khi lấy thống kê",
+      message: "Error fetching order stats",
       error: error.message,
     });
   }

@@ -50,7 +50,7 @@ const getSavedSellers = async (req, res) => {
         console.error("Error fetching saved sellers:", error);
         return res.status(500).json({
             success: false,
-            message: "Không thể tải saved sellers",
+            message: "Failed to fetch saved sellers",
             error: error.message,
         });
     }
@@ -115,7 +115,7 @@ const addSavedSeller = async (req, res) => {
         console.error("[addSavedSeller] Error:", error.message);
         return res.status(500).json({
             success: false,
-            message: "Không thể lưu seller",
+            message: "Failed to save seller",
             error: error.message,
         });
     }
@@ -143,7 +143,7 @@ const removeSavedSeller = async (req, res) => {
         console.error("Error removing saved seller:", error);
         return res.status(500).json({
             success: false,
-            message: "Không thể xóa saved seller",
+            message: "Failed to remove saved seller",
             error: error.message,
         });
     }

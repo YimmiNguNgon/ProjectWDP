@@ -17,7 +17,7 @@ const getSavedSearches = async (req, res) => {
         console.error("Error fetching saved searches:", error);
         res.status(500).json({
             success: false,
-            message: "Không thể tải saved searches",
+            message: "Failed to fetch saved searches",
         });
     }
 };
@@ -55,7 +55,7 @@ const createSavedSearch = async (req, res) => {
         console.error("Error creating saved search:", error);
         res.status(500).json({
             success: false,
-            message: "Không thể lưu search",
+            message: "Failed to save search",
         });
     }
 };
@@ -86,7 +86,7 @@ const deleteSavedSearch = async (req, res) => {
         console.error("Error deleting saved search:", error);
         res.status(500).json({
             success: false,
-            message: "Không thể xóa saved search",
+            message: "Failed to delete saved search",
         });
     }
 };
@@ -128,7 +128,7 @@ const updateSavedSearch = async (req, res) => {
         console.error("Error updating saved search:", error);
         res.status(500).json({
             success: false,
-            message: "Không thể cập nhật saved search",
+            message: "Failed to update saved search",
         });
     }
 };

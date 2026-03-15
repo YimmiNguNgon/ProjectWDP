@@ -24,7 +24,7 @@ const sellerEmailNotify = async (req, res, next) => {
                     .lean();
 
                 if (user && user.email) {
-                    const shopName = body.data.shopName || "Shop của bạn";
+                    const shopName = body.data.shopName || "Your Shop";
                     const registeredAt = new Date().toLocaleString("vi-VN", {
                         timeZone: "Asia/Ho_Chi_Minh",
                         day: "2-digit",
@@ -37,7 +37,7 @@ const sellerEmailNotify = async (req, res, next) => {
                     // Gửi email không chặn response — fire and forget
                     sendEmail({
                         to: user.email,
-                        subject: "🎉 Chúc mừng! Bạn đã đăng ký Seller thành công",
+                        subject: "🎉 Congratulations! You have successfully registered as a Seller",
                         template: "sellerRegistered.ejs",
                         data: {
                             username: user.username,
@@ -45,12 +45,12 @@ const sellerEmailNotify = async (req, res, next) => {
                             registeredAt,
                         },
                     }).catch((err) => {
-                        console.error("[sellerEmailNotify] Gửi email thất bại:", err.message);
+                        console.error("[sellerEmailNotify] Failed to send email:", err.message);
                     });
                 }
             } catch (err) {
                 // Không để lỗi email block response
-                console.error("[sellerEmailNotify] Lỗi khi xử lý email:", err.message);
+                console.error("[sellerEmailNotify] Error processing email:", err.message);
             }
         }
 
