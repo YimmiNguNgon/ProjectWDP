@@ -61,8 +61,15 @@ export const SearchContainer: React.FC<SearchContainerProps> = ({
   };
 
   // Handle seller click
-  const handleSellerClick = (sellerId: string) => {
-    navigate(`/seller/${sellerId}`);
+  const handleSellerClick = (
+    sellerId: string,
+    name: string,
+    productId: string,
+    tab: string,
+  ) => {
+    navigate(
+      `/seller/${sellerId}?name=${encodeURIComponent(name)}&productId=${productId}&tab=${tab}`,
+    );
     setShowResults(false);
     setQuery("");
   };

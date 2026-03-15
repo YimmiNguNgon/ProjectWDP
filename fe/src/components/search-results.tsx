@@ -125,7 +125,12 @@ interface SearchResultsProps {
   sellers: Seller[];
   isLoading: boolean;
   onProductClick?: (productId: string) => void;
-  onSellerClick?: (sellerId: string) => void;
+  onSellerClick?: (
+    sellerId: string,
+    name: string,
+    productId: string,
+    tab: string,
+  ) => void;
   hasSearched: boolean;
 }
 
@@ -196,7 +201,9 @@ export const SearchResults: React.FC<SearchResultsProps> = ({
               <SellerCard
                 key={seller._id}
                 seller={seller}
-                onClick={() => onSellerClick?.(seller._id)}
+                onClick={() =>
+                  onSellerClick?.(seller._id, seller.username, "", "products")
+                }
               />
             ))}
           </div>
