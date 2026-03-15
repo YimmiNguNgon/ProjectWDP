@@ -1,230 +1,239 @@
 <!DOCTYPE html>
 <html>
-
-<head>
+  <head>
     <meta charset="UTF-8" />
-    <title>Đăng ký Seller thành công</title>
+    <title>YOUR SELLER APPLICATION HAS BEEN APPROVED</title>
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <style>
-        body {
-            margin: 0;
-            padding: 0;
-            background-color: #f2f6f8;
-            font-family: "Segoe UI", Arial, sans-serif;
-        }
+      body {
+        margin: 0;
+        padding: 0;
+        background-color: #f2f6f8;
+        font-family: "Segoe UI", Arial, sans-serif;
+      }
 
-        .wrapper {
-            width: 100%;
-            padding: 30px 12px;
-            background-color: #f2f6f8;
-        }
+      .wrapper {
+        width: 100%;
+        padding: 30px 12px;
+        background-color: #f2f6f8;
+      }
 
-        .container {
-            max-width: 520px;
-            margin: 0 auto;
-            background: #ffffff;
-            border-radius: 10px;
-            overflow: hidden;
-            box-shadow: 0 4px 16px rgba(0, 0, 0, 0.06);
-        }
+      .container {
+        max-width: 520px;
+        margin: 0 auto;
+        background: #ffffff;
+        border-radius: 10px;
+        overflow: hidden;
+        box-shadow: 0 4px 16px rgba(0, 0, 0, 0.06);
+      }
 
-        .header {
-            background: linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%);
-            padding: 28px 20px;
-            text-align: center;
-            color: #ffffff;
-        }
+      .header {
+        background: linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%);
+        padding: 28px 20px;
+        text-align: center;
+        color: #ffffff;
+      }
 
-        .header .icon {
-            font-size: 40px;
-            margin-bottom: 10px;
-        }
+      .header .icon {
+        font-size: 40px;
+        margin-bottom: 10px;
+      }
 
-        .header h1 {
-            margin: 0;
-            font-size: 20px;
-            font-weight: 700;
-            letter-spacing: 0.3px;
-        }
+      .header h1 {
+        margin: 0;
+        font-size: 20px;
+        font-weight: 700;
+        letter-spacing: 0.3px;
+      }
 
-        .content {
-            padding: 28px 24px;
-            color: #333333;
-            line-height: 1.7;
-        }
+      .content {
+        padding: 28px 24px;
+        color: #333333;
+        line-height: 1.7;
+      }
 
-        .content h2 {
-            margin-top: 0;
-            font-size: 18px;
-            color: #1f2937;
-        }
+      .content h2 {
+        margin-top: 0;
+        font-size: 18px;
+        color: #1f2937;
+      }
 
-        .content p {
-            margin: 10px 0;
-            font-size: 15px;
-        }
+      .content p {
+        margin: 10px 0;
+        font-size: 15px;
+      }
 
-        .highlight-box {
-            background: #eff6ff;
-            border: 1px solid #93c5fd;
-            border-radius: 8px;
-            padding: 16px 20px;
-            margin: 20px 0;
-        }
+      .highlight-box {
+        background: #eff6ff;
+        border: 1px solid #93c5fd;
+        border-radius: 8px;
+        padding: 16px 20px;
+        margin: 20px 0;
+      }
 
-        .highlight-box p {
-            margin: 6px 0;
-            color: #1e40af;
-            font-size: 15px;
-        }
+      .highlight-box p {
+        margin: 6px 0;
+        color: #1e40af;
+        font-size: 15px;
+      }
 
-        .highlight-box p strong {
-            color: #1d4ed8;
-        }
+      .highlight-box p strong {
+        color: #1d4ed8;
+      }
 
-        .stage-box {
-            background: #fef9c3;
-            border: 1px solid #fde047;
-            border-radius: 8px;
-            padding: 14px 18px;
-            margin: 16px 0;
-        }
+      .stage-box {
+        background: #fef9c3;
+        border: 1px solid #fde047;
+        border-radius: 8px;
+        padding: 14px 18px;
+        margin: 16px 0;
+      }
 
-        .stage-box p {
-            margin: 0;
-            font-size: 14px;
-            color: #713f12;
-        }
+      .stage-box p {
+        margin: 0;
+        font-size: 14px;
+        color: #713f12;
+      }
 
-        .stage-box .stage-title {
-            font-size: 15px;
-            font-weight: 700;
-            color: #92400e;
-            margin-bottom: 6px;
-        }
+      .stage-box .stage-title {
+        font-size: 15px;
+        font-weight: 700;
+        color: #92400e;
+        margin-bottom: 6px;
+      }
 
-        .limit-list {
-            padding-left: 18px;
-            margin: 8px 0 0 0;
-            color: #713f12;
-        }
+      .limit-list {
+        padding-left: 18px;
+        margin: 8px 0 0 0;
+        color: #713f12;
+      }
 
-        .limit-list li {
-            margin-bottom: 4px;
-            font-size: 14px;
-        }
+      .limit-list li {
+        margin-bottom: 4px;
+        font-size: 14px;
+      }
 
-        .upgrade-box {
-            background: #f0fdf4;
-            border: 1px solid #86efac;
-            border-radius: 8px;
-            padding: 14px 18px;
-            margin: 16px 0;
-        }
+      .upgrade-box {
+        background: #f0fdf4;
+        border: 1px solid #86efac;
+        border-radius: 8px;
+        padding: 14px 18px;
+        margin: 16px 0;
+      }
 
-        .upgrade-box p {
-            margin: 0 0 8px 0;
-            font-size: 14px;
-            font-weight: 700;
-            color: #15803d;
-        }
+      .upgrade-box p {
+        margin: 0 0 8px 0;
+        font-size: 14px;
+        font-weight: 700;
+        color: #15803d;
+      }
 
-        .upgrade-list {
-            padding-left: 18px;
-            margin: 0;
-            color: #166534;
-        }
+      .upgrade-list {
+        padding-left: 18px;
+        margin: 0;
+        color: #166534;
+      }
 
-        .upgrade-list li {
-            margin-bottom: 4px;
-            font-size: 14px;
-        }
+      .upgrade-list li {
+        margin-bottom: 4px;
+        font-size: 14px;
+      }
 
-        .btn-wrapper {
-            text-align: center;
-            margin: 24px 0 12px;
-        }
+      .btn-wrapper {
+        text-align: center;
+        margin: 24px 0 12px;
+      }
 
-        .btn {
-            display: inline-block;
-            padding: 12px 32px;
-            background: #2563eb;
-            color: #ffffff !important;
-            text-decoration: none;
-            border-radius: 6px;
-            font-size: 15px;
-            font-weight: 600;
-        }
+      .btn {
+        display: inline-block;
+        padding: 12px 32px;
+        background: #2563eb;
+        color: #ffffff !important;
+        text-decoration: none;
+        border-radius: 6px;
+        font-size: 15px;
+        font-weight: 600;
+      }
 
-        .footer {
-            padding: 16px 24px;
-            background: #f8fafc;
-            text-align: center;
-            font-size: 12px;
-            color: #6b7280;
-            border-top: 1px solid #e5e7eb;
-        }
+      .footer {
+        padding: 16px 24px;
+        background: #f8fafc;
+        text-align: center;
+        font-size: 12px;
+        color: #6b7280;
+        border-top: 1px solid #e5e7eb;
+      }
 
-        .footer p {
-            margin: 4px 0;
-        }
+      .footer p {
+        margin: 4px 0;
+      }
     </style>
-</head>
+  </head>
 
-<body>
+  <body>
     <div class="wrapper">
-        <div class="container">
-            <div class="header">
-                <div class="icon">🎉</div>
-                <h1>CHÚC MỪNG! BẠN ĐÃ TRỞ THÀNH SELLER</h1>
-            </div>
-            <div class="content">
-                <h2>Xin chào <strong><%= username %></strong>,</h2>
-                <p>
-                    Tài khoản của bạn đã được <strong>tự động nâng cấp lên Seller</strong>.
-                    Bạn có thể bắt đầu đăng bán sản phẩm ngay bây giờ!
-                </p>
-
-                <div class="highlight-box">
-                    <p>🏪 Tên shop: <strong><%= shopName %></strong></p>
-                    <p>📅 Ngày đăng ký: <strong><%= registeredAt %></strong></p>
-                    <p>⚡ Trạng thái: <strong>PROBATION (Thử việc)</strong></p>
-                </div>
-
-                <div class="stage-box">
-                    <p class="stage-title">⚠️ Giai đoạn PROBATION – Giới hạn hiện tại:</p>
-                    <ul class="limit-list">
-                        <li>Tối đa <strong>5 sản phẩm/ngày</strong></li>
-                        <li>Tối đa <strong>10 đơn hàng/ngày</strong></li>
-                        <li>Không được đăng sản phẩm thuộc danh mục <strong>rủi ro cao</strong></li>
-                    </ul>
-                </div>
-
-                <div class="upgrade-box">
-                    <p>🚀 Điều kiện nâng cấp lên NORMAL (bỏ giới hạn):</p>
-                    <ul class="upgrade-list">
-                        <li>Có ≥ 20 đơn hàng thành công</li>
-                        <li>Rating trung bình ≥ 4.5 ⭐</li>
-                        <li>Tỷ lệ hoàn trả &lt; 5%</li>
-                        <li>Tài khoản tồn tại &gt; 30 ngày</li>
-                        <li>Không có báo cáo nghiêm trọng</li>
-                    </ul>
-                </div>
-
-                <p>Hệ thống sẽ tự động kiểm tra và nâng cấp tài khoản của bạn khi đủ điều kiện. Chúc bạn kinh doanh thành công! 💪</p>
-
-                <div class="btn-wrapper">
-                    <a href="<%= process.env.CLIENT_URL || 'http://localhost:5173' %>/seller" class="btn">
-                        Đi đến Seller Panel
-                    </a>
-                </div>
-            </div>
-            <div class="footer">
-                <p>&copy; <%= new Date().getFullYear() %> Ebay Clone. All rights reserved.</p>
-                <p>Email này được gửi tự động, vui lòng không trả lời.</p>
-            </div>
+      <div class="container">
+        <div class="header">
+          <div class="icon">🎉</div>
+          <h1>CONGRATULATIONS! YOU HAVE BECOME A SELLER</h1>
         </div>
-    </div>
-</body>
+        <div class="content">
+          <h2>Hello <strong><%= username %></strong>,</h2>
+          <p>
+            Your account has been automatically upgraded to Seller. You can
+            start selling products right away!
+          </p>
 
+          <div class="highlight-box">
+            <p>🏪 Shop name: <strong><%= shopName %></strong></p>
+            <p>📅 Registration date: <strong><%= registeredAt %></strong></p>
+            <p>⚡ Status: <strong>PROBATION (Trial)</strong></p>
+          </div>
+
+          <div class="stage-box">
+            <p class="stage-title">⚠️ PROBATION STAGE – Current Limitations:</p>
+            <ul class="limit-list">
+              <li>Maximum <strong>5 products/day</strong></li>
+              <li>Maximum <strong>10 orders/day</strong></li>
+              <li>
+                Cannot post products in <strong>high-risk categories</strong>
+              </li>
+            </ul>
+          </div>
+
+          <div class="upgrade-box">
+            <p>🚀 Conditions to upgrade to NORMAL (remove limits):</p>
+            <ul class="upgrade-list">
+              <li>Have <strong>≥ 20 orders</strong></li>
+              <li>Average rating <strong>≥ 4.5 ⭐</strong></li>
+              <li>Return rate <strong>&lt; 5%</strong></li>
+              <li>Account exists for <strong>&gt; 30 days</strong></li>
+              <li>No serious reports</li>
+            </ul>
+          </div>
+
+          <p>
+            System will automatically check and upgrade your account when you
+            meet the conditions. 💪
+          </p>
+
+          <div class="btn-wrapper">
+            <a
+              href="<%= process.env.CLIENT_URL || 'http://localhost:5173' %>/seller"
+              class="btn"
+            >
+              Navigate to Seller Panel
+            </a>
+          </div>
+        </div>
+        <div class="footer">
+          <p>
+            &copy; <%= new Date().getFullYear() %> Ebay Clone. All rights
+            reserved.
+          </p>
+          <p>This email was sent automatically, please do not reply.</p>
+        </div>
+      </div>
+    </div>
+  </body>
 </html>

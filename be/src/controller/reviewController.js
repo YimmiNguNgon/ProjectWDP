@@ -606,14 +606,14 @@ exports.deleteSellerResponse = async (req, res, next) => {
     const review = await Review.findById(reviewId);
     if (!review) return res.status(404).json({ message: 'Review not found' });
     if (!review.seller || review.seller.toString() !== sellerId.toString()) {
-      return res.status(403).json({ message: 'Bạn không có quyền xóa phản hồi này' });
+      return res.status(403).json({ message: 'You do not have permission to delete this review' });
     }
 
     review.sellerResponse = undefined;
     review.sellerResponseAt = undefined;
     await review.save();
 
-    return res.json({ message: 'Đã xóa phản hồi' });
+    return res.json({ message: 'Review response deleted successfully' });
   } catch (err) {
     return next(err);
   }
@@ -635,14 +635,14 @@ exports.addSellerResponse = async (req, res, next) => {
     const review = await Review.findById(reviewId);
     if (!review) return res.status(404).json({ message: 'Review not found' });
     if (!review.seller || review.seller.toString() !== sellerId.toString()) {
-      return res.status(403).json({ message: 'Bạn không có quyền phản hồi review này' });
+      return res.status(403).json({ message: 'You do not have permission to respond to this review' });
     }
 
     review.sellerResponse = String(response).trim();
     review.sellerResponseAt = new Date();
     await review.save();
 
-    return res.json({ message: 'Đã gửi phản hồi', data: review });
+    return res.json({ message: 'Review response added successfully', data: review });
   } catch (err) {
     return next(err);
   }
