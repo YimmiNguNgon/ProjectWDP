@@ -11,6 +11,7 @@ import {
   ShoppingCart,
   ReceiptText,
   MapPin,
+  CreditCard,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
@@ -26,6 +27,7 @@ type CheckoutSuccessState = {
   totalAmount?: number;
   subtotalAmount?: number;
   discountAmount?: number;
+  shippingMethod?: string;
   shippingPrice?: number;
   shippingAddress?: {
     fullName: string;
@@ -114,6 +116,7 @@ export default function CheckoutSuccessPage() {
   const discount = state?.discountAmount ?? 0;
   const shippingPrice = state?.shippingPrice ?? 0;
   const shippingAddress = state?.shippingAddress;
+  const shippingMethod = state?.shippingMethod;
   const paymentMethod = state?.paymentMethod ?? "COD";
   const orderGroupId = state?.orderGroupId ?? orders[0]?._id ?? "";
 
@@ -217,8 +220,8 @@ export default function CheckoutSuccessPage() {
         {/* ─── MERGED CARD: Info + Progress ─── */}
         <FadeIn delay={0.4} y={20}>
           <div className="bg-white rounded-2xl shadow-lg p-8 mb-6">
-            {/* 3-col info row */}
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+            {/* 4-col info row */}
+            <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
               {[
                 {
                   icon: <ReceiptText className="w-6 h-6 text-blue-600" />,
@@ -248,7 +251,15 @@ export default function CheckoutSuccessPage() {
                 {
                   icon: <Truck className="w-6 h-6 text-blue-600" />,
                   label: "Delivery",
-                  value: "3–5 days",
+                  value:
+                    shippingMethod === "standard" ? "5-7 days" : "3–4 days",
+                  mono: false,
+                  valueClass: "text-lg font-semibold text-blue-900",
+                },
+                {
+                  icon: <CreditCard className="w-6 h-6 text-blue-600" />,
+                  label: "Payment",
+                  value: paymentMethod === "cod" ? "COD" : "Online Payment",
                   mono: false,
                   valueClass: "text-lg font-semibold text-blue-900",
                 },

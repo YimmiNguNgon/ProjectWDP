@@ -302,6 +302,7 @@ export default function CheckoutPage() {
             subtotalAmount: preview?.totals.subtotalAmount || 0,
             discountAmount: preview?.totals.discountAmount || 0,
             shippingPrice: shippingCosts[shippingMethod] || 0,
+            shippingMethod,
             shippingAddress: {
               fullName: selectedAddress.fullName,
               phone: selectedAddress.phone,
@@ -732,7 +733,7 @@ export default function CheckoutPage() {
                     <div>
                       <p className="font-semibold text-sm">Express Shipping</p>
                       <p className="text-xs text-muted-foreground">
-                        Estimated delivery 2-3 days
+                        Estimated delivery 3-4 days
                       </p>
                     </div>
                   </div>
