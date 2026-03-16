@@ -12,7 +12,7 @@ export function ChatGuidelines() {
         <Info className="h-4 w-4 text-blue-600" />
         <div className="flex items-start justify-between gap-2">
           <div className="flex-1">
-            <AlertTitle className="text-sm font-semibold text-blue-900">eBay Messaging Guidelines</AlertTitle>
+            <AlertTitle className="text-sm font-semibold text-blue-900">efpt Messaging Guidelines</AlertTitle>
             {isExpanded && (
               <AlertDescription className="mt-2 text-sm text-blue-800">
                 <div className="space-y-3">
@@ -25,7 +25,7 @@ export function ChatGuidelines() {
                       <li>Questions about products (size, condition, color)</li>
                       <li>Shipping and delivery discussions</li>
                       <li>Product photos and invoices</li>
-                      <li>eBay links</li>
+                      <li>efpt links</li>
                       <li>Return and complaint requests</li>
                     </ul>
                   </div>

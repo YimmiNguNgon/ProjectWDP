@@ -238,7 +238,7 @@ export default function FeedbackRevisionRequestPage() {
                             <Alert variant="destructive">
                                 <AlertCircle className="h-4 w-4" />
                                 <AlertDescription>
-                                    <strong>Warning:</strong> Your message may violate eBay's feedback policy.
+                                    <strong>Warning:</strong> Your message may violate efpt's feedback policy.
                                     <br />
                                     <span className="text-sm">
                                         Detected: {messageValidation.violations.join(', ')}

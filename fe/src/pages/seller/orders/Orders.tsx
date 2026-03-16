@@ -510,14 +510,7 @@ function OrderDetailsPopup({
               >
                 {order.shipper ? (
                   <>
-                    <p
-                      style={{
-                        fontWeight: 700,
-                        color: "#0F172A",
-                        fontSize: 15,
-                        margin: "0 0 2px",
-                      }}
-                    >
+                    <p style={{ fontWeight: 700, color: "#0F172A", fontSize: 15, margin: "0 0 2px" }}>
                       {order.shipper.username}
                     </p>
                     <p style={{ color: "#64748B", fontSize: 13, margin: 0 }}>
@@ -525,14 +518,7 @@ function OrderDetailsPopup({
                     </p>
                   </>
                 ) : (
-                  <p
-                    style={{
-                      color: "#94A3B8",
-                      fontSize: 13,
-                      margin: 0,
-                      fontStyle: "italic",
-                    }}
-                  >
+                  <p style={{ color: "#94A3B8", fontSize: 13, margin: 0, fontStyle: "italic" }}>
                     Not assigned yet
                   </p>
                 )}

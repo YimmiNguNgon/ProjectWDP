@@ -11,6 +11,12 @@ export interface RecentlyViewedProduct {
   originalPrice?: number;
   listingStatus?: string;
   variants?: { name: string; options: { value: string }[] }[];
+  variantCombinations?: {
+    key: string;
+    selections: { name: string; value: string }[];
+    price?: number;
+    quantity: number;
+  }[];
 }
 
 export interface RecentlyViewedItem {

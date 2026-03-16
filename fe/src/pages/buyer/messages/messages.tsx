@@ -108,8 +108,8 @@ const MESSAGES_SIDEBAR_ITEMS = [
   { name: 'Inbox', to: '#' },
   { name: 'From members', to: '#' },
   { name: 'Unread from members', to: '#' },
-  { name: 'From eBay', to: '#' },
-  { name: 'Unread from eBay', to: '#' },
+  { name: 'From efpt', to: '#' },
+  { name: 'Unread from efpt', to: '#' },
   { name: 'Deleted', to: '#' },
   { name: 'Archive', to: '#' },
 ];

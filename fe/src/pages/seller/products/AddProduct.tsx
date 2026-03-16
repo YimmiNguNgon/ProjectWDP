@@ -15,6 +15,7 @@ import {
   ImagePlus,
   Loader2,
   Star,
+  Percent,
 } from "lucide-react";
 import { toast } from "sonner";
 import { createProduct } from "@/api/seller-products";
@@ -65,7 +66,7 @@ export default function AddProduct() {
     description: "",
     price: "",
     saleEnabled: false,
-    salePrice: "",
+    discountPercent: "",
     saleStartDate: "",
     saleEndDate: "",
     quantity: "",
@@ -193,35 +194,43 @@ export default function AddProduct() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
-    if (!formData.title || !formData.price || !formData.categoryId) {
-      toast.error("Please enter product's name, price and category");
+    const hasVariants = variantCombinations.length > 0;
+    if (!formData.title || !formData.categoryId) {
+      toast.error("Please enter product's name and category");
       return;
     }
+    if (!hasVariants && !formData.price) {
+      toast.error("Please enter selling price");
+      return;
+    }
+
+    const variantPrices = variantCombinations
+      .map((c) => c.price)
+      .filter((p): p is number => p !== undefined && p > 0);
+    const effectiveBasePrice = hasVariants
+      ? (variantPrices.length > 0 ? Math.min(...variantPrices) : 0)
+      : parseFloat(formData.price) || 0;
+
+    let computedSalePrice: number | undefined;
     if (formData.saleEnabled) {
-      const basePrice = parseFloat(formData.price);
-      const dealPrice = parseFloat(formData.salePrice);
-      if (
-        !formData.salePrice ||
-        !formData.saleStartDate ||
-        !formData.saleEndDate
-      ) {
-        toast.error("Please enter sale price, start time and end time");
+      const pct = parseFloat(formData.discountPercent);
+      if (!formData.discountPercent || !Number.isFinite(pct) || pct <= 0 || pct >= 100) {
+        toast.error("Discount must be between 1% and 99%");
         return;
       }
-      if (
-        !Number.isFinite(dealPrice) ||
-        dealPrice <= 0 ||
-        dealPrice >= basePrice
-      ) {
-        toast.error(
-          "Sale price must greater than 0 and lower than original price!",
-        );
+      if (!formData.saleStartDate || !formData.saleEndDate) {
+        toast.error("Please fill in sale start and end time");
         return;
       }
       if (new Date(formData.saleStartDate) >= new Date(formData.saleEndDate)) {
-        toast.error("Start time must placed before end time!");
+        toast.error("Start time must be before end time!");
         return;
       }
+      if (effectiveBasePrice <= 0) {
+        toast.error("Please set variant prices before enabling sale");
+        return;
+      }
+      computedSalePrice = parseFloat((effectiveBasePrice * (1 - pct / 100)).toFixed(2));
     }
 
     setLoading(true);
@@ -236,14 +245,10 @@ export default function AddProduct() {
       await createProduct({
         title: formData.title,
         description: formData.description,
-        price: parseFloat(formData.price),
+        price: hasVariants ? effectiveBasePrice : parseFloat(formData.price),
         saleEnabled: formData.saleEnabled,
-        salePrice: formData.saleEnabled
-          ? parseFloat(formData.salePrice)
-          : undefined,
-        saleStartDate: formData.saleEnabled
-          ? formData.saleStartDate
-          : undefined,
+        salePrice: formData.saleEnabled ? computedSalePrice : undefined,
+        saleStartDate: formData.saleEnabled ? formData.saleStartDate : undefined,
         saleEndDate: formData.saleEnabled ? formData.saleEndDate : undefined,
         quantity: parseInt(formData.quantity) || 0,
         condition: formData.condition,
@@ -474,30 +479,53 @@ export default function AddProduct() {
                 <CardContent className="space-y-4">
                   <div className="space-y-2">
                     <Label htmlFor="price">Price *</Label>
-                    <div className="relative">
-                      <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500">
-                        $
-                      </span>
-                      <Input
-                        id="price"
-                        name="price"
-                        type="number"
-                        placeholder="0.00"
-                        className={`pl-8 ${numericInputClass}`}
-                        value={formData.price}
-                        onChange={handleChange}
-                        required
-                        min="0"
-                        step="0.01"
-                      />
-                    </div>
+                    {variantCombinations.length > 0 ? (() => {
+                      const prices = variantCombinations
+                        .map((c) => c.price)
+                        .filter((p): p is number => p !== undefined && p > 0);
+                      const min = prices.length > 0 ? Math.min(...prices) : null;
+                      const max = prices.length > 0 ? Math.max(...prices) : null;
+                      return (
+                        <div className={`flex items-center pl-4 pr-3 rounded-md border border-input bg-muted/50 ${numericInputClass}`}>
+                          <span className="text-gray-500 mr-1">$</span>
+                          <span className="text-gray-700">
+                            {min !== null && max !== null
+                              ? min === max
+                                ? min.toFixed(2)
+                                : `${min.toFixed(2)} - ${max.toFixed(2)}`
+                              : "Set per variant below"}
+                          </span>
+                        </div>
+                      );
+                    })() : (
+                      <div className="relative">
+                        <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500">
+                          $
+                        </span>
+                        <Input
+                          id="price"
+                          name="price"
+                          type="number"
+                          placeholder="0.00"
+                          className={`pl-8 ${numericInputClass}`}
+                          value={formData.price}
+                          onChange={handleChange}
+                          min="0"
+                          step="0.01"
+                        />
+                      </div>
+                    )}
                   </div>
 
-                  <div className="space-y-3 rounded-lg border border-dashed border-red-300 p-3 bg-red-50/40">
-                    <Label className="flex items-center justify-between">
-                      <span>Sale Time</span>
+                  <div className="rounded-xl border border-dashed border-red-300 p-4 bg-red-50/40 space-y-3">
+                    <label className="flex items-center justify-between cursor-pointer">
+                      <span className="font-medium text-sm flex items-center gap-2">
+                        <Percent className="h-4 w-4 text-red-500" />
+                        Sale Discount
+                      </span>
                       <input
                         type="checkbox"
+                        className="w-4 h-4 accent-red-500"
                         checked={formData.saleEnabled}
                         onChange={(e) =>
                           setFormData((prev) => ({
@@ -506,37 +534,78 @@ export default function AddProduct() {
                           }))
                         }
                       />
-                    </Label>
+                    </label>
                     {formData.saleEnabled && (
-                      <div className="space-y-2">
-                        <Label htmlFor="salePrice">Sale Price *</Label>
-                        <Input
-                          id="salePrice"
-                          name="salePrice"
-                          type="number"
-                          min="0"
-                          step="0.01"
-                          value={formData.salePrice}
-                          onChange={handleChange}
-                          className={numericInputClass}
-                          placeholder="Enter sale price here"
-                        />
-                        <Label htmlFor="saleStartDate">Start time *</Label>
-                        <Input
-                          id="saleStartDate"
-                          name="saleStartDate"
-                          type="datetime-local"
-                          value={formData.saleStartDate}
-                          onChange={handleChange}
-                        />
-                        <Label htmlFor="saleEndDate">End time *</Label>
-                        <Input
-                          id="saleEndDate"
-                          name="saleEndDate"
-                          type="datetime-local"
-                          value={formData.saleEndDate}
-                          onChange={handleChange}
-                        />
+                      <div className="space-y-3 pt-1">
+                        <div className="space-y-1">
+                          <Label htmlFor="discountPercent" className="text-xs">Discount % *</Label>
+                          <div className="relative">
+                            <Input
+                              id="discountPercent"
+                              name="discountPercent"
+                              type="number"
+                              min="1"
+                              max="99"
+                              step="1"
+                              placeholder="e.g. 20"
+                              value={formData.discountPercent}
+                              onChange={handleChange}
+                              className={`pr-8 ${numericInputClass}`}
+                            />
+                            <span className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 font-bold">%</span>
+                          </div>
+                          {(() => {
+                            const pct = parseFloat(formData.discountPercent);
+                            const hasVariants = variantCombinations.length > 0;
+                            if (!Number.isFinite(pct) || pct <= 0) return null;
+                            if (hasVariants) {
+                              const prices = variantCombinations
+                                .map((c) => c.price)
+                                .filter((p): p is number => p !== undefined && p > 0);
+                              if (prices.length === 0) return null;
+                              const min = parseFloat((Math.min(...prices) * (1 - pct / 100)).toFixed(2));
+                              const max = parseFloat((Math.max(...prices) * (1 - pct / 100)).toFixed(2));
+                              return (
+                                <p className="text-xs text-red-600 font-medium">
+                                  After discount: <span className="font-bold">
+                                    {min === max ? `$${min.toFixed(2)}` : `$${min.toFixed(2)} - $${max.toFixed(2)}`}
+                                  </span>
+                                </p>
+                              );
+                            }
+                            const base = parseFloat(formData.price);
+                            if (!base) return null;
+                            return (
+                              <p className="text-xs text-red-600 font-medium">
+                                After discount: <span className="font-bold">${(base * (1 - pct / 100)).toFixed(2)}</span>
+                              </p>
+                            );
+                          })()}
+                        </div>
+                        <div className="grid grid-cols-2 gap-2">
+                          <div className="space-y-1">
+                            <Label htmlFor="saleStartDate" className="text-xs">Start *</Label>
+                            <Input
+                              id="saleStartDate"
+                              name="saleStartDate"
+                              type="datetime-local"
+                              value={formData.saleStartDate}
+                              onChange={handleChange}
+                              className="h-10 text-sm"
+                            />
+                          </div>
+                          <div className="space-y-1">
+                            <Label htmlFor="saleEndDate" className="text-xs">End *</Label>
+                            <Input
+                              id="saleEndDate"
+                              name="saleEndDate"
+                              type="datetime-local"
+                              value={formData.saleEndDate}
+                              onChange={handleChange}
+                              className="h-10 text-sm"
+                            />
+                          </div>
+                        </div>
                       </div>
                     )}
                   </div>

@@ -135,7 +135,7 @@ export default function HomePage() {
 
       <RecentlyViewedSection displayLimit={10} showClearAll />
 
-      <CategoryShowcase title="Trending on eBay" />
+      <CategoryShowcase title="Trending on efpt" />
     </div>
   );
 }

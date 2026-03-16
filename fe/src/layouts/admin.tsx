@@ -1,5 +1,5 @@
 import { Link, Outlet, useLocation } from 'react-router-dom';
-import { LayoutDashboard, Users, ShoppingBag, MessageCircle, ClipboardList, TicketPercent, Tags, FileSearch, Truck, AlertTriangle, PackageSearch, RefreshCcw, Home, Flag } from 'lucide-react';
+import { LayoutDashboard, Users, ShoppingBag, MessageCircle, TicketPercent, Tags, FileSearch, Truck, AlertTriangle, PackageSearch, RefreshCcw, Home, Flag } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import AdminBroadcast from '@/components/admin-broadcast';
 import NotificationBell from '@/components/notification-bell';
@@ -12,7 +12,6 @@ const navigation = [
   { name: 'Product Management', href: '/admin/products', icon: ShoppingBag },
   { name: 'Category Management', href: '/admin/categories', icon: Tags },
   { name: 'Feedback Revision', href: '/admin/feedback', icon: MessageCircle },
-  { name: 'Seller Applications', href: '/admin/seller-applications', icon: ClipboardList },
   { name: 'Voucher Requests', href: '/admin/voucher-requests', icon: TicketPercent },
   { name: 'Global Vouchers', href: '/admin/global-vouchers', icon: TicketPercent },
   { name: 'Order Management', href: '/admin/orders', icon: PackageSearch },

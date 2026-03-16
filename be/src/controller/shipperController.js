@@ -19,6 +19,7 @@ exports.getAvailableOrders = async (req, res, next) => {
     const query = {
       $or: [
         { status: { $in: ["ready_to_ship", "queued"] }, shipper: null },
+        { status: "pending_acceptance", shipper: req.user._id },
         { status: "waiting_return_shipment", returnShipper: null },
       ],
     };
@@ -50,7 +51,8 @@ exports.getMyOrders = async (req, res, next) => {
       $or: [
         { shipper: req.user._id },
         { returnShipper: req.user._id },
-      ]
+      ],
+      status: { $ne: "pending_acceptance" },
     };
     if (req.query.status) filter.status = req.query.status;
 
@@ -114,6 +116,7 @@ exports.acceptOrder = async (req, res, next) => {
       },
     };
 
+    // Accept open orders (no shipper yet)
     let order = await Order.findOneAndUpdate(
       {
         _id: req.params.id,
@@ -123,6 +126,19 @@ exports.acceptOrder = async (req, res, next) => {
       pickupUpdate,
       { new: true },
     );
+
+    // Accept pending_acceptance order assigned to this shipper
+    if (!order) {
+      order = await Order.findOneAndUpdate(
+        {
+          _id: req.params.id,
+          status: "pending_acceptance",
+          shipper: req.user._id,
+        },
+        pickupUpdate,
+        { new: true },
+      );
+    }
 
     if (!order) {
       order = await Order.findOneAndUpdate(
@@ -212,7 +228,36 @@ exports.acceptOrder = async (req, res, next) => {
 };
 
 exports.rejectOrder = async (req, res, next) => {
-  res.json({ ok: true, message: "Order declined" });
+  try {
+    const order = await Order.findOneAndUpdate(
+      {
+        _id: req.params.id,
+        status: "pending_acceptance",
+        shipper: req.user._id,
+      },
+      {
+        shipper: null,
+        status: "ready_to_ship",
+        $push: {
+          statusHistory: {
+            status: "ready_to_ship",
+            timestamp: new Date(),
+            note: `Rejected by shipper ${req.user.username}. Available for reassignment.`,
+          },
+        },
+      },
+      { new: true },
+    );
+
+    if (!order) {
+      return res.status(404).json({ message: "Order not found or cannot be rejected" });
+    }
+
+    // Leave as ready_to_ship so ALL shippers (including the one who rejected) can see it
+    res.json({ ok: true, message: "Order rejected and returned to available pool" });
+  } catch (err) {
+    next(err);
+  }
 };
 
 exports.markDelivered = async (req, res, next) => {

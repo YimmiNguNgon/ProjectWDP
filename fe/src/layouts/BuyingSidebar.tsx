@@ -18,20 +18,11 @@ export default function BuyingSidebar() {
   return (
     <aside className="w-64 shrink-0 text-base">
       <nav className="space-y-1">
-        <Link to="/coming-soon" className={linkClass("/coming-soon/summary")}>
-          Summary
-        </Link>
         <Link
           to="/my-ebay/recently-viewed"
           className={linkClass("/my-ebay/recently-viewed")}
         >
           Recently viewed
-        </Link>
-        <Link
-          to="/coming-soon"
-          className={linkClass("/coming-soon/bids-offers")}
-        >
-          Bids &amp; offers
         </Link>
         <Link to="/my-ebay/complaints" className={linkClass("/my-ebay/complaints")}>
           Returns &amp; complaints

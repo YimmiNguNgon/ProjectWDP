@@ -21,6 +21,12 @@ export interface Product {
   ratingCount: number;
   status: string;
   createdAt: string;
+  variantCombinations?: {
+    key: string;
+    selections: { name: string; value: string }[];
+    price?: number;
+    quantity: number;
+  }[];
 }
 
 export interface Seller {

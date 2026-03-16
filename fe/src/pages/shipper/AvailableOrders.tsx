@@ -1,9 +1,11 @@
-import { useEffect, useState, useCallback } from "react";
+import { useEffect, useState, useCallback, useContext } from "react";
 import { toast } from "sonner";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { Bell } from "lucide-react";
 import { getAvailableOrders, acceptOrder, rejectOrder, type ShipperOrder } from "@/api/shipper";
+import { SocketContext } from "@/hooks/use-socket";
 
 export default function ShipperAvailableOrders() {
   const [orders, setOrders] = useState<ShipperOrder[]>([]);
@@ -12,6 +14,7 @@ export default function ShipperAvailableOrders() {
   const [total, setTotal] = useState(0);
   const [loading, setLoading] = useState(true);
   const [actionLoading, setActionLoading] = useState<string | null>(null);
+  const socketCtx = useContext(SocketContext);
 
   const fetchOrders = useCallback(async (p: number) => {
     setLoading(true);
@@ -30,6 +33,22 @@ export default function ShipperAvailableOrders() {
   useEffect(() => {
     fetchOrders(page);
   }, [fetchOrders, page]);
+
+  // Real-time: refresh khi có đơn mới được assign
+  useEffect(() => {
+    const socket = socketCtx?.socket;
+    if (!socket) return;
+
+    const handleNotification = (data: { type: string }) => {
+      if (data.type === "order_assigned") {
+        fetchOrders(1);
+        setPage(1);
+      }
+    };
+
+    socket.on("notification", handleNotification);
+    return () => { socket.off("notification", handleNotification); };
+  }, [socketCtx?.socket, fetchOrders]);
 
   const handleAccept = async (orderId: string) => {
     setActionLoading(orderId);
@@ -52,11 +71,89 @@ export default function ShipperAvailableOrders() {
       await rejectOrder(orderId);
       toast.info("Order declined.");
       setOrders((prev) => prev.filter((o) => o._id !== orderId));
-    } catch {
-      toast.error("Failed to decline order");
+      setTotal((t) => t - 1);
+    } catch (err: any) {
+      const msg = err?.response?.data?.message || "Failed to decline order";
+      toast.error(msg);
     } finally {
       setActionLoading(null);
     }
+  };
+
+  const pendingOrders = orders.filter((o) => o.status === "pending_acceptance");
+  const openOrders = orders.filter((o) => o.status !== "pending_acceptance");
+
+  const renderOrderCard = (order: ShipperOrder, isPending: boolean) => {
+    const addr = order.shippingAddress;
+    const busy = actionLoading === order._id;
+    return (
+      <Card key={order._id} className={isPending ? "border-orange-200 bg-orange-50/30" : ""}>
+        <CardHeader className="pb-2">
+          <div className="flex items-center justify-between">
+            <CardTitle className="text-sm font-mono text-gray-600">
+              #{order._id.slice(-8).toUpperCase()}
+            </CardTitle>
+            {isPending ? (
+              <Badge className="bg-orange-100 text-orange-700 border border-orange-300">
+                Awaiting Your Acceptance
+              </Badge>
+            ) : order.status === "waiting_return_shipment" ? (
+              <Badge variant="outline" className="text-purple-700 border-purple-300 bg-purple-50">
+                Return Pick-up
+              </Badge>
+            ) : (
+              <Badge variant="outline" className="text-blue-700 border-blue-300 bg-blue-50">
+                Ready to Ship
+              </Badge>
+            )}
+          </div>
+        </CardHeader>
+        <CardContent>
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-4 text-sm">
+            <div>
+              <p className="text-gray-500">Seller</p>
+              <p className="font-medium">
+                {order.seller?.sellerInfo?.shopName || order.seller?.username || "—"}
+              </p>
+            </div>
+            <div>
+              <p className="text-gray-500">Delivery Address</p>
+              <p className="font-medium">
+                {[addr?.district, addr?.city].filter(Boolean).join(", ") || "—"}
+              </p>
+            </div>
+            <div>
+              <p className="text-gray-500">Total</p>
+              <p className="font-medium">${order.totalAmount.toFixed(2)}</p>
+            </div>
+            <div>
+              <p className="text-gray-500">Date</p>
+              <p className="font-medium">
+                {new Date(order.createdAt).toLocaleDateString()}
+              </p>
+            </div>
+          </div>
+          <div className="flex gap-2">
+            <Button
+              size="sm"
+              className="bg-orange-600 hover:bg-orange-700 text-white"
+              disabled={busy}
+              onClick={() => handleAccept(order._id)}
+            >
+              {busy ? "..." : "Accept"}
+            </Button>
+            <Button
+              size="sm"
+              variant="outline"
+              disabled={busy}
+              onClick={() => handleDecline(order._id)}
+            >
+              Decline
+            </Button>
+          </div>
+        </CardContent>
+      </Card>
+    );
   };
 
   return (
@@ -71,75 +168,35 @@ export default function ShipperAvailableOrders() {
       ) : orders.length === 0 ? (
         <div className="text-center py-12 text-gray-500">No available orders at the moment.</div>
       ) : (
-        <div className="space-y-4">
-          {orders.map((order) => {
-            const addr = order.shippingAddress;
-            const busy = actionLoading === order._id;
-            return (
-              <Card key={order._id}>
-                <CardHeader className="pb-2">
-                  <div className="flex items-center justify-between">
-                    <CardTitle className="text-sm font-mono text-gray-600">
-                      #{order._id.slice(-8).toUpperCase()}
-                    </CardTitle>
-                    {order.status === "waiting_return_shipment" ? (
-                      <Badge variant="outline" className="text-orange-700 border-orange-300 bg-orange-50">
-                        Return Pick-up
-                      </Badge>
-                    ) : (
-                      <Badge variant="outline" className="text-blue-700 border-blue-300 bg-blue-50">
-                        Ready to Ship
-                      </Badge>
-                    )}
-                  </div>
-                </CardHeader>
-                <CardContent>
-                  <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-4 text-sm">
-                    <div>
-                      <p className="text-gray-500">Seller</p>
-                      <p className="font-medium">
-                        {order.seller?.sellerInfo?.shopName || order.seller?.username || "—"}
-                      </p>
-                    </div>
-                    <div>
-                      <p className="text-gray-500">Delivery Address</p>
-                      <p className="font-medium">
-                        {[addr?.district, addr?.city].filter(Boolean).join(", ") || "—"}
-                      </p>
-                    </div>
-                    <div>
-                      <p className="text-gray-500">Total</p>
-                      <p className="font-medium">${order.totalAmount.toFixed(2)}</p>
-                    </div>
-                    <div>
-                      <p className="text-gray-500">Date</p>
-                      <p className="font-medium">
-                        {new Date(order.createdAt).toLocaleDateString()}
-                      </p>
-                    </div>
-                  </div>
-                  <div className="flex gap-2">
-                    <Button
-                      size="sm"
-                      className="bg-orange-600 hover:bg-orange-700 text-white"
-                      disabled={busy}
-                      onClick={() => handleAccept(order._id)}
-                    >
-                      {busy ? "..." : "Accept"}
-                    </Button>
-                    <Button
-                      size="sm"
-                      variant="outline"
-                      disabled={busy}
-                      onClick={() => handleDecline(order._id)}
-                    >
-                      Decline
-                    </Button>
-                  </div>
-                </CardContent>
-              </Card>
-            );
-          })}
+        <div className="space-y-6">
+          {/* Pending acceptance - assigned to this shipper */}
+          {pendingOrders.length > 0 && (
+            <div>
+              <div className="flex items-center gap-2 mb-3">
+                <Bell className="h-4 w-4 text-orange-600" />
+                <h2 className="text-base font-semibold text-orange-700">
+                  Assigned to You — Pending Acceptance ({pendingOrders.length})
+                </h2>
+              </div>
+              <div className="space-y-3">
+                {pendingOrders.map((order) => renderOrderCard(order, true))}
+              </div>
+            </div>
+          )}
+
+          {/* Open orders - available for any shipper */}
+          {openOrders.length > 0 && (
+            <div>
+              {pendingOrders.length > 0 && (
+                <h2 className="text-base font-semibold text-gray-700 mb-3">
+                  Open Orders ({openOrders.length})
+                </h2>
+              )}
+              <div className="space-y-3">
+                {openOrders.map((order) => renderOrderCard(order, false))}
+              </div>
+            </div>
+          )}
         </div>
       )}
 

@@ -21,7 +21,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog';
-import { Plus, Package, Layers, Eye, Flame, Clock3 } from 'lucide-react';
+import { Plus, Package, Layers, Eye, Flame, Clock3, Percent } from 'lucide-react';
 import { toast } from 'sonner';
 import {
   getMyListings,
@@ -54,7 +54,7 @@ interface EditFormData {
   description: string;
   price: number;
   saleEnabled: boolean;
-  salePrice: number;
+  discountPercent: string;
   saleStartDate: string;
   saleEndDate: string;
   quantity: number;
@@ -184,7 +184,7 @@ export default function SellerProducts() {
     description: '',
     price: 0,
     saleEnabled: false,
-    salePrice: 0,
+    discountPercent: '',
     saleStartDate: '',
     saleEndDate: '',
     quantity: 0,
@@ -239,8 +239,8 @@ export default function SellerProducts() {
       title: product.title,
       description: product.description,
       price: product.basePrice ?? product.originalPrice ?? product.price,
-      saleEnabled: Boolean(product.promotionType === 'daily_deal' || product.salePrice),
-      salePrice: Number(product.salePrice ?? product.price ?? 0),
+      saleEnabled: Boolean(product.promotionType === 'daily_deal' || product.discountPercent),
+      discountPercent: product.discountPercent ? String(product.discountPercent) : '',
       saleStartDate: toInputDateTime(product.saleStartDate ?? product.dealStartDate),
       saleEndDate: toInputDateTime(product.saleEndDate ?? product.dealEndDate),
       quantity: product.quantity ?? 0,
@@ -281,32 +281,54 @@ export default function SellerProducts() {
   // Save edit
   const handleSave = async () => {
     if (!editingProduct) return;
-    if (!formData.title || formData.price <= 0) {
-      toast.error('Please enter a valid product name and price');
+    const hasVariants = formData.variantCombinations.length > 0;
+
+    if (!formData.title) {
+      toast.error('Please enter product name');
       return;
     }
+    if (!hasVariants && formData.price <= 0) {
+      toast.error('Please enter a valid price');
+      return;
+    }
+
+    const variantPrices = formData.variantCombinations
+      .map((c) => c.price)
+      .filter((p): p is number => p !== undefined && p > 0);
+    const effectiveBasePrice = hasVariants
+      ? (variantPrices.length > 0 ? Math.min(...variantPrices) : 0)
+      : formData.price;
+
+    let computedSalePrice: number | undefined;
     if (formData.saleEnabled) {
-      if (!formData.salePrice || !formData.saleStartDate || !formData.saleEndDate) {
-        toast.error('Please fill sale price and sale time range');
+      const pct = parseFloat(formData.discountPercent);
+      if (!formData.discountPercent || !Number.isFinite(pct) || pct <= 0 || pct >= 100) {
+        toast.error('Discount must be between 1% and 99%');
         return;
       }
-      if (formData.salePrice >= formData.price) {
-        toast.error('Sale price must be lower than base price');
+      if (!formData.saleStartDate || !formData.saleEndDate) {
+        toast.error('Please fill in sale start and end time');
         return;
       }
       if (new Date(formData.saleStartDate) >= new Date(formData.saleEndDate)) {
         toast.error('Sale start date must be before end date');
         return;
       }
+      if (effectiveBasePrice <= 0) {
+        toast.error('Please set variant prices before enabling sale');
+        return;
+      }
+      computedSalePrice = parseFloat((effectiveBasePrice * (1 - pct / 100)).toFixed(2));
     }
+
     setSaving(true);
     try {
       await updateProduct(editingProduct._id, {
         title: formData.title,
         description: formData.description,
-        price: formData.price,
+        price: hasVariants ? effectiveBasePrice : formData.price,
         saleEnabled: formData.saleEnabled,
-        salePrice: formData.saleEnabled ? formData.salePrice : undefined,
+        salePrice: formData.saleEnabled ? computedSalePrice : undefined,
         saleStartDate: formData.saleEnabled ? formData.saleStartDate : undefined,
         saleEndDate: formData.saleEnabled ? formData.saleEndDate : undefined,
         quantity: formData.quantity,
@@ -703,44 +725,117 @@ export default function SellerProducts() {
 
       {/* Edit Dialog */}
       <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
-        <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
+        <DialogContent className="w-[95vw] max-w-[95vw] sm:max-w-[95vw] max-h-[92vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>Edit Product</DialogTitle>
             <DialogDescription>Update product information</DialogDescription>
           </DialogHeader>
 
-          <div className="grid gap-4 py-4">
-            <div className="grid gap-2">
-              <Label>Product Name *</Label>
-              <Input
-                value={formData.title}
-                onChange={(e) => setFormData({ ...formData, title: e.target.value })}
-              />
-            </div>
-
-            <div className="grid gap-2">
-              <Label>Description</Label>
-              <Textarea
-                rows={4}
-                value={formData.description}
-                onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-              />
-            </div>
-
-            <div className="grid grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 py-4">
+            {/* Left — main content */}
+            <div className="lg:col-span-2 space-y-4">
               <div className="grid gap-2">
-                <Label>Price ($) *</Label>
+                <Label>Product Name *</Label>
                 <Input
-                  type="number"
-                  min="0"
-                  step="0.01"
-                  className={numericInputClass}
-                  value={formData.price}
-                  onChange={(e) => setFormData({ ...formData, price: parseFloat(e.target.value) || 0 })}
+                  value={formData.title}
+                  onChange={(e) => setFormData({ ...formData, title: e.target.value })}
                 />
               </div>
+
               <div className="grid gap-2">
-                <Label>Quantity</Label>
+                <Label>Description</Label>
+                <Textarea
+                  rows={5}
+                  value={formData.description}
+                  onChange={(e) => setFormData({ ...formData, description: e.target.value })}
+                />
+              </div>
+
+              {/* Images */}
+              <div className="grid gap-2">
+                <Label>Product Images</Label>
+                <Input
+                  type="file"
+                  accept="image/*"
+                  multiple
+                  onChange={handleImageUpload}
+                  disabled={uploading}
+                />
+                {uploading && <p className="text-sm text-gray-500">Uploading...</p>}
+                {formData.images.length > 0 && (
+                  <div className="grid grid-cols-5 gap-2 mt-1">
+                    {formData.images.map((url, index) => (
+                      <div key={index} className="relative group aspect-square">
+                        <img src={url} alt="" className="w-full h-full object-cover rounded-lg border" />
+                        <button
+                          type="button"
+                          onClick={() => handleRemoveImage(index)}
+                          className="absolute top-1 right-1 bg-red-500 text-white rounded-full w-5 h-5 text-xs flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity"
+                        >
+                          ×
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+
+              {/* Variants */}
+              <div className="grid gap-2">
+                <Label className="flex items-center gap-2">
+                  <Layers className="h-4 w-4" />
+                  Product Variants
+                </Label>
+                <ProductVariantsManager
+                  variants={formData.variants}
+                  onChange={(variants) => setFormData({ ...formData, variants })}
+                  variantCombinations={formData.variantCombinations}
+                  basePrice={Number(formData.price) || 0}
+                  onCombinationsChange={(variantCombinations) =>
+                    setFormData({ ...formData, variantCombinations })
+                  }
+                  showSkuFields={false}
+                />
+              </div>
+            </div>
+
+            {/* Right — price & stock */}
+            <div className="space-y-4">
+              {/* Price */}
+              <div className="grid gap-2">
+                <Label>Price ($) *</Label>
+                {formData.variantCombinations.length > 0 ? (() => {
+                  const prices = formData.variantCombinations
+                    .map((c) => c.price)
+                    .filter((p): p is number => p !== undefined && p > 0);
+                  const min = prices.length > 0 ? Math.min(...prices) : null;
+                  const max = prices.length > 0 ? Math.max(...prices) : null;
+                  return (
+                    <div className={`flex items-center pl-4 pr-3 rounded-md border border-input bg-muted/50 ${numericInputClass}`}>
+                      <span className="text-gray-500 mr-1">$</span>
+                      <span className="text-gray-700">
+                        {min !== null && max !== null
+                          ? min === max ? min.toFixed(2) : `${min.toFixed(2)} - ${max.toFixed(2)}`
+                          : 'Set per variant below'}
+                      </span>
+                    </div>
+                  );
+                })() : (
+                  <Input
+                    type="number"
+                    min="0"
+                    step="0.01"
+                    placeholder="0.00"
+                    className={numericInputClass}
+                    value={formData.price}
+                    onChange={(e) => setFormData({ ...formData, price: parseFloat(e.target.value) || 0 })}
+                  />
+                )}
+              </div>
+
+              {/* Quantity */}
+              <div className="grid gap-2">
+                <Label>Stock</Label>
                 <Input
                   type="number"
                   min="0"
@@ -750,51 +845,90 @@ export default function SellerProducts() {
                   disabled={formData.variantCombinations.length > 0}
                 />
               </div>
-            </div>
 
-            <div className="grid gap-2 rounded-md border border-dashed border-red-300 bg-red-50/40 p-3">
-              <Label className="flex items-center justify-between">
-                <span>Sale Time</span>
-                <input
-                  type="checkbox"
-                  checked={formData.saleEnabled}
-                  onChange={(e) => setFormData({ ...formData, saleEnabled: e.target.checked })}
-                />
-              </Label>
-              {formData.saleEnabled && (
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
-                  <div className="grid gap-2">
-                    <Label>Sale Price *</Label>
-                    <Input
-                      type="number"
-                      min="0"
-                      step="0.01"
-                      className={numericInputClass}
-                      value={formData.salePrice}
-                      onChange={(e) => setFormData({ ...formData, salePrice: parseFloat(e.target.value) || 0 })}
-                    />
+              {/* Sale Discount */}
+              <div className="rounded-xl border border-dashed border-red-300 bg-red-50/40 p-4 space-y-3">
+                <label className="flex items-center justify-between cursor-pointer">
+                  <span className="font-medium text-sm flex items-center gap-2">
+                    <Percent className="h-4 w-4 text-red-500" />
+                    Sale Discount
+                  </span>
+                  <input
+                    type="checkbox"
+                    className="w-4 h-4 accent-red-500"
+                    checked={formData.saleEnabled}
+                    onChange={(e) => setFormData({ ...formData, saleEnabled: e.target.checked })}
+                  />
+                </label>
+                {formData.saleEnabled && (
+                  <div className="space-y-3 pt-1">
+                    <div className="space-y-1">
+                      <Label className="text-xs">Discount % *</Label>
+                      <div className="relative">
+                        <Input
+                          type="number"
+                          min="1"
+                          max="99"
+                          step="1"
+                          placeholder="e.g. 20"
+                          className={`pr-8 ${numericInputClass}`}
+                          value={formData.discountPercent}
+                          onChange={(e) => setFormData({ ...formData, discountPercent: e.target.value })}
+                        />
+                        <span className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 font-bold">%</span>
+                      </div>
+                      {(() => {
+                        const pct = parseFloat(formData.discountPercent);
+                        if (!Number.isFinite(pct) || pct <= 0) return null;
+                        const hasVariants = formData.variantCombinations.length > 0;
+                        if (hasVariants) {
+                          const prices = formData.variantCombinations
+                            .map((c) => c.price)
+                            .filter((p): p is number => p !== undefined && p > 0);
+                          if (prices.length === 0) return null;
+                          const min = parseFloat((Math.min(...prices) * (1 - pct / 100)).toFixed(2));
+                          const max = parseFloat((Math.max(...prices) * (1 - pct / 100)).toFixed(2));
+                          return (
+                            <p className="text-xs text-red-600 font-medium">
+                              After discount: <span className="font-bold">
+                                {min === max ? `$${min.toFixed(2)}` : `$${min.toFixed(2)} - $${max.toFixed(2)}`}
+                              </span>
+                            </p>
+                          );
+                        }
+                        if (!formData.price) return null;
+                        return (
+                          <p className="text-xs text-red-600 font-medium">
+                            After discount: <span className="font-bold">${(formData.price * (1 - pct / 100)).toFixed(2)}</span>
+                          </p>
+                        );
+                      })()}
+                    </div>
+                    <div className="grid grid-cols-2 gap-2">
+                      <div className="space-y-1">
+                        <Label className="text-xs">Start *</Label>
+                        <Input
+                          type="datetime-local"
+                          className="h-10 text-sm"
+                          value={formData.saleStartDate}
+                          onChange={(e) => setFormData({ ...formData, saleStartDate: e.target.value })}
+                        />
+                      </div>
+                      <div className="space-y-1">
+                        <Label className="text-xs">End *</Label>
+                        <Input
+                          type="datetime-local"
+                          className="h-10 text-sm"
+                          value={formData.saleEndDate}
+                          onChange={(e) => setFormData({ ...formData, saleEndDate: e.target.value })}
+                        />
+                      </div>
+                    </div>
                   </div>
-                  <div className="grid gap-2">
-                    <Label>Start Time *</Label>
-                    <Input
-                      type="datetime-local"
-                      value={formData.saleStartDate}
-                      onChange={(e) => setFormData({ ...formData, saleStartDate: e.target.value })}
-                    />
-                  </div>
-                  <div className="grid gap-2">
-                    <Label>End Time *</Label>
-                    <Input
-                      type="datetime-local"
-                      value={formData.saleEndDate}
-                      onChange={(e) => setFormData({ ...formData, saleEndDate: e.target.value })}
-                    />
-                  </div>
-                </div>
-              )}
-            </div>
+                )}
+              </div>
 
-            <div className="grid grid-cols-2 gap-4">
+              {/* Category */}
               <div className="grid gap-2">
                 <Label>Category</Label>
                 <select
@@ -808,6 +942,8 @@ export default function SellerProducts() {
                   ))}
                 </select>
               </div>
+
+              {/* Condition */}
               <div className="grid gap-2">
                 <Label>Condition</Label>
                 <select
@@ -820,52 +956,6 @@ export default function SellerProducts() {
                   <option value="used">Used</option>
                 </select>
               </div>
-            </div>
-
-            {/* Images */}
-            <div className="grid gap-2">
-              <Label>Product Images</Label>
-              <Input
-                type="file"
-                accept="image/*"
-                multiple
-                onChange={handleImageUpload}
-                disabled={uploading}
-              />
-              {uploading && <p className="text-sm text-gray-500">Uploading...</p>}
-              {formData.images.length > 0 && (
-                <div className="grid grid-cols-5 gap-2 mt-2">
-                  {formData.images.map((url, index) => (
-                    <div key={index} className="relative group">
-                      <img src={url} alt="" className="w-full h-20 object-cover rounded border" />
-                      <button
-                        type="button"
-                        onClick={() => handleRemoveImage(index)}
-                        className="absolute top-1 right-1 bg-red-500 text-white rounded-full w-5 h-5 text-xs flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity"
-                      >
-                        ×
-                      </button>
-                    </div>
-                  ))}
-                </div>
-              )}
-            </div>
-
-            {/* Variants */}
-            <div className="grid gap-2">
-              <Label className="flex items-center gap-2">
-                <Layers className="h-4 w-4" />
-                Product Variants
-              </Label>
-              <ProductVariantsManager
-                variants={formData.variants}
-                onChange={(variants) => setFormData({ ...formData, variants })}
-                variantCombinations={formData.variantCombinations}
-                basePrice={Number(formData.price) || 0}
-                onCombinationsChange={(variantCombinations) =>
-                  setFormData({ ...formData, variantCombinations })
-                }
-              />
             </div>
           </div>
 

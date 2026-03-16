@@ -46,7 +46,8 @@ const notificationSchema = new mongoose.Schema(
                 "refund_disputed",
                 "refund_resolved",
                 "refund_receipt_confirmed",
-                "feedback_revision_request"
+                "feedback_revision_request",
+                "order_assigned"
             ],
             required: true,
         },

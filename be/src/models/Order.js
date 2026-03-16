@@ -113,7 +113,8 @@ const orderSchema = new mongoose.Schema({
       "created",
       "packaging",
       "ready_to_ship",
-      "queued",      // Đang chờ shipper (tất cả shipper đầy slot)
+      "queued",              // Đang chờ shipper (tất cả shipper đầy slot)
+      "pending_acceptance",  // Đã assign shipper, chờ shipper chấp nhận
       "shipping",
       "delivered",
       "completed",
@@ -169,6 +170,7 @@ const orderSchema = new mongoose.Schema({
           "packaging",
           "ready_to_ship",
           "queued",
+          "pending_acceptance",
           "shipping",
           "delivered",
           "completed",

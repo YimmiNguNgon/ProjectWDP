@@ -72,7 +72,15 @@ export const ProductCard: React.FC<ProductCardProps> = ({
           </div>
 
           <span className="font-semibold text-sm text-gray-900">
-            ${product.price.toFixed(2)}
+            {(() => {
+              const prices = product.variantCombinations
+                ?.map((c) => c.price)
+                .filter((p): p is number => p !== undefined) ?? [];
+              if (prices.length === 0) return `$${product.price.toFixed(2)}`;
+              const min = Math.min(...prices);
+              const max = Math.max(...prices);
+              return min === max ? `$${min.toFixed(2)}` : `$${min.toFixed(2)} - $${max.toFixed(2)}`;
+            })()}
           </span>
         </div>
       </div>

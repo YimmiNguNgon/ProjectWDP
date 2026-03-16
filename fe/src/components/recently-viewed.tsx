@@ -110,9 +110,21 @@ export function RecentlyViewedSection({
             const p = item.product;
             const img =
               p.images?.[0] || p.image || "";
-            const finalPrice = p.isOnSale && p.discountPercent
-              ? p.price * (1 - p.discountPercent / 100)
-              : p.price;
+            const applyDiscount = (v: number) =>
+              p.isOnSale && p.discountPercent
+                ? v * (1 - p.discountPercent / 100)
+                : v;
+            const variantPrices = p.variantCombinations
+              ?.map((c) => c.price)
+              .filter((v): v is number => v !== undefined) ?? [];
+            const finalPrice = applyDiscount(
+              variantPrices.length > 0 ? Math.min(...variantPrices) : p.price,
+            );
+            const maxVariantPrice =
+              variantPrices.length > 0
+                ? applyDiscount(Math.max(...variantPrices))
+                : finalPrice;
+            const isPriceRange = variantPrices.length > 0 && finalPrice !== maxVariantPrice;
 
             return (
               <Link
@@ -163,9 +175,11 @@ export function RecentlyViewedSection({
                   </p>
                   <div className="flex items-center gap-1.5 flex-wrap">
                     <span className={`text-sm font-bold ${p.isOnSale ? "text-red-600" : "text-gray-900"}`}>
-                      ${finalPrice.toFixed(2)}
+                      {isPriceRange
+                        ? `$${finalPrice.toFixed(2)} - $${maxVariantPrice.toFixed(2)}`
+                        : `$${finalPrice.toFixed(2)}`}
                     </span>
-                    {p.isOnSale && p.originalPrice && (
+                    {p.isOnSale && p.originalPrice && !isPriceRange && (
                       <span className="text-[10px] text-gray-400 line-through">
                         ${p.originalPrice.toFixed(2)}
                       </span>

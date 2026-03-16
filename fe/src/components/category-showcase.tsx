@@ -96,7 +96,7 @@ const CarouselCategoryItem = React.memo(
 CarouselCategoryItem.displayName = "CarouselCategoryItem";
 
 export function CategoryShowcase({
-  title = "Trending on eBay",
+  title = "Trending on efpt",
   className = "",
 }: CategoryShowcaseProps) {
   const [categories, setCategories] = useState<Category[]>([]);

@@ -24,7 +24,7 @@ async function findBestShipper() {
     // Đếm số đơn đang shipping của từng shipper
     const shipperIds = shippers.map((s) => s._id);
     const counts = await Order.aggregate([
-        { $match: { shipper: { $in: shipperIds }, status: "shipping" } },
+        { $match: { shipper: { $in: shipperIds }, status: { $in: ["shipping", "pending_acceptance"] } } },
         { $group: { _id: "$shipper", count: { $sum: 1 } } },
     ]);
 
@@ -65,13 +65,13 @@ async function autoAssignOrder(order) {
             { _id: order._id, status: "ready_to_ship", shipper: null },
             {
                 shipper: shipper._id,
-                status: "shipping",
+                status: "pending_acceptance",
                 queuedAt: null,
                 $push: {
                     statusHistory: {
-                        status: "shipping",
+                        status: "pending_acceptance",
                         timestamp: new Date(),
-                        note: `Auto-assigned to shipper ${shipper.username}`,
+                        note: `Auto-assigned to shipper ${shipper.username}, awaiting acceptance`,
                     },
                 },
             },
@@ -80,14 +80,14 @@ async function autoAssignOrder(order) {
 
         if (!updated) return; // Đơn đã bị nhận bởi thao tác khác, bỏ qua
 
-        // Thông báo shipper được assign
+        // Thông báo shipper được assign - yêu cầu chấp nhận
         notificationService
             .sendNotification({
                 recipientId: shipper._id,
                 type: "order_assigned",
-                title: "New order assigned to you",
-                body: `Order #${updated._id} has been auto-assigned to you.`,
-                link: `/shipper/orders`,
+                title: "New order waiting for your acceptance",
+                body: `A new order has been assigned to you. Please accept or reject it.`,
+                link: `/shipper/available`,
                 metadata: { orderId: updated._id },
             })
             .catch(() => { });
@@ -126,7 +126,7 @@ async function dispatchNextFromQueue(shipperId) {
     const max = shipper.shipperInfo?.maxOrders ?? DEFAULT_MAX_ORDERS;
     const activeCount = await Order.countDocuments({
         shipper: shipperId,
-        status: "shipping",
+        status: { $in: ["shipping", "pending_acceptance"] },
     });
 
     if (activeCount >= max) return; // Vẫn đầy slot
@@ -136,13 +136,13 @@ async function dispatchNextFromQueue(shipperId) {
         { status: "queued", shipper: null },
         {
             shipper: shipperId,
-            status: "shipping",
+            status: "pending_acceptance",
             queuedAt: null,
             $push: {
                 statusHistory: {
-                    status: "shipping",
+                    status: "pending_acceptance",
                     timestamp: new Date(),
-                    note: `Auto-assigned from queue to shipper ${shipper.username}`,
+                    note: `Auto-assigned from queue to shipper ${shipper.username}, awaiting acceptance`,
                 },
             },
         },
@@ -154,14 +154,14 @@ async function dispatchNextFromQueue(shipperId) {
 
     if (!nextOrder) return; // Queue trống
 
-    // Thông báo shipper
+    // Thông báo shipper - yêu cầu chấp nhận
     notificationService
         .sendNotification({
             recipientId: shipperId,
             type: "order_assigned",
-            title: "New order assigned to you",
-            body: `Order #${nextOrder._id} from queue has been assigned to you.`,
-            link: `/shipper/orders`,
+            title: "New order waiting for your acceptance",
+            body: `A new order has been assigned to you. Please accept or reject it.`,
+            link: `/shipper/available`,
             metadata: { orderId: nextOrder._id },
         })
         .catch(() => { });

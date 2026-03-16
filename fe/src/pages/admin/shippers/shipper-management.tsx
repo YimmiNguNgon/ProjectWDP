@@ -14,6 +14,7 @@ interface Shipper {
   username: string;
   email: string;
   status: string;
+  isAvailable: boolean;
   createdAt: string;
   totalAccepted: number;
   delivered: number;
@@ -41,10 +42,12 @@ export default function AdminShipperManagement() {
   const [loading, setLoading] = useState(false);
 
   const fetchShippers = () => {
+    setLoading(true);
     api
       .get("/api/admin/shippers")
       .then((res) => setShippers(res.data.shippers))
-      .catch(() => { });
+      .catch(() => { })
+      .finally(() => setLoading(false));
   };
 
   useEffect(() => {
@@ -97,7 +100,7 @@ export default function AdminShipperManagement() {
 
       {activeTab === "shippers" && (
         <div className="overflow-x-auto">
-          {shippers.length === 0 && loading ? (
+          {loading ? (
             <div className="text-center py-12 text-gray-500">Loading...</div>
           ) : (
             <table className="w-full text-sm border-collapse">
@@ -105,7 +108,8 @@ export default function AdminShipperManagement() {
                 <tr className="bg-gray-50 border-b">
                   <th className="text-left px-4 py-3 font-medium text-gray-600">Username</th>
                   <th className="text-left px-4 py-3 font-medium text-gray-600">Email</th>
-                  <th className="text-left px-4 py-3 font-medium text-gray-600">Status</th>
+                  <th className="text-left px-4 py-3 font-medium text-gray-600">Account Status</th>
+                  <th className="text-left px-4 py-3 font-medium text-gray-600">Availability</th>
                   <th className="text-right px-4 py-3 font-medium text-gray-600">Total Accepted</th>
                   <th className="text-right px-4 py-3 font-medium text-gray-600">Delivered</th>
                   <th className="text-right px-4 py-3 font-medium text-gray-600">In Transit</th>
@@ -114,7 +118,7 @@ export default function AdminShipperManagement() {
               <tbody>
                 {shippers.length === 0 ? (
                   <tr>
-                    <td colSpan={6} className="text-center py-8 text-gray-500">
+                    <td colSpan={7} className="text-center py-8 text-gray-500">
                       No shippers found
                     </td>
                   </tr>
@@ -126,6 +130,15 @@ export default function AdminShipperManagement() {
                       <td className="px-4 py-3">
                         <span className={`px-2 py-1 rounded-full text-xs font-medium ${statusBadge(s.status)}`}>
                           {s.status}
+                        </span>
+                      </td>
+                      <td className="px-4 py-3">
+                        <span className={`px-2 py-1 rounded-full text-xs font-medium ${
+                          s.isAvailable
+                            ? "bg-green-100 text-green-700"
+                            : "bg-orange-100 text-orange-700"
+                        }`}>
+                          {s.isAvailable ? "Available" : "Delivering"}
                         </span>
                       </td>
                       <td className="px-4 py-3 text-right">{s.totalAccepted}</td>

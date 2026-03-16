@@ -4,7 +4,7 @@ const Order = require("../models/Order");
 exports.getAllShippers = async (req, res, next) => {
   try {
     const shippers = await User.find({ role: "shipper" })
-      .select("username email status createdAt")
+      .select("username email status createdAt shipperInfo")
       .lean();
 
     if (shippers.length === 0) {
@@ -38,6 +38,7 @@ exports.getAllShippers = async (req, res, next) => {
       const st = statsMap[s._id.toString()] || { totalAccepted: 0, delivered: 0, inTransit: 0 };
       return {
         ...s,
+        isAvailable: s.shipperInfo?.isAvailable ?? true,
         totalAccepted: st.totalAccepted,
         delivered: st.delivered,
         inTransit: st.inTransit,

@@ -1,11 +1,26 @@
 import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
-import { Truck, CheckCircle, Package } from "lucide-react";
+import {
+  Truck,
+  CheckCircle,
+  Package,
+  Clock,
+  ArrowRight,
+} from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { getShipperStats, type ShipperStats } from "@/api/shipper";
+import { Button } from "@/components/ui/button";
+import {
+  getShipperStats,
+  type ShipperStats,
+} from "@/api/shipper";
 
 export default function ShipperDashboard() {
-  const [stats, setStats] = useState<ShipperStats>({ delivered: 0, inTransit: 0, totalAccepted: 0 });
+  const [stats, setStats] = useState<ShipperStats>({
+    delivered: 0,
+    inTransit: 0,
+    totalAccepted: 0,
+    isAvailable: true,
+  });
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -16,62 +31,101 @@ export default function ShipperDashboard() {
   }, []);
 
   return (
-    <div className="p-6">
-      <h1 className="text-2xl font-bold text-gray-900 mb-6">Shipper Dashboard</h1>
+    <div className="p-6 max-w-5xl mx-auto">
+      {/* Header */}
+      <div className="mb-8">
+        <h1 className="text-2xl font-bold text-gray-900">Shipper Dashboard</h1>
+        <p className="text-gray-500 text-sm mt-1">Manage your deliveries</p>
+      </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
-        <Card>
+      {/* Stats Cards */}
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-5 mb-8">
+        <Card className="border-0 ring-1 ring-gray-100 shadow-sm">
           <CardHeader className="flex flex-row items-center justify-between pb-2">
-            <CardTitle className="text-sm font-medium text-gray-600">In Transit</CardTitle>
-            <Truck className="h-5 w-5 text-orange-500" />
+            <CardTitle className="text-sm font-medium text-gray-500">In Transit</CardTitle>
+            <div className="w-9 h-9 rounded-lg bg-orange-50 flex items-center justify-center">
+              <Truck className="h-5 w-5 text-orange-500" />
+            </div>
           </CardHeader>
           <CardContent>
             <div className="text-3xl font-bold text-orange-600">
-              {loading ? "..." : stats.inTransit}
+              {loading ? "—" : stats.inTransit}
             </div>
-            <p className="text-xs text-gray-500 mt-1">Currently delivering</p>
+            <p className="text-xs text-gray-400 mt-1">Orders currently on the way</p>
           </CardContent>
         </Card>
 
-        <Card>
+        <Card className="border-0 ring-1 ring-gray-100 shadow-sm">
           <CardHeader className="flex flex-row items-center justify-between pb-2">
-            <CardTitle className="text-sm font-medium text-gray-600">Delivered</CardTitle>
-            <CheckCircle className="h-5 w-5 text-green-500" />
+            <CardTitle className="text-sm font-medium text-gray-500">Delivered</CardTitle>
+            <div className="w-9 h-9 rounded-lg bg-green-50 flex items-center justify-center">
+              <CheckCircle className="h-5 w-5 text-green-500" />
+            </div>
           </CardHeader>
           <CardContent>
             <div className="text-3xl font-bold text-green-600">
-              {loading ? "..." : stats.delivered}
+              {loading ? "—" : stats.delivered}
             </div>
-            <p className="text-xs text-gray-500 mt-1">Successfully delivered</p>
+            <p className="text-xs text-gray-400 mt-1">Successfully delivered</p>
           </CardContent>
         </Card>
 
-        <Card>
+        <Card className="border-0 ring-1 ring-gray-100 shadow-sm">
           <CardHeader className="flex flex-row items-center justify-between pb-2">
-            <CardTitle className="text-sm font-medium text-gray-600">Total Accepted</CardTitle>
-            <Package className="h-5 w-5 text-blue-500" />
+            <CardTitle className="text-sm font-medium text-gray-500">Total Accepted</CardTitle>
+            <div className="w-9 h-9 rounded-lg bg-blue-50 flex items-center justify-center">
+              <Package className="h-5 w-5 text-blue-500" />
+            </div>
           </CardHeader>
           <CardContent>
             <div className="text-3xl font-bold text-blue-600">
-              {loading ? "..." : stats.totalAccepted}
+              {loading ? "—" : stats.totalAccepted}
             </div>
-            <p className="text-xs text-gray-500 mt-1">All time</p>
+            <p className="text-xs text-gray-400 mt-1">All time</p>
           </CardContent>
         </Card>
       </div>
 
-      <Card>
-        <CardContent className="pt-6">
-          <p className="text-gray-600 mb-4">Ready to pick up new orders?</p>
-          <Link
-            to="/shipper/available"
-            className="inline-flex items-center gap-2 bg-orange-600 text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-orange-700 transition-colors"
-          >
-            <Package className="h-4 w-4" />
-            View Available Orders
-          </Link>
-        </CardContent>
-      </Card>
+      {/* Quick Actions */}
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <Card className="border-0 ring-1 ring-gray-100 shadow-sm hover:ring-orange-200 transition-all">
+          <CardContent className="pt-6">
+            <div className="flex items-center gap-4">
+              <div className="w-12 h-12 rounded-xl bg-orange-50 flex items-center justify-center shrink-0">
+                <Package className="h-6 w-6 text-orange-500" />
+              </div>
+              <div className="flex-1 min-w-0">
+                <p className="font-semibold text-gray-900">Available Orders</p>
+                <p className="text-sm text-gray-500">Browse and accept new delivery orders</p>
+              </div>
+              <Link to="/shipper/available">
+                <Button size="sm" className="bg-orange-600 hover:bg-orange-700 shrink-0">
+                  <ArrowRight className="h-4 w-4" />
+                </Button>
+              </Link>
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card className="border-0 ring-1 ring-gray-100 shadow-sm hover:ring-blue-200 transition-all">
+          <CardContent className="pt-6">
+            <div className="flex items-center gap-4">
+              <div className="w-12 h-12 rounded-xl bg-blue-50 flex items-center justify-center shrink-0">
+                <Clock className="h-6 w-6 text-blue-500" />
+              </div>
+              <div className="flex-1 min-w-0">
+                <p className="font-semibold text-gray-900">My Deliveries</p>
+                <p className="text-sm text-gray-500">Track and update your active orders</p>
+              </div>
+              <Link to="/shipper/my-orders">
+                <Button size="sm" variant="outline" className="shrink-0">
+                  <ArrowRight className="h-4 w-4" />
+                </Button>
+              </Link>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
     </div>
   );
 }

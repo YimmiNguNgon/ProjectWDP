@@ -188,8 +188,14 @@ export default function AdminOrders() {
                       </div>
                       <div>
                         <p className="text-xs text-gray-400 mb-0.5">Shipper</p>
-                        <p className="font-medium">{order.shipper?.username || "Not assigned"}</p>
-                        <p className="text-xs text-gray-400">{order.shipper?.email}</p>
+                        {order.shipper ? (
+                          <>
+                            <p className="font-medium">{order.shipper.username}</p>
+                            <p className="text-xs text-gray-400">{order.shipper.email}</p>
+                          </>
+                        ) : (
+                          <p className="font-medium text-gray-400 italic">Not assigned</p>
+                        )}
                       </div>
                       <div>
                         <p className="text-xs text-gray-400 mb-0.5">Shipping Address</p>

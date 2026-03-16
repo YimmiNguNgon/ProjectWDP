@@ -1,0 +1,10 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(grep -n \"\\\\$.*toFixed\\\\|price.*\\\\$\\\\|\\\\.toFixed.*\\\\$\" fe/src/pages/buyer/orders/checkout.tsx | head -20)",
+      "Bash(grep -n \"toFixed\\\\|formatUsd\\\\|\\\\$\" fe/src/pages/buyer/orders/my-orders.tsx | head -30)",
+      "Bash(find /c/Users/Administrator/Documents/WDP/fe/src/pages/admin -type f -name \"*.tsx\" 2>/dev/null | head -20)",
+      "Bash(grep -rn \"eBay\\\\|My eBay\" C:\\\\Users\\\\Administrator\\\\Documents\\\\WDP\\\\fe\\\\src --include=\"*.tsx\" --include=\"*.ts\" -l 2>/dev/null | head -20)"
+    ]
+  }
+}

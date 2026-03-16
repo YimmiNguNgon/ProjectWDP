@@ -10,12 +10,6 @@ import type { PropsWithChildren } from "react";
 import React from "react";
 import { Link, Outlet, useNavigate } from "react-router-dom";
 import io, { type Socket } from "socket.io-client";
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
 import { WatchlistPreview } from "@/components/watchlist/watchlist-preview";
 import CartDropdown from "@/components/cart/cart-dropdown";
 import NotificationBell from "@/components/notification-bell";
@@ -135,7 +129,7 @@ export function MainLayout() {
                 </li>
                 <li>
                   <Link to="#" className="hover:text-blue-600">
-                    eBay Money Back Guarantee
+                    efpt Money Back Guarantee
                   </Link>
                 </li>
                 <li>
@@ -182,17 +176,17 @@ export function MainLayout() {
               <ul className="space-y-2 text-sm text-gray-600">
                 <li>
                   <Link to="#" className="hover:text-blue-600">
-                    eBay Blogs
+                    efpt Blogs
                   </Link>
                 </li>
                 <li>
                   <Link to="#" className="hover:text-blue-600">
-                    eBay on Facebook
+                    efpt on Facebook
                   </Link>
                 </li>
                 <li>
                   <Link to="#" className="hover:text-blue-600">
-                    eBay on Twitter
+                    efpt on Twitter
                   </Link>
                 </li>
                 <li>
@@ -203,7 +197,7 @@ export function MainLayout() {
               </ul>
             </div>
             <div>
-              <h3 className="font-semibold text-gray-900 mb-3">About eBay</h3>
+              <h3 className="font-semibold text-gray-900 mb-3">About efpt</h3>
               <ul className="space-y-2 text-sm text-gray-600">
                 <li>
                   <Link to="#" className="hover:text-blue-600">
@@ -230,7 +224,7 @@ export function MainLayout() {
           </div>
           {/* Bottom bar */}
           <div className="border-t border-gray-200 pt-6 flex items-center justify-between text-xs text-gray-600">
-            <p>&copy; 2025 eBay Inc. All rights reserved.</p>
+            <p>&copy; 2025 efpt Inc. All rights reserved.</p>
             <div className="flex gap-4">
               <Link to="#" className="hover:text-blue-600">
                 Privacy
@@ -313,70 +307,14 @@ export const SocketProvider = ({ children }: PropsWithChildren) => {
   );
 };
 
-const MY_EBAY_ITEMS = [
-  { label: "Summary", to: "#" },
-  { label: "Recently Viewed", to: "/my-ebay/recently-viewed" },
-  { label: "Bids/Offers", to: "#" },
-  { label: "Watchlist", to: "activity/watchlist" },
-  { label: "Purchase History", to: "activity/purchases" },
-  { label: "Feedback Requests", to: "feedback-requests" },
-  { label: "Buy Again", to: "#" },
-  { label: "--- Selling ---", to: "", disabled: true }, // Section divider
-  { label: "My Listings", to: "/seller/my-listings" },
-  { label: "Inventory", to: "/seller/inventory" },
-  { label: "Sold Items", to: "/seller/sold" },
-  { label: "Promotion Requests", to: "/seller/promotion-requests" },
-  { label: "--- Account ---", to: "", disabled: true }, // Section divider
-  { label: "Saved Feed", to: "#" },
-  { label: "Saved Searches", to: "#" },
-  { label: "Saved Sellers", to: "#" },
-  { label: "Payment", to: "#" },
-  { label: "My Garage", to: "#" },
-  { label: "Preferences", to: "#" },
-  { label: "My Collection", to: "#" },
-  { label: "Messages", to: "messages" },
-  { label: "PSA Vault", to: "#" },
-];
-
 function MyEbayMenu() {
   return (
-    <DropdownMenu>
-      <DropdownMenuTrigger className="font-medium cursor-pointer text-sm outline-none">
-        My eBay
-      </DropdownMenuTrigger>
-      <DropdownMenuContent
-        className="w-48 max-h-96 overflow-y-auto"
-        align="end"
-      >
-        {MY_EBAY_ITEMS.map((item, index) => {
-          // Section divider
-          if (item.disabled) {
-            return (
-              <div
-                key={index}
-                className="px-2 py-1.5 text-xs font-semibold text-gray-500"
-              >
-                {item.label.replace(/---/g, "").trim()}
-              </div>
-            );
-          }
-
-          return (
-            <DropdownMenuItem
-              key={item.label}
-              asChild
-              className="cursor-pointer"
-            >
-              <Link
-                to={item.to.startsWith("/") ? item.to : `/my-ebay/${item.to}`}
-              >
-                {item.label}
-              </Link>
-            </DropdownMenuItem>
-          );
-        })}
-      </DropdownMenuContent>
-    </DropdownMenu>
+    <Link
+      to="/my-ebay/activity/purchases"
+      className="font-medium cursor-pointer text-sm"
+    >
+      My efpt
+    </Link>
   );
 }
 

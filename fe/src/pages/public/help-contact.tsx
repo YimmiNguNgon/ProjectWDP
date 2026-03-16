@@ -12,7 +12,7 @@ import { Clock3, FileQuestion, LifeBuoy, Mail, MessageCircle, PhoneCall, ShieldC
 const faqItems = [
   {
     q: "How do I track my order?",
-    a: "Go to My eBay > Purchases to check shipping status and order timeline.",
+    a: "Go to My efpt > Purchases to check shipping status and order timeline.",
   },
   {
     q: "How can I request a return or refund?",

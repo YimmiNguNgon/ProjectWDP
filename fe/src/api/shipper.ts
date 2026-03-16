@@ -25,6 +25,7 @@ export interface ShipperStats {
   delivered: number;
   inTransit: number;
   totalAccepted: number;
+  isAvailable: boolean;
 }
 
 export interface OrdersResponse {
@@ -51,3 +52,6 @@ export const markDelivered = (orderId: string): Promise<{ data: { ok: boolean; o
 
 export const getShipperStats = (): Promise<{ data: ShipperStats }> =>
   api.get("/api/shipper/stats");
+
+export const toggleAvailability = (isAvailable: boolean): Promise<{ data: { isAvailable: boolean } }> =>
+  api.patch("/api/shipper/availability", { isAvailable });

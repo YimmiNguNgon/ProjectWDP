@@ -279,7 +279,7 @@ export default function LeaveFeedbackPage() {
                 className="block text-blue-600 underline"
                 onClick={() => navigate("/")}
               >
-                Go to My eBay
+                Go to My efpt
               </button>
               <button
                 type="button"

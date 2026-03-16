@@ -19,7 +19,7 @@ function AuthLayout() {
         >
           <img
             src='/ebay-logo-txt.png'
-            alt='eBay Logo'
+            alt='efpt Logo'
             className='h-10 w-auto'
           />
         </Link>
@@ -30,7 +30,7 @@ function AuthLayout() {
       </main>
 
       <footer className='flex items-center justify-center p-4 border-t'>
-        <span>© eBay 2025. All rights reserved.</span>
+        <span>© efpt 2025. All rights reserved.</span>
       </footer>
     </div>
   );

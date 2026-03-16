@@ -1031,6 +1031,7 @@ getOrderById = async (req, res) => {
       orders = await Order.find(groupFilter)
         .populate("buyer", "username email phone address")
         .populate("seller", "username email phone")
+        .populate("shipper", "username email")
         .populate("items.productId", "title images image");
     } else if (single) {
       orders = [single];
@@ -1075,6 +1076,7 @@ getOrderById = async (req, res) => {
         phone: order.buyer?.phone || "",
         shippingAddress: order.shippingAddress || null,
         seller: order.seller,
+        shipper: order.shipper || null,
         totalAmount: order.totalAmount, // WITHOUT group shipping
         shippingPrice: order.shippingPrice || 0,
         subtotalAmount: order.subtotalAmount ?? order.totalAmount,

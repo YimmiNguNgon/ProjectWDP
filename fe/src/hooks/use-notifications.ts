@@ -69,6 +69,7 @@ export function useNotifications(
       delivery_dispute_admin: "\uD83D\uDEA8",
       delivery_dispute_admin_replied: "\uD83D\uDCDD",
       feedback_revision_request: "\u2B50",
+      order_assigned: "\uD83D\uDCE6",
     };
 
     const handleNotification = (notif: AppNotification) => {
