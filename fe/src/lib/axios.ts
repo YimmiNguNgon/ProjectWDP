@@ -101,6 +101,14 @@ api.interceptors.response.use(
       }
     }
 
+    if (error.response?.status === 403) {
+      const msg: string = error.response?.data?.message ?? "";
+      if (msg.toLowerCase().includes("banned")) {
+        window.location.href = "/banned";
+        return Promise.reject(error);
+      }
+    }
+
     return Promise.reject(error);
   },
 );

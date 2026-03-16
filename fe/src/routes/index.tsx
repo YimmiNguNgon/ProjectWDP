@@ -10,6 +10,7 @@ import GoogleAuthSuccessPage from "@/pages/auth/google-auth-success";
 import ForgotPasswordPage from "@/pages/auth/forgot-password";
 import ResetPasswordPage from "@/pages/auth/reset-password";
 import BanAppealPage from "@/pages/auth/ban-appeal";
+import BannedPage from "@/pages/auth/banned";
 import HelpContactPage from "@/pages/public/help-contact";
 import GiftCardsPage from "@/pages/public/gift-cards";
 import UserManagement from "@/pages/admin/users/user-management";
@@ -403,6 +404,10 @@ export const AppRouter = () => {
     {
       path: "/ban-appeal",
       element: <BanAppealPage />,
+    },
+    {
+      path: "/banned",
+      element: <BannedPage />,
     },
     {
       path: "coming-soon",

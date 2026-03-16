@@ -9,12 +9,17 @@ import {
   AlertTriangle,
   RefreshCw,
   ShieldCheck,
+  Pencil,
+  Check,
+  X,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { Textarea } from "@/components/ui/textarea";
 import { useAuth } from "@/hooks/use-auth";
 import api from "@/lib/axios";
+import { toast } from "sonner";
 
 interface RecentOrder {
   _id: string;
@@ -76,6 +81,12 @@ export default function SellerOverview() {
   });
   const [loading, setLoading] = useState(true);
 
+  // Description state
+  const [description, setDescription] = useState("");
+  const [editingDesc, setEditingDesc] = useState(false);
+  const [descDraft, setDescDraft] = useState("");
+  const [savingDesc, setSavingDesc] = useState(false);
+
   useEffect(() => {
     const fetchAll = async () => {
       setLoading(true);
@@ -123,6 +134,30 @@ export default function SellerOverview() {
 
     fetchAll();
   }, []);
+
+  useEffect(() => {
+    api.get("/api/users/me").then((res) => {
+      const desc = res.data?.user?.sellerInfo?.productDescription ?? res.data?.sellerInfo?.productDescription ?? "";
+      setDescription(desc);
+    }).catch(() => {});
+  }, []);
+
+  const handleSaveDescription = async () => {
+    setSavingDesc(true);
+    try {
+      await api.put("/api/users/update-user-profile", {
+        username: user?.username ?? "",
+        productDescription: descDraft,
+      });
+      setDescription(descDraft);
+      setEditingDesc(false);
+      toast.success("Description updated");
+    } catch {
+      toast.error("Failed to update description");
+    } finally {
+      setSavingDesc(false);
+    }
+  };
 
   const isProbation = user?.sellerStage === "PROBATION";
   const avgRating = user?.sellerInfo?.avgRating ?? 0;
@@ -346,6 +381,51 @@ export default function SellerOverview() {
           </CardContent>
         </Card>
       )}
+
+      {/* Shop Description */}
+      <Card>
+        <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+          <CardTitle className="text-sm font-medium">Shop Description</CardTitle>
+          {!editingDesc && (
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={() => { setDescDraft(description); setEditingDesc(true); }}
+            >
+              <Pencil className="h-4 w-4" />
+            </Button>
+          )}
+        </CardHeader>
+        <CardContent>
+          {editingDesc ? (
+            <div className="space-y-2">
+              <Textarea
+                value={descDraft}
+                onChange={(e) => setDescDraft(e.target.value)}
+                placeholder="Describe your shop to buyers..."
+                rows={4}
+                className="resize-none"
+                maxLength={500}
+              />
+              <p className="text-xs text-muted-foreground text-right">{descDraft.length}/500</p>
+              <div className="flex gap-2">
+                <Button size="sm" onClick={handleSaveDescription} disabled={savingDesc}>
+                  <Check className="h-4 w-4 mr-1" />
+                  Save
+                </Button>
+                <Button size="sm" variant="outline" onClick={() => setEditingDesc(false)}>
+                  <X className="h-4 w-4 mr-1" />
+                  Cancel
+                </Button>
+              </div>
+            </div>
+          ) : (
+            <p className="text-sm text-muted-foreground whitespace-pre-line">
+              {description || "No description yet. Click the edit button to add one."}
+            </p>
+          )}
+        </CardContent>
+      </Card>
 
       {/* Recent orders */}
       <Card>

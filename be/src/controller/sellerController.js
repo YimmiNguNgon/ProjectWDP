@@ -1,4 +1,5 @@
 const Product = require('../models/Product');
+const User = require('../models/User');
 const mongoose = require('mongoose');
 
 class SellerController {
@@ -169,6 +170,29 @@ class SellerController {
         message: 'Error fetching seller stats',
         error: error.message
       });
+    }
+  }
+  /**
+   * Lấy public profile của seller (description, shopName)
+   * @route GET /api/seller/:sellerId/profile
+   */
+  async getSellerPublicProfile(req, res) {
+    try {
+      const { sellerId } = req.params;
+      const user = await User.findById(sellerId).select('username role sellerInfo.shopName sellerInfo.productDescription sellerInfo.registeredAt');
+      if (!user || user.role !== 'seller') {
+        return res.status(404).json({ success: false, message: 'Seller not found' });
+      }
+      res.json({
+        success: true,
+        data: {
+          description: user.sellerInfo?.productDescription || '',
+          shopName: user.sellerInfo?.shopName || user.username,
+        }
+      });
+    } catch (error) {
+      console.error('Error in getSellerPublicProfile:', error);
+      res.status(500).json({ success: false, message: error.message });
     }
   }
 }

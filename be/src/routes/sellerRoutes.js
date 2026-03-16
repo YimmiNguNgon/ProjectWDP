@@ -11,4 +11,7 @@ router.get('/:sellerId/products/:productId', sellerController.getSellerProductDe
 // GET /api/seller/:sellerId/stats - Lấy thống kê seller
 router.get('/:sellerId/stats', sellerController.getSellerStats);
 
+// GET /api/seller/:sellerId/profile - Public profile (description, shopName)
+router.get('/:sellerId/profile', sellerController.getSellerPublicProfile);
+
 module.exports = router;

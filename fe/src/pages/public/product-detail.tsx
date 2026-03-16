@@ -571,24 +571,26 @@ export default function ProductDetailPage() {
               </ItemDescription>
             </ItemContent>
             <ItemActions className="flex gap-2">
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={handleToggleFollowSeller}
-                className="gap-2"
-              >
-                {isFollowingSeller ? (
-                  <>
-                    <UserCheck className="h-4 w-4" />
-                    Following
-                  </>
-                ) : (
-                  <>
-                    <UserPlus className="h-4 w-4" />
-                    Follow Seller
-                  </>
-                )}
-              </Button>
+              {String(payload?.userId) !== String(sellerIdValue) && (
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={handleToggleFollowSeller}
+                  className="gap-2"
+                >
+                  {isFollowingSeller ? (
+                    <>
+                      <UserCheck className="h-4 w-4" />
+                      Following
+                    </>
+                  ) : (
+                    <>
+                      <UserPlus className="h-4 w-4" />
+                      Follow Seller
+                    </>
+                  )}
+                </Button>
+              )}
               <Link to={"#"} className="hover:bg-transparent">
                 <ChevronRight className="size-6" />
               </Link>

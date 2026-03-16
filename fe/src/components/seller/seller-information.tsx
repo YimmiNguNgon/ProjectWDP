@@ -1,6 +1,9 @@
 import React, { useEffect, useMemo, useState } from "react";
 import { useParams, useNavigate, useLocation } from "react-router-dom";
 import api from "@/lib/axios";
+import { useAuth } from "@/hooks/use-auth";
+import { saveSeller, unsaveSeller } from "@/api/orders";
+import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import {
@@ -22,6 +25,7 @@ import {
   Share2,
   Flag,
   Loader2,
+  Heart,
 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
@@ -170,10 +174,13 @@ export default function SellerInformationPage() {
   const { sellerId } = useParams<{ sellerId: string }>();
   const location = useLocation();
   const navigate = useNavigate();
+  const { payload } = useAuth();
   const queryParams = new URLSearchParams(location.search);
   const productId = queryParams.get("productId");
   const sellerName = queryParams.get("name") || undefined;
   const initialTab = (queryParams.get("tab") as InfoTab) || "feedback";
+
+  const isOwnProfile = payload?.userId === sellerId;
 
   // State
   const [allData, setAllData] = useState<SellerReviewsResponse | null>(null);
@@ -192,10 +199,10 @@ export default function SellerInformationPage() {
   const [sortBy, setSortBy] = useState<ProductSort>("newest");
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedCategory, setSelectedCategory] = useState<string>("all");
-  
+
   // Tổng số sản phẩm thực tế (không bị ảnh hưởng bởi filter)
   const [totalProductsCount, setTotalProductsCount] = useState(0);
-  
+
   // Categories state
   const [allCategories, setAllCategories] = useState<Category[]>([]);
   const [loadingCategories, setLoadingCategories] = useState(false);
@@ -203,6 +210,13 @@ export default function SellerInformationPage() {
   // Trust score
   const [trust, setTrust] = useState<TrustData | null>(null);
   const [loadingTrust, setLoadingTrust] = useState(true);
+
+  // Follow state
+  const [isFollowing, setIsFollowing] = useState(false);
+  const [followLoading, setFollowLoading] = useState(false);
+
+  // Seller description
+  const [sellerDescription, setSellerDescription] = useState<string>("");
 
   const displayName =
     sellerName || (sellerId ? `Seller #${sellerId.slice(-5)}` : "Seller");
@@ -255,6 +269,23 @@ export default function SellerInformationPage() {
     };
 
     fetchTrustScore();
+  }, [sellerId]);
+
+  // ===== LOAD FOLLOW STATE =====
+  useEffect(() => {
+    if (!sellerId || !payload?.userId || isOwnProfile) return;
+    api.get("/api/users/saved-sellers").then((res) => {
+      const saved = res.data?.data ?? [];
+      setIsFollowing(saved.some((s: any) => s._id === sellerId));
+    }).catch(() => {});
+  }, [sellerId, payload?.userId, isOwnProfile]);
+
+  // ===== LOAD SELLER DESCRIPTION =====
+  useEffect(() => {
+    if (!sellerId) return;
+    api.get(`/api/seller/${sellerId}/profile`).then((res) => {
+      if (res.data.success) setSellerDescription(res.data.data.description || "");
+    }).catch(() => {});
   }, [sellerId]);
 
   // ===== LOAD TOTAL PRODUCTS COUNT =====
@@ -464,6 +495,29 @@ export default function SellerInformationPage() {
     navigator.clipboard.writeText(window.location.href);
   };
 
+  const handleToggleFollow = async () => {
+    if (!payload?.userId) {
+      navigate("/auth/sign-in");
+      return;
+    }
+    setFollowLoading(true);
+    try {
+      if (isFollowing) {
+        await unsaveSeller(sellerId!);
+        setIsFollowing(false);
+        toast.success("Unfollowed seller");
+      } else {
+        await saveSeller(sellerId!);
+        setIsFollowing(true);
+        toast.success("Following seller");
+      }
+    } catch {
+      toast.error("Failed to update follow status");
+    } finally {
+      setFollowLoading(false);
+    }
+  };
+
   const clearAllFilters = () => {
     setSearchTerm("");
     setSelectedCategory("all");
@@ -519,6 +573,17 @@ export default function SellerInformationPage() {
                 <MessageCircle className="h-4 w-4 mr-2" />
                 Contact
               </Button>
+              {!isOwnProfile && (
+                <Button
+                  variant={isFollowing ? "default" : "outline"}
+                  size="sm"
+                  onClick={handleToggleFollow}
+                  disabled={followLoading}
+                >
+                  <Heart className={`h-4 w-4 mr-2 ${isFollowing ? "fill-current" : ""}`} />
+                  {isFollowing ? "Following" : "Follow"}
+                </Button>
+              )}
               <Button variant="outline" size="sm" onClick={handleShare}>
                 <Share2 className="h-4 w-4" />
               </Button>
@@ -548,6 +613,13 @@ export default function SellerInformationPage() {
                   </p>
                 )}
               </div>
+
+              {/* Seller Description */}
+              {sellerDescription && (
+                <div className="mb-6 text-sm text-muted-foreground text-center whitespace-pre-line">
+                  {sellerDescription}
+                </div>
+              )}
 
               {/* Trust Score */}
               {!loadingTrust && trust && (
@@ -1141,11 +1213,17 @@ export default function SellerInformationPage() {
                       <h3 className="font-semibold mb-2">
                         About {displayName}
                       </h3>
-                      <p className="text-sm text-muted-foreground">
-                        {sellerName
-                          ? `${sellerName} is a seller on our marketplace.`
-                          : `This seller has been a member for ${trust ? Math.floor(trust.accountAgeMonths) : "several"} months.`}
-                      </p>
+                      {sellerDescription ? (
+                        <p className="text-sm text-muted-foreground whitespace-pre-line">
+                          {sellerDescription}
+                        </p>
+                      ) : (
+                        <p className="text-sm text-muted-foreground">
+                          {sellerName
+                            ? `${sellerName} is a seller on our marketplace.`
+                            : `This seller has been a member for ${trust ? Math.floor(trust.accountAgeMonths) : "several"} months.`}
+                        </p>
+                      )}
                     </div>
 
                     <Separator />
