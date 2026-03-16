@@ -1,5 +1,5 @@
 import { Link } from "react-router-dom";
-import { ShieldX } from "lucide-react";
+import { ShieldX, Mail } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { setAuthToken } from "@/lib/axios";
 
@@ -21,15 +21,23 @@ export default function BannedPage() {
           <h1 className="text-3xl font-bold text-gray-900">Account Banned</h1>
           <p className="text-gray-600">
             Your account has been banned and you do not have permission to access this platform.
-            If you believe this is a mistake, you can submit a ban appeal.
           </p>
         </div>
+
+        <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 text-sm text-blue-800 flex items-start gap-3 text-left">
+          <Mail className="h-5 w-5 mt-0.5 flex-shrink-0 text-blue-600" />
+          <div>
+            <p className="font-semibold mb-1">How to submit a ban appeal</p>
+            <p>Sign in again with your account credentials. A ban appeal link will be sent to your registered email address.</p>
+          </div>
+        </div>
+
         <div className="flex flex-col sm:flex-row gap-3 justify-center">
-          <Button asChild>
-            <Link to="/ban-appeal">Submit Ban Appeal</Link>
+          <Button onClick={handleSignOut}>
+            Sign In to Request Appeal
           </Button>
-          <Button variant="outline" onClick={handleSignOut}>
-            Sign Out
+          <Button variant="outline" asChild>
+            <Link to="/help-contact">Contact Support</Link>
           </Button>
         </div>
       </div>

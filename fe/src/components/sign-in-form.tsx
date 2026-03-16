@@ -69,6 +69,12 @@ export function SignInForm({
           },
         );
       } else if (error.response?.status === 403) {
+        const appealUrl: string | undefined = error.response?.data?.appealUrl;
+        if (appealUrl) {
+          // Redirect trực tiếp tới trang ban appeal với token
+          window.location.href = appealUrl;
+          return;
+        }
         const serverMessage =
           error.response?.data?.message || "Access denied";
         const reason = error.response?.data?.reason;
