@@ -52,6 +52,7 @@ export interface Order {
   | "created"
   | "packaging"
   | "ready_to_ship"
+  | "pending_acceptance"
   | "queued"
   | "shipping"
   | "delivered"
@@ -93,6 +94,8 @@ const mapStatus = (status: string): Order["status"] => {
       return "packaging";
     case "ready_to_ship":
       return "ready_to_ship";
+    case "pending_acceptance":
+      return "pending_acceptance";
     case "queued":
       return "queued";
     case "shipped":
@@ -309,6 +312,7 @@ export const orderService = {
         created: "created",
         packaging: "packaging",
         ready_to_ship: "ready_to_ship",
+        pending_acceptance: "pending_acceptance",
         queued: "queued",
         shipping: "shipping",
         delivered: "delivered",

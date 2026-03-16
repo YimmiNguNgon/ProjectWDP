@@ -30,6 +30,7 @@ const STATUS_COLORS: Record<string, string> = {
   created: "bg-gray-100 text-gray-700",
   packaging: "bg-yellow-100 text-yellow-700",
   ready_to_ship: "bg-blue-100 text-blue-700",
+  pending_acceptance: "bg-orange-100 text-orange-700",
   shipping: "bg-indigo-100 text-indigo-700",
   delivered: "bg-orange-100 text-orange-700",
   completed: "bg-green-100 text-green-700",
@@ -38,9 +39,22 @@ const STATUS_COLORS: Record<string, string> = {
   failed: "bg-red-100 text-red-700",
 };
 
+const STATUS_LABELS: Record<string, string> = {
+  created: "Created",
+  packaging: "Packaging",
+  ready_to_ship: "Waiting",
+  pending_acceptance: "Waiting Shipper",
+  shipping: "Shipping",
+  delivered: "Delivered",
+  completed: "Completed",
+  cancelled: "Cancelled",
+  returned: "Returned",
+  failed: "Failed",
+};
+
 const ALL_STATUSES = [
-  "created", "packaging", "ready_to_ship", "shipping",
-  "delivered", "completed", "cancelled", "returned", "failed",
+  "created", "packaging", "ready_to_ship", "pending_acceptance",
+  "shipping", "delivered", "completed", "cancelled", "returned", "failed",
 ];
 
 export default function AdminOrders() {
@@ -117,7 +131,7 @@ export default function AdminOrders() {
             <SelectItem value="all">All Statuses</SelectItem>
             {ALL_STATUSES.map((s) => (
               <SelectItem key={s} value={s}>
-                {s.replace(/_/g, " ").replace(/\b\w/g, (c) => c.toUpperCase())}
+                {STATUS_LABELS[s] ?? s.replace(/_/g, " ").replace(/\b\w/g, (c) => c.toUpperCase())}
               </SelectItem>
             ))}
           </SelectContent>
@@ -147,7 +161,7 @@ export default function AdminOrders() {
                       #{order._id.slice(-8).toUpperCase()}
                     </span>
                     <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${statusColor}`}>
-                      {order.status.replace(/_/g, " ").toUpperCase()}
+                      {STATUS_LABELS[order.status] ?? order.status.replace(/_/g, " ").toUpperCase()}
                     </span>
                     <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${
                       order.paymentStatus === "paid"

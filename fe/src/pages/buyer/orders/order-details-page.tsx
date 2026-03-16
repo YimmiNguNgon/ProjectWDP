@@ -304,7 +304,7 @@ export default function OrderDetailsPage() {
   const STATUS_STEPS = [
     { key: "created", label: "Order Placed", Icon: ShoppingBag },
     { key: "packaging", label: "Packaging", Icon: Settings2 },
-    { key: "ready_to_ship", label: "Ready to Ship", Icon: Package },
+    { key: "ready_to_ship", label: "Waiting", Icon: Package },
     { key: "shipping", label: "Shipping", Icon: Truck },
     { key: "delivered", label: "Delivered", Icon: PackageCheck },
     { key: "completed", label: "Completed", Icon: Star },
@@ -319,6 +319,7 @@ export default function OrderDetailsPage() {
     failed: 0,
     packaging: 1,
     ready_to_ship: 2,
+    pending_acceptance: 2,
     shipping: 3,
     delivered: 4,
     completed: 5,

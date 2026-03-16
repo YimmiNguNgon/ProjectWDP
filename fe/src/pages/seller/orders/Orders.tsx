@@ -56,7 +56,7 @@ const STATUS_CONFIG = {
     border: "#BFDBFE",
   },
   ready_to_ship: {
-    label: "Ready to Ship",
+    label: "Waiting",
     dot: "#3B82F6",
     bg: "#EFF6FF",
     text: "#1E40AF",
@@ -117,6 +117,13 @@ const STATUS_CONFIG = {
     bg: "#FFFBEB",
     text: "#92400E",
     border: "#FDE68A",
+  },
+  pending_acceptance: {
+    label: "Waiting Shipper",
+    dot: "#F97316",
+    bg: "#FFF7ED",
+    text: "#9A3412",
+    border: "#FED7AA",
   },
 } as const;
 
@@ -1026,7 +1033,7 @@ export default function SellerOrders() {
     { value: "created", label: "New Order", icon: Clock },
     { value: "cancel_requested", label: "Cancel Request", icon: AlertTriangle },
     { value: "packaging", label: "Packaging", icon: Package },
-    { value: "ready_to_ship", label: "Ready to Ship", icon: Package },
+    { value: "ready_to_ship", label: "Waiting", icon: Package },
     { value: "shipping", label: "Shipping", icon: Truck },
     { value: "delivered", label: "Delivered", icon: CheckCircle },
     { value: "cancelled", label: "Cancelled", icon: XCircle },
@@ -1070,7 +1077,16 @@ export default function SellerOrders() {
             variant="outline"
             className="border-blue-300 text-blue-800 bg-blue-50"
           >
-            Ready to Ship
+            Waiting
+          </Badge>
+        );
+      case "pending_acceptance":
+        return (
+          <Badge
+            variant="outline"
+            className="border-orange-300 text-orange-800 bg-orange-50"
+          >
+            Waiting Shipper
           </Badge>
         );
       case "shipping":

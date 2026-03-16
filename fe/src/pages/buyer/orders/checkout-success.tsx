@@ -70,7 +70,7 @@ const PARTICLES = Array.from({ length: 24 }, (_, i) => ({
 const STEPS = [
   { key: "created", label: "Order Placed", Icon: ShoppingBag },
   { key: "packaging", label: "Packaging", Icon: Settings2 },
-  { key: "ready_to_ship", label: "Ready to Ship", Icon: PackageCheck },
+  { key: "ready_to_ship", label: "Waiting", Icon: PackageCheck },
   { key: "shipping", label: "Shipping", Icon: Truck },
   { key: "delivered", label: "Delivered", Icon: PackageCheck },
   { key: "completed", label: "Completed", Icon: Star },

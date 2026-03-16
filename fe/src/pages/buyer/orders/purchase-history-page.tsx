@@ -387,10 +387,18 @@ export default function PurchaseHistoryPage() {
     }
     if (normalized === "ready_to_ship") {
       return {
-        label: "Ready to Ship",
-        note: "Seller has prepared your order and it's ready to be shipped.",
+        label: "Waiting",
+        note: "Seller has prepared your order and it's waiting for a shipper.",
         dotClass: "bg-yellow-500",
         textClass: "text-yellow-700",
+      };
+    }
+    if (normalized === "pending_acceptance") {
+      return {
+        label: "Waiting Shipper",
+        note: "Waiting for shipper to accept the delivery.",
+        dotClass: "bg-orange-400",
+        textClass: "text-orange-700",
       };
     }
     if (normalized === "shipping") {

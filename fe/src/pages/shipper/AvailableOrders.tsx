@@ -103,7 +103,7 @@ export default function ShipperAvailableOrders() {
               </Badge>
             ) : (
               <Badge variant="outline" className="text-blue-700 border-blue-300 bg-blue-50">
-                Ready to Ship
+                Waiting
               </Badge>
             )}
           </div>
