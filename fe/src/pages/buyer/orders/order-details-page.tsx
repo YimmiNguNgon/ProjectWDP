@@ -329,22 +329,11 @@ export default function OrderDetailsPage() {
     returned: 5,
   };
 
-  // Overall status = the minimum rank among all sub-orders (all must reach a state before the group advances)
-  const overallStatus: StepKey = (() => {
-    let minRank = STATUS_STEPS.length - 1; // bắt đầu từ max để tìm minimum đúng
-    for (const o of orders) {
-      const rank = STATUS_RANK[o.status.toLowerCase()] ?? 0;
-      if (rank < minRank) minRank = rank;
-    }
-    return (STATUS_STEPS[minRank]?.key ?? "created") as StepKey;
-  })();
-
-  const overallRank = STATUS_RANK[overallStatus] ?? 0;
-
-  const getStepState = (stepKey: StepKey): "done" | "active" | "pending" => {
-    const rank = STATUS_RANK[stepKey] ?? 0;
-    if (rank < overallRank) return "done";
-    if (rank === overallRank) return "active";
+  const getStepState = (stepKey: StepKey, currentStatus: string): "done" | "active" | "pending" => {
+    const currentRank = STATUS_RANK[currentStatus.toLowerCase()] ?? 0;
+    const stepRank = STATUS_RANK[stepKey] ?? 0;
+    if (stepRank < currentRank) return "done";
+    if (stepRank === currentRank) return "active";
     return "pending";
   };
 
@@ -363,102 +352,6 @@ export default function OrderDetailsPage() {
       </div>
 
       <div className="bg-white rounded-xl border shadow-sm p-6 space-y-8">
-        {/* ─── Status Timeline ─── */}
-        <div className="pb-2">
-          <p className="text-sm font-semibold text-muted-foreground mb-8">
-            ORDER STATUS
-          </p>
-
-          {orders.every((o) =>
-            [
-              "waiting_return_shipment",
-              "return_shipping",
-              "delivered_to_seller",
-              "returned",
-            ].includes(o.status.toLowerCase()),
-          ) ? (
-            <div className="flex items-center gap-4 p-4 bg-orange-50 border border-orange-200 rounded-xl">
-              <div className="h-14 w-14 rounded-full bg-orange-100 border-2 border-orange-500 flex items-center justify-center shadow-md shrink-0">
-                <Truck className="h-7 w-7 text-orange-600" />
-              </div>
-              <div>
-                <p className="font-bold text-orange-700 text-base">
-                  {orders.every((o) => o.status === "returned")
-                    ? "Order Returned"
-                    : "Return in Progress"}
-                </p>
-                <p className="text-sm text-orange-600 mt-0.5">
-                  {orders.every((o) => o.status === "returned")
-                    ? "This order has been returned and refunded."
-                    : "This order is currently being returned to the seller."}
-                </p>
-              </div>
-            </div>
-          ) : orders.every(
-              (o) => o.status === "cancelled" || o.status === "failed",
-            ) ? (
-            <div className="flex items-center gap-4 p-4 bg-red-50 border border-red-200 rounded-xl">
-              <div className="h-14 w-14 rounded-full bg-red-100 border-2 border-red-500 flex items-center justify-center shadow-md shrink-0">
-                <XCircle className="h-7 w-7 text-red-600" />
-              </div>
-              <div>
-                <p className="font-bold text-red-700 text-base">
-                  Order{" "}
-                  {orders.every((o) => o.status === "failed")
-                    ? "Failed"
-                    : "Cancelled"}
-                </p>
-                <p className="text-sm text-red-500 mt-0.5">
-                  {orders.every((o) => o.status === "failed")
-                    ? "This order could not be processed."
-                    : "This order was cancelled. Any payment will be refunded."}
-                </p>
-              </div>
-            </div>
-          ) : (
-            <div className="relative flex items-start justify-between">
-              {/* connecting line behind icons — top-[28px] = half of h-14 (56px) */}
-              <div className="absolute top-[28px] left-8 right-8 h-0.5 bg-border z-0" />
-              {STATUS_STEPS.map((step) => {
-                const state = getStepState(step.key);
-                const { Icon } = step;
-                return (
-                  <div
-                    key={step.key}
-                    className="relative z-10 flex flex-col items-center gap-3 flex-1"
-                  >
-                    {state === "done" ? (
-                      <div className="h-14 w-14 rounded-full bg-emerald-50 border-2 border-emerald-400 flex items-center justify-center shadow-sm">
-                        <Icon className="h-6 w-6 text-emerald-500" />
-                      </div>
-                    ) : state === "active" ? (
-                      <div className="h-14 w-14 rounded-full bg-blue-50 border-2 border-blue-500 flex items-center justify-center shadow-md ring-4 ring-blue-100">
-                        <Icon className="h-6 w-6 text-blue-600" />
-                      </div>
-                    ) : (
-                      <div className="h-14 w-14 rounded-full bg-muted border border-border flex items-center justify-center">
-                        <Icon className="h-6 w-6 text-muted-foreground/40" />
-                      </div>
-                    )}
-                    <span
-                      className={`text-xs font-semibold text-center leading-tight tracking-wide ${
-                        state === "done"
-                          ? "text-emerald-600"
-                          : state === "active"
-                            ? "text-blue-600"
-                            : "text-muted-foreground/50"
-                      }`}
-                    >
-                      {step.label}
-                    </span>
-                  </div>
-                );
-              })}
-            </div>
-          )}
-        </div>
-
-        <Separator />
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           <div>
@@ -507,33 +400,6 @@ export default function OrderDetailsPage() {
             )}
           </div>
 
-          <div className="space-y-6">
-            <div>
-              <p className="text-sm font-semibold text-muted-foreground mb-2 tracking-wider">
-                PAYMENT METHOD
-              </p>
-              <div className="flex items-center gap-2">
-                <div className="px-3 py-1.5 bg-blue-50 text-blue-700 rounded-md border border-blue-100 text-sm font-semibold uppercase">
-                  {baseOrder.paymentMethod || "COD"}
-                </div>
-                <div
-                  className={`px-3 py-1.5 rounded-md border text-sm font-semibold uppercase ${
-                    baseOrder.paymentStatus === "paid"
-                      ? "bg-emerald-50 text-emerald-700 border-emerald-100"
-                      : baseOrder.paymentStatus === "unpaid"
-                        ? "bg-amber-50 text-amber-700 border-amber-100"
-                        : "bg-red-50 text-red-700 border-red-100"
-                  }`}
-                >
-                  {baseOrder.paymentStatus === "unpaid"
-                    ? "Unpaid"
-                    : baseOrder.paymentStatus === "paid"
-                      ? "Paid"
-                      : baseOrder.paymentStatus || "Unpaid"}
-                </div>
-              </div>
-            </div>
-          </div>
         </div>
 
         <Separator />
@@ -558,43 +424,150 @@ export default function OrderDetailsPage() {
           <p className="text-lg font-bold">Sub-orders</p>
           {orders.map((subOrder) => (
             <div key={subOrder._id} className="border rounded-lg p-4 space-y-4">
-              <div className="flex items-center justify-between">
+              <div className="flex items-start justify-between">
                 <div>
-                  <p className="text-sm font-medium">
+                  <p className="text-base font-bold text-blue-600 underline cursor-pointer">
                     Seller: {subOrder.seller?.username}
                   </p>
                   <p className="text-xs text-muted-foreground">
                     Order ID: {subOrder._id}
                   </p>
                 </div>
-                <div
-                  className={`px-3 py-1 rounded-full text-xs font-semibold ${
-                    STATUS_RANK[subOrder.status.toLowerCase()] === undefined
-                      ? "text-gray-600 bg-gray-50"
-                      : STATUS_RANK[subOrder.status.toLowerCase()] >= 3
-                        ? "text-green-600 bg-green-50"
-                        : STATUS_RANK[subOrder.status.toLowerCase()] >= 2
-                          ? "text-blue-600 bg-blue-50"
-                          : STATUS_RANK[subOrder.status.toLowerCase()] >= 1
-                            ? "text-cyan-600 bg-cyan-50"
-                            : subOrder.status.toLowerCase() === "cancelled" ||
-                                subOrder.status.toLowerCase() === "failed"
-                              ? "text-red-600 bg-red-50"
-                              : subOrder.status.toLowerCase() ===
-                                  "cancel_requested"
-                                ? "text-amber-600 bg-amber-50"
-                                : [
-                                      "waiting_return_shipment",
-                                      "return_shipping",
-                                      "delivered_to_seller",
-                                      "returned",
-                                    ].includes(subOrder.status.toLowerCase())
-                                  ? "text-orange-600 bg-orange-50"
-                                  : "text-blue-600 bg-blue-50"
-                  }`}
-                >
-                  {subOrder.status.toUpperCase().replace(/_/g, " ")}
+                <div className="flex flex-col items-end gap-2">
+                  <div className="flex gap-2">
+                    <div className="px-3 py-1 rounded-full text-xs font-bold text-blue-700 bg-blue-50 border border-blue-200 uppercase whitespace-nowrap">
+                      {subOrder.paymentMethod || "COD"}
+                    </div>
+                    <div
+                      className={`px-3 py-1 rounded-full text-xs font-bold whitespace-nowrap ${
+                        subOrder.paymentStatus === "paid"
+                          ? "text-emerald-700 bg-emerald-50 border border-emerald-200"
+                          : subOrder.paymentStatus === "unpaid"
+                            ? "text-amber-700 bg-amber-50 border border-amber-200"
+                            : "text-red-700 bg-red-50 border border-red-200"
+                      }`}
+                    >
+                      {subOrder.paymentStatus === "unpaid"
+                        ? "UNPAID"
+                        : subOrder.paymentStatus === "paid"
+                          ? "PAID"
+                          : (subOrder.paymentStatus || "UNPAID").toUpperCase()}
+                    </div>
+                  </div>
+                  <div
+                    className={`px-4 py-1.5 rounded-full text-sm font-bold border ${
+                      STATUS_RANK[subOrder.status.toLowerCase()] === undefined
+                        ? "text-gray-700 bg-gray-50 border-gray-200"
+                        : STATUS_RANK[subOrder.status.toLowerCase()] >= 3
+                          ? "text-green-700 bg-green-50 border-green-200"
+                          : STATUS_RANK[subOrder.status.toLowerCase()] >= 2
+                            ? "text-blue-700 bg-blue-50 border-blue-200"
+                            : STATUS_RANK[subOrder.status.toLowerCase()] >= 1
+                              ? "text-cyan-700 bg-cyan-50 border-cyan-200"
+                              : subOrder.status.toLowerCase() === "cancelled" ||
+                                  subOrder.status.toLowerCase() === "failed"
+                                ? "text-red-700 bg-red-50 border-red-200"
+                                : subOrder.status.toLowerCase() ===
+                                    "cancel_requested"
+                                  ? "text-amber-700 bg-amber-50 border-amber-200"
+                                  : [
+                                        "waiting_return_shipment",
+                                        "return_shipping",
+                                        "delivered_to_seller",
+                                        "returned",
+                                      ].includes(subOrder.status.toLowerCase())
+                                    ? "text-orange-700 bg-orange-50 border-orange-200"
+                                    : "text-blue-700 bg-blue-50 border-blue-200"
+                    }`}
+                  >
+                    {subOrder.status.toUpperCase().replace(/_/g, " ")}
+                  </div>
                 </div>
+              </div>
+
+              {/* ─── Status Timeline per Sub-order ─── */}
+              <div className="pt-2 pb-6 border-b">
+                {[
+                  "waiting_return_shipment",
+                  "return_shipping",
+                  "delivered_to_seller",
+                  "returned",
+                ].includes(subOrder.status.toLowerCase()) ? (
+                  <div className="flex items-center gap-4 p-4 bg-orange-50 border border-orange-200 rounded-xl">
+                    <div className="h-10 w-10 rounded-full bg-orange-100 border-2 border-orange-500 flex items-center justify-center shadow-md shrink-0">
+                      <Truck className="h-5 w-5 text-orange-600" />
+                    </div>
+                    <div>
+                      <p className="font-bold text-orange-700 text-sm">
+                        {subOrder.status === "returned"
+                          ? "Order Returned"
+                          : "Return in Progress"}
+                      </p>
+                      <p className="text-xs text-orange-600 mt-0.5">
+                        {subOrder.status === "returned"
+                          ? "This order has been returned and refunded."
+                          : "This order is currently being returned to the seller."}
+                      </p>
+                    </div>
+                  </div>
+                ) : subOrder.status === "cancelled" ||
+                  subOrder.status === "failed" ? (
+                  <div className="flex items-center gap-4 p-4 bg-red-50 border border-red-200 rounded-xl">
+                    <div className="h-10 w-10 rounded-full bg-red-100 border-2 border-red-500 flex items-center justify-center shadow-md shrink-0">
+                      <XCircle className="h-5 w-5 text-red-600" />
+                    </div>
+                    <div>
+                      <p className="font-bold text-red-700 text-sm">
+                        Order{" "}
+                        {subOrder.status === "failed" ? "Failed" : "Cancelled"}
+                      </p>
+                      <p className="text-xs text-red-500 mt-0.5">
+                        {subOrder.status === "failed"
+                          ? "This order could not be processed."
+                          : "This order was cancelled. Any payment will be refunded."}
+                      </p>
+                    </div>
+                  </div>
+                ) : (
+                  <div className="relative flex items-start justify-between">
+                    <div className="absolute top-[20px] left-6 right-6 h-0.5 bg-border z-0" />
+                    {STATUS_STEPS.map((step) => {
+                      const state = getStepState(step.key, subOrder.status);
+                      const { Icon } = step;
+                      return (
+                        <div
+                          key={step.key}
+                          className="relative z-10 flex flex-col items-center gap-2 flex-1"
+                        >
+                          {state === "done" ? (
+                            <div className="h-10 w-10 rounded-full bg-emerald-50 border-2 border-emerald-400 flex items-center justify-center shadow-sm">
+                              <Icon className="h-5 w-5 text-emerald-500" />
+                            </div>
+                          ) : state === "active" ? (
+                            <div className="h-10 w-10 rounded-full bg-blue-50 border-2 border-blue-500 flex items-center justify-center shadow-md ring-4 ring-blue-100">
+                              <Icon className="h-5 w-5 text-blue-600" />
+                            </div>
+                          ) : (
+                            <div className="h-10 w-10 rounded-full bg-muted border border-border flex items-center justify-center">
+                              <Icon className="h-5 w-5 text-muted-foreground/40" />
+                            </div>
+                          )}
+                          <span
+                            className={`text-[10px] sm:text-xs font-semibold text-center leading-tight tracking-wide ${
+                              state === "done"
+                                ? "text-emerald-600"
+                                : state === "active"
+                                  ? "text-blue-600"
+                                  : "text-muted-foreground/50"
+                            }`}
+                          >
+                            {step.label}
+                          </span>
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
               </div>
 
               {(() => {
