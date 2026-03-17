@@ -10,7 +10,7 @@ export type VoucherRequestStatus =
 
 export interface VoucherRequest {
   _id: string;
-  seller: string | { _id: string; username: string; email: string };
+  seller: string | { _id: string; username?: string; email?: string } | null;
   code: string;
   type: VoucherType;
   value: number;

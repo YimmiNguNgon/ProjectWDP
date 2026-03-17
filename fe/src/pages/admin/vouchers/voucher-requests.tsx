@@ -119,8 +119,11 @@ export default function AdminVoucherRequestsPage() {
   };
 
   const renderSeller = (seller: VoucherRequest["seller"]) => {
+    if (!seller) return "Unknown seller";
     if (typeof seller === "string") return seller;
-    return `${seller.username} (${seller.email})`;
+    const username = seller.username || "Unknown";
+    const email = seller.email ? ` (${seller.email})` : "";
+    return `${username}${email}`;
   };
 
   return (
