@@ -34,7 +34,14 @@ interface RevenueStats {
 
 function getDateRange(range: string): { startDate?: string; endDate?: string } {
   if (range === "all") return {};
-  const days = range === "7days" ? 7 : range === "30days" ? 30 : range === "90days" ? 90 : 365;
+  const days =
+    range === "7days"
+      ? 7
+      : range === "30days"
+        ? 30
+        : range === "90days"
+          ? 90
+          : 365;
   const start = new Date();
   start.setDate(start.getDate() - days);
   return { startDate: start.toISOString() };
@@ -74,7 +81,9 @@ export default function SellerRevenue() {
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900">Revenue Management</h1>
+          <h1 className="text-2xl font-bold text-gray-900">
+            Revenue Management
+          </h1>
           <p className="text-gray-600">Track your earnings and platform fees</p>
         </div>
         <Select value={timeRange} onValueChange={setTimeRange}>
@@ -83,11 +92,21 @@ export default function SellerRevenue() {
             <SelectValue />
           </SelectTrigger>
           <SelectContent>
-            <SelectItem className="cursor-pointer" value="7days">Past 7 Days</SelectItem>
-            <SelectItem className="cursor-pointer" value="30days">Past 30 Days</SelectItem>
-            <SelectItem className="cursor-pointer" value="90days">Past 90 Days</SelectItem>
-            <SelectItem className="cursor-pointer" value="year">This Year</SelectItem>
-            <SelectItem className="cursor-pointer" value="all">All Time</SelectItem>
+            <SelectItem className="cursor-pointer" value="7days">
+              Past 7 Days
+            </SelectItem>
+            <SelectItem className="cursor-pointer" value="30days">
+              Past 30 Days
+            </SelectItem>
+            <SelectItem className="cursor-pointer" value="90days">
+              Past 90 Days
+            </SelectItem>
+            <SelectItem className="cursor-pointer" value="year">
+              This Year
+            </SelectItem>
+            <SelectItem className="cursor-pointer" value="all">
+              All Time
+            </SelectItem>
           </SelectContent>
         </Select>
       </div>
@@ -106,8 +125,12 @@ export default function SellerRevenue() {
               <div className="h-8 bg-muted animate-pulse rounded" />
             ) : (
               <>
-                <div className="text-2xl font-bold">${stats.totalGross.toFixed(2)}</div>
-                <p className="text-xs text-muted-foreground mt-1">Total from {stats.totalOrders} orders</p>
+                <div className="text-2xl font-bold">
+                  ${stats.totalGross.toFixed(2)}
+                </div>
+                <p className="text-xs text-muted-foreground mt-1">
+                  Total from {stats.totalOrders} orders
+                </p>
               </>
             )}
           </CardContent>
@@ -125,8 +148,12 @@ export default function SellerRevenue() {
               <div className="h-8 bg-muted animate-pulse rounded" />
             ) : (
               <>
-                <div className="text-2xl font-bold text-red-600">-${stats.totalFee.toFixed(2)}</div>
-                <p className="text-xs text-muted-foreground mt-1">5% commission per order</p>
+                <div className="text-2xl font-bold text-red-600">
+                  -${stats.totalFee.toFixed(2)}
+                </div>
+                <p className="text-xs text-muted-foreground mt-1">
+                  5% commission per order
+                </p>
               </>
             )}
           </CardContent>
@@ -144,8 +171,12 @@ export default function SellerRevenue() {
               <div className="h-8 bg-muted animate-pulse rounded" />
             ) : (
               <>
-                <div className="text-2xl font-bold text-green-600">${stats.totalNet.toFixed(2)}</div>
-                <p className="text-xs text-muted-foreground mt-1">Your actual earnings (95%)</p>
+                <div className="text-2xl font-bold text-green-600">
+                  ${stats.totalNet.toFixed(2)}
+                </div>
+                <p className="text-xs text-muted-foreground mt-1">
+                  Your actual earnings (95%)
+                </p>
               </>
             )}
           </CardContent>
@@ -188,7 +219,9 @@ export default function SellerRevenue() {
                     </div>
                   </div>
                   <div className="text-right w-36 flex-shrink-0">
-                    <div className="font-semibold text-sm text-green-600">${m.net.toFixed(2)}</div>
+                    <div className="font-semibold text-sm text-green-600">
+                      ${m.net.toFixed(2)}
+                    </div>
                     <div className="text-xs text-muted-foreground">
                       gross ${m.gross.toFixed(2)} · {m.orders} orders
                     </div>
@@ -211,12 +244,18 @@ export default function SellerRevenue() {
           ) : (
             <div className="space-y-3 text-sm">
               <div className="flex justify-between">
-                <span className="text-muted-foreground">Gross Revenue (from buyers)</span>
-                <span className="font-semibold">${stats.totalGross.toFixed(2)}</span>
+                <span className="text-muted-foreground">
+                  Gross Revenue (from buyers)
+                </span>
+                <span className="font-semibold">
+                  ${stats.totalGross.toFixed(2)}
+                </span>
               </div>
               <div className="flex justify-between text-red-600">
                 <span>Platform Commission (5%)</span>
-                <span className="font-semibold">-${stats.totalFee.toFixed(2)}</span>
+                <span className="font-semibold">
+                  -${stats.totalFee.toFixed(2)}
+                </span>
               </div>
               <div className="border-t pt-3 flex justify-between text-green-700 font-semibold">
                 <span>Your Net Revenue (95%)</span>

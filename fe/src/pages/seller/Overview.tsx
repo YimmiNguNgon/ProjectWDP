@@ -93,35 +93,40 @@ export default function SellerOverview() {
     const fetchAll = async () => {
       setLoading(true);
       try {
-        const [ordersRes, inventoryRes] = await Promise.allSettled([
+        const [ordersRes, inventoryRes, orderStatsRes, revenueRes] = await Promise.allSettled([
           api.get("/api/orders", { params: { role: "seller", limit: 5 } }),
           api.get("/api/products/seller/inventory"),
+          api.get("/api/orders/stats"),
+          api.get("/api/revenue/seller"),
         ]);
 
-        // Xử lý orders
+        // Xử lý orders (This is just for the Recent Orders list)
         if (ordersRes.status === "fulfilled") {
           const data = ordersRes.value.data;
           const orders: RecentOrder[] = (data.data ?? []).slice(0, 5);
           setRecentOrders(orders);
-
-          // Tính stats từ tất cả đơn (không chỉ 5 đơn đầu)
-          const allOrders: RecentOrder[] = data.data ?? [];
-          const pending = allOrders.filter((o) =>
-            ["created", "paid", "processing"].includes(o.status),
-          ).length;
-          const completed = allOrders.filter(
-            (o) => o.status === "delivered",
-          ).length;
-          const revenue = allOrders
-            .filter((o) => o.status === "delivered")
-            .reduce((sum: number, o: any) => sum + (o.totalAmount ?? 0), 0);
-
-          setStats({
-            pendingOrders: pending,
-            completedOrders: completed,
-            totalRevenue: revenue,
-          });
         }
+
+        // Xử lý Dashboard Stats
+        let pending = 0;
+        let completed = 0;
+        let revenue = 0;
+
+        if (orderStatsRes.status === "fulfilled") {
+          const sData = orderStatsRes.value.data.data;
+          pending = sData?.pendingOrders ?? 0;
+          completed = sData?.completedOrders ?? 0;
+        }
+
+        if (revenueRes.status === "fulfilled") {
+          revenue = revenueRes.value.data.totalNet ?? 0;
+        }
+
+        setStats({
+          pendingOrders: pending,
+          completedOrders: completed,
+          totalRevenue: revenue,
+        });
 
         // Xử lý inventory
         if (inventoryRes.status === "fulfilled") {
