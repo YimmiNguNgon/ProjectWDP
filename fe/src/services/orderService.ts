@@ -199,7 +199,7 @@ const transformOrder = (apiOrder: ApiOrder): Order => {
     statusHistory: apiOrder.statusHistory || [],
     orderDetails: (apiOrder.items || []).map((item) => ({
       productId:
-        typeof item.productId === "object"
+        item.productId !== null && typeof item.productId === "object"
           ? item.productId._id
           : item.productId,
       productName: item.title || item.productName || "Product",
@@ -207,8 +207,9 @@ const transformOrder = (apiOrder: ApiOrder): Order => {
       quantity: item.quantity || 1,
       subtotal: item.subtotal || item.unitPrice * item.quantity || 0,
       productImage:
-        item.productId?.image ||
-        item.productId?.images?.[0] ||
+        (item.productId !== null && typeof item.productId === "object"
+          ? item.productId?.image || item.productId?.images?.[0]
+          : null) ||
         item.image ||
         "",
       variantSku: item.variantSku || "",
