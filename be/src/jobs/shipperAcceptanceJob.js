@@ -265,6 +265,9 @@ async function autoCompleteDeliveredOrders() {
     if (completed) {
       console.log(`[AutoComplete] Order ${order._id} auto-completed`);
 
+      const revenueService = require("../services/revenueService");
+      await revenueService.processOrderCompletion(order._id);
+
       if (order.seller) {
         await notify({
           recipientId: order.seller,

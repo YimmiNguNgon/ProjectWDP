@@ -1,4 +1,6 @@
 const Order = require("../models/Order");
+const OrderGroup = require("../models/OrderGroup");
+const Revenue = require("../models/Revenue");
 const Product = require("../models/Product");
 const mongoose = require("mongoose");
 // Trust Score trigger (non-blocking, fire-and-forget)
@@ -299,6 +301,9 @@ exports.updateOrderStatus = async (req, res, next) => {
       }
     }
 
+    const isNowCompleted =
+      status === "completed" && previousStatus !== "completed";
+
     // Update status
     order.status = status;
     order.updatedAt = new Date();
@@ -315,6 +320,12 @@ exports.updateOrderStatus = async (req, res, next) => {
     });
 
     await order.save();
+
+    // Process revenue and payment status centrally
+    if (isNowCompleted) {
+      const revenueService = require("../services/revenueService");
+      await revenueService.processOrderCompletion(order._id);
+    }
 
     // Nếu seller set ready_to_ship, thử auto-assign cho shipper (fire-and-forget)
     if (status === "ready_to_ship") {

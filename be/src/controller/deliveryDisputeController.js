@@ -37,6 +37,10 @@ exports.confirmReceived = async (req, res, next) => {
       })
       .catch(() => {});
 
+    // Process revenue and payment status centrally
+    const revenueService = require("../services/revenueService");
+    await revenueService.processOrderCompletion(order._id);
+
     res.json({ ok: true, order });
   } catch (err) {
     next(err);
@@ -225,6 +229,10 @@ exports.buyerConfirmAfterDispute = async (req, res, next) => {
         },
       },
     });
+
+    // Process revenue and payment status centrally
+    const revenueService = require("../services/revenueService");
+    await revenueService.processOrderCompletion(dispute.order);
 
     res.json({ ok: true, dispute });
   } catch (err) {
