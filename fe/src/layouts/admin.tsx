@@ -1,5 +1,5 @@
 import { Link, Outlet, useLocation } from 'react-router-dom';
-import { LayoutDashboard, Users, ShoppingBag, MessageCircle, TicketPercent, Tags, FileSearch, Truck, AlertTriangle, PackageSearch, RefreshCcw, Home, Flag } from 'lucide-react';
+import { LayoutDashboard, Users, ShoppingBag, MessageCircle, TicketPercent, Tags, FileSearch, Truck, AlertTriangle, PackageSearch, RefreshCcw, Home, Flag, DollarSign } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import AdminBroadcast from '@/components/admin-broadcast';
 import NotificationBell from '@/components/notification-bell';
@@ -20,6 +20,7 @@ const navigation = [
   { name: 'Buyer Reports', href: '/admin/reports', icon: Flag },
   { name: 'Shipper Management', href: '/admin/shippers', icon: Truck },
   { name: 'Delivery Reports', href: '/admin/delivery-reports', icon: AlertTriangle },
+  { name: 'Revenue', href: '/admin/revenue', icon: DollarSign },
   { name: 'Audit Logs', href: '/admin/audit-logs', icon: FileSearch },
 ];
 

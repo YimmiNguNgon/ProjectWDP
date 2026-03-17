@@ -84,6 +84,7 @@ import ComplaintsReturnsPage from "@/pages/buyer/complaints-returns-page";
 
 import SellerComplaintsPage from "@/pages/seller/orders/Complaints";
 import AdminComplaintsPage from "@/pages/admin/orders/complaints";
+import AdminRevenuePage from "@/pages/admin/revenue/Revenue";
 
 const AdminReviews = () => (
   <div className="p-8">
@@ -312,6 +313,10 @@ export const AppRouter = () => {
         {
           path: "delivery-reports",
           element: <AdminDeliveryReports />,
+        },
+        {
+          path: "revenue",
+          element: <AdminRevenuePage />,
         },
       ],
     },

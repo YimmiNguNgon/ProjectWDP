@@ -3,9 +3,8 @@ import {
   DollarSign,
   TrendingUp,
   ShoppingBag,
-  Users,
-  Calendar,
   BarChart3,
+  Calendar,
 } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import {
@@ -19,169 +18,64 @@ import api from "@/lib/axios";
 
 interface MonthlyBucket {
   month: string;
-  revenue: number;
+  gross: number;
+  fee: number;
+  net: number;
   orders: number;
-}
-interface TopProduct {
-  title: string;
-  revenue: number;
-  sales: number;
 }
 
 interface RevenueStats {
-  totalRevenue: number;
+  totalGross: number;
+  totalFee: number;
+  totalNet: number;
   totalOrders: number;
-  avgOrderValue: number;
-  completedOrders: number;
-  cancelledOrders: number;
-  pendingOrders: number;
-  shippingOrders: number;
-  uniqueBuyers: number;
+  monthly: MonthlyBucket[];
 }
 
-function getDaysBack(range: string): number {
-  switch (range) {
-    case "7days":
-      return 7;
-    case "30days":
-      return 30;
-    case "90days":
-      return 90;
-    case "year":
-      return 365;
-    default:
-      return 36500; // "all"
-  }
+function getDateRange(range: string): { startDate?: string; endDate?: string } {
+  if (range === "all") return {};
+  const days = range === "7days" ? 7 : range === "30days" ? 30 : range === "90days" ? 90 : 365;
+  const start = new Date();
+  start.setDate(start.getDate() - days);
+  return { startDate: start.toISOString() };
 }
 
 export default function SellerRevenue() {
   const [timeRange, setTimeRange] = useState("30days");
   const [loading, setLoading] = useState(true);
   const [stats, setStats] = useState<RevenueStats>({
-    totalRevenue: 0,
+    totalGross: 0,
+    totalFee: 0,
+    totalNet: 0,
     totalOrders: 0,
-    avgOrderValue: 0,
-    completedOrders: 0,
-    cancelledOrders: 0,
-    pendingOrders: 0,
-    shippingOrders: 0,
-    uniqueBuyers: 0,
+    monthly: [],
   });
-  const [monthlyData, setMonthlyData] = useState<MonthlyBucket[]>([]);
-  const [topProducts, setTopProducts] = useState<TopProduct[]>([]);
 
   useEffect(() => {
     const fetchData = async () => {
       setLoading(true);
       try {
-        const daysBack = getDaysBack(timeRange);
-        const startDate = new Date();
-        startDate.setDate(startDate.getDate() - daysBack);
-
-        const res = await api.get("/api/orders", {
-          params: {
-            role: "seller",
-            limit: 1000,
-            startDate:
-              timeRange === "all" ? undefined : startDate.toISOString(),
-          },
-        });
-
-        const orders: any[] = res.data?.data ?? [];
-
-        // ── Tính stats ──────────────────────────────────────────────────────
-        const delivered = orders.filter((o) => o.status === "delivered");
-        const cancelled = orders.filter((o) => o.status === "cancelled");
-        const pending = orders.filter((o) =>
-          ["created", "paid", "processing"].includes(o.status),
-        );
-        const shipping = orders.filter((o) => o.status === "shipped");
-        const totalRevenue = delivered.reduce(
-          (s: number, o: any) => s + (o.totalAmount ?? 0),
-          0,
-        );
-        const uniqueBuyers = new Set(
-          orders.map((o: any) => o.buyer?._id ?? o.buyer),
-        ).size;
-
-        setStats({
-          totalRevenue,
-          totalOrders: orders.length,
-          avgOrderValue:
-            delivered.length > 0 ? totalRevenue / delivered.length : 0,
-          completedOrders: delivered.length,
-          cancelledOrders: cancelled.length,
-          pendingOrders: pending.length,
-          shippingOrders: shipping.length,
-          uniqueBuyers,
-        });
-
-        // ── Nhóm theo tháng ─────────────────────────────────────────────────
-        const buckets: Record<string, { revenue: number; orders: number }> = {};
-        delivered.forEach((o: any) => {
-          const d = new Date(o.createdAt);
-          const key = `Tháng ${d.getMonth() + 1}/${d.getFullYear()}`;
-          if (!buckets[key]) buckets[key] = { revenue: 0, orders: 0 };
-          buckets[key].revenue += o.totalAmount ?? 0;
-          buckets[key].orders += 1;
-        });
-        const monthly = Object.entries(buckets)
-          .map(([month, v]) => ({ month, ...v }))
-          .sort((a, b) => {
-            const [am, ay] = a.month
-              .replace("Tháng ", "")
-              .split("/")
-              .map(Number);
-            const [bm, by] = b.month
-              .replace("Tháng ", "")
-              .split("/")
-              .map(Number);
-            return ay !== by ? ay - by : am - bm;
-          })
-          .slice(-12);
-        setMonthlyData(monthly);
-
-        // ── Top sản phẩm theo doanh thu ──────────────────────────────────────
-        const productMap: Record<
-          string,
-          { title: string; revenue: number; sales: number }
-        > = {};
-        delivered.forEach((o: any) => {
-          (o.items ?? []).forEach((item: any) => {
-            const id = item.productId?._id ?? item.productId ?? "unknown";
-            const title = item.productId?.title ?? item.title ?? "Product";
-            if (!productMap[id])
-              productMap[id] = { title, revenue: 0, sales: 0 };
-            productMap[id].revenue +=
-              (item.unitPrice ?? 0) * (item.quantity ?? 1);
-            productMap[id].sales += item.quantity ?? 1;
-          });
-        });
-        const top = Object.values(productMap)
-          .sort((a, b) => b.revenue - a.revenue)
-          .slice(0, 5);
-        setTopProducts(top);
+        const params = getDateRange(timeRange);
+        const res = await api.get("/api/revenue/seller", { params });
+        setStats(res.data);
       } catch (err) {
         console.error("[Revenue] Fetch error:", err);
       } finally {
         setLoading(false);
       }
     };
-
     fetchData();
   }, [timeRange]);
 
-  const maxMonthRevenue = Math.max(...monthlyData.map((m) => m.revenue), 1);
+  const maxMonthNet = Math.max(...stats.monthly.map((m) => m.net), 1);
 
   return (
     <div className="p-6 space-y-6">
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900">
-            Revenue Management
-          </h1>
-          <p className="text-gray-600">Track and analyze your revenue</p>
+          <h1 className="text-2xl font-bold text-gray-900">Revenue Management</h1>
+          <p className="text-gray-600">Track your earnings and platform fees</p>
         </div>
         <Select value={timeRange} onValueChange={setTimeRange}>
           <SelectTrigger className="w-[180px] cursor-pointer">
@@ -189,270 +83,149 @@ export default function SellerRevenue() {
             <SelectValue />
           </SelectTrigger>
           <SelectContent>
-            <SelectItem className="cursor-pointer" value="7days">
-              Past 7 Days
-            </SelectItem>
-            <SelectItem className="cursor-pointer" value="30days">
-              Past 30 Days
-            </SelectItem>
-            <SelectItem className="cursor-pointer" value="90days">
-              Past 90 Days
-            </SelectItem>
-            <SelectItem className="cursor-pointer" value="year">
-              This Year
-            </SelectItem>
-            <SelectItem className="cursor-pointer" value="all">
-              All Time
-            </SelectItem>
+            <SelectItem className="cursor-pointer" value="7days">Past 7 Days</SelectItem>
+            <SelectItem className="cursor-pointer" value="30days">Past 30 Days</SelectItem>
+            <SelectItem className="cursor-pointer" value="90days">Past 90 Days</SelectItem>
+            <SelectItem className="cursor-pointer" value="year">This Year</SelectItem>
+            <SelectItem className="cursor-pointer" value="all">All Time</SelectItem>
           </SelectContent>
         </Select>
       </div>
 
-      {/* Revenue Overview */}
+      {/* Summary Cards */}
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+        <Card>
+          <CardHeader className="pb-2">
+            <CardTitle className="text-sm font-medium text-muted-foreground flex items-center gap-2">
+              <ShoppingBag className="h-4 w-4" />
+              Gross Revenue
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            {loading ? (
+              <div className="h-8 bg-muted animate-pulse rounded" />
+            ) : (
+              <>
+                <div className="text-2xl font-bold">${stats.totalGross.toFixed(2)}</div>
+                <p className="text-xs text-muted-foreground mt-1">Total from {stats.totalOrders} orders</p>
+              </>
+            )}
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader className="pb-2">
+            <CardTitle className="text-sm font-medium text-muted-foreground flex items-center gap-2">
+              <TrendingUp className="h-4 w-4 text-red-500" />
+              Platform Fee (5%)
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            {loading ? (
+              <div className="h-8 bg-muted animate-pulse rounded" />
+            ) : (
+              <>
+                <div className="text-2xl font-bold text-red-600">-${stats.totalFee.toFixed(2)}</div>
+                <p className="text-xs text-muted-foreground mt-1">5% commission per order</p>
+              </>
+            )}
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader className="pb-2">
+            <CardTitle className="text-sm font-medium text-muted-foreground flex items-center gap-2">
+              <DollarSign className="h-4 w-4 text-green-500" />
+              Net Revenue
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            {loading ? (
+              <div className="h-8 bg-muted animate-pulse rounded" />
+            ) : (
+              <>
+                <div className="text-2xl font-bold text-green-600">${stats.totalNet.toFixed(2)}</div>
+                <p className="text-xs text-muted-foreground mt-1">Your actual earnings (95%)</p>
+              </>
+            )}
+          </CardContent>
+        </Card>
+      </div>
+
+      {/* Monthly Chart */}
       <Card>
-        <CardContent className="p-6">
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <BarChart3 className="h-5 w-5" />
+            Monthly Revenue
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
           {loading ? (
-            <div className="h-20 bg-muted animate-pulse rounded" />
+            <div className="space-y-3">
+              {[...Array(6)].map((_, i) => (
+                <div key={i} className="h-8 bg-muted animate-pulse rounded" />
+              ))}
+            </div>
+          ) : stats.monthly.length === 0 ? (
+            <div className="text-center py-10 text-muted-foreground">
+              <BarChart3 className="h-10 w-10 mx-auto mb-2 opacity-30" />
+              <p className="text-sm">No revenue data available</p>
+            </div>
           ) : (
-            <div className="flex flex-col lg:flex-row items-center justify-between gap-6">
-              <div className="text-center lg:text-left">
-                <div className="text-3xl font-bold">
-                  ${stats.totalRevenue.toFixed(2)}
-                </div>
-                <div className="text-gray-600 mb-1">Total Revenue</div>
-                {stats.totalRevenue === 0 && (
-                  <p className="text-xs text-muted-foreground">
-                    No completed orders in this time period
-                  </p>
-                )}
-              </div>
-              <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
-                {[
-                  { label: "Total Orders", value: stats.totalOrders },
-                  {
-                    label: "Average/Order",
-                    value: `$${stats.avgOrderValue.toFixed(2)}`,
-                  },
-                  { label: "Completed Orders", value: stats.completedOrders },
-                  { label: "Unique Buyers", value: stats.uniqueBuyers },
-                ].map((item) => (
-                  <div key={item.label} className="text-center">
-                    <div className="text-lg font-bold">{item.value}</div>
-                    <div className="text-sm text-gray-600">{item.label}</div>
+            <div className="space-y-3">
+              {stats.monthly.map((m) => (
+                <div key={m.month} className="flex items-center gap-3">
+                  <div className="text-sm font-medium w-20 flex-shrink-0">
+                    {m.month}
                   </div>
-                ))}
-              </div>
+                  <div className="flex-1">
+                    <div className="w-full bg-muted rounded-full h-2">
+                      <div
+                        className="bg-green-500 h-2 rounded-full transition-all"
+                        style={{ width: `${(m.net / maxMonthNet) * 100}%` }}
+                      />
+                    </div>
+                  </div>
+                  <div className="text-right w-36 flex-shrink-0">
+                    <div className="font-semibold text-sm text-green-600">${m.net.toFixed(2)}</div>
+                    <div className="text-xs text-muted-foreground">
+                      gross ${m.gross.toFixed(2)} · {m.orders} orders
+                    </div>
+                  </div>
+                </div>
+              ))}
             </div>
           )}
         </CardContent>
       </Card>
 
-      {/* Charts */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        {/* Monthly Revenue */}
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <BarChart3 className="h-5 w-5" />
-              Monthly Revenue
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            {loading ? (
-              <div className="space-y-3">
-                {[...Array(6)].map((_, i) => (
-                  <div key={i} className="h-8 bg-muted animate-pulse rounded" />
-                ))}
+      {/* Breakdown */}
+      <Card>
+        <CardHeader>
+          <CardTitle>Revenue Breakdown</CardTitle>
+        </CardHeader>
+        <CardContent>
+          {loading ? (
+            <div className="h-20 bg-muted animate-pulse rounded" />
+          ) : (
+            <div className="space-y-3 text-sm">
+              <div className="flex justify-between">
+                <span className="text-muted-foreground">Gross Revenue (from buyers)</span>
+                <span className="font-semibold">${stats.totalGross.toFixed(2)}</span>
               </div>
-            ) : monthlyData.length === 0 ? (
-              <div className="text-center py-10 text-muted-foreground">
-                <BarChart3 className="h-10 w-10 mx-auto mb-2 opacity-30" />
-                <p className="text-sm">No revenue data available</p>
+              <div className="flex justify-between text-red-600">
+                <span>Platform Commission (5%)</span>
+                <span className="font-semibold">-${stats.totalFee.toFixed(2)}</span>
               </div>
-            ) : (
-              <div className="space-y-3">
-                {monthlyData.map((month) => (
-                  <div key={month.month} className="flex items-center gap-3">
-                    <div className="text-sm font-medium w-28 flex-shrink-0">
-                      {month.month}
-                    </div>
-                    <div className="flex-1">
-                      <div className="w-full bg-muted rounded-full h-2">
-                        <div
-                          className="bg-primary h-2 rounded-full transition-all"
-                          style={{
-                            width: `${(month.revenue / maxMonthRevenue) * 100}%`,
-                          }}
-                        />
-                      </div>
-                    </div>
-                    <div className="text-right w-28 flex-shrink-0">
-                      <div className="font-semibold text-sm">
-                        ${month.revenue.toFixed(0)}
-                      </div>
-                      <div className="text-xs text-muted-foreground">
-                        {month.orders} orders
-                      </div>
-                    </div>
-                  </div>
-                ))}
+              <div className="border-t pt-3 flex justify-between text-green-700 font-semibold">
+                <span>Your Net Revenue (95%)</span>
+                <span>${stats.totalNet.toFixed(2)}</span>
               </div>
-            )}
-          </CardContent>
-        </Card>
-
-        {/* Top Products */}
-        <Card>
-          <CardHeader>
-            <CardTitle>Top Selling Products</CardTitle>
-          </CardHeader>
-          <CardContent>
-            {loading ? (
-              <div className="space-y-3">
-                {[...Array(4)].map((_, i) => (
-                  <div
-                    key={i}
-                    className="h-14 bg-muted animate-pulse rounded"
-                  />
-                ))}
-              </div>
-            ) : topProducts.length === 0 ? (
-              <div className="text-center py-10 text-muted-foreground">
-                <ShoppingBag className="h-10 w-10 mx-auto mb-2 opacity-30" />
-                <p className="text-sm">No products sold yet</p>
-              </div>
-            ) : (
-              <div className="space-y-3">
-                {topProducts.map((product, idx) => (
-                  <div
-                    key={idx}
-                    className="flex items-center justify-between p-3 border rounded-lg"
-                  >
-                    <div>
-                      <div className="font-medium text-sm">{product.title}</div>
-                      <div className="text-xs text-muted-foreground">
-                        {product.sales} products sold
-                      </div>
-                    </div>
-                    <div className="font-semibold text-sm">
-                      ${product.revenue.toFixed(2)}
-                    </div>
-                  </div>
-                ))}
-              </div>
-            )}
-          </CardContent>
-        </Card>
-      </div>
-
-      {/* Order Status Breakdown */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-        <Card>
-          <CardHeader>
-            <CardTitle className="text-lg flex items-center gap-2">
-              <DollarSign className="h-5 w-5 text-green-600" />
-              Total Revenue
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            {loading ? (
-              <div className="h-20 bg-muted animate-pulse rounded" />
-            ) : (
-              <div className="space-y-3">
-                <div className="flex justify-between">
-                  <span className="text-muted-foreground text-sm">
-                    From Completed Orders
-                  </span>
-                  <span className="font-semibold">
-                    ${stats.totalRevenue.toFixed(2)}
-                  </span>
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-muted-foreground text-sm">
-                    Average per Order
-                  </span>
-                  <span className="font-semibold">
-                    ${stats.avgOrderValue.toFixed(2)}
-                  </span>
-                </div>
-              </div>
-            )}
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader>
-            <CardTitle className="text-lg flex items-center gap-2">
-              <ShoppingBag className="h-5 w-5 text-blue-600" />
-              Orders
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            {loading ? (
-              <div className="h-20 bg-muted animate-pulse rounded" />
-            ) : (
-              <div className="space-y-2 text-sm">
-                {[
-                  {
-                    label: "Pending",
-                    value: stats.pendingOrders,
-                    color: "text-amber-600",
-                  },
-                  {
-                    label: "Shipping",
-                    value: stats.shippingOrders,
-                    color: "text-blue-600",
-                  },
-                  {
-                    label: "Completed",
-                    value: stats.completedOrders,
-                    color: "text-green-600",
-                  },
-                  {
-                    label: "Cancelled",
-                    value: stats.cancelledOrders,
-                    color: "text-red-600",
-                  },
-                ].map((item) => (
-                  <div key={item.label} className="flex justify-between">
-                    <span className="text-muted-foreground">{item.label}</span>
-                    <span className={`font-semibold ${item.color}`}>
-                      {item.value}
-                    </span>
-                  </div>
-                ))}
-              </div>
-            )}
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader>
-            <CardTitle className="text-lg flex items-center gap-2">
-              <Users className="h-5 w-5 text-purple-600" />
-              Customers
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            {loading ? (
-              <div className="h-20 bg-muted animate-pulse rounded" />
-            ) : (
-              <div className="space-y-2 text-sm">
-                <div className="flex justify-between">
-                  <span className="text-muted-foreground">
-                    Unique Customers
-                  </span>
-                  <span className="font-semibold">{stats.uniqueBuyers}</span>
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-muted-foreground">Total Orders</span>
-                  <span className="font-semibold">{stats.totalOrders}</span>
-                </div>
-              </div>
-            )}
-          </CardContent>
-        </Card>
-      </div>
+            </div>
+          )}
+        </CardContent>
+      </Card>
     </div>
   );
 }

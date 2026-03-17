@@ -139,6 +139,10 @@ app.use("/api/complaints", complaintRoutes);
 const recentlyViewedRoutes = require("./routes/recentlyViewedRoutes");
 app.use("/api/recently-viewed", recentlyViewedRoutes);
 
+// Revenue routes
+const revenueRoutes = require("./routes/revenueRoutes");
+app.use("/api/revenue", revenueRoutes);
+
 // health check
 app.get("/health", (req, res) => res.json({ ok: true }));
 
@@ -338,6 +342,10 @@ async function start() {
   // Initialize complaint auto-escalate cron job
   const { initComplaintJob } = require("./jobs/complaintJob");
   initComplaintJob();
+
+  // Initialize shipper acceptance timeout job (5 min)
+  const { initShipperAcceptanceJob } = require("./jobs/shipperAcceptanceJob");
+  initShipperAcceptanceJob();
 
   // Create HTTP server from Express app
   const http = require("http");

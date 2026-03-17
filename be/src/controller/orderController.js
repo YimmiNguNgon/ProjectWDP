@@ -1,5 +1,6 @@
 const Order = require("../models/Order");
 const OrderGroup = require("../models/OrderGroup");
+const Revenue = require("../models/Revenue");
 const Cart = require("../models/Cart");
 const CartItem = require("../models/CartItem");
 const Product = require("../models/Product");
@@ -1511,6 +1512,27 @@ confirmCheckout = async (req, res) => {
         { _id: { $in: orders.map((o) => o._id) } },
         { $set: { orderGroup: orderGroup._id } },
       );
+
+      // Ghi nhận doanh thu: 5% hệ thống + 95% seller + tiền ship hệ thống
+      const revenueRecords = [];
+      for (const order of orders) {
+        const commission = parseFloat((order.totalAmount * 0.05).toFixed(2));
+        const sellerNet = parseFloat((order.totalAmount * 0.95).toFixed(2));
+        revenueRecords.push(
+          { type: "system_commission", order: order._id, orderGroup: orderGroup._id, seller: order.seller, amount: commission },
+          { type: "seller_revenue",    order: order._id, orderGroup: orderGroup._id, seller: order.seller, amount: sellerNet },
+        );
+      }
+      if (orderGroup.shippingPrice > 0) {
+        revenueRecords.push({
+          type: "system_shipping",
+          order: null,
+          orderGroup: orderGroup._id,
+          seller: null,
+          amount: parseFloat(orderGroup.shippingPrice.toFixed(2)),
+        });
+      }
+      Revenue.insertMany(revenueRecords).catch(() => {});
     }
 
     // Notify each seller about new orders (fire-and-forget)
