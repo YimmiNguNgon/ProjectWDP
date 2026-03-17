@@ -156,7 +156,10 @@ export default function AdminDashboard() {
           </CardContent>
         </Card>
 
-        <Card>
+        <Card
+          className="cursor-pointer hover:shadow-lg transition-shadow"
+          onClick={() => navigate("/admin/revenue")}
+        >
           <CardHeader className="flex flex-row items-center justify-between pb-2">
             <CardTitle className="text-sm font-medium">Revenue</CardTitle>
             <ChartColumn className="h-4 w-4 text-muted-foreground" />

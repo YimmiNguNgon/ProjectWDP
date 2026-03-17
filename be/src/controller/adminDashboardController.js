@@ -1,6 +1,7 @@
 const User = require("../models/User");
 const Product = require("../models/Product");
 const Order = require("../models/Order");
+const Revenue = require("../models/Revenue");
 
 const toMonthKey = (year, month) => `${year}-${String(month).padStart(2, "0")}`;
 
@@ -75,6 +76,7 @@ exports.getDashboardStats = async (req, res, next) => {
       userTrendAgg,
       productTrendAgg,
       topProductsAgg,
+      revenueTrendAgg,
       totalRevenueAgg,
     ] = await Promise.all([
       User.countDocuments({ createdAt: { $gte: sevenDaysAgo } }),
@@ -178,16 +180,33 @@ exports.getDashboardStats = async (req, res, next) => {
         { $sort: { unitsSold: -1, revenue: -1 } },
         { $limit: 3 },
       ]),
-      Order.aggregate([
+      Revenue.aggregate([
         {
           $match: {
-            status: { $nin: ["cancelled", "failed", "returned"] },
+            type: { $in: ["system_commission", "system_shipping"] },
+            createdAt: { $gte: trendStart },
+          },
+        },
+        {
+          $group: {
+            _id: {
+              year: { $year: "$createdAt" },
+              month: { $month: "$createdAt" },
+            },
+            total: { $sum: "$amount" },
+          },
+        },
+      ]),
+      Revenue.aggregate([
+        {
+          $match: {
+            type: { $in: ["system_commission", "system_shipping"] },
           },
         },
         {
           $group: {
             _id: null,
-            amount: { $sum: "$totalAmount" },
+            amount: { $sum: "$amount" },
           },
         },
       ]),
@@ -195,6 +214,9 @@ exports.getDashboardStats = async (req, res, next) => {
 
     const orderTrendMap = new Map(
       orderTrendAgg.map((item) => [toMonthKey(item._id.year, item._id.month), item]),
+    );
+    const revenueTrendMap = new Map(
+      revenueTrendAgg.map((item) => [toMonthKey(item._id.year, item._id.month), item.total]),
     );
     const userTrendMap = new Map(
       userTrendAgg.map((item) => [toMonthKey(item._id.year, item._id.month), item.count]),
@@ -211,7 +233,7 @@ exports.getDashboardStats = async (req, res, next) => {
         year: month.year,
         month: month.month,
         orders: orderData?.count || 0,
-        revenue: Number((orderData?.revenue || 0).toFixed(2)),
+        revenue: Number(((revenueTrendMap.get(month.key) || 0).toFixed(2))),
         newUsers: userTrendMap.get(month.key) || 0,
         newProducts: productTrendMap.get(month.key) || 0,
       };
