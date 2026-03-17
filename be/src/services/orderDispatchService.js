@@ -7,15 +7,23 @@ const DEFAULT_MAX_ORDERS = 3;
 /**
  * Tìm shipper phù hợp nhất để nhận đơn.
  * Ưu tiên shipper có ít đơn đang shipping nhất mà chưa đạt giới hạn.
+ * @param {string|ObjectId|null} excludeShipperId - Shipper bị loại trừ (shipper cũ bị timeout)
  * @returns {Promise<Object|null>} shipper document hoặc null nếu tất cả đều đầy
  */
-async function findBestShipper() {
-    const shippers = await User.find({
+async function findBestShipper(excludeShipperId = null) {
+    const query = {
         role: "shipper",
         status: "active",
         // Dùng $ne: false để vẫn match shipper cũ chưa có field isAvailable trong DB
         "shipperInfo.isAvailable": { $ne: false },
-    })
+    };
+
+    // Loại trừ shipper cũ đã bị timeout để tránh gán lại ngay cho họ
+    if (excludeShipperId) {
+        query._id = { $ne: excludeShipperId };
+    }
+
+    const shippers = await User.find(query)
         .select("_id username shipperInfo")
         .lean();
 
@@ -55,9 +63,10 @@ async function findBestShipper() {
  * Tự động phân đơn cho shipper khi đơn chuyển sang ready_to_ship.
  * Nếu không có shipper rảnh thì đưa đơn vào queue (status: "queued").
  * @param {Object} order - Mongoose order document
+ * @param {string|ObjectId|null} excludeShipperId - Shipper bị loại trừ (vừa bị timeout)
  */
-async function autoAssignOrder(order) {
-    const shipper = await findBestShipper();
+async function autoAssignOrder(order, excludeShipperId = null) {
+    const shipper = await findBestShipper(excludeShipperId);
 
     if (shipper) {
         // Atomic update: chỉ gán nếu đơn vẫn còn ở ready_to_ship và chưa có shipper
