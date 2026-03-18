@@ -8,7 +8,7 @@ exports.confirmReceived = async (req, res, next) => {
     const order = await Order.findOneAndUpdate(
       { _id: req.params.orderId, buyer: req.user._id, status: "delivered" },
       {
-        $set: { status: "completed" },
+        $set: { status: "completed", paymentStatus: "paid" },
         $push: {
           statusHistory: {
             status: "completed",
@@ -220,7 +220,7 @@ exports.buyerConfirmAfterDispute = async (req, res, next) => {
     }
 
     await Order.findByIdAndUpdate(dispute.order, {
-      $set: { status: "completed" },
+      $set: { status: "completed", paymentStatus: "paid" },
       $push: {
         statusHistory: {
           status: "completed",
