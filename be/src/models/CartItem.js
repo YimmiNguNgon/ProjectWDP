@@ -47,6 +47,10 @@ const cartItemSchema = new mongoose.Schema(
       type: Boolean,
       default: false,
     },
+    savedForLater: {
+      type: Boolean,
+      default: false,
+    },
   },
   { timestamps: true },
 );

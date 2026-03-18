@@ -294,11 +294,13 @@ exports.getMyCart = async (req, res, next) => {
       });
     }
 
-    const computedTotalItems = mappedItems.reduce(
+    const activeMappedItems = mappedItems.filter((item) => !item.savedForLater);
+
+    const computedTotalItems = activeMappedItems.reduce(
       (sum, cartItem) => sum + Number(cartItem.quantity || 0),
       0,
     );
-    const computedTotalPrice = mappedItems.reduce(
+    const computedTotalPrice = activeMappedItems.reduce(
       (sum, cartItem) =>
         sum +
         Number(cartItem.quantity || 0) * Number(cartItem.priceSnapShot || 0),
@@ -399,6 +401,7 @@ exports.addToCart = async (req, res, next) => {
           .json({ message: "Product stock is not enough to add." });
       }
       item.quantity += parsedQty;
+      item.savedForLater = false;
       applyLatestVariantSnapshot(
         item,
         normalizedVariants,
@@ -443,6 +446,7 @@ exports.addToCart = async (req, res, next) => {
 
         existingItem.quantity += parsedQty;
         existingItem.stockAlertSent = false;
+        existingItem.savedForLater = false;
         applyLatestVariantSnapshot(
           existingItem,
           normalizedVariants,
@@ -455,8 +459,10 @@ exports.addToCart = async (req, res, next) => {
 
     const currentItems = await CartItem.find({ cart: cart._id });
 
-    cart.totalItems = currentItems.reduce((sum, i) => sum + i.quantity, 0);
-    cart.totalPrice = currentItems.reduce(
+    const activeItems = currentItems.filter(i => !i.savedForLater);
+
+    cart.totalItems = activeItems.reduce((sum, i) => sum + i.quantity, 0);
+    cart.totalPrice = activeItems.reduce(
       (sum, i) => sum + i.quantity * i.priceSnapShot,
       0,
     );
@@ -591,6 +597,40 @@ exports.deleteCartItem = async (req, res, next) => {
     await recalculateCart(cart._id);
 
     return res.status(200).json({ message: "Delete Item" });
+  } catch (error) {
+    next(error);
+  }
+};
+
+exports.toggleSaveForLater = async (req, res, next) => {
+  try {
+    const userId = req.user._id;
+    const { itemId } = req.params;
+
+    const cart = await Cart.findOne({ user: userId, status: "active" });
+
+    if (!cart) {
+      return res.status(404).json({ message: "Not found cart" });
+    }
+
+    const item = await CartItem.findOne({
+      _id: itemId,
+      cart: cart._id,
+    });
+
+    if (!item) {
+      return res.status(404).json({ message: "Item not found in cart" });
+    }
+
+    item.savedForLater = !item.savedForLater;
+    await item.save();
+
+    await recalculateCart(cart._id);
+
+    return res.status(200).json({ 
+      message: item.savedForLater ? "Item saved for later" : "Item moved to cart",
+      savedForLater: item.savedForLater
+    });
   } catch (error) {
     next(error);
   }

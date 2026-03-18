@@ -34,6 +34,7 @@ export interface CartItem {
     | "insufficient_stock"
     | "unavailable";
   availabilityMessage?: string;
+  savedForLater?: boolean;
   seller: {
     _id: string;
     username: string;
@@ -82,6 +83,11 @@ export const cartService = {
 
   deleteCartItem: async (itemId: string) => {
     const response = await api.delete(`/api/cart/item/${itemId}`);
+    return response.data;
+  },
+
+  toggleSaveForLater: async (itemId: string) => {
+    const response = await api.patch(`/api/cart/item/${itemId}/save-for-later`);
     return response.data;
   },
 };

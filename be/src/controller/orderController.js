@@ -393,7 +393,7 @@ const collectCheckoutItems = async ({
     }
 
     const selectedCartItemIds = toArray(cartItemIds).filter(Boolean);
-    const query = { cart: cart._id };
+    const query = { cart: cart._id, savedForLater: { $ne: true } };
     if (selectedCartItemIds.length > 0) {
       query._id = { $in: selectedCartItemIds };
     }
