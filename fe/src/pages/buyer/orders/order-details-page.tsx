@@ -145,7 +145,7 @@ export default function OrderDetailsPage() {
       toast.success("Order confirmed as received! You can now leave a review.");
       setOrders((prev) =>
         prev.map((o) =>
-          o._id === subOrderId ? { ...o, status: "completed" } : o,
+          o._id === subOrderId ? { ...o, status: "completed", paymentStatus: "paid" } : o,
         ),
       );
     } catch (err: any) {
@@ -197,7 +197,7 @@ export default function OrderDetailsPage() {
       toast.success("Confirmed! Order is now completed.");
       setOrders((prev) =>
         prev.map((o) =>
-          o._id === subOrderId ? { ...o, status: "completed" } : o,
+          o._id === subOrderId ? { ...o, status: "completed", paymentStatus: "paid" } : o,
         ),
       );
       setDisputes((prev) => ({
