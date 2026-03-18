@@ -2,7 +2,7 @@ const Cart = require("../models/Cart");
 const CartItem = require("../models/CartItem");
 
 const recalculateCart = async (cartId) => {
-  const items = await CartItem.find({ cart: cartId });
+  const items = await CartItem.find({ cart: cartId, savedForLater: { $ne: true } });
 
   const totalItems = items.reduce((sum, i) => sum + i.quantity, 0);
   const totalPrice = items.reduce(

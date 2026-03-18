@@ -24,6 +24,7 @@ interface CartContextProps {
     quantity?: number,
   ) => Promise<void>;
   removeFromCart: (itemId: string) => Promise<void>;
+  toggleSaveForLater: (itemId: string) => Promise<void>;
   refreshCart: () => Promise<void>;
 }
 
@@ -158,6 +159,16 @@ export const CartProvider = ({ children }: { children: React.ReactNode }) => {
     }
   };
 
+  const toggleSaveForLater = async (itemId: string) => {
+    try {
+      const res = await cartService.toggleSaveForLater(itemId);
+      toast.success(res.message);
+      await fetchCart();
+    } catch (error: any) {
+      toast.error(error.response?.data?.message || "Failed to toggle save for later item");
+    }
+  };
+
   return (
     <CartContext.Provider
       value={{
@@ -166,6 +177,7 @@ export const CartProvider = ({ children }: { children: React.ReactNode }) => {
         addToCart,
         updateQuantity,
         removeFromCart,
+        toggleSaveForLater,
         refreshCart: () => fetchCart(),
       }}
     >

@@ -13,7 +13,7 @@ interface CartItemProps {
 const formatVND = (amount: number) => amount.toLocaleString("vi-VN") + " VND";
 
 export const CartItem = ({ item, isSelected, onToggle }: CartItemProps) => {
-  const { updateQuantity, removeFromCart } = useCart();
+  const { updateQuantity, removeFromCart, toggleSaveForLater } = useCart();
   const [quantity, setQuantity] = useState(item.quantity);
   const navigate = useNavigate();
 
@@ -37,7 +37,7 @@ export const CartItem = ({ item, isSelected, onToggle }: CartItemProps) => {
     item.isOutOfStock || item.availabilityStatus === "out_of_stock",
   );
   const isInsufficient = item.availabilityStatus === "insufficient_stock";
-  const isPurchasable = item.availabilityStatus
+  const isPurchasable = item.savedForLater ? false : item.availabilityStatus
     ? item.availabilityStatus === "ok"
     : !isOutOfStock && !isInsufficient && quantity <= availableStock;
   const availabilityMessage =
@@ -243,10 +243,13 @@ export const CartItem = ({ item, isSelected, onToggle }: CartItemProps) => {
             </button>
             <span className="text-gray-300">|</span>
             <button
-              onClick={(e) => e.stopPropagation()}
+              onClick={(e) => {
+                e.stopPropagation();
+                toggleSaveForLater(item._id);
+              }}
               className="text-blue-600 cursor-pointer hover:text-blue-800 hover:underline font-medium transition-colors px-1"
             >
-              Save for later
+              {item.savedForLater ? "Move to cart" : "Save for later"}
             </button>
             <span className="text-gray-300">|</span>
             <button

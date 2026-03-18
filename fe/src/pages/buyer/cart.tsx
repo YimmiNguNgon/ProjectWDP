@@ -7,13 +7,25 @@ import { Button } from "@/components/ui/button";
 import { useNavigate } from "react-router-dom";
 
 const CartPage = () => {
-  const { cart } = useCart();
+  const cartContext = useCart();
   const [selectedItemIds, setSelectedItemIds] = useState<string[]>([]);
   const navigate = useNavigate();
 
-  const items = useMemo(() => cart?.items || [], [cart?.items]);
+  const items = useMemo(() => cartContext.cart?.items || [], [cartContext.cart?.items]);
+
+  const { activeItems, savedItems } = useMemo(() => {
+    const active: typeof items = [];
+    const saved: typeof items = [];
+    items.forEach((item) => {
+      if (item.savedForLater) saved.push(item);
+      else active.push(item);
+    });
+    return { activeItems: active, savedItems: saved };
+  }, [items]);
+
   const isItemPurchasable = React.useCallback(
     (item: (typeof items)[number]) => {
+      if (item.savedForLater) return false;
       if (item.availabilityStatus) {
         return item.availabilityStatus === "ok";
       }
@@ -23,11 +35,11 @@ const CartPage = () => {
     [],
   );
 
-  // Group items by seller
+  // Group ONLY active items by seller
   const groupedItems = useMemo(() => {
     const groups: Record<string, { sellerName: string; items: typeof items }> =
       {};
-    items.forEach((item) => {
+    activeItems.forEach((item) => {
       const sellerId = item.seller?._id || "unknown";
       if (!groups[sellerId]) {
         groups[sellerId] = {
@@ -38,7 +50,7 @@ const CartPage = () => {
       groups[sellerId].items.push(item);
     });
     return groups;
-  }, [items]);
+  }, [activeItems]);
 
   const purchasableItems = useMemo(
     () => items.filter((item) => isItemPurchasable(item)),
@@ -113,8 +125,8 @@ const CartPage = () => {
   }, [purchasableItemIds]);
 
   const selectedItems = useMemo(() => {
-    return items.filter((item) => selectedItemIds.includes(item._id));
-  }, [items, selectedItemIds]);
+    return activeItems.filter((item) => selectedItemIds.includes(item._id));
+  }, [activeItems, selectedItemIds]);
 
   const selectedTotalPrice = useMemo(() => {
     return selectedItems.reduce(
@@ -144,7 +156,7 @@ const CartPage = () => {
       <div className="grid grid-cols-12 gap-8 mt-4">
         <div className="col-span-12 lg:col-span-8">
           {/* Global Select All Section */}
-          {items.length > 0 && (
+          {activeItems.length > 0 && (
             <div className="flex items-center gap-3 bg-white p-4 rounded-xl border border-gray-200 shadow-sm mb-4">
               <input
                 type="checkbox"
@@ -229,6 +241,23 @@ const CartPage = () => {
               </div>
             )}
           </div>
+
+          {/* Saved for Later Section */}
+          {savedItems.length > 0 && (
+            <div className="mt-8">
+              <h2 className="text-2xl font-bold text-gray-900 mb-4">Saved for Later ({savedItems.length})</h2>
+              <div className="space-y-4">
+                {savedItems.map((item) => (
+                  <CartItem
+                    key={item._id}
+                    item={item}
+                    isSelected={false}
+                    onToggle={() => {}}
+                  />
+                ))}
+              </div>
+            </div>
+          )}
         </div>
 
         <div className="col-span-12 lg:col-span-4 sticky top-5 h-fit">
