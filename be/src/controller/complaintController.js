@@ -268,8 +268,18 @@ const adminGetAllFromBuyers = async (req, res) => {
       seller: r.seller || null,
       reason: r.reason,
       content: r.content,
+      images: r.images || [],
       status: r.status,
+      resolution: r.resolution || null,
+      resolutionNote: r.resolutionNote || null,
+      history: (r.history || []).map((h) => ({
+        actionBy: h.actionBy,
+        action: h.action,
+        note: h.note,
+        at: formatDateTime(h.at),
+      })),
       createdAt: formatDateTime(r.createdAt),
+      updatedAt: formatDateTime(r.updatedAt),
     }));
 
     return res.json({ data });

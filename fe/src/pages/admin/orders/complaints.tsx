@@ -11,12 +11,19 @@ import { toast } from "sonner";
 import { AlertTriangle, CheckCircle, XCircle, RefreshCw } from "lucide-react";
 
 const STATUS_BADGE: Record<string, { label: string; className: string }> = {
-  pending: { label: "Pending", className: "bg-yellow-100 text-yellow-800" },
-  seller_replied: { label: "Seller Replied", className: "bg-blue-100 text-blue-800" },
-  escalated_to_admin: { label: "Escalated", className: "bg-red-100 text-red-800" },
-  resolved_approved: { label: "Approved", className: "bg-green-100 text-green-800" },
-  resolved_rejected: { label: "Rejected", className: "bg-gray-100 text-gray-800" },
+  // Uppercase (model enum)
+  OPEN: { label: "Open", className: "bg-yellow-100 text-yellow-800" },
+  SENT_TO_ADMIN: { label: "Sent to Admin", className: "bg-red-100 text-red-800" },
+  RESOLVED: { label: "Resolved", className: "bg-green-100 text-green-800" },
+  CLOSED: { label: "Closed", className: "bg-gray-100 text-gray-600" },
+  // Legacy lowercase values in DB
+  open: { label: "Open", className: "bg-yellow-100 text-yellow-800" },
+  sent_to_admin: { label: "Sent to Admin", className: "bg-red-100 text-red-800" },
+  resolved: { label: "Resolved", className: "bg-green-100 text-green-800" },
   closed: { label: "Closed", className: "bg-gray-100 text-gray-600" },
+  // Old legacy statuses from previous schema
+  agreed: { label: "Seller Agreed", className: "bg-blue-100 text-blue-800" },
+  rejected: { label: "Rejected", className: "bg-gray-100 text-gray-800" },
 };
 
 export default function AdminComplaintsPage() {
@@ -75,7 +82,7 @@ export default function AdminComplaintsPage() {
     };
 
     const canAdjudicate = (status: string) =>
-        status === "escalated_to_admin";
+        status?.toUpperCase() === "SENT_TO_ADMIN";
 
     return (
         <div className="p-8">
@@ -88,12 +95,10 @@ export default function AdminComplaintsPage() {
                         </SelectTrigger>
                         <SelectContent>
                             <SelectItem value="all">All Complaints</SelectItem>
-                            <SelectItem value="pending">Pending</SelectItem>
-                            <SelectItem value="seller_replied">Seller Replied</SelectItem>
-                            <SelectItem value="escalated_to_admin">Escalated</SelectItem>
-                            <SelectItem value="resolved_approved">Approved</SelectItem>
-                            <SelectItem value="resolved_rejected">Rejected</SelectItem>
-                            <SelectItem value="closed">Closed</SelectItem>
+                            <SelectItem value="OPEN">Open</SelectItem>
+                            <SelectItem value="SENT_TO_ADMIN">Sent to Admin</SelectItem>
+                            <SelectItem value="RESOLVED">Resolved</SelectItem>
+                            <SelectItem value="CLOSED">Closed</SelectItem>
                         </SelectContent>
                     </Select>
                     <Button variant="outline" size="icon" onClick={fetchComplaints}>
@@ -189,6 +194,32 @@ export default function AdminComplaintsPage() {
                                 <p><strong>Status:</strong> {STATUS_BADGE[selectedComplaint.status]?.label || selectedComplaint.status}</p>
                                 <p className="mt-2"><strong>Complaint:</strong></p>
                                 <p className="text-gray-700 italic border-l-2 pl-2 mt-1">{selectedComplaint.content}</p>
+
+                                {/* Evidence Images */}
+                                {selectedComplaint.images && selectedComplaint.images.length > 0 && (
+                                    <div className="mt-3">
+                                        <p className="font-semibold mb-2">Evidence ({selectedComplaint.images.length} photo{selectedComplaint.images.length > 1 ? "s" : ""})</p>
+                                        <div className="flex flex-wrap gap-2">
+                                            {selectedComplaint.images.map((img: { url: string }, idx: number) => (
+                                                <a
+                                                    key={idx}
+                                                    href={img.url}
+                                                    target="_blank"
+                                                    rel="noopener noreferrer"
+                                                    className="block w-20 h-20 rounded border bg-white overflow-hidden hover:opacity-80 hover:ring-2 hover:ring-blue-400 transition-all"
+                                                    title="Click to view full size"
+                                                >
+                                                    <img
+                                                        src={img.url}
+                                                        alt={`Evidence ${idx + 1}`}
+                                                        className="w-full h-full object-cover"
+                                                    />
+                                                </a>
+                                            ))}
+                                        </div>
+                                    </div>
+                                )}
+
                                 {selectedComplaint.resolutionNote && (
                                     <>
                                         <p className="mt-2"><strong>Resolution Note:</strong></p>

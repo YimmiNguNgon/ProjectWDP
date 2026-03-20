@@ -116,10 +116,10 @@ export default function ComplaintsReturnsPage() {
                                     </div>
                                     <div className="flex items-center sm:items-end">
                                         <Link 
-                                            to={`/my-ebay/activity/purchases`} 
+                                            to={c.orderId ? `/purchases/${c.orderId}` : `/my-ebay/activity/purchases`} 
                                             className="text-blue-600 hover:underline text-sm font-medium flex items-center gap-1"
                                         >
-                                            View Purchase History <ArrowRight className="h-4 w-4" />
+                                            View Order <ArrowRight className="h-4 w-4" />
                                         </Link>
                                     </div>
                                 </Card>
