@@ -55,7 +55,7 @@ interface Category {
 const ratings = [1, 2, 3, 4, 5];
 
 const DEFAULT_MIN_PRICE = 0;
-const DEFAULT_MAX_PRICE = 10000;
+const DEFAULT_MAX_PRICE = 10000000;
 
 const parseCategorySlugs = (value: string | null): string[] =>
   String(value || "")
@@ -428,16 +428,16 @@ export default function ProductsPage() {
               <div className="mt-3 space-y-3 text-sm">
                 <Slider
                   min={0}
-                  max={10000}
-                  step={10}
+                  max={10000000}
+                  step={10000}
                   value={priceRange}
                   onValueChange={handlePriceChange}
                   className="w-full cursor-pointer"
                 />
                 <div className="flex items-center justify-between">
-                  <span className="text-xs font-medium">${priceRange[0]}</span>
+                  <span className="text-xs font-medium">{priceRange[0].toLocaleString("vi-VN")}₫</span>
                   <span className="text-xs font-medium">-</span>
-                  <span className="text-xs font-medium">${priceRange[1]}</span>
+                  <span className="text-xs font-medium">{priceRange[1].toLocaleString("vi-VN")}₫</span>
                 </div>
               </div>
             </SidebarGroup>

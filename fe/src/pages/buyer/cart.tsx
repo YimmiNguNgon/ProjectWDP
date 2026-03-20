@@ -233,7 +233,7 @@ const CartPage = () => {
                 <Button
                   className="cursor-pointer"
                   onClick={() =>
-                    navigate("/products?minPrice=0&maxPrice=10000")
+                    navigate("/products?minPrice=0&maxPrice=10000000")
                   }
                 >
                   Browse Product
