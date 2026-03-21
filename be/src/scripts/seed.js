@@ -226,30 +226,30 @@ async function seed() {
   // ── 3. PRODUCTS ────────────────────────────────────────────────────────────
   console.log("\n📦 Seeding products…");
 
-  // Ghi chú: ratingCount & averageRating khớp với reviews được seed bên dưới
-  // techProducts[0] = headphones  → 1 review (5★)
-  // techProducts[3] = keyboard    → 1 review (4★)
-  // techProducts[5] = SSD         → delivered (chưa review)
-  // techProducts[6] = power bank  → shipping (chưa review)
-  // techProducts[4] = webcam      → packaging (chưa review)
+  // Prices in USD ($10–$500). Shipping $5.99–$9.99.
+  // ratingCount & averageRating khớp với reviews được seed bên dưới:
+  //   techProducts[0] = headphones  → 1 review (5★)
+  //   techProducts[3] = keyboard    → 1 review (4★)
+  //   sportProducts[0] = shoes      → 1 review (4★)
+  //   sportProducts[2] = yoga mat   → 1 review (5★)
   const techProducts = await Product.insertMany([
     {
       sellerId: techSeller._id,
       categoryId: catBySlug["electronics"],
       title: "Wireless Bluetooth Headphones Pro X",
       description: "Active noise-cancelling wireless headphones with 30-hour battery life and Hi-Fi sound. Dual-device multipoint connection.",
-      price: 850000, stock: 44, quantity: 44, condition: "New", listingStatus: "active",
-      averageRating: 5.0, ratingCount: 1,  // 1 completed order → 1 review
+      price: 79.99, stock: 44, quantity: 44, condition: "New", listingStatus: "active",
+      averageRating: 5.0, ratingCount: 1,
       image: "https://images.unsplash.com/photo-1505740420928-5e560c06d30e?w=600",
       images: ["https://images.unsplash.com/photo-1505740420928-5e560c06d30e?w=600"],
-      variants: [{ name: "Color", options: [{ value: "Black", price: 850000, quantity: 24 }, { value: "White", price: 850000, quantity: 20 }] }],
+      variants: [{ name: "Color", options: [{ value: "Black", price: 79.99, quantity: 24 }, { value: "White", price: 79.99, quantity: 20 }] }],
     },
     {
       sellerId: techSeller._id,
       categoryId: catBySlug["electronics"],
       title: "7-in-1 USB-C Hub Aluminum",
       description: "7-port USB-C hub: 4K HDMI, 3x USB-A, SD/MicroSD card reader, 100W PD charging. Aluminum heat-dissipation body.",
-      price: 320000, stock: 78, quantity: 78, condition: "New", listingStatus: "active",
+      price: 29.99, stock: 78, quantity: 78, condition: "New", listingStatus: "active",
       averageRating: 0, ratingCount: 0,
       image: "https://images.unsplash.com/photo-1587829741301-dc798b83add3?w=600",
       images: ["https://images.unsplash.com/photo-1587829741301-dc798b83add3?w=600"],
@@ -259,19 +259,19 @@ async function seed() {
       categoryId: catBySlug["electronics"],
       title: "RGB Gaming Mouse 12000 DPI",
       description: "Gaming mouse with 16.8M RGB lighting, 100-12000 DPI, 7 programmable buttons, high-precision optical sensor.",
-      price: 450000, stock: 60, quantity: 60, condition: "New", listingStatus: "active",
+      price: 42.99, stock: 60, quantity: 60, condition: "New", listingStatus: "active",
       averageRating: 0, ratingCount: 0,
       image: "https://images.unsplash.com/photo-1527814050087-3793815479db?w=600",
       images: ["https://images.unsplash.com/photo-1527814050087-3793815479db?w=600"],
-      variants: [{ name: "Color", options: [{ value: "Black", price: 450000, quantity: 40 }, { value: "Red", price: 450000, quantity: 20 }] }],
+      variants: [{ name: "Color", options: [{ value: "Black", price: 42.99, quantity: 40 }, { value: "Red", price: 42.99, quantity: 20 }] }],
     },
     {
       sellerId: techSeller._id,
       categoryId: catBySlug["electronics"],
       title: "Mechanical Keyboard TKL Blue Switch",
       description: "87-key TKL mechanical keyboard with Blue clicky switches, per-key RGB backlight, and CNC aluminum build.",
-      price: 980000, stock: 24, quantity: 24, condition: "New", listingStatus: "active",
-      averageRating: 4.0, ratingCount: 1,  // 1 completed order → 1 review
+      price: 89.99, stock: 24, quantity: 24, condition: "New", listingStatus: "active",
+      averageRating: 4.0, ratingCount: 1,
       image: "https://images.unsplash.com/photo-1511467687858-23d96c32e4ae?w=600",
       images: ["https://images.unsplash.com/photo-1511467687858-23d96c32e4ae?w=600"],
     },
@@ -280,7 +280,7 @@ async function seed() {
       categoryId: catBySlug["electronics"],
       title: "HD Webcam 1080p 60fps",
       description: "Full HD 1080p/60fps webcam with autofocus and dual noise-cancelling microphone. Compatible with Zoom, Teams, Google Meet.",
-      price: 550000, stock: 35, quantity: 35, condition: "New", listingStatus: "active",
+      price: 49.99, stock: 35, quantity: 35, condition: "New", listingStatus: "active",
       averageRating: 0, ratingCount: 0,
       image: "https://images.unsplash.com/photo-1587826080692-f439cd0b70da?w=600",
       images: ["https://images.unsplash.com/photo-1587826080692-f439cd0b70da?w=600"],
@@ -290,8 +290,8 @@ async function seed() {
       categoryId: catBySlug["electronics"],
       title: "Portable SSD 1TB USB 3.2",
       description: "1TB portable SSD with 1050MB/s read speed. Compact, shock-resistant, compatible with PC, Mac, and Android.",
-      price: 1250000, stock: 19, quantity: 19, condition: "New", listingStatus: "active",
-      averageRating: 0, ratingCount: 0,  // delivered nhưng chưa review
+      price: 109.99, stock: 19, quantity: 19, condition: "New", listingStatus: "active",
+      averageRating: 0, ratingCount: 0,
       image: "https://images.unsplash.com/photo-1597872200969-2b65d56bd16b?w=600",
       images: ["https://images.unsplash.com/photo-1597872200969-2b65d56bd16b?w=600"],
     },
@@ -300,8 +300,8 @@ async function seed() {
       categoryId: catBySlug["electronics"],
       title: "Power Bank 20000mAh PD 65W",
       description: "20000mAh power bank with 65W PD fast charging, 3 output ports (2x USB-A + 1x USB-C), LED battery percentage display.",
-      price: 680000, stock: 54, quantity: 54, condition: "New", listingStatus: "active",
-      averageRating: 0, ratingCount: 0,  // đang shipping, chưa review
+      price: 59.99, stock: 54, quantity: 54, condition: "New", listingStatus: "active",
+      averageRating: 0, ratingCount: 0,
       image: "https://images.unsplash.com/photo-1585771724684-38269d6639fd?w=600",
       images: ["https://images.unsplash.com/photo-1585771724684-38269d6639fd?w=600"],
     },
@@ -310,7 +310,7 @@ async function seed() {
       categoryId: catBySlug["home-garden"],
       title: "Smart Touch LED Desk Lamp",
       description: "LED desk lamp with 3 color modes (warm/neutral/cool), 10 brightness levels, USB-C power input, and USB-A charging port.",
-      price: 280000, stock: 70, quantity: 70, condition: "New", listingStatus: "active",
+      price: 24.99, stock: 70, quantity: 70, condition: "New", listingStatus: "active",
       averageRating: 0, ratingCount: 0,
       image: "https://images.unsplash.com/photo-1580893246395-52aead8960dc?w=600",
       images: ["https://images.unsplash.com/photo-1580893246395-52aead8960dc?w=600"],
@@ -320,18 +320,18 @@ async function seed() {
       categoryId: catBySlug["electronics"],
       title: "Silicone Watch Band for Apple Watch 45mm",
       description: "Soft silicone sport band compatible with Apple Watch 45mm. Sweat-resistant, available in multiple colors.",
-      price: 95000, stock: 200, quantity: 200, condition: "New", listingStatus: "active",
+      price: 11.99, stock: 200, quantity: 200, condition: "New", listingStatus: "active",
       averageRating: 0, ratingCount: 0,
       image: "https://images.unsplash.com/photo-1575311373937-040b8e1fd5b6?w=600",
       images: ["https://images.unsplash.com/photo-1575311373937-040b8e1fd5b6?w=600"],
-      variants: [{ name: "Color", options: [{ value: "Black", price: 95000, quantity: 60 }, { value: "Blue", price: 95000, quantity: 50 }, { value: "Pink", price: 95000, quantity: 50 }, { value: "Green", price: 95000, quantity: 40 }] }],
+      variants: [{ name: "Color", options: [{ value: "Black", price: 11.99, quantity: 60 }, { value: "Blue", price: 11.99, quantity: 50 }, { value: "Pink", price: 11.99, quantity: 50 }, { value: "Green", price: 11.99, quantity: 40 }] }],
     },
     {
       sellerId: techSeller._id,
       categoryId: catBySlug["electronics"],
       title: "HDMI 2.1 Cable 8K 2m",
       description: "HDMI 2.1 cable supporting 8K@60Hz / 4K@120Hz, HDR, VRR. 2-meter length, anti-oxidation metal connectors.",
-      price: 145000, stock: 150, quantity: 150, condition: "New", listingStatus: "active",
+      price: 13.99, stock: 150, quantity: 150, condition: "New", listingStatus: "active",
       averageRating: 0, ratingCount: 0,
       image: "https://images.unsplash.com/photo-1558618666-fcd25c85cd64?w=600",
       images: ["https://images.unsplash.com/photo-1558618666-fcd25c85cd64?w=600"],
@@ -341,7 +341,7 @@ async function seed() {
       categoryId: catBySlug["electronics"],
       title: "Adjustable Aluminum Laptop Stand",
       description: "Solid aluminum laptop stand with 6 adjustable angles (15-50°), compatible with 10-16 inch laptops. Foldable and portable.",
-      price: 210000, stock: 90, quantity: 90, condition: "New", listingStatus: "active",
+      price: 21.99, stock: 90, quantity: 90, condition: "New", listingStatus: "active",
       averageRating: 0, ratingCount: 0,
       image: "https://images.unsplash.com/photo-1498050108023-c5249f4df085?w=600",
       images: ["https://images.unsplash.com/photo-1498050108023-c5249f4df085?w=600"],
@@ -351,7 +351,7 @@ async function seed() {
       categoryId: catBySlug["electronics"],
       title: "XL Gaming Mouse Pad 80x30cm",
       description: "Extra-large gaming desk pad 80x30cm with high-speed woven surface, stitched edges, and non-slip rubber base.",
-      price: 120000, stock: 120, quantity: 120, condition: "New", listingStatus: "active",
+      price: 12.99, stock: 120, quantity: 120, condition: "New", listingStatus: "active",
       averageRating: 0, ratingCount: 0,
       image: "https://images.unsplash.com/photo-1593640408182-31c228dacb46?w=600",
       images: ["https://images.unsplash.com/photo-1593640408182-31c228dacb46?w=600"],
@@ -361,7 +361,7 @@ async function seed() {
       categoryId: catBySlug["electronics"],
       title: "USB Condenser Microphone Studio Kit",
       description: "USB cardioid condenser microphone for streaming and podcasts, 20Hz-20kHz frequency, includes desk mount and pop filter.",
-      price: 720000, stock: 18, quantity: 18, condition: "New", listingStatus: "active",
+      price: 65.99, stock: 18, quantity: 18, condition: "New", listingStatus: "active",
       averageRating: 0, ratingCount: 0,
       image: "https://images.unsplash.com/photo-1520170350707-b2da59970118?w=600",
       images: ["https://images.unsplash.com/photo-1520170350707-b2da59970118?w=600"],
@@ -371,20 +371,20 @@ async function seed() {
       categoryId: catBySlug["electronics"],
       title: "iPhone 15 Pro Clear MagSafe Case",
       description: "Transparent MagSafe-compatible case, anti-yellowing TPU material, 1.5mm raised camera protection.",
-      price: 85000, stock: 300, quantity: 300, condition: "New", listingStatus: "active",
+      price: 10.99, stock: 300, quantity: 300, condition: "New", listingStatus: "active",
       averageRating: 0, ratingCount: 0,
       image: "https://images.unsplash.com/photo-1601784551446-20c9e07cdbdb?w=600",
       images: ["https://images.unsplash.com/photo-1601784551446-20c9e07cdbdb?w=600"],
       promotionType: "outlet",
-      originalPrice: 120000,
-      discountPercent: 29,
+      originalPrice: 15.99,
+      discountPercent: 31,
     },
     {
       sellerId: techSeller._id,
       categoryId: catBySlug["electronics"],
       title: "iPhone 15 Tempered Glass Screen Protector 9H (2-Pack)",
       description: "9H hardness tempered glass, 99.9% clarity, anti-fingerprint coating. Pack of 2 with alignment frame.",
-      price: 45000, stock: 500, quantity: 500, condition: "New", listingStatus: "active",
+      price: 9.99, stock: 500, quantity: 500, condition: "New", listingStatus: "active",
       averageRating: 0, ratingCount: 0,
       image: "https://images.unsplash.com/photo-1512941937669-90a1b58e7e9c?w=600",
       images: ["https://images.unsplash.com/photo-1512941937669-90a1b58e7e9c?w=600"],
@@ -402,24 +402,24 @@ async function seed() {
       categoryId: catBySlug["sports-outdoors"],
       title: "Running Shoes Pro 2024",
       description: "Lightweight EVA sole running shoes with Air cushion, breathable mesh upper. Suitable for road running and treadmill.",
-      price: 780000, stock: 59, quantity: 59, condition: "New", listingStatus: "active",
-      averageRating: 4.0, ratingCount: 1,  // 1 completed order → 1 review
+      price: 75.99, stock: 59, quantity: 59, condition: "New", listingStatus: "active",
+      averageRating: 4.0, ratingCount: 1,
       image: "https://images.unsplash.com/photo-1542291026-7eec264c27ff?w=600",
       images: ["https://images.unsplash.com/photo-1542291026-7eec264c27ff?w=600"],
-      variants: [{ name: "Size", options: [{ value: "39", price: 780000, quantity: 10 }, { value: "40", price: 780000, quantity: 15 }, { value: "41", price: 780000, quantity: 15 }, { value: "42", price: 780000, quantity: 9 }, { value: "43", price: 780000, quantity: 10 }] }],
+      variants: [{ name: "Size", options: [{ value: "39", price: 75.99, quantity: 10 }, { value: "40", price: 75.99, quantity: 15 }, { value: "41", price: 75.99, quantity: 15 }, { value: "42", price: 75.99, quantity: 9 }, { value: "43", price: 75.99, quantity: 10 }] }],
     },
     {
       sellerId: sportSeller._id,
       categoryId: catBySlug["clothing-apparel"],
       title: "Men's Dry-Fit Athletic T-Shirt",
       description: "Quick-dry Dry-Fit polo shirt with 4-way stretch. Suitable for gym, running, and yoga.",
-      price: 185000, stock: 150, quantity: 150, condition: "New", listingStatus: "active",
+      price: 18.99, stock: 150, quantity: 150, condition: "New", listingStatus: "active",
       averageRating: 0, ratingCount: 0,
       image: "https://images.unsplash.com/photo-1521572163474-6864f9cf17ab?w=600",
       images: ["https://images.unsplash.com/photo-1521572163474-6864f9cf17ab?w=600"],
       variants: [
-        { name: "Size", options: [{ value: "S", price: 185000, quantity: 30 }, { value: "M", price: 185000, quantity: 50 }, { value: "L", price: 185000, quantity: 40 }, { value: "XL", price: 185000, quantity: 30 }] },
-        { name: "Color", options: [{ value: "Black", price: 185000, quantity: 75 }, { value: "Navy", price: 185000, quantity: 75 }] },
+        { name: "Size", options: [{ value: "S", price: 18.99, quantity: 30 }, { value: "M", price: 18.99, quantity: 50 }, { value: "L", price: 18.99, quantity: 40 }, { value: "XL", price: 18.99, quantity: 30 }] },
+        { name: "Color", options: [{ value: "Black", price: 18.99, quantity: 75 }, { value: "Navy", price: 18.99, quantity: 75 }] },
       ],
     },
     {
@@ -427,51 +427,51 @@ async function seed() {
       categoryId: catBySlug["sports-outdoors"],
       title: "Non-Slip TPE Yoga Mat 6mm",
       description: "Dual-layer 6mm TPE yoga mat with double-sided anti-slip surface, odorless, easy to clean. Includes carry strap and mesh bag.",
-      price: 320000, stock: 84, quantity: 84, condition: "New", listingStatus: "active",
-      averageRating: 5.0, ratingCount: 1,  // 1 completed order → 1 review
+      price: 29.99, stock: 84, quantity: 84, condition: "New", listingStatus: "active",
+      averageRating: 5.0, ratingCount: 1,
       image: "https://images.unsplash.com/photo-1544367567-0f2fcb009e0b?w=600",
       images: ["https://images.unsplash.com/photo-1544367567-0f2fcb009e0b?w=600"],
-      variants: [{ name: "Color", options: [{ value: "Purple", price: 320000, quantity: 29 }, { value: "Blue", price: 320000, quantity: 30 }, { value: "Pink", price: 320000, quantity: 25 }] }],
+      variants: [{ name: "Color", options: [{ value: "Purple", price: 29.99, quantity: 29 }, { value: "Blue", price: 29.99, quantity: 30 }, { value: "Pink", price: 29.99, quantity: 25 }] }],
     },
     {
       sellerId: sportSeller._id,
       categoryId: catBySlug["sports-outdoors"],
       title: "Stainless Steel Sports Water Bottle 1L",
       description: "1-liter insulated stainless steel bottle, keeps cold 24h / hot 12h, one-touch lid, BPA-free.",
-      price: 245000, stock: 108, quantity: 108, condition: "New", listingStatus: "active",
-      averageRating: 0, ratingCount: 0,  // delivered nhưng chưa review
+      price: 22.99, stock: 108, quantity: 108, condition: "New", listingStatus: "active",
+      averageRating: 0, ratingCount: 0,
       image: "https://images.unsplash.com/photo-1602143407151-7111542de6e8?w=600",
       images: ["https://images.unsplash.com/photo-1602143407151-7111542de6e8?w=600"],
-      variants: [{ name: "Color", options: [{ value: "Silver", price: 245000, quantity: 40 }, { value: "Black", price: 245000, quantity: 38 }, { value: "Blue", price: 245000, quantity: 30 }] }],
+      variants: [{ name: "Color", options: [{ value: "Silver", price: 22.99, quantity: 40 }, { value: "Black", price: 22.99, quantity: 38 }, { value: "Blue", price: 22.99, quantity: 30 }] }],
     },
     {
       sellerId: sportSeller._id,
       categoryId: catBySlug["clothing-apparel"],
       title: "Adjustable Sports Baseball Cap",
       description: "Unisex cotton sports cap with Velcro adjustable strap and embroidered logo. Lightweight and breathable.",
-      price: 95000, stock: 200, quantity: 200, condition: "New", listingStatus: "active",
+      price: 11.99, stock: 200, quantity: 200, condition: "New", listingStatus: "active",
       averageRating: 0, ratingCount: 0,
       image: "https://images.unsplash.com/photo-1588850561407-ed78c282e89b?w=600",
       images: ["https://images.unsplash.com/photo-1588850561407-ed78c282e89b?w=600"],
-      variants: [{ name: "Color", options: [{ value: "Black", price: 95000, quantity: 80 }, { value: "White", price: 95000, quantity: 60 }, { value: "Red", price: 95000, quantity: 60 }] }],
+      variants: [{ name: "Color", options: [{ value: "Black", price: 11.99, quantity: 80 }, { value: "White", price: 11.99, quantity: 60 }, { value: "Red", price: 11.99, quantity: 60 }] }],
     },
     {
       sellerId: sportSeller._id,
       categoryId: catBySlug["sports-outdoors"],
       title: "Gel Open-Finger Gym Gloves",
       description: "Neoprene gym gloves with gel palm padding, wrist support strap, and anti-slip grip.",
-      price: 135000, stock: 95, quantity: 95, condition: "New", listingStatus: "active",
+      price: 13.99, stock: 95, quantity: 95, condition: "New", listingStatus: "active",
       averageRating: 0, ratingCount: 0,
       image: "https://images.unsplash.com/photo-1534438327276-14e5300c3a48?w=600",
       images: ["https://images.unsplash.com/photo-1534438327276-14e5300c3a48?w=600"],
-      variants: [{ name: "Size", options: [{ value: "S/M", price: 135000, quantity: 50 }, { value: "L/XL", price: 135000, quantity: 45 }] }],
+      variants: [{ name: "Size", options: [{ value: "S/M", price: 13.99, quantity: 50 }, { value: "L/XL", price: 13.99, quantity: 45 }] }],
     },
     {
       sellerId: sportSeller._id,
       categoryId: catBySlug["sports-outdoors"],
       title: "High-Speed Jump Rope with Bearings",
       description: "Speed jump rope with 360° ball bearings, anti-slip plastic handles, PVC-coated steel cable, adjustable length.",
-      price: 75000, stock: 180, quantity: 180, condition: "New", listingStatus: "active",
+      price: 10.99, stock: 180, quantity: 180, condition: "New", listingStatus: "active",
       averageRating: 0, ratingCount: 0,
       image: "https://images.unsplash.com/photo-1571019613454-1cb2f99b2d8b?w=600",
       images: ["https://images.unsplash.com/photo-1571019613454-1cb2f99b2d8b?w=600"],
@@ -481,7 +481,7 @@ async function seed() {
       categoryId: catBySlug["sports-outdoors"],
       title: "Resistance Bands Set 5 Levels",
       description: "Set of 5 latex resistance bands (10-50 lb), color-coded by difficulty level. Includes mesh carry bag and exercise guide.",
-      price: 180000, stock: 130, quantity: 130, condition: "New", listingStatus: "active",
+      price: 17.99, stock: 130, quantity: 130, condition: "New", listingStatus: "active",
       averageRating: 0, ratingCount: 0,
       image: "https://images.unsplash.com/photo-1598300042247-d088f8ab3a91?w=600",
       images: ["https://images.unsplash.com/photo-1598300042247-d088f8ab3a91?w=600"],
@@ -491,24 +491,24 @@ async function seed() {
       categoryId: catBySlug["clothing-apparel"],
       title: "Men's 7-Inch Compression Shorts",
       description: "4D spandex stretch compression shorts with zippered side pocket and muscle support technology.",
-      price: 220000, stock: 75, quantity: 75, condition: "New", listingStatus: "active",
+      price: 21.99, stock: 75, quantity: 75, condition: "New", listingStatus: "active",
       averageRating: 0, ratingCount: 0,
       image: "https://images.unsplash.com/photo-1506629082955-511b1aa562c8?w=600",
       images: ["https://images.unsplash.com/photo-1506629082955-511b1aa562c8?w=600"],
-      variants: [{ name: "Size", options: [{ value: "S", price: 220000, quantity: 15 }, { value: "M", price: 220000, quantity: 25 }, { value: "L", price: 220000, quantity: 20 }, { value: "XL", price: 220000, quantity: 15 }] }],
+      variants: [{ name: "Size", options: [{ value: "S", price: 21.99, quantity: 15 }, { value: "M", price: 21.99, quantity: 25 }, { value: "L", price: 21.99, quantity: 20 }, { value: "XL", price: 21.99, quantity: 15 }] }],
     },
     {
       sellerId: sportSeller._id,
       categoryId: catBySlug["sports-outdoors"],
       title: "Waterproof Hiking Backpack 30L",
       description: "30L nylon waterproof backpack with padded 15.6\" laptop compartment, separate shoe pocket, and ergonomic back frame.",
-      price: 485000, stock: 55, quantity: 55, condition: "New", listingStatus: "active",
+      price: 45.99, stock: 55, quantity: 55, condition: "New", listingStatus: "active",
       averageRating: 0, ratingCount: 0,
       image: "https://images.unsplash.com/photo-1553062407-98eeb64c6a62?w=600",
       images: ["https://images.unsplash.com/photo-1553062407-98eeb64c6a62?w=600"],
       promotionType: "daily_deal",
-      originalPrice: 650000,
-      discountPercent: 25,
+      originalPrice: 59.99,
+      discountPercent: 23,
       dealStartDate: daysAgo(3),
       dealEndDate: daysFromNow(7),
     },
@@ -579,7 +579,7 @@ async function seed() {
       ordersLast30Days: 24,
       completionRate: 0.985,
       trustScore: 4.47,
-      accountAgeMonths: 6,
+      accountAgeMonths: 12,
       verifiedAt: daysAgo(30),
       lastCheckedAt: daysAgo(1),
     },
@@ -589,7 +589,7 @@ async function seed() {
       ordersLast30Days: 18,
       completionRate: 0.910,
       trustScore: 4.07,
-      accountAgeMonths: 3,
+      accountAgeMonths: 9,
       lastCheckedAt: daysAgo(1),
     },
   ]);
@@ -658,18 +658,18 @@ async function seed() {
             : "created",
       paymentStatus: data.paymentStatus || "paid",
       shippingAddress: data.shippingAddress,
-      shippingPrice: data.shippingPrice || 30000,
+      shippingPrice: data.shippingPrice || 9.99,
       paymentMethod: "cod",
     });
     await Order.findByIdAndUpdate(order._id, { orderGroup: og._id });
     return { order, og };
   }
 
-  // Order 1 — completed, buyer1, techstore headphones
+  // Order 1 — completed, buyer1, techstore headphones ($79.99 + $9.99 ship)
   const { order: o1 } = await createOrder({
     buyer: buyer1._id, seller: techSeller._id, shipper: shipper1._id,
-    items: [{ productId: techProducts[0]._id, title: techProducts[0].title, unitPrice: 850000, quantity: 1, selectedVariants: [{ name: "Color", value: "Black" }] }],
-    subtotalAmount: 850000, totalAmount: 880000, shippingPrice: 30000,
+    items: [{ productId: techProducts[0]._id, title: techProducts[0].title, unitPrice: 79.99, quantity: 1, selectedVariants: [{ name: "Color", value: "Black" }] }],
+    subtotalAmount: 79.99, totalAmount: 89.98, shippingPrice: 9.99,
     status: "completed", paymentStatus: "paid",
     shippingAddress: shippingAddr1,
     deliveredAt: daysAgo(10),
@@ -682,11 +682,11 @@ async function seed() {
     ],
   });
 
-  // Order 2 — completed, buyer2, techstore keyboard
+  // Order 2 — completed, buyer2, techstore keyboard ($89.99 + $9.99 ship)
   const { order: o2 } = await createOrder({
     buyer: buyer2._id, seller: techSeller._id, shipper: shipper2._id,
-    items: [{ productId: techProducts[3]._id, title: techProducts[3].title, unitPrice: 980000, quantity: 1 }],
-    subtotalAmount: 980000, totalAmount: 1010000, shippingPrice: 30000,
+    items: [{ productId: techProducts[3]._id, title: techProducts[3].title, unitPrice: 89.99, quantity: 1 }],
+    subtotalAmount: 89.99, totalAmount: 99.98, shippingPrice: 9.99,
     status: "completed", paymentStatus: "paid",
     shippingAddress: shippingAddr2,
     deliveredAt: daysAgo(15),
@@ -699,11 +699,11 @@ async function seed() {
     ],
   });
 
-  // Order 3 — completed, buyer3, sportzone yoga mat
+  // Order 3 — completed, buyer3, sportzone yoga mat ($29.99 + $5.99 ship)
   const { order: o3 } = await createOrder({
     buyer: buyer3._id, seller: sportSeller._id, shipper: shipper1._id,
-    items: [{ productId: sportProducts[2]._id, title: sportProducts[2].title, unitPrice: 320000, quantity: 1, selectedVariants: [{ name: "Color", value: "Purple" }] }],
-    subtotalAmount: 320000, totalAmount: 350000, shippingPrice: 30000,
+    items: [{ productId: sportProducts[2]._id, title: sportProducts[2].title, unitPrice: 29.99, quantity: 1, selectedVariants: [{ name: "Color", value: "Purple" }] }],
+    subtotalAmount: 29.99, totalAmount: 35.98, shippingPrice: 5.99,
     status: "completed", paymentStatus: "paid",
     shippingAddress: shippingAddr3,
     deliveredAt: daysAgo(7),
@@ -716,11 +716,11 @@ async function seed() {
     ],
   });
 
-  // Order 4 — completed, buyer1, sportzone running shoes
+  // Order 4 — completed, buyer1, sportzone running shoes ($75.99 + $9.99 ship)
   const { order: o4 } = await createOrder({
     buyer: buyer1._id, seller: sportSeller._id, shipper: shipper2._id,
-    items: [{ productId: sportProducts[0]._id, title: sportProducts[0].title, unitPrice: 780000, quantity: 1, selectedVariants: [{ name: "Size", value: "42" }] }],
-    subtotalAmount: 780000, totalAmount: 810000, shippingPrice: 30000,
+    items: [{ productId: sportProducts[0]._id, title: sportProducts[0].title, unitPrice: 75.99, quantity: 1, selectedVariants: [{ name: "Size", value: "42" }] }],
+    subtotalAmount: 75.99, totalAmount: 85.98, shippingPrice: 9.99,
     status: "completed", paymentStatus: "paid",
     shippingAddress: shippingAddr1,
     deliveredAt: daysAgo(20),
@@ -733,11 +733,11 @@ async function seed() {
     ],
   });
 
-  // Order 5 — delivered (chưa review), buyer4, techstore SSD
+  // Order 5 — delivered (chưa review), buyer4, techstore SSD ($109.99 + $9.99 ship)
   const { order: o5 } = await createOrder({
     buyer: buyer4._id, seller: techSeller._id, shipper: shipper1._id,
-    items: [{ productId: techProducts[5]._id, title: techProducts[5].title, unitPrice: 1250000, quantity: 1 }],
-    subtotalAmount: 1250000, totalAmount: 1280000, shippingPrice: 30000,
+    items: [{ productId: techProducts[5]._id, title: techProducts[5].title, unitPrice: 109.99, quantity: 1 }],
+    subtotalAmount: 109.99, totalAmount: 119.98, shippingPrice: 9.99,
     status: "delivered", paymentStatus: "paid",
     shippingAddress: { fullName: "Sarah Davis", phone: "0934567890", country: "Vietnam", city: "Ho Chi Minh City", district: "Binh Thanh", ward: "Phuong 22", street: "56 Xo Viet Nghe Tinh", detail: "" },
     deliveredAt: daysAgo(3),
@@ -748,11 +748,11 @@ async function seed() {
     ],
   });
 
-  // Order 6 — delivered, buyer2, sportzone water bottle
+  // Order 6 — delivered, buyer2, sportzone water bottle x2 ($22.99×2 + $5.99 ship)
   const { order: o6 } = await createOrder({
     buyer: buyer2._id, seller: sportSeller._id, shipper: shipper2._id,
-    items: [{ productId: sportProducts[3]._id, title: sportProducts[3].title, unitPrice: 245000, quantity: 2, selectedVariants: [{ name: "Color", value: "Black" }] }],
-    subtotalAmount: 490000, totalAmount: 520000, shippingPrice: 30000,
+    items: [{ productId: sportProducts[3]._id, title: sportProducts[3].title, unitPrice: 22.99, quantity: 2, selectedVariants: [{ name: "Color", value: "Black" }] }],
+    subtotalAmount: 45.98, totalAmount: 51.97, shippingPrice: 5.99,
     status: "delivered", paymentStatus: "paid",
     shippingAddress: shippingAddr2,
     deliveredAt: daysAgo(2),
@@ -763,11 +763,11 @@ async function seed() {
     ],
   });
 
-  // Order 7 — shipping, buyer5, techstore power bank
+  // Order 7 — shipping, buyer5, techstore power bank ($59.99 + $9.99 ship)
   const { order: o7 } = await createOrder({
     buyer: buyer5._id, seller: techSeller._id, shipper: shipper1._id,
-    items: [{ productId: techProducts[6]._id, title: techProducts[6].title, unitPrice: 680000, quantity: 1 }],
-    subtotalAmount: 680000, totalAmount: 710000, shippingPrice: 30000,
+    items: [{ productId: techProducts[6]._id, title: techProducts[6].title, unitPrice: 59.99, quantity: 1 }],
+    subtotalAmount: 59.99, totalAmount: 69.98, shippingPrice: 9.99,
     status: "shipping", paymentStatus: "paid",
     shippingAddress: { fullName: "Chris Wilson", phone: "0945678901", country: "Vietnam", city: "Ho Chi Minh City", district: "Quan 7", ward: "Phuong Tan Phong", street: "89 Nguyen Van Linh", detail: "" },
     statusHistory: [
@@ -777,11 +777,11 @@ async function seed() {
     ],
   });
 
-  // Order 8 — packaging, buyer3, techstore webcam
+  // Order 8 — packaging, buyer3, techstore webcam ($49.99 + $9.99 ship)
   const { order: o8 } = await createOrder({
     buyer: buyer3._id, seller: techSeller._id,
-    items: [{ productId: techProducts[4]._id, title: techProducts[4].title, unitPrice: 550000, quantity: 1 }],
-    subtotalAmount: 550000, totalAmount: 580000, shippingPrice: 30000,
+    items: [{ productId: techProducts[4]._id, title: techProducts[4].title, unitPrice: 49.99, quantity: 1 }],
+    subtotalAmount: 49.99, totalAmount: 59.98, shippingPrice: 9.99,
     status: "packaging", paymentStatus: "paid",
     shippingAddress: shippingAddr3,
     statusHistory: [
@@ -790,11 +790,11 @@ async function seed() {
     ],
   });
 
-  // Order 9 — cancelled, buyer4, sportzone cap
+  // Order 9 — cancelled, buyer4, sportzone cap x2 ($11.99×2 + $5.99 ship)
   const { order: o9 } = await createOrder({
     buyer: buyer4._id, seller: sportSeller._id,
-    items: [{ productId: sportProducts[4]._id, title: sportProducts[4].title, unitPrice: 95000, quantity: 2 }],
-    subtotalAmount: 190000, totalAmount: 220000, shippingPrice: 30000,
+    items: [{ productId: sportProducts[4]._id, title: sportProducts[4].title, unitPrice: 11.99, quantity: 2 }],
+    subtotalAmount: 23.98, totalAmount: 29.97, shippingPrice: 5.99,
     status: "cancelled", paymentStatus: "unpaid",
     shippingAddress: { fullName: "Sarah Davis", phone: "0934567890", country: "Vietnam", city: "Ho Chi Minh City", district: "Binh Thanh", ward: "Phuong 22", street: "56 Xo Viet Nghe Tinh", detail: "" },
     statusHistory: [
@@ -803,11 +803,11 @@ async function seed() {
     ],
   });
 
-  // Order 10 — returned, buyer1, sportzone gloves
+  // Order 10 — returned, buyer1, sportzone gym gloves ($13.99 + $5.99 ship)
   const { order: o10 } = await createOrder({
     buyer: buyer1._id, seller: sportSeller._id, shipper: shipper1._id,
-    items: [{ productId: sportProducts[5]._id, title: sportProducts[5].title, unitPrice: 135000, quantity: 1 }],
-    subtotalAmount: 135000, totalAmount: 165000, shippingPrice: 30000,
+    items: [{ productId: sportProducts[5]._id, title: sportProducts[5].title, unitPrice: 13.99, quantity: 1 }],
+    subtotalAmount: 13.99, totalAmount: 19.98, shippingPrice: 5.99,
     status: "returned", paymentStatus: "refunded",
     shippingAddress: shippingAddr1,
     deliveredAt: daysAgo(18),
@@ -869,8 +869,8 @@ async function seed() {
       scope: "global",
       type: "percentage",
       value: 10,
-      minOrderValue: 100000,
-      maxDiscountAmount: 50000,
+      minOrderValue: 20,
+      maxDiscountAmount: 10,
       usageLimit: 500,
       usedCount: 12,
       perUserLimit: 1,
@@ -886,8 +886,8 @@ async function seed() {
       scope: "seller",
       type: "percentage",
       value: 20,
-      minOrderValue: 500000,
-      maxDiscountAmount: 100000,
+      minOrderValue: 50,
+      maxDiscountAmount: 20,
       usageLimit: 100,
       usedCount: 8,
       perUserLimit: 1,
@@ -898,12 +898,12 @@ async function seed() {
       source: "seller_request",
     },
     {
-      code: "SPORT50K",
+      code: "SPORT5",
       seller: sportSeller._id,
       scope: "seller",
       type: "fixed",
-      value: 50000,
-      minOrderValue: 300000,
+      value: 5,
+      minOrderValue: 30,
       usageLimit: 50,
       usedCount: 3,
       perUserLimit: 1,
@@ -1007,11 +1007,9 @@ async function seed() {
   ]);
   console.log("  Created 8 notifications");
 
-  // ── 14. CARTS (active) ─────────────────────────────────────────────────────
   // ── 14. REVENUE ────────────────────────────────────────────────────────────
   console.log("\n💰 Seeding revenue…");
 
-  // Helper: tạo 3 revenue records cho 1 order đã thanh toán
   // system_commission = 5% subtotal, system_shipping = shippingPrice, seller_revenue = 95% subtotal
   const addRevenue = async (order, seller, subtotal, shipping, createdAt) => {
     const commission = parseFloat((subtotal * 0.05).toFixed(2));
@@ -1023,48 +1021,48 @@ async function seed() {
     ]);
   };
 
-  // Orders hiện tại (paid)
-  await addRevenue(o1, techSeller,  850000, 30000, daysAgo(20));   // headphones, completed
-  await addRevenue(o2, techSeller,  980000, 30000, daysAgo(25));   // keyboard, completed
-  await addRevenue(o3, sportSeller, 320000, 30000, daysAgo(14));   // yoga mat, completed
-  await addRevenue(o4, sportSeller, 780000, 30000, daysAgo(30));   // running shoes, completed
-  await addRevenue(o5, techSeller, 1250000, 30000, daysAgo(10));   // SSD, delivered
-  await addRevenue(o6, sportSeller, 490000, 30000, daysAgo(9));    // water bottle, delivered
-  await addRevenue(o7, techSeller,  680000, 30000, daysAgo(5));    // power bank, shipping
-  await addRevenue(o8, techSeller,  550000, 30000, daysAgo(2));    // webcam, packaging
+  // Recent orders (paid)
+  await addRevenue(o1, techSeller,  79.99,  9.99, daysAgo(20));   // headphones, completed
+  await addRevenue(o2, techSeller,  89.99,  9.99, daysAgo(25));   // keyboard, completed
+  await addRevenue(o3, sportSeller, 29.99,  5.99, daysAgo(14));   // yoga mat, completed
+  await addRevenue(o4, sportSeller, 75.99,  9.99, daysAgo(30));   // running shoes, completed
+  await addRevenue(o5, techSeller, 109.99,  9.99, daysAgo(10));   // SSD, delivered
+  await addRevenue(o6, sportSeller, 45.98,  5.99, daysAgo(9));    // water bottle x2, delivered
+  await addRevenue(o7, techSeller,  59.99,  9.99, daysAgo(5));    // power bank, shipping
+  await addRevenue(o8, techSeller,  49.99,  9.99, daysAgo(2));    // webcam, packaging
 
-  // Dữ liệu lịch sử 5 tháng trước — để chart Monthly có data
+  // Historical revenue — 5 months of data for monthly chart
   const historicalOrders = [
-    // Tháng -5
-    { seller: techSeller,  sub: 720000,  ship: 30000, dAgo: 155 },
-    { seller: sportSeller, sub: 450000,  ship: 30000, dAgo: 150 },
-    { seller: techSeller,  sub: 980000,  ship: 30000, dAgo: 148 },
-    // Tháng -4
-    { seller: techSeller,  sub: 850000,  ship: 30000, dAgo: 120 },
-    { seller: techSeller,  sub: 320000,  ship: 30000, dAgo: 118 },
-    { seller: sportSeller, sub: 780000,  ship: 30000, dAgo: 115 },
-    { seller: sportSeller, sub: 245000,  ship: 25000, dAgo: 112 },
-    // Tháng -3
-    { seller: techSeller,  sub: 1250000, ship: 30000, dAgo: 90 },
-    { seller: techSeller,  sub: 680000,  ship: 30000, dAgo: 88 },
-    { seller: sportSeller, sub: 320000,  ship: 30000, dAgo: 85 },
-    { seller: techSeller,  sub: 550000,  ship: 30000, dAgo: 82 },
-    { seller: sportSeller, sub: 185000,  ship: 25000, dAgo: 80 },
-    // Tháng -2
-    { seller: techSeller,  sub: 850000,  ship: 30000, dAgo: 60 },
-    { seller: techSeller,  sub: 145000,  ship: 20000, dAgo: 58 },
-    { seller: sportSeller, sub: 780000,  ship: 30000, dAgo: 55 },
-    { seller: techSeller,  sub: 980000,  ship: 30000, dAgo: 52 },
-    { seller: sportSeller, sub: 490000,  ship: 30000, dAgo: 50 },
-    { seller: techSeller,  sub: 720000,  ship: 30000, dAgo: 48 },
-    // Tháng -1 (trong 30 ngày qua)
-    { seller: techSeller,  sub: 1250000, ship: 30000, dAgo: 35 },
-    { seller: sportSeller, sub: 320000,  ship: 30000, dAgo: 33 },
-    { seller: techSeller,  sub: 850000,  ship: 30000, dAgo: 32 },
-    { seller: sportSeller, sub: 780000,  ship: 30000, dAgo: 28 },
-    { seller: techSeller,  sub: 550000,  ship: 30000, dAgo: 26 },
-    { seller: sportSeller, sub: 245000,  ship: 25000, dAgo: 24 },
-    { seller: techSeller,  sub: 680000,  ship: 30000, dAgo: 22 },
+    // Month -5
+    { seller: techSeller,  sub: 68.99,  ship: 9.99, dAgo: 155 },
+    { seller: sportSeller, sub: 42.99,  ship: 5.99, dAgo: 150 },
+    { seller: techSeller,  sub: 89.99,  ship: 9.99, dAgo: 148 },
+    // Month -4
+    { seller: techSeller,  sub: 79.99,  ship: 9.99, dAgo: 120 },
+    { seller: techSeller,  sub: 29.99,  ship: 5.99, dAgo: 118 },
+    { seller: sportSeller, sub: 75.99,  ship: 9.99, dAgo: 115 },
+    { seller: sportSeller, sub: 22.99,  ship: 5.99, dAgo: 112 },
+    // Month -3
+    { seller: techSeller,  sub: 109.99, ship: 9.99, dAgo: 90 },
+    { seller: techSeller,  sub: 59.99,  ship: 9.99, dAgo: 88 },
+    { seller: sportSeller, sub: 29.99,  ship: 5.99, dAgo: 85 },
+    { seller: techSeller,  sub: 49.99,  ship: 9.99, dAgo: 82 },
+    { seller: sportSeller, sub: 17.99,  ship: 5.99, dAgo: 80 },
+    // Month -2
+    { seller: techSeller,  sub: 79.99,  ship: 9.99, dAgo: 60 },
+    { seller: techSeller,  sub: 13.99,  ship: 5.99, dAgo: 58 },
+    { seller: sportSeller, sub: 75.99,  ship: 9.99, dAgo: 55 },
+    { seller: techSeller,  sub: 89.99,  ship: 9.99, dAgo: 52 },
+    { seller: sportSeller, sub: 45.98,  ship: 5.99, dAgo: 50 },
+    { seller: techSeller,  sub: 65.99,  ship: 9.99, dAgo: 48 },
+    // Month -1
+    { seller: techSeller,  sub: 109.99, ship: 9.99, dAgo: 35 },
+    { seller: sportSeller, sub: 29.99,  ship: 5.99, dAgo: 33 },
+    { seller: techSeller,  sub: 79.99,  ship: 9.99, dAgo: 32 },
+    { seller: sportSeller, sub: 75.99,  ship: 9.99, dAgo: 28 },
+    { seller: techSeller,  sub: 49.99,  ship: 9.99, dAgo: 26 },
+    { seller: sportSeller, sub: 22.99,  ship: 5.99, dAgo: 24 },
+    { seller: techSeller,  sub: 59.99,  ship: 9.99, dAgo: 22 },
   ];
 
   for (const h of historicalOrders) {
@@ -1089,10 +1087,10 @@ async function seed() {
     product: techProducts[1]._id,
     seller: techSeller._id,
     quantity: 2,
-    priceSnapShot: 320000,
+    priceSnapShot: 29.99,
     variantKey: "",
   });
-  await Cart.findByIdAndUpdate(cart3._id, { totalPrice: 640000, totalItems: 2 });
+  await Cart.findByIdAndUpdate(cart3._id, { totalPrice: 59.98, totalItems: 2 });
   console.log("  Created 1 cart with items");
 
   // ── DONE ───────────────────────────────────────────────────────────────────
