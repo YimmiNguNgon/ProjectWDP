@@ -237,14 +237,30 @@ exports.getTopSellers = async (req, res, next) => {
   try {
     const limit = Math.min(parseInt(req.query.limit) || 6, 20);
 
+    // Count actual delivered+completed orders per seller from Order collection
+    const orderCounts = await Order.aggregate([
+      { $match: { status: { $in: ["delivered", "completed"] } } },
+      { $group: { _id: "$seller", successOrders: { $sum: 1 } } },
+    ]);
+    const orderCountMap = new Map(
+      orderCounts.map((o) => [o._id.toString(), o.successOrders])
+    );
+
     const sellers = await User.find({ role: "seller", status: "active" })
       .select("username avatarUrl sellerInfo")
       .lean();
 
-    // Sort by successOrders desc
-    sellers.sort((a, b) => (b.sellerInfo?.successOrders || 0) - (a.sellerInfo?.successOrders || 0));
+    const sellersWithCount = sellers.map((s) => ({
+      ...s,
+      sellerInfo: {
+        ...s.sellerInfo,
+        successOrders: orderCountMap.get(s._id.toString()) ?? 0,
+      },
+    }));
 
-    return res.json({ data: sellers.slice(0, limit) });
+    sellersWithCount.sort((a, b) => (b.sellerInfo?.successOrders || 0) - (a.sellerInfo?.successOrders || 0));
+
+    return res.json({ data: sellersWithCount.slice(0, limit) });
   } catch (err) {
     next(err);
   }
