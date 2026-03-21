@@ -105,6 +105,11 @@ export default function SellerVouchersPage() {
       return;
     }
 
+    if (form.startDate && form.endDate && new Date(form.startDate) >= new Date(form.endDate)) {
+      toast.error("Start date must be before end date");
+      return;
+    }
+
     setSubmitting(true);
     try {
       await requestVoucher({

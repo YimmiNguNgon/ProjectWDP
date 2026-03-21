@@ -56,6 +56,11 @@ export default function AdminGlobalVouchersPage() {
       return;
     }
 
+    if (form.startDate && form.endDate && new Date(form.startDate) >= new Date(form.endDate)) {
+      toast.error("Start date must be before end date");
+      return;
+    }
+
     try {
       setSubmitting(true);
       await createAdminGlobalVoucher({
