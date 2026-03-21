@@ -1,10 +1,14 @@
 const cron = require("node-cron");
 const Order = require("../models/Order");
+const OrderGroup = require("../models/OrderGroup");
+const Product = require("../models/Product");
+const Revenue = require("../models/Revenue");
 const User = require("../models/User");
 const DeliveryDispute = require("../models/DeliveryDispute");
 const notificationService = require("../services/notificationService");
 const { autoAssignOrder } = require("../services/orderDispatchService");
 
+const SELLER_CONFIRM_TIMEOUT_MINUTES = 5;
 const TIMEOUT_MINUTES = 5;
 const SHIPPING_TIMEOUT_MINUTES = 5;
 const DELIVERED_AUTO_COMPLETE_MINUTES = 5;
@@ -43,6 +47,94 @@ async function deactivateShipper(shipperId, shortOrderId, reason) {
     link: `/shipper/dashboard`,
     metadata: { reason },
   });
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Luồng 0: Seller không mark packaging trong SELLER_CONFIRM_TIMEOUT_MINUTES phút
+// ─────────────────────────────────────────────────────────────────────────────
+async function expireNewOrders() {
+  const cutoff = new Date(Date.now() - SELLER_CONFIRM_TIMEOUT_MINUTES * 60 * 1000);
+
+  const expiredOrders = await Order.find({
+    status: "created",
+    createdAt: { $lt: cutoff },
+  })
+    .select("_id seller buyer orderGroup items paymentStatus")
+    .lean();
+
+  if (!expiredOrders.length) return;
+
+  console.log(`[SellerConfirm] Found ${expiredOrders.length} unconfirmed order(s)`);
+
+  for (const order of expiredOrders) {
+    const shortId = order._id.toString().slice(-8).toUpperCase();
+
+    // 1. Cancel đơn
+    const cancelled = await Order.findOneAndUpdate(
+      { _id: order._id, status: "created" },
+      {
+        $set: { status: "cancelled", paymentStatus: order.paymentStatus === "paid" ? "refunded" : order.paymentStatus },
+        $push: {
+          statusHistory: {
+            status: "cancelled",
+            timestamp: new Date(),
+            note: `Auto-cancelled: seller did not confirm order within ${SELLER_CONFIRM_TIMEOUT_MINUTES} minutes.`,
+          },
+        },
+      },
+      { new: true }
+    );
+
+    if (!cancelled) {
+      console.log(`[SellerConfirm] Order ${order._id} already processed, skipping.`);
+      continue;
+    }
+
+    console.log(`[SellerConfirm] Order ${order._id} cancelled (seller timeout).`);
+
+    // 2. Hoàn lại stock sản phẩm
+    for (const item of order.items || []) {
+      if (item.productId && item.quantity) {
+        await Product.findByIdAndUpdate(item.productId, {
+          $inc: { stock: item.quantity, quantity: item.quantity },
+        }).catch(() => {});
+      }
+    }
+
+    // 3. Xóa revenue records liên quan (chưa hoàn tiền thực tế nên xóa luôn)
+    await Revenue.deleteMany({ order: order._id }).catch(() => {});
+
+    // 4. Cập nhật OrderGroup nếu có
+    if (order.orderGroup) {
+      await OrderGroup.findByIdAndUpdate(order.orderGroup, {
+        $set: { status: "cancelled" },
+      }).catch(() => {});
+    }
+
+    // 5. Notify seller
+    if (order.seller) {
+      await notify({
+        recipientId: order.seller,
+        type: "order_cancelled",
+        title: "Order auto-cancelled — no response",
+        body: `Order #${shortId} was automatically cancelled because you did not confirm it within ${SELLER_CONFIRM_TIMEOUT_MINUTES} minutes. Please process orders promptly to avoid cancellations.`,
+        link: `/seller/orders`,
+        metadata: { orderId: order._id },
+      });
+    }
+
+    // 6. Notify buyer
+    if (order.buyer) {
+      await notify({
+        recipientId: order.buyer,
+        type: "order_cancelled",
+        title: "Your order has been cancelled",
+        body: `Order #${shortId} was automatically cancelled because the seller did not confirm it in time. You will receive a full refund if payment was made.`,
+        link: `/purchases/${order._id}`,
+        metadata: { orderId: order._id },
+      });
+    }
+  }
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -299,6 +391,7 @@ async function autoCompleteDeliveredOrders() {
 function initShipperAcceptanceJob() {
   cron.schedule("* * * * *", async () => {
     try {
+      await expireNewOrders();
       await expirePendingAcceptance();
       await expireShippingOrders();
       await autoCompleteDeliveredOrders();
@@ -314,6 +407,7 @@ function initShipperAcceptanceJob() {
 
 module.exports = {
   initShipperAcceptanceJob,
+  expireNewOrders,
   expirePendingAcceptance,
   expireShippingOrders,
   autoCompleteDeliveredOrders,

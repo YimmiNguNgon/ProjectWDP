@@ -149,7 +149,7 @@ export default function ProductsPage() {
     selectedSort: searchParams.get("sort") || "",
   }));
   const [totalPages, setTotalPages] = React.useState(1);
-  const itemsPerPage = 10;
+  const itemsPerPage = 12;
 
   useEffect(() => {
     const fetchCategories = async () => {
@@ -548,7 +548,7 @@ export default function ProductsPage() {
           ) : (
             <>
               {/* Product Grid */}
-              <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+              <div className="grid gap-4 grid-cols-4">
                 {products.map((product) => (
                   <Card
                     key={product._id}
