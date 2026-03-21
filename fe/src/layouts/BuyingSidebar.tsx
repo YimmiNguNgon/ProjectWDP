@@ -1,62 +1,49 @@
 import { Link, useLocation } from "react-router-dom";
 import { cn } from "@/lib/utils";
+import {
+  Clock,
+  RotateCcw,
+  ShoppingBag,
+  Heart,
+  Search,
+  MessageSquare,
+  Store,
+} from "lucide-react";
+
+const NAV_ITEMS = [
+  { to: "/my-ebay/activity/purchases", label: "Purchases", icon: ShoppingBag },
+  { to: "/my-ebay/activity/watchlist", label: "Watchlist", icon: Heart },
+  { to: "/my-ebay/recently-viewed", label: "Recently Viewed", icon: Clock },
+  { to: "/my-ebay/complaints", label: "Returns & Complaints", icon: RotateCcw },
+  { to: "/my-ebay/saved-searches", label: "Saved Searches", icon: Search },
+  { to: "/my-ebay/feedback-requests", label: "Feedback Requests", icon: MessageSquare },
+  { to: "/my-ebay/saved-sellers", label: "Saved Sellers", icon: Store },
+];
 
 export default function BuyingSidebar() {
   const location = useLocation();
 
-  const isActive = (path: string) => location.pathname === path;
-
-  // Helper to standard link classes
-  const linkClass = (path: string) =>
-    cn(
-      "block w-full text-lg rounded px-3 py-2 text-left transition-colors",
-      isActive(path)
-        ? "bg-muted font-bold text-foreground"
-        : "hover:bg-muted text-muted-foreground hover:text-foreground font-medium",
-    );
+  const isActive = (path: string) =>
+    location.pathname === path || location.pathname.startsWith(path + "/");
 
   return (
-    <aside className="w-64 shrink-0 text-base">
-      <nav className="space-y-1">
-        <Link
-          to="/my-ebay/recently-viewed"
-          className={linkClass("/my-ebay/recently-viewed")}
-        >
-          Recently viewed
-        </Link>
-        <Link to="/my-ebay/complaints" className={linkClass("/my-ebay/complaints")}>
-          Returns &amp; complaints
-        </Link>
-        <Link
-          to="/my-ebay/activity/purchases"
-          className={linkClass("/my-ebay/activity/purchases")}
-        >
-          Purchases
-        </Link>
-        <Link
-          to="/my-ebay/activity/watchlist"
-          className={linkClass("/my-ebay/activity/watchlist")}
-        >
-          Watchlist
-        </Link>
-        <Link
-          to="/my-ebay/saved-searches"
-          className={linkClass("/my-ebay/saved-searches")}
-        >
-          Saved searches
-        </Link>
-        <Link
-          to="/my-ebay/feedback-requests"
-          className={linkClass("/my-ebay/feedback-requests")}
-        >
-          Feedback requests
-        </Link>
-        <Link
-          to="/my-ebay/saved-sellers"
-          className={linkClass("/my-ebay/saved-sellers")}
-        >
-          Saved sellers
-        </Link>
+    <aside className="w-56 shrink-0">
+      <nav className="flex flex-col gap-0.5">
+        {NAV_ITEMS.map(({ to, label, icon: Icon }) => (
+          <Link
+            key={to}
+            to={to}
+            className={cn(
+              "flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors",
+              isActive(to)
+                ? "bg-primary/10 text-primary"
+                : "text-muted-foreground hover:bg-muted hover:text-foreground"
+            )}
+          >
+            <Icon className={cn("h-4 w-4 shrink-0", isActive(to) ? "text-primary" : "")} />
+            {label}
+          </Link>
+        ))}
       </nav>
     </aside>
   );

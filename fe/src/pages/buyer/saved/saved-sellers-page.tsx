@@ -1,188 +1,149 @@
-﻿import { useState, useEffect } from "react";
-import { Trash2, Store, ExternalLink, Package } from "lucide-react";
+import { useState, useEffect } from "react";
+import { Trash2, Store, ExternalLink } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
-import { Card } from "@/components/ui/card";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { Badge } from "@/components/ui/badge";
-import {
-    Select,
-    SelectContent,
-    SelectItem,
-    SelectTrigger,
-    SelectValue,
-} from "@/components/ui/select";
 import axios from "@/lib/axios";
 import { toast } from "sonner";
 
 interface SavedSeller {
-    _id: string;
-    username: string;
-    email: string;
-    avatarUrl?: string;
-    reputationScore: number;
-    productCount: number;
+  _id: string;
+  username: string;
+  email: string;
+  avatarUrl?: string;
+  reputationScore: number;
+  productCount: number;
 }
 
 export default function SavedSellersPage() {
-    const [savedSellers, setSavedSellers] = useState<SavedSeller[]>([]);
-    const [loading, setLoading] = useState(true);
-    const [sortBy, setSortBy] = useState("newest");
-    const navigate = useNavigate();
+  const [savedSellers, setSavedSellers] = useState<SavedSeller[]>([]);
+  const [loading, setLoading] = useState(true);
+  const navigate = useNavigate();
 
-    useEffect(() => {
-        fetchSavedSellers();
-    }, [sortBy]);
+  useEffect(() => {
+    fetchSavedSellers();
+  }, []);
 
-    const fetchSavedSellers = async () => {
-        try {
-            const response = await axios.get("/api/saved-sellers", {
-                params: { sortBy },
-            });
-            if (response.data.success) {
-                setSavedSellers(response.data.data);
-            }
-        } catch (error) {
-            console.error("Error fetching saved sellers:", error);
-            toast.error("Unable to load saved sellers");
-        } finally {
-            setLoading(false);
-        }
-    };
-
-    const handleRemoveSeller = async (sellerId: string) => {
-        try {
-            const response = await axios.delete(`/api/saved-sellers/${sellerId}`);
-            if (response.data.success) {
-                setSavedSellers((prev) => prev.filter((s) => s._id !== sellerId));
-                toast.success("Seller removed from saved list");
-            }
-        } catch (error) {
-            console.error("Error removing saved seller:", error);
-            toast.error("Unable to remove saved seller");
-        }
-    };
-
-    const handleViewSeller = (sellerId: string) => {
-        // Navigate to products filtered by this seller
-        navigate(`/products?seller=${sellerId}`);
-    };
-
-    if (loading) {
-        return (
-            <div className="container mx-auto px-4 py-8">
-                <div className="animate-pulse space-y-4">
-                    <div className="h-8 bg-gray-200 rounded w-1/4"></div>
-                    <div className="h-32 bg-gray-200 rounded"></div>
-                    <div className="h-32 bg-gray-200 rounded"></div>
-                </div>
-            </div>
-        );
+  const fetchSavedSellers = async () => {
+    try {
+      const response = await axios.get("/api/saved-sellers");
+      if (response.data.success) {
+        setSavedSellers(response.data.data);
+      }
+    } catch {
+      toast.error("Unable to load saved sellers");
+    } finally {
+      setLoading(false);
     }
+  };
 
+  const handleRemoveSeller = async (sellerId: string) => {
+    try {
+      const response = await axios.delete(`/api/saved-sellers/${sellerId}`);
+      if (response.data.success) {
+        setSavedSellers((prev) => prev.filter((s) => s._id !== sellerId));
+        toast.success("Seller removed from saved list");
+      }
+    } catch {
+      toast.error("Unable to remove saved seller");
+    }
+  };
+
+  if (loading) {
     return (
-        <div className="container mx-auto px-4 py-8">
-            <div className="max-w-4xl mx-auto">
-                <div className="flex items-center justify-between mb-6">
-                    <h1 className="text-3xl font-bold">Saved Sellers</h1>
-
-                    {savedSellers.length > 0 && (
-                        <Select value={sortBy} onValueChange={setSortBy}>
-                            <SelectTrigger className="w-[200px]">
-                                <SelectValue placeholder="Sort by" />
-                            </SelectTrigger>
-                            <SelectContent>
-                                <SelectItem value="newest">Newest Follow</SelectItem>
-                                <SelectItem value="rating">Highest Rating</SelectItem>
-                                <SelectItem value="products">Most Products</SelectItem>
-                            </SelectContent>
-                        </Select>
-                    )}
-                </div>
-
-                {savedSellers.length === 0 ? (
-                    <Card className="p-12 text-center">
-                        <Store className="w-16 h-16 mx-auto mb-4 text-gray-400" />
-                        <h3 className="text-xl font-semibold mb-2">No saved sellers yet</h3>
-                        <p className="text-gray-600 mb-4">
-                            Save your favorite sellers to quickly find their items
-                        </p>
-                        <Button onClick={() => navigate("/products")}>
-                            Browse Products
-                        </Button>
-                    </Card>
-                ) : (
-                    <div className="space-y-4">
-                        {savedSellers.map((seller) => (
-                            <Card key={seller._id} className="p-6">
-                                <div className="flex items-center justify-between">
-                                    <div className="flex items-center gap-4 flex-1">
-                                        <Avatar className="w-16 h-16">
-                                            <AvatarImage
-                                                src={seller.avatarUrl || "/default-avatar.png"}
-                                                alt={seller.username}
-                                            />
-                                            <AvatarFallback>
-                                                {seller.username.substring(0, 2).toUpperCase()}
-                                            </AvatarFallback>
-                                        </Avatar>
-
-                                        <div className="flex-1">
-                                            <div className="flex items-center gap-2 mb-1">
-                                                <h3 className="text-lg font-semibold">
-                                                    {seller.username}
-                                                </h3>
-                                                <Badge variant="secondary" className="flex items-center gap-1">
-                                                    <Package className="w-3 h-3" />
-                                                    {seller.productCount} products
-                                                </Badge>
-                                            </div>
-                                            <p className="text-gray-600 text-sm mb-2">
-                                                {seller.email}
-                                            </p>
-                                            <div className="flex items-center gap-2">
-                                                <span className="text-sm text-gray-500">
-                                                    Reputation:
-                                                </span>
-                                                <Badge
-                                                    variant={
-                                                        seller.reputationScore >= 80
-                                                            ? "default"
-                                                            : seller.reputationScore >= 50
-                                                                ? "secondary"
-                                                                : "outline"
-                                                    }
-                                                >
-                                                    {seller.reputationScore}
-                                                </Badge>
-                                            </div>
-                                        </div>
-                                    </div>
-
-                                    <div className="flex gap-2 ml-4">
-                                        <Button
-                                            variant="outline"
-                                            size="sm"
-                                            onClick={() => handleViewSeller(seller._id)}
-                                        >
-                                            <ExternalLink className="w-4 h-4 mr-2" />
-                                            View Shop
-                                        </Button>
-                                        <Button
-                                            variant="ghost"
-                                            size="sm"
-                                            onClick={() => handleRemoveSeller(seller._id)}
-                                        >
-                                            <Trash2 className="w-4 h-4 text-red-500" />
-                                        </Button>
-                                    </div>
-                                </div>
-                            </Card>
-                        ))}
-                    </div>
-                )}
+      <div className="space-y-3">
+        {[1, 2, 3].map((i) => (
+          <div key={i} className="bg-white rounded-xl border shadow-sm p-4 animate-pulse">
+            <div className="flex items-center gap-4">
+              <div className="h-12 w-12 rounded-full bg-muted" />
+              <div className="flex-1 space-y-2">
+                <div className="h-4 bg-muted rounded w-1/3" />
+                <div className="h-3 bg-muted rounded w-1/2" />
+              </div>
             </div>
-        </div>
+          </div>
+        ))}
+      </div>
     );
-}
+  }
 
+  if (savedSellers.length === 0) {
+    return (
+      <div className="bg-white rounded-xl border shadow-sm p-16 text-center">
+        <div className="w-16 h-16 rounded-full bg-muted flex items-center justify-center mx-auto mb-4">
+          <Store className="w-8 h-8 text-muted-foreground" />
+        </div>
+        <h3 className="text-lg font-semibold mb-1">No saved sellers yet</h3>
+        <p className="text-muted-foreground text-sm mb-4">
+          Follow your favorite sellers to quickly find their products
+        </p>
+        <Button onClick={() => navigate("/products")}>Browse Products</Button>
+      </div>
+    );
+  }
+
+  return (
+    <div>
+      <div className="flex items-center justify-between mb-4">
+        <h2 className="text-lg font-semibold">
+          Saved Sellers
+          <span className="ml-2 text-sm font-normal text-muted-foreground">
+            ({savedSellers.length})
+          </span>
+        </h2>
+      </div>
+
+      <div className="space-y-3">
+        {savedSellers.map((seller) => (
+          <div
+            key={seller._id}
+            className="bg-white rounded-xl border shadow-sm p-4 flex items-center gap-4 hover:shadow-md hover:border-primary/20 transition-all"
+          >
+            {/* Avatar */}
+            <Avatar className="h-12 w-12 shrink-0">
+              <AvatarImage src={seller.avatarUrl} alt={seller.username} />
+              <AvatarFallback className="bg-primary/10 text-primary font-semibold">
+                {seller.username.substring(0, 2).toUpperCase()}
+              </AvatarFallback>
+            </Avatar>
+
+            {/* Info */}
+            <div className="flex-1 min-w-0">
+              <h3 className="font-semibold text-sm truncate">{seller.username}</h3>
+              <p className="text-xs text-muted-foreground truncate">{seller.email}</p>
+              <div className="flex items-center gap-2 mt-1">
+                <span className="text-xs text-muted-foreground">Reputation:</span>
+                <span className={`text-xs font-semibold ${
+                  seller.reputationScore >= 80 ? "text-emerald-600" :
+                  seller.reputationScore >= 50 ? "text-amber-600" : "text-red-500"
+                }`}>
+                  {seller.reputationScore}
+                </span>
+              </div>
+            </div>
+
+            {/* Actions */}
+            <div className="flex items-center gap-2 shrink-0">
+              <Button
+                size="sm"
+                variant="outline"
+                onClick={() => navigate(`/seller/${seller._id}`)}
+              >
+                <ExternalLink className="h-3.5 w-3.5 mr-1.5" />
+                View Shop
+              </Button>
+              <Button
+                size="sm"
+                variant="ghost"
+                className="text-muted-foreground hover:text-destructive hover:bg-destructive/10"
+                onClick={() => handleRemoveSeller(seller._id)}
+              >
+                <Trash2 className="h-3.5 w-3.5" />
+              </Button>
+            </div>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}

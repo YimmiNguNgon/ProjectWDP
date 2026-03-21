@@ -73,10 +73,8 @@ import ShipperAvailableOrders from "@/pages/shipper/AvailableOrders";
 import ShipperMyOrders from "@/pages/shipper/MyOrders";
 import ShipperDisputes from "@/pages/shipper/Disputes";
 import AdminShipperManagement from "@/pages/admin/shippers/shipper-management";
-import AdminDeliveryReports from "@/pages/admin/shippers/delivery-reports";
 import AdminOrders from "@/pages/admin/orders/orders";
 import AdminRefunds from "@/pages/admin/orders/refunds";
-import AdminReportManagement from "@/pages/admin/reports/report-management";
 import BuyerReportPage from "@/pages/buyer/reports/submit-report";
 import RecentlyViewedPage from "@/pages/buyer/recently-viewed-page";
 import CreateComplaintPage from "@/pages/buyer/orders/CreateComplaint";
@@ -303,16 +301,8 @@ export const AppRouter = () => {
           element: <AdminRefunds />,
         },
         {
-          path: "reports",
-          element: <AdminReportManagement />,
-        },
-        {
           path: "shippers",
           element: <AdminShipperManagement />,
-        },
-        {
-          path: "delivery-reports",
-          element: <AdminDeliveryReports />,
         },
         {
           path: "revenue",

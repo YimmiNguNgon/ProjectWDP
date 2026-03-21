@@ -5,6 +5,9 @@ const sellerController = require('../controller/sellerController');
 // GET /api/seller/:sellerId/products - Lấy danh sách sản phẩm
 router.get('/:sellerId/products', sellerController.getSellerProducts);
 
+// GET /api/seller/:sellerId/products/stats - Lấy thống kê sản phẩm (phải đặt TRƯỚC /:productId)
+router.get('/:sellerId/products/stats', sellerController.getSellerProductStats);
+
 // GET /api/seller/:sellerId/products/:productId - Lấy chi tiết 1 sản phẩm
 router.get('/:sellerId/products/:productId', sellerController.getSellerProductDetail);
 

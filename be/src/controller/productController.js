@@ -1,5 +1,7 @@
 const Category = require("../models/Category");
 const Product = require("../models/Product");
+const Order = require("../models/Order");
+const User = require("../models/User");
 const mongoose = require("mongoose");
 const {
   normalizeVariantCombinations,
@@ -187,6 +189,62 @@ exports.listProducts = async (req, res, next) => {
       total,
       data: products.map((product) => decorateProductPricing(product)),
     });
+  } catch (err) {
+    next(err);
+  }
+};
+
+// Top N best-selling products (by completed order item quantity)
+exports.getTopSellingProducts = async (req, res, next) => {
+  try {
+    const limit = Math.min(parseInt(req.query.limit) || 3, 20);
+
+    const topItems = await Order.aggregate([
+      { $match: { status: "completed" } },
+      { $unwind: "$items" },
+      {
+        $group: {
+          _id: "$items.productId",
+          totalSold: { $sum: "$items.quantity" },
+        },
+      },
+      { $sort: { totalSold: -1 } },
+      { $limit: limit },
+    ]);
+
+    const productIds = topItems.map((t) => t._id);
+    const products = await Product.find({ _id: { $in: productIds }, listingStatus: "active" })
+      .populate("sellerId", "username sellerInfo.shopName avatarUrl")
+      .populate("categoryId", "name slug")
+      .lean();
+
+    const soldMap = {};
+    for (const t of topItems) soldMap[t._id.toString()] = t.totalSold;
+
+    const sorted = productIds
+      .map((id) => products.find((p) => p._id.toString() === id.toString()))
+      .filter(Boolean)
+      .map((p) => ({ ...decorateProductPricing(p), totalSold: soldMap[p._id.toString()] || 0 }));
+
+    return res.json({ data: sorted });
+  } catch (err) {
+    next(err);
+  }
+};
+
+// Top N sellers (by completed orders count)
+exports.getTopSellers = async (req, res, next) => {
+  try {
+    const limit = Math.min(parseInt(req.query.limit) || 6, 20);
+
+    const sellers = await User.find({ role: "seller", status: "active" })
+      .select("username avatarUrl sellerInfo")
+      .lean();
+
+    // Sort by successOrders desc
+    sellers.sort((a, b) => (b.sellerInfo?.successOrders || 0) - (a.sellerInfo?.successOrders || 0));
+
+    return res.json({ data: sellers.slice(0, limit) });
   } catch (err) {
     next(err);
   }

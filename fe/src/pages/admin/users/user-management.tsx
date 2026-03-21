@@ -49,6 +49,9 @@ export default function UserManagement() {
     const [roleFilter, setRoleFilter] = useState('all');
     const [statusFilter, setStatusFilter] = useState('all');
 
+    const handleRoleFilterChange = (value: string) => { setPage(1); setRoleFilter(value); };
+    const handleStatusFilterChange = (value: string) => { setPage(1); setStatusFilter(value); };
+
     // Ban dialog state
     const [banDialogOpen, setBanDialogOpen] = useState(false);
     const [selectedUser, setSelectedUser] = useState<User | null>(null);
@@ -226,7 +229,7 @@ export default function UserManagement() {
                         onKeyPress={(e) => e.key === 'Enter' && handleSearch()}
                     />
                 </div>
-                <Select value={roleFilter} onValueChange={setRoleFilter}>
+                <Select value={roleFilter} onValueChange={handleRoleFilterChange}>
                     <SelectTrigger className="w-[180px]">
                         <SelectValue placeholder="Filter by role" />
                     </SelectTrigger>
@@ -237,7 +240,7 @@ export default function UserManagement() {
                         <SelectItem value="admin">Admin</SelectItem>
                     </SelectContent>
                 </Select>
-                <Select value={statusFilter} onValueChange={setStatusFilter}>
+                <Select value={statusFilter} onValueChange={handleStatusFilterChange}>
                     <SelectTrigger className="w-[180px]">
                         <SelectValue placeholder="Filter by status" />
                     </SelectTrigger>
@@ -245,7 +248,6 @@ export default function UserManagement() {
                         <SelectItem value="all">All statuses</SelectItem>
                         <SelectItem value="active">Active</SelectItem>
                         <SelectItem value="banned">Banned</SelectItem>
-                        <SelectItem value="suspended">Suspended</SelectItem>
                     </SelectContent>
                 </Select>
 

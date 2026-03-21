@@ -1,5 +1,5 @@
 import { Badge } from '@/components/ui/badge';
-import { Package, Tag, Clock } from 'lucide-react';
+import { Tag, Clock } from 'lucide-react';
 import { useEffect, useState } from 'react';
 
 export interface ProductVariantCombination {
@@ -29,12 +29,6 @@ export function PromotionBadges({ product }: { product: ProductProps }) {
 
     return (
         <div className="absolute top-2 left-2 flex flex-col gap-1">
-            {product.promotionType === 'outlet' && (
-                <Badge className="bg-orange-600 text-white shadow-lg">
-                    <Package className="w-3 h-3 mr-1" />
-                    Brand Outlet
-                </Badge>
-            )}
             {product.promotionType === 'daily_deal' && (
                 <Badge className="bg-gradient-to-r from-rose-600 to-red-500 text-white shadow-lg border-0">
                     <Tag className="w-3 h-3 mr-1" />

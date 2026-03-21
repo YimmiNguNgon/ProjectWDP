@@ -2,8 +2,10 @@ import { Messages } from "@/components/chat/messages";
 import ConversationList from "@/components/chat/conversation-list";
 import { Card } from "@/components/ui/card";
 import { MessageContext, type Conversation, type Message } from "@/hooks/use-message";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import type { ProductDetail } from "@/pages/product-detail";
+import { useSearchParams } from "react-router-dom";
+import { useAuth } from "@/hooks/use-auth";
 
 export default function MessagesPage() {
     const [participants, setParticipantsState] = useState<string[]>([]);
@@ -11,10 +13,20 @@ export default function MessagesPage() {
     const [messages, setMessages] = useState<Message[] | undefined>();
     const [productRef, setProductRef] = useState<string | undefined>();
     const [product, setProduct] = useState<ProductDetail | undefined>();
+    const [searchParams] = useSearchParams();
+    const { payload } = useAuth();
 
     const setParticipants = (newParticipants: string[]) => {
         setParticipantsState(newParticipants);
     };
+
+    // Auto-open conversation when sellerId is in URL params
+    useEffect(() => {
+        const sellerId = searchParams.get("sellerId");
+        if (sellerId && payload?.userId && sellerId !== payload.userId) {
+            setParticipantsState([payload.userId, sellerId]);
+        }
+    }, [searchParams, payload?.userId]);
 
     return (
         <MessageContext.Provider

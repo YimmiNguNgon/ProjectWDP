@@ -18,6 +18,7 @@ interface Shipper {
   createdAt: string;
   totalAccepted: number;
   delivered: number;
+  completed: number;
   inTransit: number;
 }
 
@@ -112,13 +113,14 @@ export default function AdminShipperManagement() {
                   <th className="text-left px-4 py-3 font-medium text-gray-600">Availability</th>
                   <th className="text-right px-4 py-3 font-medium text-gray-600">Total Accepted</th>
                   <th className="text-right px-4 py-3 font-medium text-gray-600">Delivered</th>
+                  <th className="text-right px-4 py-3 font-medium text-gray-600">Completed</th>
                   <th className="text-right px-4 py-3 font-medium text-gray-600">In Transit</th>
                 </tr>
               </thead>
               <tbody>
                 {shippers.length === 0 ? (
                   <tr>
-                    <td colSpan={7} className="text-center py-8 text-gray-500">
+                    <td colSpan={8} className="text-center py-8 text-gray-500">
                       No shippers found
                     </td>
                   </tr>
@@ -143,6 +145,7 @@ export default function AdminShipperManagement() {
                       </td>
                       <td className="px-4 py-3 text-right">{s.totalAccepted}</td>
                       <td className="px-4 py-3 text-right text-green-600">{s.delivered}</td>
+                      <td className="px-4 py-3 text-right text-blue-600">{s.completed}</td>
                       <td className="px-4 py-3 text-right text-purple-600">{s.inTransit}</td>
                     </tr>
                   ))
@@ -164,6 +167,7 @@ export default function AdminShipperManagement() {
                 <SelectItem value="all">All Status</SelectItem>
                 <SelectItem value="shipping">Shipping</SelectItem>
                 <SelectItem value="delivered">Delivered</SelectItem>
+                <SelectItem value="completed">Completed</SelectItem>
               </SelectContent>
             </Select>
 
@@ -201,7 +205,7 @@ export default function AdminShipperManagement() {
                 <tbody>
                   {orders.length === 0 ? (
                     <tr>
-                      <td colSpan={7} className="text-center py-8 text-gray-500">
+                      <td colSpan={8} className="text-center py-8 text-gray-500">
                         No orders found
                       </td>
                     </tr>

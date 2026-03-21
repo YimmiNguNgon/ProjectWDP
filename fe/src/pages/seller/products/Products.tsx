@@ -21,7 +21,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog';
-import { Plus, Package, Layers, Eye, Flame, Clock3, Percent } from 'lucide-react';
+import { Plus, Package, Layers, Eye, Flame, Clock3, Percent, Star } from 'lucide-react';
 import { toast } from 'sonner';
 import {
   getMyListings,
@@ -246,7 +246,7 @@ export default function SellerProducts() {
       quantity: product.quantity ?? 0,
       condition: product.condition || 'new',
       categoryId: typeof product.categoryId === 'object' ? product.categoryId?._id ?? '' : product.categoryId ?? '',
-      images: product.images ?? [],
+      images: product.images?.length ? product.images : (product.image ? [product.image] : []),
       variants: product.variants ?? [],
       variantCombinations: product.variantCombinations ?? [],
     });
@@ -334,6 +334,7 @@ export default function SellerProducts() {
         quantity: formData.quantity,
         condition: formData.condition,
         categoryId: formData.categoryId || undefined,
+        image: formData.images[0] ?? "",
         images: formData.images,
         variants: formData.variants,
         variantCombinations: formData.variantCombinations,
@@ -421,6 +422,7 @@ export default function SellerProducts() {
               <TableHead>Price</TableHead>
               <TableHead>Sale</TableHead>
               <TableHead>Stock</TableHead>
+              <TableHead>Rating</TableHead>
               <TableHead>Variants</TableHead>
               <TableHead>Status</TableHead>
               <TableHead>Created Date</TableHead>
@@ -430,11 +432,11 @@ export default function SellerProducts() {
           <TableBody>
             {loading ? (
               <TableRow>
-                <TableCell colSpan={10} className="text-center py-8">Loading...</TableCell>
+                <TableCell colSpan={11} className="text-center py-8">Loading...</TableCell>
               </TableRow>
             ) : products.length === 0 ? (
               <TableRow>
-                <TableCell colSpan={10} className="text-center py-12">
+                <TableCell colSpan={11} className="text-center py-12">
                   <Package className="h-10 w-10 text-gray-400 mx-auto mb-3" />
                   <p className="text-gray-500">No products found</p>
                   <Link to="/seller/products/new">
@@ -520,6 +522,13 @@ export default function SellerProducts() {
                     {saleInfo.state === 'none' && <span className="text-xs text-gray-400">-</span>}
                   </TableCell>
                   <TableCell>{product.quantity ?? 0}</TableCell>
+                  <TableCell>
+                    <div className="flex items-center gap-1 text-sm">
+                      <Star className="h-3.5 w-3.5 fill-yellow-400 text-yellow-400" />
+                      <span className="font-medium">{(product.averageRating ?? 0).toFixed(1)}</span>
+                      <span className="text-gray-400 text-xs">({product.ratingCount ?? 0})</span>
+                    </div>
+                  </TableCell>
                   <TableCell>
                     {product.variants && product.variants.length > 0 ? (
                       <Badge variant="outline" className="flex items-center gap-1 w-fit">
@@ -665,6 +674,14 @@ export default function SellerProducts() {
                 <div>
                   <span className="text-gray-500">Created Date:</span>
                   <span className="ml-2">{new Date(viewingProduct.createdAt).toLocaleDateString('vi-VN')}</span>
+                </div>
+                <div>
+                  <span className="text-gray-500">Rating:</span>
+                  <span className="ml-2 inline-flex items-center gap-1">
+                    <Star className="h-3.5 w-3.5 fill-yellow-400 text-yellow-400" />
+                    <span className="font-semibold">{(viewingProduct.averageRating ?? 0).toFixed(1)}</span>
+                    <span className="text-gray-400 text-xs">({viewingProduct.ratingCount ?? 0} reviews)</span>
+                  </span>
                 </div>
               </div>
 

@@ -425,13 +425,11 @@ export default function ProductManagement() {
                                     </TableCell>
                                     <TableCell>
                                         {product.sellerTrustScore != null ? (
-                                            <div className="flex items-center gap-2">
-                                                <span className={`font-semibold ${Number(product.sellerTrustScore) < 4 ? 'text-red-600' : 'text-amber-600'}`}>
+                                            <div className="flex items-center gap-1">
+                                                <span className={`font-semibold ${Number(product.sellerTrustScore) < 2.5 ? 'text-red-600' : Number(product.sellerTrustScore) < 4 ? 'text-amber-600' : 'text-green-600'}`}>
                                                     {Number(product.sellerTrustScore).toFixed(2)}
                                                 </span>
-                                                {product.sellerTrustTier && (
-                                                    <Badge variant="outline">{product.sellerTrustTier}</Badge>
-                                                )}
+                                                <span className="text-gray-400 text-xs">/5</span>
                                             </div>
                                         ) : (
                                             <span className="text-gray-400 text-sm">—</span>

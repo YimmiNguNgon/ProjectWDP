@@ -137,7 +137,7 @@ class SellerController {
       const { sellerId } = req.params;
 
       const stats = await Product.aggregate([
-        { $match: { sellerId: mongoose.Types.ObjectId(sellerId) } },
+        { $match: { sellerId: new mongoose.Types.ObjectId(sellerId) } },
         { $group: {
           _id: null,
           totalProducts: { $sum: 1 },
@@ -172,6 +172,39 @@ class SellerController {
       });
     }
   }
+  /**
+   * Lấy thống kê sản phẩm của seller
+   * @route GET /api/seller/:sellerId/products/stats
+   */
+  async getSellerProductStats(req, res) {
+    try {
+      const { sellerId } = req.params;
+      const sellerObjId = new mongoose.Types.ObjectId(sellerId);
+
+      const stats = await Product.aggregate([
+        { $match: { sellerId: sellerObjId, listingStatus: { $ne: 'deleted' } } },
+        {
+          $group: {
+            _id: null,
+            totalProducts: { $sum: 1 },
+            activeProducts: {
+              $sum: { $cond: [{ $eq: ['$listingStatus', 'active'] }, 1, 0] },
+            },
+            averageRating: { $avg: '$averageRating' },
+          },
+        },
+      ]);
+
+      res.json({
+        success: true,
+        data: stats[0] || { totalProducts: 0, activeProducts: 0, averageRating: 0 },
+      });
+    } catch (error) {
+      console.error('Error in getSellerProductStats:', error);
+      res.status(500).json({ success: false, message: error.message });
+    }
+  }
+
   /**
    * Lấy public profile của seller (description, shopName)
    * @route GET /api/seller/:sellerId/profile

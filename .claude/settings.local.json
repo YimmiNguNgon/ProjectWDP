@@ -26,7 +26,20 @@
       "Bash(cd \"C:\\\\Users\\\\Administrator\\\\Documents\\\\WDP\\\\be\" && node -e \"\nrequire\\('dotenv'\\).config\\({path:'.env'}\\);\nconst mongoose=require\\('mongoose'\\);\nmongoose.connect\\(process.env.MONGO_URI\\).then\\(async\\(\\)=>{\n  const User=require\\('./src/models/User'\\);\n  const users=await User.find\\({email:{'\\\\$in':['seedadmin@wdp.com','techstore@wdp.com','sportzone@wdp.com','buyer1@wdp.com','shipper1@wdp.com']}}\\).select\\('email username role status isEmailVerified passwordHash'\\).lean\\(\\);\n  for\\(const u of users\\){\n    console.log\\(u.email,'|',u.role,'|',u.status,'|',u.isEmailVerified,'| hasPassword:',!!u.passwordHash\\);\n  }\n  process.exit\\(0\\);\n}\\)\" 2>&1)",
       "Bash(cd \"C:\\\\Users\\\\Administrator\\\\Documents\\\\WDP\\\\be\" && node -e \"require\\('dotenv'\\).config\\({path:'.env'}\\);const mongoose=require\\('mongoose'\\);mongoose.connect\\(process.env.MONGO_URI\\).then\\(async\\(\\)=>{const User=require\\('./src/models/User'\\);const emails=['seedadmin@wdp.com','techstore@wdp.com','buyer1@wdp.com'];for\\(const email of emails\\){const u=await User.findOne\\({email}\\).select\\('email role status isEmailVerified passwordHash'\\).lean\\(\\);if\\(u\\)console.log\\(u.email,'|',u.role,'|',u.status,'|verified:',u.isEmailVerified,'|hasPass:',!!u.passwordHash\\);else console.log\\(email,'NOT FOUND'\\);}process.exit\\(0\\);}\\)\" 2>&1)",
       "Bash(cd \"C:\\\\Users\\\\Administrator\\\\Documents\\\\WDP\\\\be\" && node src/check-users.js 2>&1)",
-      "Bash(cd \"C:\\\\Users\\\\Administrator\\\\Documents\\\\WDP\\\\be\" && node src/reset-seed-passwords.js 2>&1)"
+      "Bash(cd \"C:\\\\Users\\\\Administrator\\\\Documents\\\\WDP\\\\be\" && node src/reset-seed-passwords.js 2>&1)",
+      "Bash(cd \"C:\\\\Users\\\\Administrator\\\\Documents\\\\WDP\\\\fe\" && npm install embla-carousel-autoplay --save 2>&1 | tail -5)",
+      "Bash(cd /c/Users/Administrator/Documents/WDP/be && node src/reset-seed-passwords.js)",
+      "Bash(find \"C:\\\\Users\\\\Administrator\\\\Documents\\\\WDP\\\\fe\\\\src\\\\pages\\\\buyer\" -type f \\\\\\( -name \"*recently*\" -o -name \"*purchase*\" -o -name \"*watchlist*\" -o -name \"*complaints*\" -o -name \"*saved*\" -o -name \"*feedback*\" \\\\\\) 2>/dev/null | sort)",
+      "Bash(git checkout:*)",
+      "Bash(find C:/Users/Administrator/Documents/WDP/be -name \"*.js\" -not -path \"*/node_modules/*\" | xargs grep -l \"products.json\\\\|seed-data\" 2>/dev/null)",
+      "Bash(cd \"C:/Users/Administrator/Documents/WDP/Ebay_admina/seed-data\" && node -e \"\nconst fs = require\\('fs'\\);\nconst data = JSON.parse\\(fs.readFileSync\\('products.json','utf8'\\)\\);\ndata.forEach\\(p => delete p.soldCount\\);\nfs.writeFileSync\\('products.json', JSON.stringify\\(data, null, 2\\)\\);\nconsole.log\\('Done, removed soldCount from', data.length, 'products'\\);\n\")",
+      "Bash(cd \"C:/Users/Administrator/Documents/WDP/be\" && node -e \"const mongoose = require\\('mongoose'\\); console.log\\(mongoose.version\\)\")",
+      "Bash(grep -r \"mongoimport\\\\|mongoexport\\\\|mongodump\\\\|mongorestore\" \"C:/Users/Administrator/Documents/WDP/be\" --include=\"*.js\" --include=\"*.json\" 2>/dev/null | head -20)",
+      "Bash(find \"C:/Users/Administrator/Documents/WDP/be/src\" -name \"*.js\" -path \"*/models/*\" -o -name \"*Schema.js\" -o -name \"*Model.js\" 2>/dev/null | grep -v node_modules | head -50)",
+      "Bash(find \"C:/Users/Administrator/Documents/WDP/be/src\" -type f -name \"*.js\" | xargs grep -l \"mongoose.Schema\" | grep -v models | head -20)",
+      "Bash(cd C:/Users/Administrator/Documents/WDP/be && node src/scripts/seed.js 2>&1)",
+      "Bash(cd C:/Users/Administrator/Documents/WDP/be && node -e \"\nconst mongoose = require\\('mongoose'\\);\nrequire\\('dotenv'\\).config\\(\\);\nmongoose.connect\\(process.env.MONGO_URI\\).then\\(async \\(\\) => {\n  const reviews = await mongoose.connection.db.collection\\('reviews'\\).find\\({}\\).toArray\\(\\);\n  console.log\\('Reviews count:', reviews.length\\);\n  reviews.forEach\\(r => console.log\\('  product:', r.product, 'rating:', r.rating\\)\\);\n  await mongoose.disconnect\\(\\);\n}\\);\n\" 2>&1)",
+      "Bash(node src/scripts/seed.js 2>&1)"
     ]
   }
 }

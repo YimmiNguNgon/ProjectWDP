@@ -18,7 +18,6 @@ import { RecentlyViewedDropdown } from "@/components/recently-viewed-dropdown";
 const LEFT_NAV_ITEMS = [
   { name: "Browse Products", to: "/products" },
   { name: "Sale Time", to: "/products?saleOnly=true" },
-  { name: "Brand Outlet", to: "/products" },
   { name: "Gift Cards", to: "/gift-cards" },
   { name: "Help & Contact", to: "/help-contact" },
 ] as const;
@@ -99,7 +98,7 @@ export function MainLayout() {
             <Link to={"/"} className="flex">
               <img
                 src="/ebay-logo-txt.png"
-                alt="ebay logo"
+                alt="efpt logo"
                 className="h-12 w-auto"
               />
             </Link>

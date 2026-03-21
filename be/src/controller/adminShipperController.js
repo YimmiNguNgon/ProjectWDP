@@ -22,6 +22,9 @@ exports.getAllShippers = async (req, res, next) => {
           delivered: {
             $sum: { $cond: [{ $eq: ["$status", "delivered"] }, 1, 0] },
           },
+          completed: {
+            $sum: { $cond: [{ $eq: ["$status", "completed"] }, 1, 0] },
+          },
           inTransit: {
             $sum: { $cond: [{ $eq: ["$status", "shipping"] }, 1, 0] },
           },
@@ -35,12 +38,13 @@ exports.getAllShippers = async (req, res, next) => {
     }
 
     const result = shippers.map((s) => {
-      const st = statsMap[s._id.toString()] || { totalAccepted: 0, delivered: 0, inTransit: 0 };
+      const st = statsMap[s._id.toString()] || { totalAccepted: 0, delivered: 0, completed: 0, inTransit: 0 };
       return {
         ...s,
         isAvailable: s.shipperInfo?.isAvailable ?? true,
         totalAccepted: st.totalAccepted,
         delivered: st.delivered,
+        completed: st.completed,
         inTransit: st.inTransit,
       };
     });

@@ -111,42 +111,45 @@ exports.getAllProducts = async (req, res, next) => {
             .limit(limit)
             .lean();
 
-        // Get reviews and calculate ratings for all products
-        const productIds = products.map((p) => p._id);
-        const Reviews = mongoose.connection.db.collection("reviews");
-        const reviews = await Reviews.find({
-            productId: { $in: productIds },
-            rating: { $exists: true, $ne: null } // Only reviews with rating
-        }).toArray();
+        // Load trust scores for all unique sellers in this page
+        const sellerIds = [...new Set(
+            products.map((p) => String(p.sellerId?._id ?? p.sellerId)).filter(Boolean)
+        )];
+        const trustScores = await SellerTrustScore.find({
+            seller: { $in: sellerIds },
+        }).select("seller finalScore tier").lean();
 
-        // Calculate rating stats for each product
-        const ratingMap = {};
-        reviews.forEach(review => {
-            const productId = review.productId.toString();
-            if (!ratingMap[productId]) {
-                ratingMap[productId] = { total: 0, count: 0 };
-            }
-            ratingMap[productId].total += review.rating;
-            ratingMap[productId].count += 1;
-        });
+        // Merge both maps: low-score map (for pending review tab) and full map
+        const trustScoreMap = new Map(
+            trustScores.map((ts) => [
+                String(ts.seller),
+                { finalScore: Number(ts.finalScore || 0), tier: ts.tier || "TRUSTED" },
+            ])
+        );
+        if (lowScoreSellerScoreMap) {
+            lowScoreSellerScoreMap.forEach((v, k) => {
+                if (!trustScoreMap.has(k)) trustScoreMap.set(k, v);
+            });
+        }
 
-        // Normalize products with inventory and rating data
+        // Normalize products — use stored averageRating/ratingCount from product model
         const normalizedProducts = products.map(product => {
-            const productId = product._id.toString();
-            const ratingStats = ratingMap[productId];
-            const averageRating = ratingStats ? ratingStats.total / ratingStats.count : 0;
-            const ratingCount = ratingStats ? ratingStats.count : 0;
-            const trustScore = lowScoreSellerScoreMap?.get(String(product.sellerId?._id));
+            const sellerId = String(product.sellerId?._id ?? product.sellerId);
+            const trustScore = trustScoreMap.get(sellerId);
+            // finalScore is already 0-5 scale (from sellerTrustService)
+            const normalizedScore = trustScore
+                ? parseFloat(Math.min(trustScore.finalScore, 5).toFixed(2))
+                : null;
 
             return {
                 ...product,
                 quantity: resolveProductQuantity(product),
-                averageRating: averageRating,
-                ratingCount: ratingCount,
+                averageRating: Number(product.averageRating || 0),
+                ratingCount: Number(product.ratingCount || 0),
                 status: product.status || "available",
                 condition: product.condition || "",
                 images: product.images || (product.image ? [product.image] : []),
-                sellerTrustScore: trustScore?.finalScore ?? null,
+                sellerTrustScore: normalizedScore,
                 sellerTrustTier: trustScore?.tier ?? null,
             };
         });

@@ -1,4 +1,3 @@
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import React from "react";
 import { Outlet, useLocation } from "react-router-dom";
 import { useNavigate } from "react-router-dom";
@@ -61,24 +60,12 @@ export default function MyEbayLayout() {
   return (
     <div className="flex flex-col gap-4">
       <h1 className="text-3xl font-bold">My EFPT</h1>
-      <Tabs value={value} onValueChange={handleTabChange}>
-        <TabsList className="w-full justify-start border-b p-0 h-auto bg-transparent">
-          <TabsTrigger
-            value="activity"
-            className="border text-md border-b-2 cursor-pointer border-transparent data-[state=active]:text-black data-[state=active]:border-primary data-[state=active]:bg-transparent px-4 py-2"
-          >
-            Buying
-          </TabsTrigger>
-        </TabsList>
-        <TabsContent value="activity" className="m-0">
-          <div className="flex gap-8 mt-6">
-            <BuyingSidebar />
-            <main className="flex-1">
-              <Outlet />
-            </main>
-          </div>
-        </TabsContent>
-      </Tabs>
+      <div className="flex gap-8 mt-2">
+        <BuyingSidebar />
+        <main className="flex-1">
+          <Outlet />
+        </main>
+      </div>
     </div>
   );
 }

@@ -283,30 +283,84 @@ router.get("/shipper-orders", adminShipperController.getShipperOrders);
 router.get("/orders", async (req, res, next) => {
   try {
     const Order = require("../models/Order");
+    const mongoose = require("mongoose");
     const page = Math.max(1, parseInt(req.query.page) || 1);
     const limit = Math.min(50, parseInt(req.query.limit) || 20);
     const skip = (page - 1) * limit;
 
-    const filter = {};
-    if (req.query.status) filter.status = req.query.status;
-    if (req.query.search) {
-      const mongoose = require("mongoose");
-      if (mongoose.isValidObjectId(req.query.search)) {
-        filter._id = req.query.search;
-      }
+    const matchStage = {};
+    if (req.query.status) matchStage.status = req.query.status;
+    if (req.query.search && mongoose.isValidObjectId(req.query.search)) {
+      matchStage._id = new mongoose.Types.ObjectId(req.query.search);
     }
 
-    const [orders, total] = await Promise.all([
-      Order.find(filter)
-        .populate("buyer", "username email")
-        .populate("seller", "username email")
-        .populate("shipper", "username email")
-        .sort({ createdAt: -1 })
-        .skip(skip)
-        .limit(limit)
-        .lean(),
-      Order.countDocuments(filter),
+    // Use aggregate + $lookup to safely join users even if buyer/seller stored as string (invalid ObjectId)
+    const userLookup = (localField, asField) => [
+      {
+        $lookup: {
+          from: "users",
+          let: { uid: { $ifNull: [`$${localField}`, null] } },
+          pipeline: [
+            {
+              $match: {
+                $expr: {
+                  $and: [
+                    { $eq: [{ $type: "$$uid" }, "objectId"] },
+                    { $eq: ["$_id", "$$uid"] },
+                  ],
+                },
+              },
+            },
+            { $project: { username: 1, email: 1 } },
+          ],
+          as: asField,
+        },
+      },
+      {
+        $addFields: {
+          [localField]: { $arrayElemAt: [`$${asField}`, 0] },
+        },
+      },
+      { $project: { [asField]: 0 } },
+    ];
+
+    const [result] = await Order.aggregate([
+      { $match: matchStage },
+      { $sort: { createdAt: -1 } },
+      {
+        $facet: {
+          orders: [
+            { $skip: skip },
+            { $limit: limit },
+            ...userLookup("buyer", "_buyerArr"),
+            ...userLookup("seller", "_sellerArr"),
+            ...userLookup("shipper", "_shipperArr"),
+            {
+              $lookup: {
+                from: "complaints",
+                localField: "_id",
+                foreignField: "order",
+                pipeline: [{ $project: { reason: 1, content: 1, status: 1, createdAt: 1 } }],
+                as: "complaints",
+              },
+            },
+            {
+              $lookup: {
+                from: "deliverydisputes",
+                localField: "_id",
+                foreignField: "order",
+                pipeline: [{ $project: { status: 1, buyerNote: 1, shipperNote: 1, adminNote: 1, createdAt: 1 } }],
+                as: "deliveryDisputes",
+              },
+            },
+          ],
+          total: [{ $count: "count" }],
+        },
+      },
     ]);
+
+    const orders = result.orders || [];
+    const total = result.total?.[0]?.count || 0;
 
     res.json({ orders, total, page, pages: Math.ceil(total / limit) });
   } catch (err) {

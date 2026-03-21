@@ -8,11 +8,12 @@ import { getMyOrders, markDelivered, type ShipperOrder } from "@/api/shipper";
 const STATUS_CONFIG: Record<string, { label: string; className: string }> = {
   shipping: { label: "In Transit", className: "text-purple-700 border-purple-300 bg-purple-50" },
   delivered: { label: "Delivered", className: "text-green-700 border-green-300 bg-green-50" },
+  completed: { label: "Completed", className: "text-blue-700 border-blue-300 bg-blue-50" },
   return_shipping: { label: "Returning to Seller", className: "text-orange-700 border-orange-300 bg-orange-50" },
   delivered_to_seller: { label: "Returned to Seller", className: "text-emerald-700 border-emerald-300 bg-emerald-50" },
 };
 
-type StatusFilter = "all" | "shipping" | "delivered";
+type StatusFilter = "all" | "shipping" | "delivered" | "completed";
 
 export default function ShipperMyOrders() {
   const [orders, setOrders] = useState<ShipperOrder[]>([]);
@@ -67,6 +68,7 @@ export default function ShipperMyOrders() {
     { label: "All", value: "all" },
     { label: "In Transit", value: "shipping" },
     { label: "Delivered", value: "delivered" },
+    { label: "Completed", value: "completed" },
   ];
 
   return (

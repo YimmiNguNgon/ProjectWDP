@@ -24,6 +24,8 @@ interface AdminOrder {
   shipper: { _id: string; username: string; email: string } | null;
   items: { title: string; quantity: number; unitPrice: number }[];
   shippingAddress?: { fullName?: string; city?: string; district?: string };
+  complaints: { reason: string; content: string; status: string; createdAt: string }[];
+  deliveryDisputes: { status: string; buyerNote: string; shipperNote: string; adminNote: string; createdAt: string }[];
 }
 
 const STATUS_COLORS: Record<string, string> = {
@@ -32,7 +34,7 @@ const STATUS_COLORS: Record<string, string> = {
   ready_to_ship: "bg-blue-100 text-blue-700",
   pending_acceptance: "bg-orange-100 text-orange-700",
   shipping: "bg-indigo-100 text-indigo-700",
-  delivered: "bg-orange-100 text-orange-700",
+  delivered: "bg-green-100 text-green-700",
   completed: "bg-green-100 text-green-700",
   cancelled: "bg-red-100 text-red-700",
   returned: "bg-purple-100 text-purple-700",
@@ -161,7 +163,7 @@ export default function AdminOrders() {
                       #{order._id.slice(-8).toUpperCase()}
                     </span>
                     <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${statusColor}`}>
-                      {STATUS_LABELS[order.status] ?? order.status.replace(/_/g, " ").toUpperCase()}
+                      {STATUS_LABELS[order.status] ?? order.status?.replace(/_/g, " ").toUpperCase() ?? "—"}
                     </span>
                     <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${
                       order.paymentStatus === "paid"
@@ -244,6 +246,55 @@ export default function AdminOrders() {
                       <span>Total: <b>${order.totalAmount?.toFixed(2)}</b></span>
                       <span>Ordered: <b>{new Date(order.createdAt).toLocaleString()}</b></span>
                     </div>
+
+                    {/* Complaints */}
+                    {order.complaints?.length > 0 && (
+                      <div>
+                        <p className="text-xs text-gray-400 mb-2 font-semibold uppercase tracking-wide">Buyer Complaints ({order.complaints.length})</p>
+                        <div className="space-y-1">
+                          {order.complaints.map((c, i) => (
+                            <div key={i} className="bg-red-50 border border-red-100 rounded-lg p-3 text-sm">
+                              <div className="flex items-center justify-between mb-1">
+                                <span className="font-medium text-red-700 capitalize">{c.reason}</span>
+                                <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${
+                                  c.status === "RESOLVED" ? "bg-green-100 text-green-700" :
+                                  c.status === "CLOSED" ? "bg-gray-100 text-gray-600" :
+                                  c.status === "SENT_TO_ADMIN" ? "bg-orange-100 text-orange-700" :
+                                  "bg-yellow-100 text-yellow-700"
+                                }`}>{c.status}</span>
+                              </div>
+                              <p className="text-gray-600 text-xs line-clamp-2">{c.content}</p>
+                              <p className="text-xs text-gray-400 mt-1">{new Date(c.createdAt).toLocaleString()}</p>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Delivery Disputes */}
+                    {order.deliveryDisputes?.length > 0 && (
+                      <div>
+                        <p className="text-xs text-gray-400 mb-2 font-semibold uppercase tracking-wide">Delivery Disputes ({order.deliveryDisputes.length})</p>
+                        <div className="space-y-1">
+                          {order.deliveryDisputes.map((d, i) => (
+                            <div key={i} className="bg-orange-50 border border-orange-100 rounded-lg p-3 text-sm">
+                              <div className="flex items-center justify-between mb-1">
+                                <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${
+                                  d.status === "CONFIRMED" ? "bg-green-100 text-green-700" :
+                                  d.status === "REPORTED_TO_ADMIN" ? "bg-red-100 text-red-700" :
+                                  d.status === "SHIPPER_RESPONDED" ? "bg-blue-100 text-blue-700" :
+                                  "bg-yellow-100 text-yellow-700"
+                                }`}>{d.status.replace(/_/g, " ")}</span>
+                                <p className="text-xs text-gray-400">{new Date(d.createdAt).toLocaleString()}</p>
+                              </div>
+                              {d.buyerNote && <p className="text-xs text-gray-600"><b>Buyer:</b> {d.buyerNote}</p>}
+                              {d.shipperNote && <p className="text-xs text-gray-600"><b>Shipper:</b> {d.shipperNote}</p>}
+                              {d.adminNote && <p className="text-xs text-gray-600"><b>Admin:</b> {d.adminNote}</p>}
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    )}
                   </div>
                 )}
               </div>

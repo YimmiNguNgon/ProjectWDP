@@ -8,6 +8,8 @@ const Product = require("../models/Product");
 
 // Public routes (đặt trước các route có params để tránh conflict)
 router.get("/", ctrl.listProducts);
+router.get("/top-selling", ctrl.getTopSellingProducts);
+router.get("/top-sellers", ctrl.getTopSellers);
 
 // Seller-specific routes (đặt trước /:productId)
 router.get("/seller/my-listings", protectedRoute, sellerCtrl.getMyListings);

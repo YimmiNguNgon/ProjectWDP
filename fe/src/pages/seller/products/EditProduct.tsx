@@ -115,7 +115,13 @@ export default function EditProduct() {
                     condition: p.condition ?? 'new',
                     categoryId: p.categoryId?._id ?? p.categoryId ?? '',
                 });
-                setExistingImages(p.images ?? []);
+                // images[] is the authoritative list (includes all images, main is index 0)
+                // Fallback: if images[] empty but image exists, use it
+                if (p.images?.length > 0) {
+                    setExistingImages(p.images);
+                } else if (p.image) {
+                    setExistingImages([p.image]);
+                }
                 setVariants(p.variants ?? []);
                 setVariantCombinations(p.variantCombinations ?? []);
             })
@@ -291,6 +297,7 @@ export default function EditProduct() {
                 quantity: parseInt(formData.quantity) || 0,
                 condition: formData.condition,
                 categoryId: formData.categoryId || undefined,
+                image: allImages[0] ?? "",
                 images: allImages,
                 variants,
                 variantCombinations,
