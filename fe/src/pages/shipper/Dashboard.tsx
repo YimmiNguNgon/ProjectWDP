@@ -6,11 +6,13 @@ import {
   Package,
   Clock,
   ArrowRight,
+  PlayCircle,
 } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import {
   getShipperStats,
+  resumeShipper,
   type ShipperStats,
 } from "@/api/shipper";
 
@@ -20,15 +22,33 @@ export default function ShipperDashboard() {
     inTransit: 0,
     totalAccepted: 0,
     isAvailable: true,
+    shipperStatus: "available",
   });
   const [loading, setLoading] = useState(true);
+  const [resuming, setResuming] = useState(false);
 
-  useEffect(() => {
+  const fetchStats = () => {
     getShipperStats()
       .then((res) => setStats(res.data))
       .catch(() => {})
       .finally(() => setLoading(false));
+  };
+
+  useEffect(() => {
+    fetchStats();
   }, []);
+
+  const handleResume = async () => {
+    setResuming(true);
+    try {
+      await resumeShipper();
+      await fetchStats();
+    } catch {
+      // ignore
+    } finally {
+      setResuming(false);
+    }
+  };
 
   return (
     <div className="p-6 max-w-5xl mx-auto">
@@ -37,6 +57,26 @@ export default function ShipperDashboard() {
         <h1 className="text-2xl font-bold text-gray-900">Shipper Dashboard</h1>
         <p className="text-gray-500 text-sm mt-1">Manage your deliveries</p>
       </div>
+
+      {/* Paused Banner */}
+      {!loading && stats.shipperStatus === "paused" && (
+        <div className="mb-6 flex items-center justify-between bg-red-50 border border-red-200 rounded-lg px-5 py-4">
+          <div>
+            <p className="font-semibold text-red-700">Your account is paused</p>
+            <p className="text-sm text-red-500 mt-0.5">
+              You did not respond to an order assignment in time. Click "Ready to Ship" when you are ready to receive orders again.
+            </p>
+          </div>
+          <Button
+            onClick={handleResume}
+            disabled={resuming}
+            className="ml-4 shrink-0 bg-red-600 hover:bg-red-700 text-white"
+          >
+            <PlayCircle className="h-4 w-4 mr-1.5" />
+            {resuming ? "Resuming..." : "Ready to Ship"}
+          </Button>
+        </div>
+      )}
 
       {/* Stats Cards */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-5 mb-8">

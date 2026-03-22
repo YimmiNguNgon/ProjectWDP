@@ -2,9 +2,10 @@ import { Link, Outlet, useLocation } from "react-router-dom";
 import { LayoutDashboard, Package, Truck, Home, AlertTriangle } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useAuth } from "@/hooks/use-auth";
-import { useContext } from "react";
+import { useContext, useEffect, useState } from "react";
 import { SocketContext } from "@/hooks/use-socket";
 import NotificationBell from "@/components/notification-bell";
+import { getShipperStats } from "@/api/shipper";
 
 const navigation = [
   { name: "Dashboard", href: "/shipper", icon: LayoutDashboard },
@@ -13,10 +14,23 @@ const navigation = [
   { name: "Delivery Disputes", href: "/shipper/disputes", icon: AlertTriangle },
 ];
 
+const STATUS_CONFIG = {
+  available: { label: "Available", className: "bg-green-100 text-green-700" },
+  shipping: { label: "Shipping", className: "bg-blue-100 text-blue-700" },
+  paused: { label: "Paused", className: "bg-red-100 text-red-700" },
+} as const;
+
 export default function ShipperLayout() {
   const location = useLocation();
   const { user } = useAuth();
   const socketCtx = useContext(SocketContext);
+  const [shipperStatus, setShipperStatus] = useState<"available" | "shipping" | "paused">("available");
+
+  useEffect(() => {
+    getShipperStats()
+      .then((res) => setShipperStatus(res.data.shipperStatus ?? "available"))
+      .catch(() => {});
+  }, [location.pathname]);
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -32,6 +46,9 @@ export default function ShipperLayout() {
                 <p className="text-sm text-gray-600">
                   {user?.username || user?.email?.split("@")[0]}
                 </p>
+                <span className={`inline-block mt-1 text-xs px-2 py-0.5 rounded-full font-medium ${STATUS_CONFIG[shipperStatus].className}`}>
+                  {STATUS_CONFIG[shipperStatus].label}
+                </span>
               </div>
               <NotificationBell socket={socketCtx?.socket ?? undefined} />
             </div>

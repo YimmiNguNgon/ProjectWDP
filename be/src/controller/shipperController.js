@@ -156,6 +156,12 @@ exports.acceptOrder = async (req, res, next) => {
       return res.status(409).json({ message: "Order no longer available" });
     }
 
+    // Đánh dấu shipper đang shipping
+    await User.findByIdAndUpdate(req.user._id, {
+      "shipperInfo.shipperStatus": "shipping",
+      "shipperInfo.isAvailable": false,
+    }).catch(() => {});
+
     // Populate items to get product names
     await order.populate("items.productId", "title");
     const productNames = (order.items || [])
@@ -288,8 +294,24 @@ exports.markDelivered = async (req, res, next) => {
     });
     await order.save();
 
-    // After delivery, dispatch the next queued order (fire-and-forget)
-    setImmediate(() => dispatchNextFromQueue(req.user._id).catch(() => { }));
+    // Kiểm tra còn đơn active không; nếu không thì set available
+    setImmediate(async () => {
+      try {
+        const activeCount = await Order.countDocuments({
+          $or: [
+            { shipper: req.user._id, status: { $in: ["shipping", "pending_acceptance"] } },
+            { returnShipper: req.user._id, status: "return_shipping" },
+          ],
+        });
+        if (activeCount === 0) {
+          await User.findByIdAndUpdate(req.user._id, {
+            "shipperInfo.shipperStatus": "available",
+            "shipperInfo.isAvailable": true,
+          });
+        }
+        await dispatchNextFromQueue(req.user._id);
+      } catch (e) { /* ignore */ }
+    });
 
     // Populate items to get product names
     await order.populate("items.productId", "title");
@@ -397,6 +419,7 @@ exports.getShipperStats = async (req, res, next) => {
       .lean();
     const maxOrders = shipperDoc?.shipperInfo?.maxOrders ?? 3;
     const isAvailable = shipperDoc?.shipperInfo?.isAvailable ?? true;
+    const shipperStatus = shipperDoc?.shipperInfo?.shipperStatus ?? "available";
 
     res.json({
       delivered,
@@ -405,6 +428,7 @@ exports.getShipperStats = async (req, res, next) => {
       queuedOrders: queued,
       maxOrders,
       isAvailable,
+      shipperStatus,
     });
   } catch (err) {
     next(err);
@@ -421,8 +445,31 @@ exports.toggleAvailability = async (req, res, next) => {
     res.json({
       ok: true,
       isAvailable: shipper.shipperInfo.isAvailable,
+      shipperStatus: shipper.shipperInfo.shipperStatus,
       maxOrders: shipper.shipperInfo.maxOrders,
     });
+  } catch (err) {
+    next(err);
+  }
+};
+
+exports.resumeShipper = async (req, res, next) => {
+  try {
+    const shipperDoc = await User.findById(req.user._id).select("shipperInfo");
+    if (!shipperDoc) return res.status(404).json({ message: "Shipper not found" });
+
+    if (shipperDoc.shipperInfo?.shipperStatus !== "paused") {
+      return res.status(400).json({ message: "Shipper is not in paused state" });
+    }
+
+    shipperDoc.shipperInfo.shipperStatus = "available";
+    shipperDoc.shipperInfo.isAvailable = true;
+    await shipperDoc.save();
+
+    // Trigger dispatch từ queue nếu có đơn chờ
+    setImmediate(() => dispatchNextFromQueue(req.user._id).catch(() => {}));
+
+    res.json({ ok: true, shipperStatus: "available" });
   } catch (err) {
     next(err);
   }

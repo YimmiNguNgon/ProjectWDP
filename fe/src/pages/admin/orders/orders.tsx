@@ -32,6 +32,7 @@ const STATUS_COLORS: Record<string, string> = {
   created: "bg-gray-100 text-gray-700",
   packaging: "bg-yellow-100 text-yellow-700",
   ready_to_ship: "bg-blue-100 text-blue-700",
+  queued: "bg-orange-100 text-orange-700",
   pending_acceptance: "bg-orange-100 text-orange-700",
   shipping: "bg-indigo-100 text-indigo-700",
   delivered: "bg-green-100 text-green-700",
@@ -44,7 +45,8 @@ const STATUS_COLORS: Record<string, string> = {
 const STATUS_LABELS: Record<string, string> = {
   created: "Created",
   packaging: "Packaging",
-  ready_to_ship: "Waiting",
+  ready_to_ship: "Ready to Ship",
+  queued: "Waiting",
   pending_acceptance: "Waiting Shipper",
   shipping: "Shipping",
   delivered: "Delivered",
@@ -55,7 +57,7 @@ const STATUS_LABELS: Record<string, string> = {
 };
 
 const ALL_STATUSES = [
-  "created", "packaging", "ready_to_ship", "pending_acceptance",
+  "created", "packaging", "ready_to_ship", "queued", "pending_acceptance",
   "shipping", "delivered", "completed", "cancelled", "returned", "failed",
 ];
 
@@ -180,6 +182,9 @@ export default function AdminOrders() {
                     </span>
                     <span className="text-xs text-gray-500">
                       Buyer: <b>{order.buyer?.username || "—"}</b>
+                    </span>
+                    <span className="text-xs text-gray-500">
+                      Shipper: <b>{order.shipper?.username || <span className="text-gray-400 italic font-normal">Not assigned</span>}</b>
                     </span>
                     {isExpanded
                       ? <ChevronUp className="h-4 w-4 text-gray-400" />

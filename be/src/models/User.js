@@ -101,7 +101,12 @@ const userSchema = new mongoose.Schema(
     // Chỉ có giá trị khi role === "shipper"
     shipperInfo: {
       maxOrders: { type: Number, default: 3 },     // Giới hạn đơn đồng thời
-      isAvailable: { type: Boolean, default: true }, // Shipper có sẵn sàng nhận đơn không
+      isAvailable: { type: Boolean, default: true }, // Legacy field (kept for compat)
+      shipperStatus: {
+        type: String,
+        enum: ["available", "shipping", "paused"],
+        default: "available",
+      },
     },
   },
   { timestamps: true },

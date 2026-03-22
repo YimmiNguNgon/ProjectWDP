@@ -110,7 +110,6 @@ export default function AdminShipperManagement() {
                   <th className="text-left px-4 py-3 font-medium text-gray-600">Username</th>
                   <th className="text-left px-4 py-3 font-medium text-gray-600">Email</th>
                   <th className="text-left px-4 py-3 font-medium text-gray-600">Account Status</th>
-                  <th className="text-left px-4 py-3 font-medium text-gray-600">Availability</th>
                   <th className="text-right px-4 py-3 font-medium text-gray-600">Total Accepted</th>
                   <th className="text-right px-4 py-3 font-medium text-gray-600">Delivered</th>
                   <th className="text-right px-4 py-3 font-medium text-gray-600">Completed</th>
@@ -120,7 +119,7 @@ export default function AdminShipperManagement() {
               <tbody>
                 {shippers.length === 0 ? (
                   <tr>
-                    <td colSpan={8} className="text-center py-8 text-gray-500">
+                    <td colSpan={7} className="text-center py-8 text-gray-500">
                       No shippers found
                     </td>
                   </tr>
@@ -132,15 +131,6 @@ export default function AdminShipperManagement() {
                       <td className="px-4 py-3">
                         <span className={`px-2 py-1 rounded-full text-xs font-medium ${statusBadge(s.status)}`}>
                           {s.status}
-                        </span>
-                      </td>
-                      <td className="px-4 py-3">
-                        <span className={`px-2 py-1 rounded-full text-xs font-medium ${
-                          s.isAvailable
-                            ? "bg-green-100 text-green-700"
-                            : "bg-orange-100 text-orange-700"
-                        }`}>
-                          {s.isAvailable ? "Available" : "Delivering"}
                         </span>
                       </td>
                       <td className="px-4 py-3 text-right">{s.totalAccepted}</td>

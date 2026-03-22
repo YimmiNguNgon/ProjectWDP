@@ -319,6 +319,7 @@ export default function OrderDetailsPage() {
     failed: 0,
     packaging: 1,
     ready_to_ship: 2,
+    queued: 2,
     pending_acceptance: 2,
     shipping: 3,
     delivered: 4,
@@ -327,6 +328,24 @@ export default function OrderDetailsPage() {
     return_shipping: 5,
     delivered_to_seller: 5,
     returned: 5,
+  };
+
+  const STATUS_DISPLAY_LABELS: Record<string, string> = {
+    created: "CREATED",
+    packaging: "PACKAGING",
+    ready_to_ship: "READY TO SHIP",
+    queued: "WAITING",
+    pending_acceptance: "FINDING SHIPPER",
+    shipping: "SHIPPING",
+    delivered: "DELIVERED",
+    completed: "COMPLETED",
+    cancelled: "CANCELLED",
+    returned: "RETURNED",
+    failed: "FAILED",
+    cancel_requested: "CANCEL REQUESTED",
+    waiting_return_shipment: "WAITING RETURN",
+    return_shipping: "RETURN SHIPPING",
+    delivered_to_seller: "RETURNED TO SELLER",
   };
 
   const getStepState = (stepKey: StepKey, currentStatus: string): "done" | "active" | "pending" => {
@@ -430,6 +449,14 @@ export default function OrderDetailsPage() {
                     Seller: {subOrder.seller?.username}
                   </p>
                   <p className="text-xs text-muted-foreground">
+                    Shipper:{" "}
+                    {subOrder.shipper ? (
+                      <span className="font-medium text-foreground">{subOrder.shipper.username}</span>
+                    ) : (
+                      <span className="italic">Not assigned yet</span>
+                    )}
+                  </p>
+                  <p className="text-xs text-muted-foreground">
                     Order ID: {subOrder._id}
                   </p>
                 </div>
@@ -456,31 +483,32 @@ export default function OrderDetailsPage() {
                   </div>
                   <div
                     className={`px-4 py-1.5 rounded-full text-sm font-bold border ${
-                      STATUS_RANK[subOrder.status.toLowerCase()] === undefined
-                        ? "text-gray-700 bg-gray-50 border-gray-200"
-                        : STATUS_RANK[subOrder.status.toLowerCase()] >= 3
-                          ? "text-green-700 bg-green-50 border-green-200"
-                          : STATUS_RANK[subOrder.status.toLowerCase()] >= 2
-                            ? "text-blue-700 bg-blue-50 border-blue-200"
-                            : STATUS_RANK[subOrder.status.toLowerCase()] >= 1
-                              ? "text-cyan-700 bg-cyan-50 border-cyan-200"
-                              : subOrder.status.toLowerCase() === "cancelled" ||
-                                  subOrder.status.toLowerCase() === "failed"
-                                ? "text-red-700 bg-red-50 border-red-200"
-                                : subOrder.status.toLowerCase() ===
-                                    "cancel_requested"
-                                  ? "text-amber-700 bg-amber-50 border-amber-200"
-                                  : [
-                                        "waiting_return_shipment",
-                                        "return_shipping",
-                                        "delivered_to_seller",
-                                        "returned",
-                                      ].includes(subOrder.status.toLowerCase())
-                                    ? "text-orange-700 bg-orange-50 border-orange-200"
-                                    : "text-blue-700 bg-blue-50 border-blue-200"
+                      subOrder.status.toLowerCase() === "cancelled" ||
+                      subOrder.status.toLowerCase() === "failed"
+                        ? "text-red-700 bg-red-50 border-red-200"
+                        : subOrder.status.toLowerCase() === "cancel_requested"
+                          ? "text-amber-700 bg-amber-50 border-amber-200"
+                          : subOrder.status.toLowerCase() === "queued"
+                            ? "text-orange-700 bg-orange-50 border-orange-200"
+                            : [
+                                  "waiting_return_shipment",
+                                  "return_shipping",
+                                  "delivered_to_seller",
+                                  "returned",
+                                ].includes(subOrder.status.toLowerCase())
+                              ? "text-orange-700 bg-orange-50 border-orange-200"
+                              : STATUS_RANK[subOrder.status.toLowerCase()] === undefined
+                                ? "text-gray-700 bg-gray-50 border-gray-200"
+                                : STATUS_RANK[subOrder.status.toLowerCase()] >= 3
+                                  ? "text-green-700 bg-green-50 border-green-200"
+                                  : STATUS_RANK[subOrder.status.toLowerCase()] >= 2
+                                    ? "text-blue-700 bg-blue-50 border-blue-200"
+                                    : STATUS_RANK[subOrder.status.toLowerCase()] >= 1
+                                      ? "text-cyan-700 bg-cyan-50 border-cyan-200"
+                                      : "text-blue-700 bg-blue-50 border-blue-200"
                     }`}
                   >
-                    {subOrder.status.toUpperCase().replace(/_/g, " ")}
+                    {STATUS_DISPLAY_LABELS[subOrder.status.toLowerCase()] ?? subOrder.status.toUpperCase().replace(/_/g, " ")}
                   </div>
                 </div>
               </div>
@@ -625,14 +653,15 @@ export default function OrderDetailsPage() {
                               : "bg-red-50/50 border-red-100 text-red-800"
                         }`}
                       >
-                        <strong>
-                          {resolutionType === "approve"
-                            ? "Approve Note:"
-                            : resolutionType === "reject"
-                              ? "Reject Note:"
-                              : "Cancellation reason:"}
-                        </strong>{" "}
-                        "{resolutionNote}"
+                        {resolutionType === "approve" ? (
+                          <><strong>Approve Note:</strong> "{resolutionNote}"</>
+                        ) : resolutionType === "reject" ? (
+                          <><strong>Reject Note:</strong> "{resolutionNote}"</>
+                        ) : resolutionNote.startsWith("Auto-cancelled:") ? (
+                          <><strong>System:</strong> {resolutionNote}</>
+                        ) : (
+                          <><strong>Buyer cancelled</strong> — Reason: "{resolutionNote}"</>
+                        )}
                       </div>
                     )}
                   </>
@@ -1047,16 +1076,15 @@ export default function OrderDetailsPage() {
               {/* ─── Post-completion actions ─── */}
               {subOrder.status === "completed" && (
                 <div className="mt-4 flex gap-3 flex-wrap">
-                  {subOrder.items.map((item) => (
+                  {subOrder.items[0]?.productId?._id && (
                     <Link
-                      key={item.productId?._id}
-                      to={`/purchases/${subOrder._id}/feedback/${item.productId?._id}`}
+                      to={`/purchases/${subOrder._id}/feedback/${subOrder.items[0].productId._id}`}
                       className="inline-flex items-center gap-1.5 text-sm text-blue-600 hover:underline"
                     >
                       <Star className="h-3.5 w-3.5" />
                       Leave a review
                     </Link>
-                  ))}
+                  )}
                   <Link
                     to={`/purchases/${subOrder._id}/return`}
                     className="inline-flex items-center gap-1.5 text-sm text-orange-600 hover:underline"

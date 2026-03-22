@@ -751,25 +751,28 @@ export default function CheckoutPage() {
             </h2>
             <RadioGroup value={paymentMethod} onValueChange={setPaymentMethod}>
               <div className="grid gap-3 mb-4">
-                {[
-                  { id: "cod", label: "Cash on Delivery (COD)" },
-                  { id: "bank", label: "Bank Transfer" },
-                ].map((method) => (
                   <Label
-                    key={method.id}
                     className={cn(
                       "flex items-center gap-3 p-4 rounded-lg border-2 cursor-pointer transition-all",
-                      paymentMethod === method.id
+                      paymentMethod === "cod"
                         ? "border-primary bg-primary/5"
                         : "border-border hover:border-muted-foreground/30",
                     )}
                   >
-                    <RadioGroupItem value={method.id} />
-                    <span className="font-semibold text-sm">
-                      {method.label}
-                    </span>
+                    <RadioGroupItem value="cod" />
+                    <span className="font-semibold text-sm">Cash on Delivery (COD)</span>
                   </Label>
-                ))}
+                  <Label
+                    className={cn(
+                      "flex items-center gap-3 p-4 rounded-lg border-2 cursor-not-allowed transition-all opacity-50",
+                      "border-border",
+                    )}
+                    onClick={(e) => e.preventDefault()}
+                  >
+                    <RadioGroupItem value="bank" disabled />
+                    <span className="font-semibold text-sm">Bank Transfer</span>
+                    <span className="ml-auto text-xs font-medium text-muted-foreground bg-muted px-2 py-0.5 rounded-full">Coming Soon</span>
+                  </Label>
               </div>
             </RadioGroup>
           </section>

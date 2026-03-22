@@ -39,7 +39,13 @@
       "Bash(find \"C:/Users/Administrator/Documents/WDP/be/src\" -type f -name \"*.js\" | xargs grep -l \"mongoose.Schema\" | grep -v models | head -20)",
       "Bash(cd C:/Users/Administrator/Documents/WDP/be && node src/scripts/seed.js 2>&1)",
       "Bash(cd C:/Users/Administrator/Documents/WDP/be && node -e \"\nconst mongoose = require\\('mongoose'\\);\nrequire\\('dotenv'\\).config\\(\\);\nmongoose.connect\\(process.env.MONGO_URI\\).then\\(async \\(\\) => {\n  const reviews = await mongoose.connection.db.collection\\('reviews'\\).find\\({}\\).toArray\\(\\);\n  console.log\\('Reviews count:', reviews.length\\);\n  reviews.forEach\\(r => console.log\\('  product:', r.product, 'rating:', r.rating\\)\\);\n  await mongoose.disconnect\\(\\);\n}\\);\n\" 2>&1)",
-      "Bash(node src/scripts/seed.js 2>&1)"
+      "Bash(node src/scripts/seed.js 2>&1)",
+      "Bash(grep -l \"router\\\\.\" /c/Users/Administrator/Documents/WDP/be/src/routes/*.js | xargs -I {} basename {} | head -20)",
+      "Bash(cd \"C:\\\\Users\\\\Administrator\\\\Documents\\\\WDP\\\\be\" && node src/scripts/seed.js 2>&1 | tail -30)",
+      "Bash(cd \"C:\\\\Users\\\\Administrator\\\\Documents\\\\WDP\\\\fe\" && npm run build 2>&1 | tail -30)",
+      "Bash(cd \"C:\\\\Users\\\\Administrator\\\\Documents\\\\WDP\\\\fe\" && npm run build 2>&1 | grep -E \"shipper|shipper\\\\.tsx|Dashboard\\\\.tsx|api/shipper\")",
+      "Bash(cd \"C:\\\\Users\\\\Administrator\\\\Documents\\\\WDP\\\\be\" && node -e \"\nconst mongoose = require\\('mongoose'\\);\nrequire\\('dotenv'\\).config\\(\\);\nmongoose.connect\\(process.env.MONGODB_URI\\).then\\(async \\(\\) => {\n  const User = require\\('./src/models/User'\\);\n  const result = await User.updateMany\\(\n    { role: 'shipper', status: 'active' },\n    { 'shipperInfo.shipperStatus': 'available', 'shipperInfo.isAvailable': true }\n  \\);\n  console.log\\('Updated', result.modifiedCount, 'shippers to available'\\);\n  process.exit\\(0\\);\n}\\).catch\\(e => { console.error\\(e\\); process.exit\\(1\\); }\\);\n\")",
+      "Bash(cd \"C:\\\\Users\\\\Administrator\\\\Documents\\\\WDP\\\\be\" && node -e \"\nconst mongoose = require\\('mongoose'\\);\nmongoose.connect\\('mongodb://127.0.0.1:27017/ebay'\\).then\\(async \\(\\) => {\n  const User = require\\('./src/models/User'\\);\n  const result = await User.updateMany\\(\n    { role: 'shipper', status: 'active' },\n    { 'shipperInfo.shipperStatus': 'available', 'shipperInfo.isAvailable': true }\n  \\);\n  console.log\\('Updated', result.modifiedCount, 'shippers to available'\\);\n  process.exit\\(0\\);\n}\\).catch\\(e => { console.error\\(e.message\\); process.exit\\(1\\); }\\);\n\")"
     ]
   }
 }

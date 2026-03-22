@@ -14,8 +14,8 @@ async function findBestShipper(excludeShipperId = null) {
     const query = {
         role: "shipper",
         status: "active",
-        // Dùng $ne: false để vẫn match shipper cũ chưa có field isAvailable trong DB
-        "shipperInfo.isAvailable": { $ne: false },
+        "shipperInfo.shipperStatus": "available",
+        "shipperInfo.isAvailable": true,
     };
 
     // Loại trừ shipper cũ đã bị timeout để tránh gán lại ngay cho họ
@@ -89,6 +89,12 @@ async function autoAssignOrder(order, excludeShipperId = null) {
 
         if (!updated) return; // Đơn đã bị nhận bởi thao tác khác, bỏ qua
 
+        // Cập nhật trạng thái shipper sang shipping
+        await User.findByIdAndUpdate(shipper._id, {
+            "shipperInfo.shipperStatus": "shipping",
+            "shipperInfo.isAvailable": false,
+        }).catch(() => {});
+
         // Thông báo shipper được assign - yêu cầu chấp nhận
         notificationService
             .sendNotification({
@@ -130,7 +136,7 @@ async function dispatchNextFromQueue(shipperId) {
         .lean();
 
     if (!shipper || shipper.status !== "active") return;
-    if (shipper.shipperInfo?.isAvailable === false) return;
+    if (shipper.shipperInfo?.shipperStatus !== "available") return;
 
     const max = shipper.shipperInfo?.maxOrders ?? DEFAULT_MAX_ORDERS;
     const activeCount = await Order.countDocuments({
@@ -163,6 +169,12 @@ async function dispatchNextFromQueue(shipperId) {
 
     if (!nextOrder) return; // Queue trống
 
+    // Cập nhật trạng thái shipper sang shipping
+    await User.findByIdAndUpdate(shipperId, {
+        "shipperInfo.shipperStatus": "shipping",
+        "shipperInfo.isAvailable": false,
+    }).catch(() => {});
+
     // Thông báo shipper - yêu cầu chấp nhận
     notificationService
         .sendNotification({
@@ -183,9 +195,13 @@ async function dispatchNextFromQueue(shipperId) {
  * @param {boolean} isAvailable
  */
 async function toggleShipperAvailability(shipperId, isAvailable) {
+    const updateFields = isAvailable
+        ? { "shipperInfo.shipperStatus": "available", "shipperInfo.isAvailable": true }
+        : { "shipperInfo.shipperStatus": "paused", "shipperInfo.isAvailable": false };
+
     const shipper = await User.findByIdAndUpdate(
         shipperId,
-        { "shipperInfo.isAvailable": isAvailable },
+        updateFields,
         { new: true },
     ).select("_id username shipperInfo status");
 

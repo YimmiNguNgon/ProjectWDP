@@ -43,6 +43,38 @@ async function hashPassword(plain) {
   return bcrypt.hash(plain, 10);
 }
 
+/**
+ * Generate variantCombinations (Cartesian product) từ variants array.
+ * Quantity mỗi combo = option đầu tiên / số combo cùng option đó.
+ * 1D: quantity = option.quantity
+ * 2D (e.g. Size × Color): quantity = size.quantity / colorCount
+ */
+function buildCombinations(variants) {
+  if (!variants || !variants.length) return [];
+  let combos = [[]];
+  for (const variant of variants) {
+    const next = [];
+    for (const combo of combos) {
+      for (const opt of variant.options) {
+        next.push([...combo, { name: variant.name, value: opt.value, price: opt.price, qty: opt.quantity }]);
+      }
+    }
+    combos = next;
+  }
+  const firstVariantOptCount = variants[0].options.length;
+  const ratio = combos.length / firstVariantOptCount; // = product of other variant option counts
+  return combos.map((selections) => {
+    const sorted = [...selections].sort((a, b) => a.name.localeCompare(b.name));
+    return {
+      key: sorted.map((s) => `${s.name}:${s.value}`).join("|"),
+      selections: sorted.map((s) => ({ name: s.name, value: s.value })),
+      quantity: Math.round(selections[0].qty / ratio),
+      price: selections[0].price,
+      sku: "",
+    };
+  });
+}
+
 async function dropCollections(db) {
   const collections = [
     "users", "categories", "products", "orders", "ordergroups",
@@ -192,7 +224,7 @@ async function seed() {
     isEmailVerified: true,
     status: "active",
     avatarUrl: "https://api.dicebear.com/7.x/avataaars/svg?seed=shipper1",
-    shipperInfo: { maxOrders: 5, isAvailable: true },
+    shipperInfo: { maxOrders: 5, isAvailable: true, shipperStatus: "available" },
   });
   const shipper2 = await User.create({
     username: "shipper_jake",
@@ -202,7 +234,7 @@ async function seed() {
     isEmailVerified: true,
     status: "active",
     avatarUrl: "https://api.dicebear.com/7.x/avataaars/svg?seed=shipper2",
-    shipperInfo: { maxOrders: 3, isAvailable: true },
+    shipperInfo: { maxOrders: 3, isAvailable: true, shipperStatus: "available" },
   });
 
   console.log("  Created 10 users");
@@ -243,6 +275,7 @@ async function seed() {
       image: "https://images.unsplash.com/photo-1505740420928-5e560c06d30e?w=600",
       images: ["https://images.unsplash.com/photo-1505740420928-5e560c06d30e?w=600"],
       variants: [{ name: "Color", options: [{ value: "Black", price: 79.99, quantity: 24 }, { value: "White", price: 79.99, quantity: 20 }] }],
+      variantCombinations: buildCombinations([{ name: "Color", options: [{ value: "Black", price: 79.99, quantity: 24 }, { value: "White", price: 79.99, quantity: 20 }] }]),
     },
     {
       sellerId: techSeller._id,
@@ -264,6 +297,7 @@ async function seed() {
       image: "https://images.unsplash.com/photo-1527814050087-3793815479db?w=600",
       images: ["https://images.unsplash.com/photo-1527814050087-3793815479db?w=600"],
       variants: [{ name: "Color", options: [{ value: "Black", price: 42.99, quantity: 40 }, { value: "Red", price: 42.99, quantity: 20 }] }],
+      variantCombinations: buildCombinations([{ name: "Color", options: [{ value: "Black", price: 42.99, quantity: 40 }, { value: "Red", price: 42.99, quantity: 20 }] }]),
     },
     {
       sellerId: techSeller._id,
@@ -325,6 +359,7 @@ async function seed() {
       image: "https://images.unsplash.com/photo-1575311373937-040b8e1fd5b6?w=600",
       images: ["https://images.unsplash.com/photo-1575311373937-040b8e1fd5b6?w=600"],
       variants: [{ name: "Color", options: [{ value: "Black", price: 11.99, quantity: 60 }, { value: "Blue", price: 11.99, quantity: 50 }, { value: "Pink", price: 11.99, quantity: 50 }, { value: "Green", price: 11.99, quantity: 40 }] }],
+      variantCombinations: buildCombinations([{ name: "Color", options: [{ value: "Black", price: 11.99, quantity: 60 }, { value: "Blue", price: 11.99, quantity: 50 }, { value: "Pink", price: 11.99, quantity: 50 }, { value: "Green", price: 11.99, quantity: 40 }] }]),
     },
     {
       sellerId: techSeller._id,
@@ -407,6 +442,7 @@ async function seed() {
       image: "https://images.unsplash.com/photo-1542291026-7eec264c27ff?w=600",
       images: ["https://images.unsplash.com/photo-1542291026-7eec264c27ff?w=600"],
       variants: [{ name: "Size", options: [{ value: "39", price: 75.99, quantity: 10 }, { value: "40", price: 75.99, quantity: 15 }, { value: "41", price: 75.99, quantity: 15 }, { value: "42", price: 75.99, quantity: 9 }, { value: "43", price: 75.99, quantity: 10 }] }],
+      variantCombinations: buildCombinations([{ name: "Size", options: [{ value: "39", price: 75.99, quantity: 10 }, { value: "40", price: 75.99, quantity: 15 }, { value: "41", price: 75.99, quantity: 15 }, { value: "42", price: 75.99, quantity: 9 }, { value: "43", price: 75.99, quantity: 10 }] }]),
     },
     {
       sellerId: sportSeller._id,
@@ -421,6 +457,10 @@ async function seed() {
         { name: "Size", options: [{ value: "S", price: 18.99, quantity: 30 }, { value: "M", price: 18.99, quantity: 50 }, { value: "L", price: 18.99, quantity: 40 }, { value: "XL", price: 18.99, quantity: 30 }] },
         { name: "Color", options: [{ value: "Black", price: 18.99, quantity: 75 }, { value: "Navy", price: 18.99, quantity: 75 }] },
       ],
+      variantCombinations: buildCombinations([
+        { name: "Size", options: [{ value: "S", price: 18.99, quantity: 30 }, { value: "M", price: 18.99, quantity: 50 }, { value: "L", price: 18.99, quantity: 40 }, { value: "XL", price: 18.99, quantity: 30 }] },
+        { name: "Color", options: [{ value: "Black", price: 18.99, quantity: 75 }, { value: "Navy", price: 18.99, quantity: 75 }] },
+      ]),
     },
     {
       sellerId: sportSeller._id,
@@ -432,6 +472,7 @@ async function seed() {
       image: "https://images.unsplash.com/photo-1544367567-0f2fcb009e0b?w=600",
       images: ["https://images.unsplash.com/photo-1544367567-0f2fcb009e0b?w=600"],
       variants: [{ name: "Color", options: [{ value: "Purple", price: 29.99, quantity: 29 }, { value: "Blue", price: 29.99, quantity: 30 }, { value: "Pink", price: 29.99, quantity: 25 }] }],
+      variantCombinations: buildCombinations([{ name: "Color", options: [{ value: "Purple", price: 29.99, quantity: 29 }, { value: "Blue", price: 29.99, quantity: 30 }, { value: "Pink", price: 29.99, quantity: 25 }] }]),
     },
     {
       sellerId: sportSeller._id,
@@ -443,6 +484,7 @@ async function seed() {
       image: "https://images.unsplash.com/photo-1602143407151-7111542de6e8?w=600",
       images: ["https://images.unsplash.com/photo-1602143407151-7111542de6e8?w=600"],
       variants: [{ name: "Color", options: [{ value: "Silver", price: 22.99, quantity: 40 }, { value: "Black", price: 22.99, quantity: 38 }, { value: "Blue", price: 22.99, quantity: 30 }] }],
+      variantCombinations: buildCombinations([{ name: "Color", options: [{ value: "Silver", price: 22.99, quantity: 40 }, { value: "Black", price: 22.99, quantity: 38 }, { value: "Blue", price: 22.99, quantity: 30 }] }]),
     },
     {
       sellerId: sportSeller._id,
@@ -454,6 +496,7 @@ async function seed() {
       image: "https://images.unsplash.com/photo-1588850561407-ed78c282e89b?w=600",
       images: ["https://images.unsplash.com/photo-1588850561407-ed78c282e89b?w=600"],
       variants: [{ name: "Color", options: [{ value: "Black", price: 11.99, quantity: 80 }, { value: "White", price: 11.99, quantity: 60 }, { value: "Red", price: 11.99, quantity: 60 }] }],
+      variantCombinations: buildCombinations([{ name: "Color", options: [{ value: "Black", price: 11.99, quantity: 80 }, { value: "White", price: 11.99, quantity: 60 }, { value: "Red", price: 11.99, quantity: 60 }] }]),
     },
     {
       sellerId: sportSeller._id,
@@ -465,6 +508,7 @@ async function seed() {
       image: "https://images.unsplash.com/photo-1534438327276-14e5300c3a48?w=600",
       images: ["https://images.unsplash.com/photo-1534438327276-14e5300c3a48?w=600"],
       variants: [{ name: "Size", options: [{ value: "S/M", price: 13.99, quantity: 50 }, { value: "L/XL", price: 13.99, quantity: 45 }] }],
+      variantCombinations: buildCombinations([{ name: "Size", options: [{ value: "S/M", price: 13.99, quantity: 50 }, { value: "L/XL", price: 13.99, quantity: 45 }] }]),
     },
     {
       sellerId: sportSeller._id,
@@ -496,6 +540,7 @@ async function seed() {
       image: "https://images.unsplash.com/photo-1506629082955-511b1aa562c8?w=600",
       images: ["https://images.unsplash.com/photo-1506629082955-511b1aa562c8?w=600"],
       variants: [{ name: "Size", options: [{ value: "S", price: 21.99, quantity: 15 }, { value: "M", price: 21.99, quantity: 25 }, { value: "L", price: 21.99, quantity: 20 }, { value: "XL", price: 21.99, quantity: 15 }] }],
+      variantCombinations: buildCombinations([{ name: "Size", options: [{ value: "S", price: 21.99, quantity: 15 }, { value: "M", price: 21.99, quantity: 25 }, { value: "L", price: 21.99, quantity: 20 }, { value: "XL", price: 21.99, quantity: 15 }] }]),
     },
     {
       sellerId: sportSeller._id,

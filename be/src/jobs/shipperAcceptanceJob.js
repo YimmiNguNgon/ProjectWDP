@@ -12,6 +12,7 @@ const SELLER_CONFIRM_TIMEOUT_MINUTES = 5;
 const TIMEOUT_MINUTES = 5;
 const SHIPPING_TIMEOUT_MINUTES = 5;
 const DELIVERED_AUTO_COMPLETE_MINUTES = 5;
+const READY_TO_SHIP_REASSIGN_MINUTES = 5;
 
 const notify = (payload) =>
   notificationService.sendNotification(payload).catch((err) => {
@@ -25,12 +26,12 @@ async function deactivateShipper(shipperId, shortOrderId, reason) {
   try {
     const result = await User.findByIdAndUpdate(
       shipperId,
-      { "shipperInfo.isAvailable": false },
+      { "shipperInfo.shipperStatus": "paused", "shipperInfo.isAvailable": false },
       { new: true }
     );
     if (result) {
       console.log(
-        `[ShipperJob] Shipper ${shipperId} marked unavailable. Reason: ${reason}`
+        `[ShipperJob] Shipper ${shipperId} paused. Reason: ${reason}`
       );
     } else {
       console.warn(`[ShipperJob] Could not find shipper ${shipperId} to deactivate.`);
@@ -386,6 +387,51 @@ async function autoCompleteDeliveredOrders() {
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
+// Luồng 4: ready_to_ship không có shipper nhận sau READY_TO_SHIP_REASSIGN_MINUTES phút
+// ─────────────────────────────────────────────────────────────────────────────
+async function expireReadyToShipOrders() {
+  const cutoff = new Date(Date.now() - READY_TO_SHIP_REASSIGN_MINUTES * 60 * 1000);
+
+  const staleOrders = await Order.find({
+    status: "ready_to_ship",
+    shipper: null,
+    updatedAt: { $lt: cutoff },
+  })
+    .select("_id seller")
+    .lean();
+
+  if (!staleOrders.length) return;
+
+  console.log(`[ReadyToShip] Found ${staleOrders.length} stale ready_to_ship order(s), reassigning...`);
+
+  for (const order of staleOrders) {
+    // Atomic refresh updatedAt trước khi assign để tránh double-fire
+    const refreshed = await Order.findOneAndUpdate(
+      { _id: order._id, status: "ready_to_ship", shipper: null },
+      {
+        $push: {
+          statusHistory: {
+            status: "ready_to_ship",
+            timestamp: new Date(),
+            note: `No shipper accepted within ${READY_TO_SHIP_REASSIGN_MINUTES} minutes. Attempting reassignment.`,
+          },
+        },
+      },
+      { new: true }
+    );
+
+    if (!refreshed) continue; // already picked up
+
+    try {
+      await autoAssignOrder(refreshed);
+      console.log(`[ReadyToShip] autoAssignOrder completed for order ${order._id}`);
+    } catch (err) {
+      console.error(`[ReadyToShip] autoAssignOrder failed for order ${order._id}:`, err.message);
+    }
+  }
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
 // Init cron job
 // ─────────────────────────────────────────────────────────────────────────────
 function initShipperAcceptanceJob() {
@@ -394,6 +440,7 @@ function initShipperAcceptanceJob() {
       await expireNewOrders();
       await expirePendingAcceptance();
       await expireShippingOrders();
+      await expireReadyToShipOrders();
       await autoCompleteDeliveredOrders();
     } catch (err) {
       console.error("[ShipperJob] Unexpected error:", err.message);
@@ -410,5 +457,6 @@ module.exports = {
   expireNewOrders,
   expirePendingAcceptance,
   expireShippingOrders,
+  expireReadyToShipOrders,
   autoCompleteDeliveredOrders,
 };

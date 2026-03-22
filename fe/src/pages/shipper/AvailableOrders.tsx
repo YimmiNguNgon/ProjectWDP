@@ -118,13 +118,15 @@ export default function ShipperAvailableOrders() {
             </div>
             <div>
               <p className="text-gray-500">Delivery Address</p>
-              <p className="font-medium">
-                {[addr?.district, addr?.city].filter(Boolean).join(", ") || "—"}
+              <p className="font-medium">{addr?.fullName || "—"}</p>
+              <p className="text-xs text-gray-400">
+                {[addr?.street, addr?.ward, addr?.district, addr?.city].filter(Boolean).join(", ") || "—"}
               </p>
+              {addr?.phone && <p className="text-xs text-gray-400">{addr.phone}</p>}
             </div>
             <div>
               <p className="text-gray-500">Total</p>
-              <p className="font-medium">${order.totalAmount.toFixed(2)}</p>
+              <p className="font-medium text-orange-600">${order.totalAmount.toFixed(2)}</p>
             </div>
             <div>
               <p className="text-gray-500">Date</p>
@@ -133,6 +135,26 @@ export default function ShipperAvailableOrders() {
               </p>
             </div>
           </div>
+
+          {/* Items */}
+          {order.items && order.items.length > 0 && (
+            <div className="mb-4 border rounded-lg overflow-hidden">
+              <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide px-3 py-2 bg-gray-50 border-b">
+                Items ({order.items.length})
+              </p>
+              <div className="divide-y">
+                {order.items.map((item, i) => (
+                  <div key={i} className="flex items-center justify-between px-3 py-2 text-sm">
+                    <span className="text-gray-800 flex-1 mr-2">{item.title || "—"}</span>
+                    <span className="text-gray-500 whitespace-nowrap">
+                      x{item.quantity} · <span className="font-medium">${(item.unitPrice * item.quantity).toFixed(2)}</span>
+                    </span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
           <div className="flex gap-2">
             <Button
               size="sm"

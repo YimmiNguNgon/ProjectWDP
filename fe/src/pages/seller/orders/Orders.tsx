@@ -63,7 +63,7 @@ const STATUS_CONFIG = {
     border: "#BFDBFE",
   },
   queued: {
-    label: "Queued",
+    label: "Waiting",
     dot: "#F97316",
     bg: "#FFF7ED",
     text: "#9A3412",
@@ -219,11 +219,11 @@ function InfoBlock({
 
 function StatusPill({ status }: { status: Order["status"] }) {
   const cfg = STATUS_CONFIG[status] ?? {
-    label: "Unknown",
-    dot: "#94A3B8",
-    bg: "#F8FAFC",
-    text: "#475569",
-    border: "#E2E8F0",
+    label: "Cancelled",
+    dot: "#EF4444",
+    bg: "#FEF2F2",
+    text: "#7F1D1D",
+    border: "#FECACA",
   };
   return (
     <span
@@ -1150,6 +1150,15 @@ export default function SellerOrders() {
             className="border-amber-300 text-amber-800 bg-amber-50"
           >
             Cancel Requested
+          </Badge>
+        );
+      case "queued":
+        return (
+          <Badge
+            variant="outline"
+            className="border-orange-300 text-orange-800 bg-orange-50"
+          >
+            Waiting
           </Badge>
         );
       default:

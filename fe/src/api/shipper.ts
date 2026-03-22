@@ -14,6 +14,7 @@ export interface ShipperOrder {
     district?: string;
     ward?: string;
     street?: string;
+    detail?: string;
   };
   buyer?: { _id: string; username: string; email: string };
   seller?: { _id: string; username: string; sellerInfo?: { shopName?: string } };
@@ -26,6 +27,7 @@ export interface ShipperStats {
   inTransit: number;
   totalAccepted: number;
   isAvailable: boolean;
+  shipperStatus: "available" | "shipping" | "paused";
 }
 
 export interface OrdersResponse {
@@ -55,3 +57,6 @@ export const getShipperStats = (): Promise<{ data: ShipperStats }> =>
 
 export const toggleAvailability = (isAvailable: boolean): Promise<{ data: { isAvailable: boolean } }> =>
   api.patch("/api/shipper/availability", { isAvailable });
+
+export const resumeShipper = (): Promise<{ data: { ok: boolean; shipperStatus: string } }> =>
+  api.patch("/api/shipper/resume");

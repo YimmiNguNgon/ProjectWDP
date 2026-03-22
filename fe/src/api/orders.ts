@@ -22,6 +22,7 @@ export interface Order {
   orderGroup?: string | null;
   customer: { _id: string; username: string; email: string };
   seller: { _id: string; username: string; email: string };
+  shipper?: { _id: string; username: string; email: string } | null;
   items: OrderItem[];
   subtotalAmount?: number;
   discountAmount?: number;
