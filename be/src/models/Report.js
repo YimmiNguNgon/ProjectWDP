@@ -74,6 +74,27 @@ const reportSchema = new mongoose.Schema(
       type: String,
       default: null,
     },
+    // ---- Anti-Abuse System Fields ----
+    weight: {
+      type: Number,
+      default: 1.0,
+      index: true,
+    },
+    ipAddress: {
+      type: String,
+      default: null,
+      index: true,
+    },
+    deviceFingerprint: {
+      type: String,
+      default: null,
+      index: true,
+    },
+    suspiciousCluster: {
+      type: Boolean,
+      default: false,
+      index: true,
+    },
   },
   { timestamps: true }
 );

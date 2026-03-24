@@ -17,8 +17,10 @@ const BuyerReportStats = require("../models/BuyerReportStats");
 const SellerTrustScore = require("../models/SellerTrustScore");
 const SellerRiskHistory = require("../models/SellerRiskHistory");
 const Order = require("../models/Order");
+const User = require("../models/User");
 const notificationService = require("./notificationService");
 const { evaluateSellerTrust } = require("./sellerTrustService");
+const antiAbuseService = require("./reportAntiAbuseService");
 
 // ── Constants ─────────────────────────────────────────────────────────────────
 const MAX_REPORTS_PER_7_DAYS = 3;
@@ -33,7 +35,10 @@ const VALID_REPORT_RATE_THRESHOLD = 0.10;
  * submitReport – validates rate limits / abuse rules, then saves the report.
  * Returns the saved report document.
  */
-async function submitReport({ buyerId, sellerId, productId, orderId, reason, description, evidenceUrl }) {
+async function submitReport({ buyerId, sellerId, productId, orderId, reason, description, evidenceUrl, ipAddress, deviceFingerprint }) {
+  // Validate with anti-abuse layer
+  await antiAbuseService.validateReportSubmission(buyerId, sellerId, ipAddress, deviceFingerprint);
+
   // 1. Load buyer stats
   let stats = await BuyerReportStats.findOne({ buyer: buyerId });
   if (!stats) {
@@ -59,6 +64,10 @@ async function submitReport({ buyerId, sellerId, productId, orderId, reason, des
     throw err;
   }
 
+  // Calculate weight based on user trust
+  const buyerDoc = await User.findById(buyerId).lean();
+  const weight = antiAbuseService.calculateReportWeight(buyerDoc, stats);
+
   // 4. Save the report with PENDING status
   const report = await Report.create({
     buyer: buyerId,
@@ -69,12 +78,19 @@ async function submitReport({ buyerId, sellerId, productId, orderId, reason, des
     description,
     evidenceUrl: evidenceUrl || null,
     status: "PENDING",
+    weight,
+    ipAddress: ipAddress || null,
+    deviceFingerprint: deviceFingerprint || null
   });
 
   // 5. Increment buyer stats
   stats.totalReports += 1;
   stats.lastReportAt = new Date();
-  stats.accuracyScore = stats.totalReports > 0 ? stats.validReports / stats.totalReports : 1.0;
+  
+  // Update accuracy based on evaluated reports ONLY
+  const totalEvaluated = (stats.validReports || 0) + (stats.rejectedReports || 0);
+  stats.accuracyScore = totalEvaluated > 0 ? stats.validReports / totalEvaluated : 1.0;
+  
   await stats.save();
 
   return report;
@@ -135,12 +151,13 @@ async function updateBuyerStats(buyerId, status) {
   }
 
   // Recalculate accuracy score
-  stats.accuracyScore = stats.totalReports > 0
-    ? stats.validReports / stats.totalReports
+  const totalEvaluated = stats.validReports + stats.rejectedReports;
+  stats.accuracyScore = totalEvaluated > 0
+    ? stats.validReports / totalEvaluated
     : 1.0;
 
   // Enter monitoring mode if accuracy is too low (after minimum threshold)
-  if (stats.totalReports >= MIN_REPORTS_FOR_ACCURACY && stats.accuracyScore < ACCURACY_THRESHOLD) {
+  if (totalEvaluated >= MIN_REPORTS_FOR_ACCURACY && stats.accuracyScore < ACCURACY_THRESHOLD) {
     if (!stats.underMonitoring) {
       stats.underMonitoring = true;
       stats.monitoringStartedAt = new Date();
@@ -177,31 +194,44 @@ async function handleValidReport(report) {
 
   // Check seller risk thresholds in 30-day window
   const thirtyDaysAgo = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000);
-  const validReports30Days = await Report.countDocuments({
+  const recentReports = await Report.find({
     seller: sellerId,
-    status: "VALID",
     verifiedAt: { $gte: thirtyDaysAgo },
-  });
+  }).populate("buyer", "createdAt").lean();
+
+  if (antiAbuseService.detectSuspiciousPattern(recentReports)) {
+    // If a cluster/spam event detected, do not penalize seller
+    // Mark them dynamically as suspicious cluster
+    await Report.updateMany(
+      { _id: { $in: recentReports.map(r => r._id) } },
+      { $set: { suspiciousCluster: true } }
+    );
+    // Exit early, prevent automatic penalization
+    return;
+  }
+
+  // Weighted valid issues in last 30 days
+  const validReports30DaysCount = recentReports.filter(r => r.status === "VALID").length;
+  const weightedRiskScore = antiAbuseService.calculateSellerRiskScore(recentReports);
 
   const totalOrders = await Order.countDocuments({ seller: sellerId });
-  const validReportRate = totalOrders > 0 ? validReports30Days / totalOrders : 0;
+  const validReportRate = totalOrders > 0 ? weightedRiskScore / totalOrders : 0;
 
   const shouldFlag =
-    validReports30Days >= VALID_REPORTS_30D_THRESHOLD ||
+    antiAbuseService.shouldFlagSeller(recentReports) ||
     validReportRate > VALID_REPORT_RATE_THRESHOLD;
 
   if (shouldFlag) {
     const trustDoc = await SellerTrustScore.findOne({ seller: sellerId });
-    const wasAlreadyFlagged = trustDoc?.riskFlagged ?? false;
+    const wasAlreadyWarned = trustDoc?.reportWarningSent ?? false;
 
-    if (!wasAlreadyFlagged) {
-      // Set risk flag
+    if (!wasAlreadyWarned) {
+      // Send Warning Only
       await SellerTrustScore.findOneAndUpdate(
         { seller: sellerId },
         {
           $set: {
-            riskFlagged: true,
-            productModerationMode: "REQUIRE_ADMIN",
+            reportWarningSent: true,
           },
         },
         { upsert: true }
@@ -209,17 +239,17 @@ async function handleValidReport(report) {
 
       // Log in SellerRiskHistory
       const riskReason =
-        validReports30Days >= VALID_REPORTS_30D_THRESHOLD
-          ? `≥${VALID_REPORTS_30D_THRESHOLD} valid reports in 30 days (count: ${validReports30Days})`
-          : `Valid report rate ${(validReportRate * 100).toFixed(1)}% exceeds ${VALID_REPORT_RATE_THRESHOLD * 100}% threshold`;
+        validReports30DaysCount >= VALID_REPORTS_30D_THRESHOLD
+          ? `≥${VALID_REPORTS_30D_THRESHOLD} valid reports in 30 days (count: ${validReports30DaysCount}, total weighted score: ${weightedRiskScore})`
+          : `Weighted valid report rate ${(validReportRate * 100).toFixed(1)}% exceeds ${VALID_REPORT_RATE_THRESHOLD * 100}% threshold`;
 
       await SellerRiskHistory.create({
         seller: sellerId,
-        action: "FLAG_SET",
-        riskFlagged: true,
+        action: "WARNING_SENT",
+        riskFlagged: trustDoc?.riskFlagged ?? false,
         metrics: {
           totalOrders30Days: totalOrders,
-          disputeCount30Days: validReports30Days,
+          disputeCount30Days: validReports30DaysCount,
           adjustedRefundRate: 0,
           disputeRate: validReportRate,
           finalScore: trustDoc?.finalScore ?? 0,
@@ -232,14 +262,14 @@ async function handleValidReport(report) {
       try {
         await notificationService.sendNotification({
           recipientId: sellerId,
-          type: "seller_risk_flagged",
-          title: "🚨 Account Under Monitoring",
-          body: `Your account has been flagged due to multiple valid buyer reports. All new product listings will require admin approval.`,
+          type: "seller_report_warning",
+          title: "⚠️ Warning: Multiple Valid Reports",
+          body: `Your account has received multiple valid buyer reports recently. Please review your behavior to avoid further penalties.`,
           link: "/seller/trust-score",
-          metadata: { validReports30Days, validReportRate },
+          metadata: { validReports30DaysCount, validReportRate },
         });
       } catch (e) {
-        console.error("[ReportService] Failed to notify seller risk flag:", e.message);
+        console.error("[ReportService] Failed to notify seller report warning:", e.message);
       }
     }
   }

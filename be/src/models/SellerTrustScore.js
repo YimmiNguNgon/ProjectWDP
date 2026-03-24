@@ -45,6 +45,7 @@ const sellerTrustScoreSchema = new mongoose.Schema(
         refunds30Days: { type: Number, default: 0 },
         refundRate: { type: Number, default: 0 },
         riskFlagged: { type: Boolean, default: false },
+        reportWarningSent: { type: Boolean, default: false },
 
         // ── Tier ─────────────────────────────────────────────────────
         tier: {
