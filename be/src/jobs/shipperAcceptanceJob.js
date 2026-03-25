@@ -8,11 +8,11 @@ const DeliveryDispute = require("../models/DeliveryDispute");
 const notificationService = require("../services/notificationService");
 const { autoAssignOrder } = require("../services/orderDispatchService");
 
-const SELLER_CONFIRM_TIMEOUT_MINUTES = 5;
-const TIMEOUT_MINUTES = 5;
-const SHIPPING_TIMEOUT_MINUTES = 5;
-const DELIVERED_AUTO_COMPLETE_MINUTES = 5;
-const READY_TO_SHIP_REASSIGN_MINUTES = 5;
+const SELLER_CONFIRM_TIMEOUT_MINUTES = 30;
+const TIMEOUT_MINUTES = 15;
+const SHIPPING_TIMEOUT_MINUTES = 60;
+const DELIVERED_AUTO_COMPLETE_MINUTES = 60;
+const READY_TO_SHIP_REASSIGN_MINUTES = 10;
 
 const notify = (payload) =>
   notificationService.sendNotification(payload).catch((err) => {

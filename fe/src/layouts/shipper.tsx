@@ -14,17 +14,17 @@ const navigation = [
   { name: "Delivery Disputes", href: "/shipper/disputes", icon: AlertTriangle },
 ];
 
-const STATUS_CONFIG = {
+const STATUS_CONFIG: Record<string, { label: string; className: string }> = {
   available: { label: "Available", className: "bg-green-100 text-green-700" },
-  shipping: { label: "Shipping", className: "bg-blue-100 text-blue-700" },
-  paused: { label: "Paused", className: "bg-red-100 text-red-700" },
-} as const;
+  shipping:  { label: "Shipping",  className: "bg-purple-100 text-purple-700" },
+  paused:    { label: "Paused",    className: "bg-red-100 text-red-700" },
+};
 
 export default function ShipperLayout() {
   const location = useLocation();
   const { user } = useAuth();
   const socketCtx = useContext(SocketContext);
-  const [shipperStatus, setShipperStatus] = useState<"available" | "shipping" | "paused">("available");
+  const [shipperStatus, setShipperStatus] = useState<string>("available");
 
   useEffect(() => {
     getShipperStats()
@@ -46,8 +46,8 @@ export default function ShipperLayout() {
                 <p className="text-sm text-gray-600">
                   {user?.username || user?.email?.split("@")[0]}
                 </p>
-                <span className={`inline-block mt-1 text-xs px-2 py-0.5 rounded-full font-medium ${STATUS_CONFIG[shipperStatus].className}`}>
-                  {STATUS_CONFIG[shipperStatus].label}
+                <span className={`inline-block mt-1 text-xs px-2 py-0.5 rounded-full font-medium ${(STATUS_CONFIG[shipperStatus] ?? STATUS_CONFIG.available).className}`}>
+                  {(STATUS_CONFIG[shipperStatus] ?? STATUS_CONFIG.available).label}
                 </span>
               </div>
               <NotificationBell socket={socketCtx?.socket ?? undefined} />

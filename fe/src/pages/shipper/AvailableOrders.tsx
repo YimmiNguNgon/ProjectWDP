@@ -164,14 +164,16 @@ export default function ShipperAvailableOrders() {
             >
               {busy ? "..." : "Accept"}
             </Button>
-            <Button
-              size="sm"
-              variant="outline"
-              disabled={busy}
-              onClick={() => handleDecline(order._id)}
-            >
-              Decline
-            </Button>
+            {order.status === "pending_acceptance" && (
+              <Button
+                size="sm"
+                variant="outline"
+                disabled={busy}
+                onClick={() => handleDecline(order._id)}
+              >
+                Decline
+              </Button>
+            )}
           </div>
         </CardContent>
       </Card>

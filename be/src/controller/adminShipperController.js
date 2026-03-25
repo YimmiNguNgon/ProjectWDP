@@ -42,6 +42,8 @@ exports.getAllShippers = async (req, res, next) => {
       return {
         ...s,
         isAvailable: s.shipperInfo?.isAvailable ?? true,
+        shipperStatus: s.shipperInfo?.shipperStatus ?? "available",
+        maxOrders: s.shipperInfo?.maxOrders ?? 3,
         totalAccepted: st.totalAccepted,
         delivered: st.delivered,
         completed: st.completed,
@@ -50,6 +52,37 @@ exports.getAllShippers = async (req, res, next) => {
     });
 
     res.json({ shippers: result });
+  } catch (err) {
+    next(err);
+  }
+};
+
+exports.updateShipperStatus = async (req, res, next) => {
+  try {
+    const { id } = req.params;
+    const { shipperStatus } = req.body;
+
+    const allowed = ["available", "paused"];
+    if (!allowed.includes(shipperStatus)) {
+      return res.status(400).json({ message: "Invalid shipperStatus. Must be: available | paused" });
+    }
+
+    const isAvailable = shipperStatus === "available";
+
+    const shipper = await User.findOneAndUpdate(
+      { _id: id, role: "shipper" },
+      {
+        "shipperInfo.shipperStatus": shipperStatus,
+        "shipperInfo.isAvailable": isAvailable,
+      },
+      { new: true }
+    ).select("_id username shipperInfo");
+
+    if (!shipper) {
+      return res.status(404).json({ message: "Shipper not found" });
+    }
+
+    res.json({ message: "Shipper status updated", shipper });
   } catch (err) {
     next(err);
   }

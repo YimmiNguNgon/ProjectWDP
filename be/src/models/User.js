@@ -104,7 +104,7 @@ const userSchema = new mongoose.Schema(
       isAvailable: { type: Boolean, default: true }, // Legacy field (kept for compat)
       shipperStatus: {
         type: String,
-        enum: ["available", "shipping", "paused"],
+        enum: ["available", "pending_acceptance", "shipping", "paused"],
         default: "available",
       },
     },

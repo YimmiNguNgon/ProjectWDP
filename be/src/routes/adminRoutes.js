@@ -278,6 +278,7 @@ router.post(
 // Shipper management routes
 router.get("/shippers", adminShipperController.getAllShippers);
 router.get("/shipper-orders", adminShipperController.getShipperOrders);
+router.patch("/shippers/:id/status", adminShipperController.updateShipperStatus);
 
 // Admin order management
 router.get("/orders", async (req, res, next) => {

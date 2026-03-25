@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import {
   Select,
   SelectContent,
@@ -8,6 +9,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import api from "@/lib/axios";
+import { toast } from "sonner";
 
 interface Shipper {
   _id: string;
@@ -15,6 +17,8 @@ interface Shipper {
   email: string;
   status: string;
   isAvailable: boolean;
+  shipperStatus: string;
+  maxOrders: number;
   createdAt: string;
   totalAccepted: number;
   delivered: number;
@@ -34,6 +38,27 @@ interface ShipperOrder {
 
 type TabType = "shippers" | "orders";
 
+const SHIPPER_STATUS_CONFIG: Record<string, { label: string; cls: string }> = {
+  available: { label: "Available", cls: "bg-green-100 text-green-700 border-green-200" },
+  shipping:  { label: "Shipping",  cls: "bg-purple-100 text-purple-700 border-purple-200" },
+  paused:    { label: "Paused",    cls: "bg-orange-100 text-orange-700 border-orange-200" },
+};
+
+const ACCOUNT_STATUS_CONFIG: Record<string, { label: string; cls: string }> = {
+  active:    { label: "Active",    cls: "bg-green-100 text-green-700" },
+  banned:    { label: "Banned",    cls: "bg-red-100 text-red-700" },
+  suspended: { label: "Suspended", cls: "bg-yellow-100 text-yellow-700" },
+};
+
+const ORDER_STATUS_CONFIG: Record<string, string> = {
+  shipping:  "bg-purple-100 text-purple-700",
+  delivered: "bg-green-100 text-green-700",
+  completed: "bg-blue-100 text-blue-700",
+  cancelled: "bg-red-100 text-red-700",
+  pending_acceptance: "bg-blue-50 text-blue-600",
+  queued:    "bg-gray-100 text-gray-600",
+};
+
 export default function AdminShipperManagement() {
   const [activeTab, setActiveTab] = useState<TabType>("shippers");
   const [shippers, setShippers] = useState<Shipper[]>([]);
@@ -41,13 +66,14 @@ export default function AdminShipperManagement() {
   const [orderStatus, setOrderStatus] = useState("all");
   const [shipperId, setShipperId] = useState("all");
   const [loading, setLoading] = useState(false);
+  const [updatingId, setUpdatingId] = useState<string | null>(null);
 
   const fetchShippers = () => {
     setLoading(true);
     api
       .get("/api/admin/shippers")
       .then((res) => setShippers(res.data.shippers))
-      .catch(() => { })
+      .catch(() => {})
       .finally(() => setLoading(false));
   };
 
@@ -64,81 +90,110 @@ export default function AdminShipperManagement() {
       api
         .get("/api/admin/shipper-orders", { params })
         .then((res) => setOrders(res.data.orders))
-        .catch(() => { })
+        .catch(() => {})
         .finally(() => setLoading(false));
     }
   }, [activeTab, orderStatus, shipperId]);
 
-  const statusBadge = (status: string) => {
-    const map: Record<string, string> = {
-      active: "bg-green-100 text-green-700",
-      banned: "bg-red-100 text-red-700",
-      suspended: "bg-yellow-100 text-yellow-700",
-      shipping: "bg-purple-100 text-purple-700",
-      delivered: "bg-green-100 text-green-700",
-    };
-    return map[status] || "bg-gray-100 text-gray-700";
+  const handleSetStatus = async (shipperId: string, shipperStatus: "available" | "paused") => {
+    setUpdatingId(shipperId);
+    try {
+      await api.patch(`/api/admin/shippers/${shipperId}/status`, { shipperStatus });
+      setShippers((prev) =>
+        prev.map((s) =>
+          s._id === shipperId
+            ? { ...s, shipperStatus, isAvailable: shipperStatus === "available" }
+            : s
+        )
+      );
+      toast.success(`Shipper set to ${shipperStatus}`);
+    } catch {
+      toast.error("Failed to update shipper status");
+    } finally {
+      setUpdatingId(null);
+    }
   };
 
   return (
-    <div className="p-6">
-      <h1 className="text-2xl font-bold text-gray-900 mb-6">Shipper Management</h1>
+    <div className="p-6 space-y-6">
+      <div>
+        <h1 className="text-2xl font-bold text-gray-900">Shipper Management</h1>
+        <p className="text-sm text-muted-foreground mt-1">Manage shipper availability and monitor delivery orders</p>
+      </div>
 
-      <div className="flex gap-2 mb-6">
+      {/* Tabs */}
+      <div className="flex gap-2">
         {(["shippers", "orders"] as TabType[]).map((tab) => (
           <button
             key={tab}
             onClick={() => setActiveTab(tab)}
-            className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${activeTab === tab
-              ? "bg-blue-600 text-white"
-              : "bg-gray-100 text-gray-600 hover:bg-gray-200"
-              }`}
+            className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
+              activeTab === tab
+                ? "bg-primary text-white"
+                : "bg-gray-100 text-gray-600 hover:bg-gray-200"
+            }`}
           >
             {tab === "shippers" ? "Shippers" : "Shipper Orders"}
           </button>
         ))}
       </div>
 
+      {/* ── Shippers Tab ── */}
       {activeTab === "shippers" && (
-        <div className="overflow-x-auto">
+        <div className="bg-white rounded-2xl border border-border/60 shadow-sm overflow-hidden">
           {loading ? (
-            <div className="text-center py-12 text-gray-500">Loading...</div>
+            <div className="text-center py-12 text-muted-foreground">Loading...</div>
           ) : (
-            <table className="w-full text-sm border-collapse">
+            <table className="w-full text-sm">
               <thead>
-                <tr className="bg-gray-50 border-b">
-                  <th className="text-left px-4 py-3 font-medium text-gray-600">Username</th>
-                  <th className="text-left px-4 py-3 font-medium text-gray-600">Email</th>
-                  <th className="text-left px-4 py-3 font-medium text-gray-600">Account Status</th>
-                  <th className="text-right px-4 py-3 font-medium text-gray-600">Total Accepted</th>
-                  <th className="text-right px-4 py-3 font-medium text-gray-600">Delivered</th>
-                  <th className="text-right px-4 py-3 font-medium text-gray-600">Completed</th>
-                  <th className="text-right px-4 py-3 font-medium text-gray-600">In Transit</th>
+                <tr className="bg-gray-50 border-b text-xs uppercase tracking-wide text-muted-foreground">
+                  <th className="text-left px-5 py-3">Shipper</th>
+                  <th className="text-left px-5 py-3">Account</th>
+                  <th className="text-right px-5 py-3">Accepted</th>
+                  <th className="text-right px-5 py-3">Delivered</th>
+                  <th className="text-right px-5 py-3">In Transit</th>
+                  <th className="text-center px-5 py-3">Status</th>
                 </tr>
               </thead>
-              <tbody>
+              <tbody className="divide-y divide-border/40">
                 {shippers.length === 0 ? (
                   <tr>
-                    <td colSpan={7} className="text-center py-8 text-gray-500">
+                    <td colSpan={8} className="text-center py-10 text-muted-foreground">
                       No shippers found
                     </td>
                   </tr>
                 ) : (
-                  shippers.map((s) => (
-                    <tr key={s._id} className="border-b hover:bg-gray-50">
-                      <td className="px-4 py-3 font-medium">{s.username}</td>
-                      <td className="px-4 py-3 text-gray-600">{s.email}</td>
-                      <td className="px-4 py-3">
-                        <span className={`px-2 py-1 rounded-full text-xs font-medium ${statusBadge(s.status)}`}>
-                          {s.status}
-                        </span>
-                      </td>
-                      <td className="px-4 py-3 text-right">{s.totalAccepted}</td>
-                      <td className="px-4 py-3 text-right text-green-600">{s.delivered}</td>
-                      <td className="px-4 py-3 text-right text-blue-600">{s.completed}</td>
-                      <td className="px-4 py-3 text-right text-purple-600">{s.inTransit}</td>
-                    </tr>
-                  ))
+                  shippers.map((s) => {
+                    const acct = ACCOUNT_STATUS_CONFIG[s.status] ?? { label: s.status, cls: "bg-gray-100 text-gray-600" };
+                    const isUpdating = updatingId === s._id;
+
+                    return (
+                      <tr key={s._id} className="hover:bg-gray-50 transition-colors">
+                        <td className="px-5 py-3.5">
+                          <p className="font-semibold text-foreground">{s.username}</p>
+                          <p className="text-xs text-muted-foreground">{s.email}</p>
+                        </td>
+                        <td className="px-5 py-3.5">
+                          <span className={`inline-flex px-2.5 py-1 rounded-full text-xs font-medium ${acct.cls}`}>
+                            {acct.label}
+                          </span>
+                        </td>
+                        <td className="px-5 py-3.5 text-right font-medium">{s.totalAccepted}</td>
+                        <td className="px-5 py-3.5 text-right text-green-600 font-medium">{s.delivered}</td>
+                        <td className="px-5 py-3.5 text-right text-purple-600 font-medium">{s.inTransit}</td>
+                        <td className="px-5 py-3.5 text-center">
+                          {(() => {
+                            const cfg = SHIPPER_STATUS_CONFIG[s.shipperStatus] ?? { label: s.shipperStatus, cls: "bg-gray-100 text-gray-600 border-gray-200" };
+                            return (
+                              <span className={`inline-flex px-2.5 py-1 rounded-full text-xs font-medium border ${cfg.cls}`}>
+                                {cfg.label}
+                              </span>
+                            );
+                          })()}
+                        </td>
+                      </tr>
+                    );
+                  })
                 )}
               </tbody>
             </table>
@@ -146,15 +201,17 @@ export default function AdminShipperManagement() {
         </div>
       )}
 
+      {/* ── Orders Tab ── */}
       {activeTab === "orders" && (
-        <div>
-          <div className="flex gap-4 mb-4">
+        <div className="space-y-4">
+          <div className="flex gap-3">
             <Select value={orderStatus} onValueChange={setOrderStatus}>
-              <SelectTrigger className="w-40">
+              <SelectTrigger className="w-48">
                 <SelectValue placeholder="All Status" />
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="all">All Status</SelectItem>
+                <SelectItem value="pending_acceptance">Pending Acceptance</SelectItem>
                 <SelectItem value="shipping">Shipping</SelectItem>
                 <SelectItem value="delivered">Delivered</SelectItem>
                 <SelectItem value="completed">Completed</SelectItem>
@@ -162,7 +219,7 @@ export default function AdminShipperManagement() {
             </Select>
 
             <Select value={shipperId} onValueChange={setShipperId}>
-              <SelectTrigger className="w-48">
+              <SelectTrigger className="w-52">
                 <SelectValue placeholder="All Shippers" />
               </SelectTrigger>
               <SelectContent>
@@ -176,51 +233,56 @@ export default function AdminShipperManagement() {
             </Select>
           </div>
 
-          <div className="overflow-x-auto">
+          <div className="bg-white rounded-2xl border border-border/60 shadow-sm overflow-hidden">
             {loading ? (
-              <div className="text-center py-12 text-gray-500">Loading...</div>
+              <div className="text-center py-12 text-muted-foreground">Loading...</div>
             ) : (
-              <table className="w-full text-sm border-collapse">
+              <table className="w-full text-sm">
                 <thead>
-                  <tr className="bg-gray-50 border-b">
-                    <th className="text-left px-4 py-3 font-medium text-gray-600">Order ID</th>
-                    <th className="text-left px-4 py-3 font-medium text-gray-600">Buyer</th>
-                    <th className="text-left px-4 py-3 font-medium text-gray-600">Seller</th>
-                    <th className="text-left px-4 py-3 font-medium text-gray-600">Shipper</th>
-                    <th className="text-right px-4 py-3 font-medium text-gray-600">Amount</th>
-                    <th className="text-left px-4 py-3 font-medium text-gray-600">Status</th>
-                    <th className="text-left px-4 py-3 font-medium text-gray-600">Date</th>
+                  <tr className="bg-gray-50 border-b text-xs uppercase tracking-wide text-muted-foreground">
+                    <th className="text-left px-5 py-3">Order ID</th>
+                    <th className="text-left px-5 py-3">Buyer</th>
+                    <th className="text-left px-5 py-3">Seller</th>
+                    <th className="text-left px-5 py-3">Shipper</th>
+                    <th className="text-right px-5 py-3">Amount</th>
+                    <th className="text-left px-5 py-3">Status</th>
+                    <th className="text-left px-5 py-3">Date</th>
                   </tr>
                 </thead>
-                <tbody>
+                <tbody className="divide-y divide-border/40">
                   {orders.length === 0 ? (
                     <tr>
-                      <td colSpan={8} className="text-center py-8 text-gray-500">
+                      <td colSpan={7} className="text-center py-10 text-muted-foreground">
                         No orders found
                       </td>
                     </tr>
                   ) : (
-                    orders.map((o) => (
-                      <tr key={o._id} className="border-b hover:bg-gray-50">
-                        <td className="px-4 py-3 font-mono text-xs text-gray-600">
-                          #{o._id.slice(-8).toUpperCase()}
-                        </td>
-                        <td className="px-4 py-3">{o.buyer?.username || "—"}</td>
-                        <td className="px-4 py-3">
-                          {o.seller?.sellerInfo?.shopName || o.seller?.username || "—"}
-                        </td>
-                        <td className="px-4 py-3">{o.shipper?.username || "—"}</td>
-                        <td className="px-4 py-3 text-right">${o.totalAmount.toFixed(2)}</td>
-                        <td className="px-4 py-3">
-                          <Badge variant="outline" className={`text-xs ${statusBadge(o.status)}`}>
-                            {o.status}
-                          </Badge>
-                        </td>
-                        <td className="px-4 py-3 text-gray-600">
-                          {new Date(o.createdAt).toLocaleDateString()}
-                        </td>
-                      </tr>
-                    ))
+                    orders.map((o) => {
+                      const statusCls = ORDER_STATUS_CONFIG[o.status] ?? "bg-gray-100 text-gray-600";
+                      return (
+                        <tr key={o._id} className="hover:bg-gray-50 transition-colors">
+                          <td className="px-5 py-3.5 font-mono text-xs text-muted-foreground">
+                            #{o._id.slice(-8).toUpperCase()}
+                          </td>
+                          <td className="px-5 py-3.5">{o.buyer?.username || "—"}</td>
+                          <td className="px-5 py-3.5">
+                            {o.seller?.sellerInfo?.shopName || o.seller?.username || "—"}
+                          </td>
+                          <td className="px-5 py-3.5">{o.shipper?.username || "—"}</td>
+                          <td className="px-5 py-3.5 text-right font-medium">
+                            ${o.totalAmount.toFixed(2)}
+                          </td>
+                          <td className="px-5 py-3.5">
+                            <Badge variant="outline" className={`text-xs ${statusCls}`}>
+                              {o.status.replace(/_/g, " ")}
+                            </Badge>
+                          </td>
+                          <td className="px-5 py-3.5 text-muted-foreground">
+                            {new Date(o.createdAt).toLocaleDateString()}
+                          </td>
+                        </tr>
+                      );
+                    })
                   )}
                 </tbody>
               </table>

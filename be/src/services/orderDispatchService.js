@@ -89,9 +89,9 @@ async function autoAssignOrder(order, excludeShipperId = null) {
 
         if (!updated) return; // Đơn đã bị nhận bởi thao tác khác, bỏ qua
 
-        // Cập nhật trạng thái shipper sang shipping
+        // Cập nhật trạng thái shipper sang pending_acceptance (chưa accept nên chưa "shipping")
         await User.findByIdAndUpdate(shipper._id, {
-            "shipperInfo.shipperStatus": "shipping",
+            "shipperInfo.shipperStatus": "pending_acceptance",
             "shipperInfo.isAvailable": false,
         }).catch(() => {});
 
@@ -169,9 +169,9 @@ async function dispatchNextFromQueue(shipperId) {
 
     if (!nextOrder) return; // Queue trống
 
-    // Cập nhật trạng thái shipper sang shipping
+    // Cập nhật trạng thái shipper sang pending_acceptance
     await User.findByIdAndUpdate(shipperId, {
-        "shipperInfo.shipperStatus": "shipping",
+        "shipperInfo.shipperStatus": "pending_acceptance",
         "shipperInfo.isAvailable": false,
     }).catch(() => {});
 
