@@ -115,7 +115,7 @@ const PROMO_BANNERS: PromoBanner[] = [
       "24/7 fraud detection system",
     ],
     link: "/products",
-    cta: "Shop with Confidence",
+    cta: "",
   },
   {
     bg: "bg-amber-50",
@@ -132,7 +132,7 @@ const PROMO_BANNERS: PromoBanner[] = [
       "Dispute resolution in 24 hrs",
     ],
     link: "/products",
-    cta: "Explore Trusted Stores",
+    cta: "",
   },
 ];
 
@@ -300,9 +300,11 @@ export default function HomePage() {
                     ))}
                   </ul>
                 )}
-                <span className="text-xs font-bold text-primary mt-2 group-hover:underline tracking-wide">
-                  {banner.cta} →
-                </span>
+                {banner.cta && (
+                  <span className="text-xs font-bold text-primary mt-2 group-hover:underline tracking-wide">
+                    {banner.cta} →
+                  </span>
+                )}
               </div>
               {/* Icon */}
               <div className="flex-shrink-0 z-10">
