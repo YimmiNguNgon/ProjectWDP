@@ -2,6 +2,7 @@ const Category = require("../models/Category");
 const Product = require("../models/Product");
 const Order = require("../models/Order");
 const User = require("../models/User");
+const SellerTrustScore = require("../models/SellerTrustScore");
 const mongoose = require("mongoose");
 const {
   normalizeVariantCombinations,
@@ -250,12 +251,21 @@ exports.getTopSellers = async (req, res, next) => {
       .select("username avatarUrl sellerInfo")
       .lean();
 
+    const sellerIds = sellers.map((s) => s._id);
+    const trustScores = await SellerTrustScore.find({ seller: { $in: sellerIds } })
+      .select("seller finalScore")
+      .lean();
+    const trustScoreMap = new Map(
+      trustScores.map((t) => [t.seller.toString(), t.finalScore])
+    );
+
     const sellersWithCount = sellers.map((s) => ({
       ...s,
       sellerInfo: {
         ...s.sellerInfo,
         successOrders: orderCountMap.get(s._id.toString()) ?? 0,
       },
+      trustScore: trustScoreMap.get(s._id.toString()) ?? null,
     }));
 
     sellersWithCount.sort((a, b) => (b.sellerInfo?.successOrders || 0) - (a.sellerInfo?.successOrders || 0));

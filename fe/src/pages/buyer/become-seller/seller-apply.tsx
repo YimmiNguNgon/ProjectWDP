@@ -22,17 +22,17 @@ import {
 } from "lucide-react";
 
 const PROBATION_LIMITS = [
-    { icon: Package, label: "Tối đa 5 sản phẩm/ngày" },
-    { icon: Clock, label: "Tối đa 10 đơn hàng/ngày" },
-    { icon: ShieldAlert, label: "Không được đăng danh mục rủi ro cao" },
+    { icon: Package, label: "Max 5 products/day" },
+    { icon: Clock, label: "Max 10 orders/day" },
+    { icon: ShieldAlert, label: "Cannot list high-risk categories" },
 ];
 
 const UPGRADE_CONDITIONS = [
-    { label: "≥ 20 đơn hàng thành công" },
-    { label: "Rating trung bình ≥ 4.5 ⭐" },
-    { label: "Tỷ lệ hoàn trả < 5%" },
-    { label: "Tài khoản > 30 ngày" },
-    { label: "Không có báo cáo nghiêm trọng" },
+    { label: "≥ 20 successful orders" },
+    { label: "Average rating ≥ 4.5 ⭐" },
+    { label: "Return rate < 5%" },
+    { label: "Account age > 30 days" },
+    { label: "No serious reports" },
 ];
 
 export default function SellerApplyPage() {
@@ -61,11 +61,9 @@ export default function SellerApplyPage() {
             return;
         }
 
-        // Kiểm tra đã có đơn chưa
         api.get("/api/seller-applications/my")
             .then((res) => {
                 if (res.data.data) {
-                    // Đã đăng ký rồi → redirect luôn về seller panel
                     navigate("/seller");
                 }
             })
@@ -83,23 +81,22 @@ export default function SellerApplyPage() {
         e.preventDefault();
 
         if (!user?.isEmailVerified) {
-            toast.error("Vui lòng xác thực email trước khi đăng ký seller");
+            toast.error("Please verify your email before registering as a seller");
             return;
         }
 
         if (form.productDescription.length < 20) {
-            toast.error("Mô tả sản phẩm cần ít nhất 20 ký tự");
+            toast.error("Product description must be at least 20 characters");
             return;
         }
 
         setLoading(true);
         try {
             await api.post("/api/seller-applications", form);
-            // Refresh user data để cập nhật role mới
             await fetchMe();
             setSuccess(true);
         } catch (err: any) {
-            toast.error(err.response?.data?.message || "Đăng ký thất bại, vui lòng thử lại.");
+            toast.error(err.response?.data?.message || "Registration failed, please try again.");
         } finally {
             setLoading(false);
         }
@@ -108,12 +105,12 @@ export default function SellerApplyPage() {
     if (checkingStatus) {
         return (
             <div className="flex items-center justify-center min-h-[50vh]">
-                <p className="text-muted-foreground">Đang kiểm tra trạng thái...</p>
+                <p className="text-muted-foreground">Checking status...</p>
             </div>
         );
     }
 
-    // ─── Màn hình thành công ────────────────────────────────────────────────────
+    // ─── Success screen ──────────────────────────────────────────────────────────
     if (success) {
         return (
             <div className="max-w-lg mx-auto mt-12 flex flex-col items-center gap-6 text-center px-4">
@@ -128,14 +125,14 @@ export default function SellerApplyPage() {
 
                 <div>
                     <Badge className="mb-3 bg-blue-100 text-blue-700 hover:bg-blue-100">
-                        Tự động phê duyệt
+                        Auto-approved
                     </Badge>
                     <h2 className="text-2xl font-bold text-foreground mb-2">
-                        🎉 Chúc mừng! Bạn đã là Seller
+                        🎉 Congratulations! You are now a Seller
                     </h2>
                     <p className="text-muted-foreground text-sm leading-relaxed">
-                        Tài khoản của bạn đã được nâng cấp thành công.{" "}
-                        <strong>Email xác nhận</strong> đã được gửi tới hòm thư của bạn.
+                        Your account has been successfully upgraded.{" "}
+                        <strong>A confirmation email</strong> has been sent to your inbox.
                     </p>
                 </div>
 
@@ -143,7 +140,7 @@ export default function SellerApplyPage() {
                     <div className="flex items-center gap-2 mb-3">
                         <ShieldAlert className="h-4 w-4 text-amber-600" />
                         <span className="text-sm font-semibold text-amber-800">
-                            Giai đoạn PROBATION – Giới hạn đang áp dụng
+                            PROBATION Stage – Limits currently applied
                         </span>
                     </div>
                     <div className="flex flex-col gap-2">
@@ -163,7 +160,7 @@ export default function SellerApplyPage() {
                     <div className="flex items-center gap-2 mb-3">
                         <TrendingUp className="h-4 w-4 text-green-700" />
                         <span className="text-sm font-semibold text-green-800">
-                            Điều kiện nâng cấp lên NORMAL (bỏ giới hạn)
+                            Conditions to upgrade to NORMAL (remove limits)
                         </span>
                     </div>
                     <div className="flex flex-col gap-1.5">
@@ -175,7 +172,7 @@ export default function SellerApplyPage() {
                         ))}
                     </div>
                     <p className="text-xs text-green-600 mt-3">
-                        Hệ thống tự động kiểm tra và nâng cấp hàng ngày.
+                        The system automatically checks and upgrades daily.
                     </p>
                 </div>
 
@@ -185,13 +182,13 @@ export default function SellerApplyPage() {
                     className="w-full cursor-pointer"
                     onClick={() => navigate("/seller")}
                 >
-                    Đi đến Seller Panel
+                    Go to Seller Panel
                 </Button>
             </div>
         );
     }
 
-    // ─── Form đăng ký ───────────────────────────────────────────────────────────
+    // ─── Registration form ───────────────────────────────────────────────────────
     return (
         <div className="max-w-2xl mx-auto py-10 px-4">
             {/* Back */}
@@ -200,23 +197,23 @@ export default function SellerApplyPage() {
                 className="flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground mb-6 cursor-pointer transition-colors"
             >
                 <ChevronLeft className="h-4 w-4" />
-                Quay lại
+                Go back
             </button>
 
             {/* Header */}
             <div className="mb-6">
                 <div className="flex items-center gap-2 mb-1">
                     <h1 className="text-2xl font-bold text-foreground">
-                        Đăng ký trở thành Seller
+                        Register to become a Seller
                     </h1>
                     <Badge className="bg-blue-100 text-blue-700 hover:bg-blue-100">
                         <Zap className="h-3 w-3 mr-1" />
-                        Tự động duyệt
+                        Auto-approved
                     </Badge>
                 </div>
                 <p className="text-muted-foreground text-sm">
-                    Điền thông tin bên dưới. Tài khoản của bạn sẽ được nâng cấp{" "}
-                    <strong>ngay lập tức</strong> sau khi gửi.
+                    Fill in the information below. Your account will be upgraded{" "}
+                    <strong>instantly</strong> upon submission.
                 </p>
             </div>
 
@@ -225,9 +222,9 @@ export default function SellerApplyPage() {
                 <div className="mb-5 flex items-start gap-3 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3">
                     <MailCheck className="h-5 w-5 text-amber-600 flex-shrink-0 mt-0.5" />
                     <p className="text-sm text-amber-700">
-                        Vui lòng{" "}
-                        <strong>xác thực email</strong> trước khi đăng ký seller.
-                        Kiểm tra hộp thư của bạn.
+                        Please{" "}
+                        <strong>verify your email</strong> before registering as a seller.
+                        Check your inbox.
                     </p>
                 </div>
             )}
@@ -237,12 +234,12 @@ export default function SellerApplyPage() {
                 {/* Shop name */}
                 <div className="flex flex-col gap-1.5">
                     <Label htmlFor="shopName">
-                        Tên shop <span className="text-destructive">*</span>
+                        Shop name <span className="text-destructive">*</span>
                     </Label>
                     <Input
                         id="shopName"
                         name="shopName"
-                        placeholder="Ví dụ: Shop Thời Trang ABC"
+                        placeholder="e.g. ABC Fashion Store"
                         value={form.shopName}
                         onChange={handleChange}
                         required
@@ -253,12 +250,12 @@ export default function SellerApplyPage() {
                 {/* Product description */}
                 <div className="flex flex-col gap-1.5">
                     <Label htmlFor="productDescription">
-                        Mô tả sản phẩm dự định bán <span className="text-destructive">*</span>
+                        Shop description <span className="text-destructive">*</span>
                     </Label>
                     <Textarea
                         id="productDescription"
                         name="productDescription"
-                        placeholder="Mô tả ngắn gọn các loại sản phẩm bạn định kinh doanh. Ví dụ: Thời trang nữ cao cấp, túi xách hàng hiệu..."
+                        placeholder="Describe your shop and what you sell. e.g. Premium women's fashion, luxury handbags..."
                         value={form.productDescription}
                         onChange={handleChange}
                         required
@@ -266,7 +263,7 @@ export default function SellerApplyPage() {
                         disabled={!user?.isEmailVerified}
                     />
                     <p className="text-xs text-muted-foreground">
-                        Tối thiểu 20 ký tự. Hiện tại: {form.productDescription.length} ký tự.
+                        This will be displayed as your shop's public description. Minimum 20 characters. Current: {form.productDescription.length} characters.
                     </p>
                 </div>
 
@@ -275,15 +272,14 @@ export default function SellerApplyPage() {
                 {/* PROBATION info */}
                 <div className="rounded-xl border border-border bg-muted/30 p-4">
                     <p className="text-xs font-semibold text-foreground mb-2">
-                        ℹ️ Sau khi đăng ký, bạn sẽ ở giai đoạn <strong>PROBATION</strong>:
+                        ℹ️ After registration, you will be in the <strong>PROBATION</strong> stage:
                     </p>
                     <ul className="text-xs text-muted-foreground space-y-1 pl-4 list-disc">
-                        <li>Tối đa 5 sản phẩm/ngày và 10 đơn/ngày</li>
-                        <li>Không đăng danh mục rủi ro cao</li>
-                        <li>Sản phẩm cũ (nếu có) vẫn hiển thị bình thường</li>
+                        <li>Cannot list high-risk categories</li>
+                        <li>Existing products (if any) remain visible as normal</li>
                     </ul>
                     <p className="text-xs text-muted-foreground mt-2">
-                        Hệ thống tự động nâng cấp lên <strong>NORMAL</strong> khi đạt đủ điều kiện.
+                        The system automatically upgrades to <strong>NORMAL</strong> when conditions are met.
                     </p>
                 </div>
 
@@ -295,7 +291,7 @@ export default function SellerApplyPage() {
                     disabled={loading || !user?.isEmailVerified}
                     className="w-full cursor-pointer"
                 >
-                    {loading ? "Đang xử lý..." : "Đăng ký Seller ngay"}
+                    {loading ? "Processing..." : "Register as Seller now"}
                 </Button>
             </form>
         </div>

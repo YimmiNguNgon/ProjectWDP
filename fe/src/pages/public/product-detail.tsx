@@ -778,6 +778,17 @@ export default function ProductDetailPage() {
         </div>
       </div>
 
+      {/* Description */}
+      {product?.description && (
+        <div className="mt-6 flex flex-col gap-3">
+          <h2 className="text-xl font-semibold">Product Description</h2>
+          <Separator />
+          <div className="prose prose-sm max-w-none text-sm text-foreground whitespace-pre-wrap leading-relaxed">
+            {product.description}
+          </div>
+        </div>
+      )}
+
       {/* BELOW: Seller Trust Score full + Seller feedback */}
       {product && (
         <>

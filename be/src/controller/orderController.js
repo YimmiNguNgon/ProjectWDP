@@ -1154,7 +1154,11 @@ getOrders = async (req, res) => {
     }
 
     if (status && status !== "all") {
-      filter.status = status;
+      if (status === "ready_to_ship") {
+        filter.status = { $in: ["ready_to_ship", "queued", "pending_acceptance"] };
+      } else {
+        filter.status = status;
+      }
     }
 
     if (startDate || endDate) {
@@ -1288,6 +1292,8 @@ getOrderStats = async (req, res) => {
       "created",
       "packaging",
       "ready_to_ship",
+      "queued",
+      "pending_acceptance",
       "shipping",
       "delivered",
       "cancelled",

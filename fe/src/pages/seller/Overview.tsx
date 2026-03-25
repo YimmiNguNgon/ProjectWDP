@@ -190,24 +190,6 @@ export default function SellerOverview() {
         </Button>
       </div>
 
-      {/* PROBATION banner */}
-      {isProbation && (
-        <div className="flex items-start gap-3 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3">
-          <AlertTriangle className="h-5 w-5 text-amber-600 flex-shrink-0 mt-0.5" />
-          <div>
-            <p className="text-sm font-semibold text-amber-800">
-              Account is in PROBATION stage
-            </p>
-            <p className="text-xs text-amber-700 mt-0.5">
-              Limits: 5 products/day · 10 orders/day · No listing of high-risk
-              categories.{" "}
-              <Link to="/seller/my-listings" className="underline font-medium">
-                View details →
-              </Link>
-            </p>
-          </div>
-        </div>
-      )}
 
       <Card className="border-blue-200 bg-gradient-to-r from-blue-50 via-cyan-50 to-white">
         <CardContent className="py-5">

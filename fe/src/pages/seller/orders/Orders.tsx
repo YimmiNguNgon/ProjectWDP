@@ -1275,7 +1275,9 @@ export default function SellerOrders() {
       <div className="grid grid-cols-2 md:grid-cols-5 gap-4 mb-6">
         {statuses.slice(1).map((status) => {
           const Icon = status.icon;
-          const count = stats?.counts?.[status.value] || 0;
+          const count = status.value === "ready_to_ship"
+            ? (stats?.counts?.ready_to_ship || 0) + (stats?.counts?.queued || 0) + (stats?.counts?.pending_acceptance || 0)
+            : stats?.counts?.[status.value] || 0;
           return (
             <Card key={status.value}>
               <CardContent className="p-4">

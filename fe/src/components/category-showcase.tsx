@@ -1,5 +1,5 @@
-import React, { useEffect, useState, useMemo } from "react";
-import { Link, useNavigate } from "react-router-dom";
+import React, { useEffect, useState } from "react";
+import { useNavigate } from "react-router-dom";
 import {
   Carousel,
   CarouselContent,
@@ -7,6 +7,7 @@ import {
   CarouselNext,
   CarouselPrevious,
 } from "@/components/ui/carousel";
+import { FaGrip } from "react-icons/fa6";
 import api from "@/lib/axios";
 
 interface Category {
@@ -21,8 +22,7 @@ interface CategoryShowcaseProps {
   className?: string;
 }
 
-// Memoized category item component for flex layout
-const FlexCategoryItem = React.memo(
+const CategoryCard = React.memo(
   ({
     category,
     navigate,
@@ -32,102 +32,63 @@ const FlexCategoryItem = React.memo(
   }) => (
     <div
       onClick={() => navigate(`/products?categories=${category.slug}`)}
-      className="w-full flex flex-col items-center group cursor-pointer"
+      className="group flex flex-col items-center gap-3 cursor-pointer"
     >
-      <div className="aspect-square bg-muted rounded-full flex items-center justify-center overflow-hidden transition-transform group-hover:scale-105 w-full will-change-transform">
+      <div className="w-full aspect-square rounded-2xl overflow-hidden bg-muted shadow-sm group-hover:shadow-md transition-all duration-200 group-hover:-translate-y-1 border border-border/40">
         {category.imageUrl ? (
           <img
             src={category.imageUrl}
             alt={category.name}
-            className="w-full h-full object-cover"
+            className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
             loading="lazy"
           />
         ) : (
-          <span className="text-4xl font-bold text-muted-foreground">
-            {category.name.charAt(0).toUpperCase()}
-          </span>
+          <div className="w-full h-full flex items-center justify-center bg-gradient-to-br from-primary/10 to-primary/20">
+            <span className="text-3xl font-bold text-primary/50">
+              {category.name.charAt(0).toUpperCase()}
+            </span>
+          </div>
         )}
       </div>
-      <figcaption className="text-muted-foreground pt-2 text-sm text-center mt-2 line-clamp-2 group-hover:text-foreground transition-colors">
+      <p className="text-sm font-medium text-center text-foreground line-clamp-1 group-hover:text-primary transition-colors">
         {category.name}
-      </figcaption>
+      </p>
     </div>
   ),
 );
 
-FlexCategoryItem.displayName = "FlexCategoryItem";
-
-// Memoized category item component for carousel
-const CarouselCategoryItem = React.memo(
-  ({
-    category,
-    navigate,
-  }: {
-    category: Category;
-    navigate: ReturnType<typeof useNavigate>;
-  }) => (
-    <CarouselItem className="basis-1/2 sm:basis-1/3 md:basis-1/4 lg:basis-1/5">
-      <div
-        onClick={() => navigate(`/products?categories=${category.slug}`)}
-        className="flex flex-col items-center group h-full cursor-pointer"
-      >
-        <div className="aspect-square bg-muted rounded-full flex items-center justify-center overflow-hidden transition-transform group-hover:scale-100 w-[85%] will-change-transform">
-          {category.imageUrl ? (
-            <img
-              src={category.imageUrl}
-              alt={category.name}
-              className="w-full h-full object-cover"
-              loading="lazy"
-            />
-          ) : (
-            <span className="text-4xl font-bold text-muted-foreground">
-              {category.name.charAt(0).toUpperCase()}
-            </span>
-          )}
-        </div>
-        <figcaption className="text-muted-foreground pt-2 text-md text-center mt-2 line-clamp-2 group-hover:text-foreground transition-colors">
-          {category.name}
-        </figcaption>
-      </div>
-    </CarouselItem>
-  ),
-);
-
-CarouselCategoryItem.displayName = "CarouselCategoryItem";
+CategoryCard.displayName = "CategoryCard";
 
 export function CategoryShowcase({
-  title = "Trending on efpt",
+  title = "Shop by Category",
   className = "",
 }: CategoryShowcaseProps) {
   const [categories, setCategories] = useState<Category[]>([]);
-  const [loading, setLoading] = useState(false);
+  const [loading, setLoading] = useState(true);
   const navigate = useNavigate();
 
   useEffect(() => {
-    const fetchCategories = async () => {
-      try {
-        setLoading(true);
-        const res = await api.get("/api/categories");
-        setCategories(res.data.data || []);
-      } catch (error) {
-        console.error("Failed to fetch categories:", error);
-      } finally {
-        setLoading(false);
-      }
-    };
-    fetchCategories();
+    api
+      .get("/api/categories")
+      .then((r) => setCategories(r.data.data || []))
+      .catch(() => {})
+      .finally(() => setLoading(false));
   }, []);
 
-  // Show skeleton only if loading AND no categories yet
   if (loading && categories.length === 0) {
     return (
-      <section className={`flex flex-col gap-4 ${className}`}>
-        <h1 className="text-2xl font-bold">{title}</h1>
-        <div className="flex gap-4">
-          {Array.from({ length: 5 }).map((_, index) => (
-            <div key={index} className="w-full animate-pulse">
-              <div className="aspect-square bg-muted rounded-full" />
-              <div className="h-4 bg-muted rounded mt-4" />
+      <section className={`flex flex-col gap-5 ${className}`}>
+        <div className="flex items-center gap-2.5">
+          <div className="p-2 bg-primary/10 rounded-xl">
+            <FaGrip className="w-4 h-4 text-primary" />
+          </div>
+          <div className="h-7 w-40 bg-muted rounded animate-pulse" />
+        </div>
+        <div className="grid grid-cols-6 gap-4">
+          {Array.from({ length: 6 }).map((_, i) => (
+            <div key={i} className="flex flex-col gap-3">
+              <div className="aspect-square bg-muted rounded-2xl animate-pulse" />
+              <div className="h-4 bg-muted rounded w-3/4 mx-auto animate-pulse" />
             </div>
           ))}
         </div>
@@ -135,54 +96,50 @@ export function CategoryShowcase({
     );
   }
 
-  // If no categories, don't render
-  if (categories.length === 0) {
-    return null;
-  }
+  if (categories.length === 0) return null;
 
-  // If 5 or fewer categories, show them in a flex layout
-  if (categories.length <= 5) {
-    return (
-      <section className={`flex flex-col gap-4 ${className}`}>
-        <h1 className="text-2xl font-bold">{title}</h1>
-        <div className="flex gap-4">
-          {categories.map((category) => (
-            <FlexCategoryItem
-              key={category._id}
-              category={category}
-              navigate={navigate}
-            />
-          ))}
-        </div>
-      </section>
-    );
-  }
+  const COLS = Math.min(categories.length, 6);
+  const useCarousel = categories.length > 6;
 
-  // If more than 5 categories, show as carousel
   return (
-    <section className={`flex flex-col gap-4 ${className}`}>
-      <h1 className="text-2xl font-bold">{title}</h1>
-      <Carousel className="relative">
-        <CarouselContent>
-          {categories.map((category) => (
-            <CarouselCategoryItem
-              key={category._id}
-              category={category}
-              navigate={navigate}
-            />
-          ))}
-        </CarouselContent>
-        <div className="absolute right-0 bottom-0 flex gap-2">
-          <CarouselPrevious
-            size={"icon"}
-            className="static translate-0 cursor-pointer"
-          />
-          <CarouselNext
-            size={"icon"}
-            className="static translate-0 cursor-pointer"
-          />
+    <section className={`flex flex-col gap-5 ${className}`}>
+      {/* Header */}
+      <div className="flex items-center justify-between">
+        <div className="flex items-center gap-2.5">
+          <div className="p-2 bg-primary/10 rounded-xl">
+            <FaGrip className="w-4 h-4 text-primary" />
+          </div>
+          <div>
+            <h2 className="text-xl font-bold text-foreground">{title}</h2>
+            <p className="text-xs text-muted-foreground">Browse products by category</p>
+          </div>
         </div>
-      </Carousel>
+      </div>
+
+      {useCarousel ? (
+        <Carousel className="relative">
+          <CarouselContent>
+            {categories.map((category) => (
+              <CarouselItem
+                key={category._id}
+                className="basis-1/3 sm:basis-1/4 md:basis-1/5 lg:basis-1/6"
+              >
+                <CategoryCard category={category} navigate={navigate} />
+              </CarouselItem>
+            ))}
+          </CarouselContent>
+          <div className="absolute -top-10 right-0 flex gap-2">
+            <CarouselPrevious size="icon" className="static translate-0 cursor-pointer" />
+            <CarouselNext size="icon" className="static translate-0 cursor-pointer" />
+          </div>
+        </Carousel>
+      ) : (
+        <div className={`grid gap-4`} style={{ gridTemplateColumns: `repeat(${COLS}, minmax(0, 1fr))` }}>
+          {categories.map((category) => (
+            <CategoryCard key={category._id} category={category} navigate={navigate} />
+          ))}
+        </div>
+      )}
     </section>
   );
 }
