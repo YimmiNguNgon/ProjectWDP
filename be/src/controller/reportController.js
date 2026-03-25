@@ -17,7 +17,8 @@ const BuyerReportStats = require("../models/BuyerReportStats");
 exports.submitReport = async (req, res, next) => {
   try {
     const buyerId = req.user._id;
-    const { sellerId, productId, orderId, reason, description, evidenceUrl } = req.body;
+    const { sellerId, productId, orderId, reason, description, evidenceUrl, deviceFingerprint } = req.body;
+    const ipAddress = req.headers['x-forwarded-for'] || req.socket.remoteAddress || null;
 
     if (!sellerId || !reason || !description) {
       return res.status(400).json({ message: "sellerId, reason, and description are required" });
@@ -46,6 +47,8 @@ exports.submitReport = async (req, res, next) => {
       reason,
       description,
       evidenceUrl: evidenceUrl || null,
+      ipAddress,
+      deviceFingerprint: deviceFingerprint || null,
     });
 
     return res.status(201).json({ message: "Report submitted successfully", data: report });
