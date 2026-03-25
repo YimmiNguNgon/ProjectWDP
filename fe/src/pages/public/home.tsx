@@ -23,7 +23,11 @@ import {
   FaStore,
   FaCircleCheck,
   FaFire,
+  FaRocket,
+  FaLock,
+  FaMedal,
 } from "react-icons/fa6";
+import type { IconType } from "react-icons";
 import Autoplay from "embla-carousel-autoplay";
 
 interface TopProduct {
@@ -50,10 +54,6 @@ interface TopSeller {
   trustScore?: number | null;
 }
 
-function formatPrice(price: number) {
-  return price.toLocaleString("vi-VN") + "₫";
-}
-
 const FEATURES = [
   { icon: FaTruck,        title: "Free Delivery",   subtitle: "From all orders over $10" },
   { icon: FaHeadset,      title: "Support 24/7",    subtitle: "Shop with an expert" },
@@ -68,61 +68,83 @@ const RANK_COLORS = [
   { bar: "from-amber-600 to-orange-500", badge: "bg-amber-600 text-white",       label: "#3" },
 ];
 
-const PROMO_BANNERS = [
+interface PromoBanner {
+  bg: string;
+  iconBg: string;
+  iconColor: string;
+  icon: IconType;
+  badge: string;
+  badgeColor: string;
+  title: string;
+  subtitle: string;
+  bullets: string[];
+  link: string;
+  cta: string;
+}
+
+const PROMO_BANNERS: PromoBanner[] = [
   {
-    bg: "bg-sky-100",
-    badge: "Best Seller",
-    title: "World's Best\nRO Water Purifiers",
-    subtitle: "Water 100% Pure",
-    bullets: ["Makes Water 100% Pure", "Multiple Purification Process", "Retains Essential Minerals"],
-    imageUrl: "",
+    bg: "bg-sky-50",
+    iconBg: "bg-sky-500",
+    iconColor: "text-white",
+    icon: FaRocket,
+    badge: "For Sellers",
+    badgeColor: "text-sky-600",
+    title: "Become a Seller\nEasily Today",
+    subtitle: "Start your online store in minutes",
+    bullets: [
+      "Register & verify in under 5 minutes",
+      "List unlimited products for free",
+      "Access 10,000+ active buyers daily",
+    ],
+    link: "/become-seller",
+    cta: "Start Selling Now",
   },
   {
-    bg: "bg-rose-50",
-    badge: "New Arrival",
-    title: "Smart Kitchen\nAppliances",
-    subtitle: "Cook Smart, Cook Tasty and Cook Easy",
-    bullets: [],
-    imageUrl: "",
+    bg: "bg-violet-50",
+    iconBg: "bg-violet-500",
+    iconColor: "text-white",
+    icon: FaLock,
+    badge: "Our Platform",
+    badgeColor: "text-violet-600",
+    title: "Safe & Secure\nShopping",
+    subtitle: "Every transaction is protected end-to-end",
+    bullets: [
+      "SSL-encrypted payments & data",
+      "Escrow-based order protection",
+      "24/7 fraud detection system",
+    ],
+    link: "/products",
+    cta: "Shop with Confidence",
   },
   {
-    bg: "bg-emerald-50",
-    badge: "Starting from $82",
-    title: "Electric Kettles",
-    subtitle: "High capacity electric kettles for boiling water",
-    bullets: [],
-    imageUrl: "",
+    bg: "bg-amber-50",
+    iconBg: "bg-amber-400",
+    iconColor: "text-white",
+    icon: FaMedal,
+    badge: "Trust System",
+    badgeColor: "text-amber-600",
+    title: "Verified Sellers\n& Real Reviews",
+    subtitle: "Buy from trusted, badge-verified stores",
+    bullets: [
+      "Seller trust scores & tier badges",
+      "Verified buyer reviews only",
+      "Dispute resolution in 24 hrs",
+    ],
+    link: "/products",
+    cta: "Explore Trusted Stores",
   },
 ];
-
-interface Category {
-  _id: string;
-  name: string;
-  slug: string;
-  imageUrl?: string;
-}
 
 export default function HomePage() {
   const [topProducts, setTopProducts] = useState<TopProduct[]>([]);
   const [topSellers, setTopSellers] = useState<TopSeller[]>([]);
-  const [promoBannerImages, setPromoBannerImages] = useState<string[]>(["", "", ""]);
   const [carouselApi, setCarouselApi] = useState<CarouselApi>();
   const [currentSlide, setCurrentSlide] = useState(0);
 
   useEffect(() => {
     api.get("/api/products/top-selling?limit=3").then((r) => setTopProducts(r.data.data || [])).catch(() => {});
     api.get("/api/products/top-sellers?limit=3").then((r) => setTopSellers(r.data.data || [])).catch(() => {});
-    api.get("/api/categories").then((r) => {
-      const cats: Category[] = r.data?.data || [];
-      const withImg = cats.filter((c) => c.imageUrl);
-      // shuffle and pick 3
-      const shuffled = [...withImg].sort(() => Math.random() - 0.5);
-      setPromoBannerImages([
-        shuffled[0]?.imageUrl || "",
-        shuffled[1]?.imageUrl || "",
-        shuffled[2]?.imageUrl || "",
-      ]);
-    }).catch(() => {});
   }, []);
 
   useEffect(() => {
@@ -256,45 +278,37 @@ export default function HomePage() {
 
       {/* ── Promo Banners ── */}
       <div className="grid grid-cols-3 gap-4">
-        {PROMO_BANNERS.map((banner, idx) => {
-          const imgUrl = promoBannerImages[idx] || banner.imageUrl;
+        {PROMO_BANNERS.map((banner) => {
+          const Icon = banner.icon;
           return (
             <Link
               key={banner.title}
-              to="/products"
-              className={`${banner.bg} rounded-2xl p-6 group shadow-sm hover:shadow-md transition-all duration-200 min-h-[200px] flex items-center gap-3 overflow-hidden relative`}
+              to={banner.link}
+              className={`${banner.bg} rounded-2xl p-6 group shadow-sm hover:shadow-md transition-all duration-200 min-h-[200px] flex items-center gap-4 overflow-hidden relative`}
             >
               <div className="flex-1 flex flex-col gap-1.5 z-10">
-                <p className="text-[11px] font-medium text-slate-500 uppercase tracking-wide">{banner.badge}</p>
+                <p className={`text-[11px] font-bold uppercase tracking-widest ${banner.badgeColor}`}>{banner.badge}</p>
                 <h3 className="text-lg font-bold text-slate-800 whitespace-pre-line leading-tight">{banner.title}</h3>
-                <p className="text-xs text-slate-600">{banner.subtitle}</p>
+                <p className="text-xs text-slate-500">{banner.subtitle}</p>
                 {banner.bullets.length > 0 && (
-                  <ul className="text-[11px] text-slate-600 space-y-0.5 mt-1">
+                  <ul className="text-[11px] text-slate-600 space-y-1 mt-1">
                     {banner.bullets.map((b) => (
                       <li key={b} className="flex items-start gap-1.5">
-                        <span className="w-1 h-1 rounded-full bg-slate-400 flex-shrink-0 mt-1.5" />
+                        <FaCircleCheck className="w-2.5 h-2.5 text-green-500 flex-shrink-0 mt-0.5" />
                         {b}
                       </li>
                     ))}
                   </ul>
                 )}
-                <span className="text-xs font-semibold text-primary mt-2 group-hover:underline uppercase tracking-wide">
-                  Learn more
+                <span className="text-xs font-bold text-primary mt-2 group-hover:underline tracking-wide">
+                  {banner.cta} →
                 </span>
               </div>
-              {/* Image */}
-              <div className="flex-shrink-0 w-28 h-28 flex items-center justify-center z-10">
-                {imgUrl ? (
-                  <img
-                    src={imgUrl}
-                    alt={banner.title}
-                    className="w-28 h-28 object-cover rounded-2xl shadow-md group-hover:scale-105 transition-transform duration-300"
-                  />
-                ) : (
-                  <div className="w-28 h-28 rounded-2xl bg-white/40 border-2 border-dashed border-white/60 flex items-center justify-center">
-                    <span className="text-slate-400/60 text-[10px] text-center px-2">Add image</span>
-                  </div>
-                )}
+              {/* Icon */}
+              <div className="flex-shrink-0 z-10">
+                <div className={`w-20 h-20 rounded-2xl ${banner.iconBg} flex items-center justify-center shadow-md group-hover:scale-110 transition-transform duration-300`}>
+                  <Icon className={`w-9 h-9 ${banner.iconColor}`} />
+                </div>
               </div>
               <div className="absolute -right-6 -bottom-6 w-28 h-28 rounded-full bg-white/20 pointer-events-none" />
             </Link>

@@ -48,7 +48,8 @@
       "Bash(cd \"C:\\\\Users\\\\Administrator\\\\Documents\\\\WDP\\\\be\" && node -e \"\nconst mongoose = require\\('mongoose'\\);\nmongoose.connect\\('mongodb://127.0.0.1:27017/ebay'\\).then\\(async \\(\\) => {\n  const User = require\\('./src/models/User'\\);\n  const result = await User.updateMany\\(\n    { role: 'shipper', status: 'active' },\n    { 'shipperInfo.shipperStatus': 'available', 'shipperInfo.isAvailable': true }\n  \\);\n  console.log\\('Updated', result.modifiedCount, 'shippers to available'\\);\n  process.exit\\(0\\);\n}\\).catch\\(e => { console.error\\(e.message\\); process.exit\\(1\\); }\\);\n\")",
       "Bash(cd \"C:\\\\Users\\\\Administrator\\\\Documents\\\\WDP\\\\fe\" && npm run lint 2>&1)",
       "Bash(cd \"C:\\\\Users\\\\Administrator\\\\Documents\\\\WDP\\\\fe\" && npm run build 2>&1)",
-      "Bash(cd \"C:\\\\Users\\\\Administrator\\\\Documents\\\\WDP\\\\fe\" && npm install react-icons --save 2>&1 | tail -5)"
+      "Bash(cd \"C:\\\\Users\\\\Administrator\\\\Documents\\\\WDP\\\\fe\" && npm install react-icons --save 2>&1 | tail -5)",
+      "Bash(npm run:*)"
     ]
   }
 }
