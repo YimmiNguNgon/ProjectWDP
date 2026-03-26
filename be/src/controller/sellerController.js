@@ -212,7 +212,7 @@ class SellerController {
   async getSellerPublicProfile(req, res) {
     try {
       const { sellerId } = req.params;
-      const user = await User.findById(sellerId).select('username role sellerInfo.shopName sellerInfo.productDescription sellerInfo.registeredAt');
+      const user = await User.findById(sellerId).select('username role sellerInfo.shopName sellerInfo.productDescription sellerInfo.registeredAt sellerInfo.shopAddress');
       if (!user || user.role !== 'seller') {
         return res.status(404).json({ success: false, message: 'Seller not found' });
       }
@@ -221,6 +221,7 @@ class SellerController {
         data: {
           description: user.sellerInfo?.productDescription || '',
           shopName: user.sellerInfo?.shopName || user.username,
+          shopAddress: user.sellerInfo?.shopAddress || '',
         }
       });
     } catch (error) {

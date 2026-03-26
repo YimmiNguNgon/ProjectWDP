@@ -1,6 +1,7 @@
 import { useEffect, useState, useCallback } from "react";
 import { toast } from "sonner";
 import { ChevronDown, ChevronUp, Search } from "lucide-react";
+import ShippingTimeline from "@/components/shipping-timeline";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
@@ -26,6 +27,7 @@ interface AdminOrder {
   shippingAddress?: { fullName?: string; city?: string; district?: string };
   complaints: { reason: string; content: string; status: string; createdAt: string }[];
   deliveryDisputes: { status: string; buyerNote: string; shipperNote: string; adminNote: string; createdAt: string }[];
+  statusHistory?: { status: string; timestamp: string; note: string }[];
 }
 
 const STATUS_COLORS: Record<string, string> = {
@@ -298,6 +300,16 @@ export default function AdminOrders() {
                             </div>
                           ))}
                         </div>
+                      </div>
+                    )}
+
+                    {/* Lịch sử vận chuyển */}
+                    {order.statusHistory && order.statusHistory.length > 0 && (
+                      <div>
+                        <ShippingTimeline
+                          statusHistory={order.statusHistory}
+                          currentStatus={order.status}
+                        />
                       </div>
                     )}
                   </div>

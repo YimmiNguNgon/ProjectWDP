@@ -47,6 +47,12 @@ const orderSchema = new mongoose.Schema({
     default: null,
     index: true,
   },
+  pickupShipper: {
+    // Shipper 1 — người lấy hàng từ seller (lưu lại sau khi bàn giao)
+    type: mongoose.Schema.Types.ObjectId,
+    ref: "User",
+    default: null,
+  },
   returnShipper: {
     type: mongoose.Schema.Types.ObjectId,
     ref: "User",
@@ -113,9 +119,13 @@ const orderSchema = new mongoose.Schema({
       "created",
       "packaging",
       "ready_to_ship",
-      "queued",              // Đang chờ shipper (tất cả shipper đầy slot)
-      "pending_acceptance",  // Đã assign shipper, chờ shipper chấp nhận
-      "shipping",
+      "queued",                        // Chờ Shipper 1 (tất cả shipper khu vực seller đầy slot)
+      "pending_acceptance",            // Shipper 1 được assign, chờ chấp nhận
+      "shipping",                      // Shipper 1 đang lấy hàng từ seller
+      "in_transit",                    // Shipper 1 đã đến khu vực buyer, chờ Shipper 2
+      "delivery_queued",               // Chờ Shipper 2 (tất cả shipper khu vực buyer đầy slot)
+      "pending_delivery_acceptance",   // Shipper 2 được assign, chờ chấp nhận
+      "delivering",                    // Shipper 2 đang giao đến buyer
       "delivered",
       "completed",
       "cancelled",
@@ -132,6 +142,8 @@ const orderSchema = new mongoose.Schema({
 
   // Thời điểm đưa vào queue – dùng để FIFO khi auto-assign
   queuedAt: { type: Date, default: null },
+  // Thời điểm đưa vào delivery_queued – FIFO cho Shipper 2
+  deliveryQueuedAt: { type: Date, default: null },
   paymentStatus: {
     type: String,
     enum: ["unpaid", "paid", "failed", "refunded"],
@@ -172,6 +184,10 @@ const orderSchema = new mongoose.Schema({
           "queued",
           "pending_acceptance",
           "shipping",
+          "in_transit",
+          "delivery_queued",
+          "pending_delivery_acceptance",
+          "delivering",
           "delivered",
           "completed",
           "cancelled",

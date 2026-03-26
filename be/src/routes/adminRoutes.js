@@ -277,6 +277,7 @@ router.post(
 
 // Shipper management routes
 router.get("/shippers", adminShipperController.getAllShippers);
+router.get("/shippers/provinces", adminShipperController.getShipperProvinces);
 router.get("/shipper-orders", adminShipperController.getShipperOrders);
 router.patch("/shippers/:id/status", adminShipperController.updateShipperStatus);
 

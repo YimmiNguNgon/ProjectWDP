@@ -17,7 +17,8 @@ export interface ShipperOrder {
     detail?: string;
   };
   buyer?: { _id: string; username: string; email: string };
-  seller?: { _id: string; username: string; sellerInfo?: { shopName?: string } };
+  seller?: { _id: string; username: string; sellerInfo?: { shopName?: string; shopAddress?: string } };
+  pickupShipper?: { _id: string; username: string };
   shipper?: { _id: string; username: string; email: string };
   items?: { title: string; quantity: number; unitPrice: number }[];
 }
@@ -28,6 +29,7 @@ export interface ShipperStats {
   totalAccepted: number;
   isAvailable: boolean;
   shipperStatus: "available" | "shipping" | "paused";
+  assignedProvince?: string;
 }
 
 export interface OrdersResponse {
@@ -48,6 +50,9 @@ export const acceptOrder = (orderId: string): Promise<{ data: { ok: boolean; ord
 
 export const rejectOrder = (orderId: string): Promise<{ data: { ok: boolean } }> =>
   api.patch(`/api/shipper/orders/${orderId}/reject`);
+
+export const arrivedAtDestination = (orderId: string): Promise<{ data: { ok: boolean; order: ShipperOrder } }> =>
+  api.patch(`/api/shipper/orders/${orderId}/arrived`);
 
 export const markDelivered = (orderId: string): Promise<{ data: { ok: boolean; order: ShipperOrder } }> =>
   api.patch(`/api/shipper/orders/${orderId}/delivered`);

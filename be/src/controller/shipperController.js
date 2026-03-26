@@ -5,6 +5,8 @@ const { evaluateSellerTrust } = require("../services/sellerTrustService");
 const notificationService = require("../services/notificationService");
 const {
   dispatchNextFromQueue,
+  dispatchNextDeliveryFromQueue,
+  autoAssignDeliveryShipper,
   toggleShipperAvailability,
 } = require("../services/orderDispatchService");
 
@@ -16,10 +18,20 @@ exports.getAvailableOrders = async (req, res, next) => {
     const limit = Math.min(100, parseInt(req.query.limit) || PAGE_SIZE);
     const skip = (page - 1) * limit;
 
+    const shipperDoc = await User.findById(req.user._id).select("shipperInfo").lean();
+    const assignedProvince = shipperDoc?.shipperInfo?.assignedProvince || null;
+
     const query = {
       $or: [
+        // Phase 1 pickup orders
         { status: { $in: ["ready_to_ship", "queued"] }, shipper: null },
         { status: "pending_acceptance", shipper: req.user._id },
+        // Phase 2 delivery orders — hiển thị cho shipper cùng khu vực buyer
+        ...(assignedProvince
+          ? [{ status: "delivery_queued", shipper: null, "shippingAddress.city": assignedProvince }]
+          : [{ status: "delivery_queued", shipper: null }]),
+        { status: "pending_delivery_acceptance", shipper: req.user._id },
+        // Return orders
         { status: "waiting_return_shipment", returnShipper: null },
       ],
     };
@@ -50,9 +62,10 @@ exports.getMyOrders = async (req, res, next) => {
     const filter = {
       $or: [
         { shipper: req.user._id },
+        { pickupShipper: req.user._id },
         { returnShipper: req.user._id },
       ],
-      status: { $ne: "pending_acceptance" },
+      status: { $nin: ["pending_acceptance", "pending_delivery_acceptance"] },
     };
     if (req.query.status) filter.status = req.query.status;
 
@@ -78,7 +91,7 @@ exports.acceptOrder = async (req, res, next) => {
     const [activeCount, shipperDoc] = await Promise.all([
       Order.countDocuments({
         $or: [
-          { shipper: req.user._id, status: "shipping" },
+          { shipper: req.user._id, status: { $in: ["shipping", "delivering"] } },
           { returnShipper: req.user._id, status: "return_shipping" },
         ],
       }),
@@ -116,7 +129,21 @@ exports.acceptOrder = async (req, res, next) => {
       },
     };
 
-    // Accept open orders (no shipper yet)
+    // Delivery update cho Shipper 2
+    const deliveryUpdate = {
+      status: "delivering",
+      shipper: req.user._id,
+      deliveryQueuedAt: null,
+      $push: {
+        statusHistory: {
+          status: "delivering",
+          timestamp: new Date(),
+          note: `Delivery accepted by shipper ${req.user.username}`,
+        },
+      },
+    };
+
+    // Accept open pickup orders (no shipper yet)
     let order = await Order.findOneAndUpdate(
       {
         _id: req.params.id,
@@ -127,7 +154,7 @@ exports.acceptOrder = async (req, res, next) => {
       { new: true },
     );
 
-    // Accept pending_acceptance order assigned to this shipper
+    // Accept pending_acceptance order assigned to this shipper (Shipper 1)
     if (!order) {
       order = await Order.findOneAndUpdate(
         {
@@ -136,6 +163,32 @@ exports.acceptOrder = async (req, res, next) => {
           shipper: req.user._id,
         },
         pickupUpdate,
+        { new: true },
+      );
+    }
+
+    // Accept delivery_queued order for Shipper 2 (open, no shipper)
+    if (!order) {
+      order = await Order.findOneAndUpdate(
+        {
+          _id: req.params.id,
+          status: "delivery_queued",
+          shipper: null,
+        },
+        deliveryUpdate,
+        { new: true },
+      );
+    }
+
+    // Accept pending_delivery_acceptance assigned to this shipper (Shipper 2)
+    if (!order) {
+      order = await Order.findOneAndUpdate(
+        {
+          _id: req.params.id,
+          status: "pending_delivery_acceptance",
+          shipper: req.user._id,
+        },
+        deliveryUpdate,
         { new: true },
       );
     }
@@ -235,7 +288,8 @@ exports.acceptOrder = async (req, res, next) => {
 
 exports.rejectOrder = async (req, res, next) => {
   try {
-    const order = await Order.findOneAndUpdate(
+    // Reject Shipper 1 pickup assignment
+    let order = await Order.findOneAndUpdate(
       {
         _id: req.params.id,
         status: "pending_acceptance",
@@ -255,11 +309,38 @@ exports.rejectOrder = async (req, res, next) => {
       { new: true },
     );
 
+    // Reject Shipper 2 delivery assignment → back to in_transit for re-assignment
+    if (!order) {
+      order = await Order.findOneAndUpdate(
+        {
+          _id: req.params.id,
+          status: "pending_delivery_acceptance",
+          shipper: req.user._id,
+        },
+        {
+          shipper: null,
+          status: "in_transit",
+          $push: {
+            statusHistory: {
+              status: "in_transit",
+              timestamp: new Date(),
+              note: `Delivery rejected by shipper ${req.user.username}. Re-queuing for delivery assignment.`,
+            },
+          },
+        },
+        { new: true },
+      );
+
+      // Trigger tìm Shipper 2 khác
+      if (order) {
+        setImmediate(() => autoAssignDeliveryShipper(order, req.user._id).catch(() => {}));
+      }
+    }
+
     if (!order) {
       return res.status(404).json({ message: "Order not found or cannot be rejected" });
     }
 
-    // Leave as ready_to_ship so ALL shippers (including the one who rejected) can see it
     res.json({ ok: true, message: "Order rejected and returned to available pool" });
   } catch (err) {
     next(err);
@@ -271,7 +352,8 @@ exports.markDelivered = async (req, res, next) => {
     const order = await Order.findOne({
       _id: req.params.id,
       $or: [
-        { shipper: req.user._id, status: "shipping" },
+        { shipper: req.user._id, status: "shipping" },     // Shipper 1 không có relay (same area)
+        { shipper: req.user._id, status: "delivering" },   // Shipper 2 giao hàng
         { returnShipper: req.user._id, status: "return_shipping" }
       ]
     });
@@ -299,7 +381,7 @@ exports.markDelivered = async (req, res, next) => {
       try {
         const activeCount = await Order.countDocuments({
           $or: [
-            { shipper: req.user._id, status: { $in: ["shipping", "pending_acceptance"] } },
+            { shipper: req.user._id, status: { $in: ["shipping", "pending_acceptance", "delivering", "pending_delivery_acceptance"] } },
             { returnShipper: req.user._id, status: "return_shipping" },
           ],
         });
@@ -309,7 +391,9 @@ exports.markDelivered = async (req, res, next) => {
             "shipperInfo.isAvailable": true,
           });
         }
+        // Thử dispatch cả 2 loại queue
         await dispatchNextFromQueue(req.user._id);
+        await dispatchNextDeliveryFromQueue(req.user._id);
       } catch (e) { /* ignore */ }
     });
 
@@ -387,6 +471,86 @@ exports.markDelivered = async (req, res, next) => {
   }
 };
 
+/**
+ * Shipper 1 báo đã đến khu vực buyer → bàn giao cho Shipper 2.
+ * Shipper 1 được ghi vào pickupShipper, shipper field reset để Shipper 2 nhận.
+ * Sau đó tự động assign Shipper 2 hoặc đưa vào delivery_queued.
+ */
+exports.arrivedAtDestination = async (req, res, next) => {
+  try {
+    const order = await Order.findOne({
+      _id: req.params.id,
+      shipper: req.user._id,
+      status: "shipping",
+    });
+
+    if (!order) {
+      return res.status(404).json({ message: "Order not found or not in shipping status" });
+    }
+
+    // Ghi lại Shipper 1, reset shipper field để Shipper 2 có thể nhận
+    order.pickupShipper = req.user._id;
+    order.shipper = null;
+    order.status = "in_transit";
+    order.statusHistory.push({
+      status: "in_transit",
+      timestamp: new Date(),
+      note: `Shipper ${req.user.username} arrived at buyer area. Handoff to local delivery shipper.`,
+    });
+    await order.save();
+
+    // Cập nhật Shipper 1: giải phóng slot
+    setImmediate(async () => {
+      try {
+        const activeCount = await Order.countDocuments({
+          $or: [
+            { shipper: req.user._id, status: { $in: ["shipping", "pending_acceptance", "delivering", "pending_delivery_acceptance"] } },
+            { returnShipper: req.user._id, status: "return_shipping" },
+          ],
+        });
+        if (activeCount === 0) {
+          await User.findByIdAndUpdate(req.user._id, {
+            "shipperInfo.shipperStatus": "available",
+            "shipperInfo.isAvailable": true,
+          });
+        }
+        // Dispatch đơn tiếp từ queue cho Shipper 1
+        await dispatchNextFromQueue(req.user._id);
+        // Assign Shipper 2 cho đơn này
+        await autoAssignDeliveryShipper(order, req.user._id);
+      } catch (e) { /* ignore */ }
+    });
+
+    // Notify buyer
+    notificationService
+      .sendNotification({
+        recipientId: order.buyer,
+        type: "order_in_transit",
+        title: "Your order is almost there!",
+        body: `The package has arrived in your area and is being assigned to a local delivery shipper.`,
+        link: `/purchases/${order._id}`,
+        metadata: { orderId: order._id },
+      })
+      .catch(() => { });
+
+    // Notify seller
+    notificationService
+      .sendNotification({
+        recipientId: order.seller,
+        type: "order_in_transit",
+        title: "Order in transit",
+        body: `Shipper ${req.user.username} has arrived at the buyer's area. Awaiting local delivery shipper.`,
+        link: `/seller/orders`,
+        metadata: { orderId: order._id },
+      })
+      .catch(() => { });
+
+    res.json({ ok: true, order });
+  } catch (err) {
+    next(err);
+  }
+};
+
 exports.getShipperStats = async (req, res, next) => {
   try {
     const shipperId = req.user._id;
@@ -400,17 +564,23 @@ exports.getShipperStats = async (req, res, next) => {
       }),
       Order.countDocuments({
         $or: [
-          { shipper: shipperId, status: "shipping" },
+          { shipper: shipperId, status: { $in: ["shipping", "delivering"] } },
           { returnShipper: shipperId, status: "return_shipping" }
         ]
       }),
       Order.countDocuments({
         $or: [
           { shipper: shipperId },
+          { pickupShipper: shipperId },
           { returnShipper: shipperId }
         ]
       }),
-      Order.countDocuments({ status: "queued", shipper: null }),
+      Order.countDocuments({
+        $or: [
+          { status: "queued", shipper: null },
+          { status: "delivery_queued", shipper: null },
+        ]
+      }),
     ]);
 
     // Load shipper limits
@@ -420,6 +590,7 @@ exports.getShipperStats = async (req, res, next) => {
     const maxOrders = shipperDoc?.shipperInfo?.maxOrders ?? 3;
     const isAvailable = shipperDoc?.shipperInfo?.isAvailable ?? true;
     const shipperStatus = shipperDoc?.shipperInfo?.shipperStatus ?? "available";
+    const assignedProvince = shipperDoc?.shipperInfo?.assignedProvince ?? "";
 
     res.json({
       delivered,
@@ -429,6 +600,7 @@ exports.getShipperStats = async (req, res, next) => {
       maxOrders,
       isAvailable,
       shipperStatus,
+      assignedProvince,
     });
   } catch (err) {
     next(err);

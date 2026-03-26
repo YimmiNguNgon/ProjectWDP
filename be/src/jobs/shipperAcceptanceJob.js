@@ -6,7 +6,7 @@ const Revenue = require("../models/Revenue");
 const User = require("../models/User");
 const DeliveryDispute = require("../models/DeliveryDispute");
 const notificationService = require("../services/notificationService");
-const { autoAssignOrder } = require("../services/orderDispatchService");
+const { autoAssignOrder, autoAssignDeliveryShipper } = require("../services/orderDispatchService");
 
 const SELLER_CONFIRM_TIMEOUT_MINUTES = 30;
 const TIMEOUT_MINUTES = 15;
@@ -313,6 +313,129 @@ async function expireShippingOrders() {
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
+// Luồng 2b: Shipper 2 không accept pending_delivery_acceptance trong TIMEOUT_MINUTES
+// ─────────────────────────────────────────────────────────────────────────────
+async function expirePendingDeliveryAcceptance() {
+  const cutoff = new Date(Date.now() - TIMEOUT_MINUTES * 60 * 1000);
+
+  const expiredOrders = await Order.find({
+    status: "pending_delivery_acceptance",
+    updatedAt: { $lt: cutoff },
+  })
+    .select("_id shipper seller buyer")
+    .lean();
+
+  if (!expiredOrders.length) return;
+
+  for (const order of expiredOrders) {
+    const shortId = order._id.toString().slice(-8).toUpperCase();
+
+    const reset = await Order.findOneAndUpdate(
+      { _id: order._id, status: "pending_delivery_acceptance" },
+      {
+        shipper: null,
+        status: "in_transit",
+        $push: {
+          statusHistory: {
+            status: "in_transit",
+            timestamp: new Date(),
+            note: `Delivery shipper did not respond within ${TIMEOUT_MINUTES} minutes. Re-queuing.`,
+          },
+        },
+      },
+      { new: true }
+    );
+
+    if (!reset) continue;
+
+    if (order.shipper) {
+      await notify({
+        recipientId: order.shipper,
+        type: "order_unassigned",
+        title: "Delivery assignment cancelled",
+        body: `Order #${shortId} delivery was unassigned because you did not respond within ${TIMEOUT_MINUTES} minutes.`,
+        link: `/shipper/available`,
+        metadata: { orderId: order._id },
+      });
+      await deactivateShipper(order.shipper, shortId, `You did not accept the delivery within ${TIMEOUT_MINUTES} minutes.`);
+    }
+
+    try {
+      await autoAssignDeliveryShipper(reset, order.shipper);
+    } catch (err) {
+      console.error(`[DeliveryAcceptance] autoAssignDeliveryShipper failed:`, err.message);
+    }
+  }
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Luồng 2c: Shipper 2 không mark delivered trong SHIPPING_TIMEOUT_MINUTES
+// ─────────────────────────────────────────────────────────────────────────────
+async function expireDeliveringOrders() {
+  const cutoff = new Date(Date.now() - SHIPPING_TIMEOUT_MINUTES * 60 * 1000);
+
+  const expiredOrders = await Order.find({
+    status: "delivering",
+    updatedAt: { $lt: cutoff },
+  })
+    .select("_id shipper seller buyer")
+    .lean();
+
+  if (!expiredOrders.length) return;
+
+  for (const order of expiredOrders) {
+    const shortId = order._id.toString().slice(-8).toUpperCase();
+
+    const reset = await Order.findOneAndUpdate(
+      { _id: order._id, status: "delivering" },
+      {
+        shipper: null,
+        status: "in_transit",
+        $push: {
+          statusHistory: {
+            status: "in_transit",
+            timestamp: new Date(),
+            note: `Delivery shipper did not mark delivered within ${SHIPPING_TIMEOUT_MINUTES} minutes. Reassigning.`,
+          },
+        },
+      },
+      { new: true }
+    );
+
+    if (!reset) continue;
+
+    if (order.shipper) {
+      await notify({
+        recipientId: order.shipper,
+        type: "order_unassigned",
+        title: "Order unassigned — delivery timeout",
+        body: `Order #${shortId} was unassigned because you did not deliver within ${SHIPPING_TIMEOUT_MINUTES} minutes.`,
+        link: `/shipper/available`,
+        metadata: { orderId: order._id },
+      });
+      await deactivateShipper(order.shipper, shortId, `You did not deliver the order within ${SHIPPING_TIMEOUT_MINUTES} minutes.`);
+    }
+
+    if (order.seller) {
+      await notify({
+        recipientId: order.seller,
+        type: "order_reassigning",
+        title: "Finding a new delivery shipper",
+        body: `Order #${shortId} delivery shipper timed out. The system is reassigning.`,
+        link: `/seller/orders`,
+        metadata: { orderId: order._id },
+      });
+    }
+
+    try {
+      await autoAssignDeliveryShipper(reset, order.shipper);
+    } catch (err) {
+      console.error(`[DeliveringTimeout] autoAssignDeliveryShipper failed:`, err.message);
+    }
+  }
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
 // Luồng 3: Auto-complete đơn đã delivered sau DELIVERED_AUTO_COMPLETE_MINUTES phút
 // ─────────────────────────────────────────────────────────────────────────────
 async function autoCompleteDeliveredOrders() {
@@ -440,6 +563,8 @@ function initShipperAcceptanceJob() {
       await expireNewOrders();
       await expirePendingAcceptance();
       await expireShippingOrders();
+      await expirePendingDeliveryAcceptance();
+      await expireDeliveringOrders();
       await expireReadyToShipOrders();
       await autoCompleteDeliveredOrders();
     } catch (err) {
@@ -457,6 +582,8 @@ module.exports = {
   expireNewOrders,
   expirePendingAcceptance,
   expireShippingOrders,
+  expirePendingDeliveryAcceptance,
+  expireDeliveringOrders,
   expireReadyToShipOrders,
   autoCompleteDeliveredOrders,
 };

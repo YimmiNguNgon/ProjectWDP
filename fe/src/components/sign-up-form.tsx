@@ -16,15 +16,23 @@ import {
 import { Input } from "@/components/ui/input";
 import { Password } from "./ui/password";
 import { Separator } from "./ui/separator";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { Link, useNavigate } from "react-router-dom";
 import React from "react";
 import { useAuth } from "@/hooks/use-auth";
 import { toast } from "sonner";
 import LoadingAuth from "./loading-auth";
 import { z } from "zod";
-import { useForm } from "react-hook-form";
+import { useForm, Controller } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import api from "@/lib/axios";
+import axios from "axios";
 
 const signUpSchema = z.object({
   username: z.string().min(3, "Username must be at least 3 characters"),
@@ -37,6 +45,7 @@ const staffSignUpSchema = z.object({
   email: z.string().email("Invalid email address"),
   password: z.string().min(6, "Password must be at least 6 characters"),
   staffCode: z.string().min(1, "Staff code is required"),
+  assignedProvince: z.string().min(1, "Please select your delivery area"),
 });
 
 type SignUpValues = z.infer<typeof signUpSchema>;
@@ -44,12 +53,25 @@ type StaffSignUpValues = z.infer<typeof staffSignUpSchema>;
 type Step = "form" | "pending" | "staff-success";
 type Mode = "normal" | "staff";
 
+interface Province {
+  code: number;
+  name: string;
+}
+
 export function SignupForm({ ...props }: React.ComponentProps<typeof Card>) {
   const [step, setStep] = React.useState<Step>("form");
   const [mode, setMode] = React.useState<Mode>("normal");
   const [resendLoading, setResendLoading] = React.useState(false);
+  const [provinces, setProvinces] = React.useState<Province[]>([]);
   const navigate = useNavigate();
   const { signUp, loading } = useAuth();
+
+  React.useEffect(() => {
+    axios
+      .get("https://provinces.open-api.vn/api/p/1?depth=2")
+      .then((res) => setProvinces(res.data.districts))
+      .catch(() => {});
+  }, []);
 
   const normalForm = useForm<SignUpValues>({
     resolver: zodResolver(signUpSchema),
@@ -58,7 +80,7 @@ export function SignupForm({ ...props }: React.ComponentProps<typeof Card>) {
 
   const staffForm = useForm<StaffSignUpValues>({
     resolver: zodResolver(staffSignUpSchema),
-    defaultValues: { username: "", email: "", password: "", staffCode: "" },
+    defaultValues: { username: "", email: "", password: "", staffCode: "", assignedProvince: "" },
   });
 
   const [countdown, setCountdown] = React.useState(0);
@@ -113,6 +135,7 @@ export function SignupForm({ ...props }: React.ComponentProps<typeof Card>) {
         password: data.password,
         role: "shipper",
         staffCode: data.staffCode,
+        assignedProvince: data.assignedProvince,
       });
       toast.success("Staff account created! You can now sign in.", {
         position: "top-center",
@@ -371,6 +394,32 @@ export function SignupForm({ ...props }: React.ComponentProps<typeof Card>) {
                 {staffForm.formState.errors.staffCode && (
                   <p className="text-sm text-destructive">
                     {staffForm.formState.errors.staffCode.message}
+                  </p>
+                )}
+              </Field>
+              <Field>
+                <FieldLabel>Khu vực phụ trách</FieldLabel>
+                <Controller
+                  control={staffForm.control}
+                  name="assignedProvince"
+                  render={({ field }) => (
+                    <Select value={field.value} onValueChange={field.onChange}>
+                      <SelectTrigger className="w-full cursor-pointer">
+                        <SelectValue placeholder="Chọn tỉnh / thành phố" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {provinces.map((p) => (
+                          <SelectItem key={p.code} value={p.name}>
+                            {p.name}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  )}
+                />
+                {staffForm.formState.errors.assignedProvince && (
+                  <p className="text-sm text-destructive">
+                    {staffForm.formState.errors.assignedProvince.message}
                   </p>
                 )}
               </Field>

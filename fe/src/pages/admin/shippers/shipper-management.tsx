@@ -1,6 +1,5 @@
 import { useEffect, useState } from "react";
 import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
 import {
   Select,
   SelectContent,
@@ -19,6 +18,7 @@ interface Shipper {
   isAvailable: boolean;
   shipperStatus: string;
   maxOrders: number;
+  assignedProvince: string;
   createdAt: string;
   totalAccepted: number;
   delivered: number;
@@ -62,6 +62,8 @@ const ORDER_STATUS_CONFIG: Record<string, string> = {
 export default function AdminShipperManagement() {
   const [activeTab, setActiveTab] = useState<TabType>("shippers");
   const [shippers, setShippers] = useState<Shipper[]>([]);
+  const [provinces, setProvinces] = useState<string[]>([]);
+  const [provinceFilter, setProvinceFilter] = useState("all");
   const [orders, setOrders] = useState<ShipperOrder[]>([]);
   const [orderStatus, setOrderStatus] = useState("all");
   const [shipperId, setShipperId] = useState("all");
@@ -79,6 +81,10 @@ export default function AdminShipperManagement() {
 
   useEffect(() => {
     fetchShippers();
+    api
+      .get("/api/admin/shippers/provinces")
+      .then((res) => setProvinces(res.data.provinces))
+      .catch(() => {});
   }, []);
 
   useEffect(() => {
@@ -114,6 +120,11 @@ export default function AdminShipperManagement() {
     }
   };
 
+  const filteredShippers =
+    provinceFilter === "all"
+      ? shippers
+      : shippers.filter((s) => s.assignedProvince === provinceFilter);
+
   return (
     <div className="p-6 space-y-6">
       <div>
@@ -140,64 +151,89 @@ export default function AdminShipperManagement() {
 
       {/* ── Shippers Tab ── */}
       {activeTab === "shippers" && (
-        <div className="bg-white rounded-2xl border border-border/60 shadow-sm overflow-hidden">
-          {loading ? (
-            <div className="text-center py-12 text-muted-foreground">Loading...</div>
-          ) : (
-            <table className="w-full text-sm">
-              <thead>
-                <tr className="bg-gray-50 border-b text-xs uppercase tracking-wide text-muted-foreground">
-                  <th className="text-left px-5 py-3">Shipper</th>
-                  <th className="text-left px-5 py-3">Account</th>
-                  <th className="text-right px-5 py-3">Accepted</th>
-                  <th className="text-right px-5 py-3">Delivered</th>
-                  <th className="text-right px-5 py-3">In Transit</th>
-                  <th className="text-center px-5 py-3">Status</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-border/40">
-                {shippers.length === 0 ? (
-                  <tr>
-                    <td colSpan={8} className="text-center py-10 text-muted-foreground">
-                      No shippers found
-                    </td>
-                  </tr>
-                ) : (
-                  shippers.map((s) => {
-                    const acct = ACCOUNT_STATUS_CONFIG[s.status] ?? { label: s.status, cls: "bg-gray-100 text-gray-600" };
-                    const isUpdating = updatingId === s._id;
+        <div className="space-y-4">
+          {/* Province filter */}
+          <div className="flex gap-3">
+            <Select value={provinceFilter} onValueChange={setProvinceFilter}>
+              <SelectTrigger className="w-56">
+                <SelectValue placeholder="Tất cả tỉnh/thành" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">Tất cả tỉnh/thành</SelectItem>
+                {provinces.map((p) => (
+                  <SelectItem key={p} value={p}>
+                    {p}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
 
-                    return (
-                      <tr key={s._id} className="hover:bg-gray-50 transition-colors">
-                        <td className="px-5 py-3.5">
-                          <p className="font-semibold text-foreground">{s.username}</p>
-                          <p className="text-xs text-muted-foreground">{s.email}</p>
-                        </td>
-                        <td className="px-5 py-3.5">
-                          <span className={`inline-flex px-2.5 py-1 rounded-full text-xs font-medium ${acct.cls}`}>
-                            {acct.label}
-                          </span>
-                        </td>
-                        <td className="px-5 py-3.5 text-right font-medium">{s.totalAccepted}</td>
-                        <td className="px-5 py-3.5 text-right text-green-600 font-medium">{s.delivered}</td>
-                        <td className="px-5 py-3.5 text-right text-purple-600 font-medium">{s.inTransit}</td>
-                        <td className="px-5 py-3.5 text-center">
-                          {(() => {
-                            const cfg = SHIPPER_STATUS_CONFIG[s.shipperStatus] ?? { label: s.shipperStatus, cls: "bg-gray-100 text-gray-600 border-gray-200" };
-                            return (
-                              <span className={`inline-flex px-2.5 py-1 rounded-full text-xs font-medium border ${cfg.cls}`}>
-                                {cfg.label}
-                              </span>
-                            );
-                          })()}
-                        </td>
-                      </tr>
-                    );
-                  })
-                )}
-              </tbody>
-            </table>
-          )}
+          <div className="bg-white rounded-2xl border border-border/60 shadow-sm overflow-hidden">
+            {loading ? (
+              <div className="text-center py-12 text-muted-foreground">Loading...</div>
+            ) : (
+              <table className="w-full text-sm">
+                <thead>
+                  <tr className="bg-gray-50 border-b text-xs uppercase tracking-wide text-muted-foreground">
+                    <th className="text-left px-5 py-3">Shipper</th>
+                    <th className="text-left px-5 py-3">Tỉnh/Thành</th>
+                    <th className="text-left px-5 py-3">Account</th>
+                    <th className="text-right px-5 py-3">Accepted</th>
+                    <th className="text-right px-5 py-3">Delivered</th>
+                    <th className="text-right px-5 py-3">In Transit</th>
+                    <th className="text-center px-5 py-3">Status</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-border/40">
+                  {filteredShippers.length === 0 ? (
+                    <tr>
+                      <td colSpan={7} className="text-center py-10 text-muted-foreground">
+                        No shippers found
+                      </td>
+                    </tr>
+                  ) : (
+                    filteredShippers.map((s) => {
+                      const acct = ACCOUNT_STATUS_CONFIG[s.status] ?? { label: s.status, cls: "bg-gray-100 text-gray-600" };
+                      const isUpdating = updatingId === s._id;
+
+                      return (
+                        <tr key={s._id} className="hover:bg-gray-50 transition-colors">
+                          <td className="px-5 py-3.5">
+                            <p className="font-semibold text-foreground">{s.username}</p>
+                            <p className="text-xs text-muted-foreground">{s.email}</p>
+                          </td>
+                          <td className="px-5 py-3.5">
+                            <span className="text-xs text-muted-foreground">
+                              {s.assignedProvince || "—"}
+                            </span>
+                          </td>
+                          <td className="px-5 py-3.5">
+                            <span className={`inline-flex px-2.5 py-1 rounded-full text-xs font-medium ${acct.cls}`}>
+                              {acct.label}
+                            </span>
+                          </td>
+                          <td className="px-5 py-3.5 text-right font-medium">{s.totalAccepted}</td>
+                          <td className="px-5 py-3.5 text-right text-green-600 font-medium">{s.delivered}</td>
+                          <td className="px-5 py-3.5 text-right text-purple-600 font-medium">{s.inTransit}</td>
+                          <td className="px-5 py-3.5 text-center">
+                            {(() => {
+                              const cfg = SHIPPER_STATUS_CONFIG[s.shipperStatus] ?? { label: s.shipperStatus, cls: "bg-gray-100 text-gray-600 border-gray-200" };
+                              return (
+                                <span className={`inline-flex px-2.5 py-1 rounded-full text-xs font-medium border ${cfg.cls}`}>
+                                  {cfg.label}
+                                </span>
+                              );
+                            })()}
+                          </td>
+                        </tr>
+                      );
+                    })
+                  )}
+                </tbody>
+              </table>
+            )}
+          </div>
         </div>
       )}
 

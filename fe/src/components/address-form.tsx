@@ -40,11 +40,6 @@ interface AddressFormProps {
   initialData?: Address | null;
 }
 
-interface Province {
-  code: number;
-  name: string;
-}
-
 interface District {
   code: number;
   name: string;
@@ -64,14 +59,10 @@ const AddressForm = ({
   const isEdit = Boolean(initialData);
 
   // API Data State
-  const [provinces, setProvinces] = useState<Province[]>([]);
   const [districts, setDistricts] = useState<District[]>([]);
   const [wards, setWards] = useState<Ward[]>([]);
 
   // Selection State (codes)
-  const [selectedProvinceCode, setSelectedProvinceCode] = useState<
-    number | null
-  >(null);
   const [selectedDistrictCode, setSelectedDistrictCode] = useState<
     number | null
   >(null);
@@ -90,41 +81,20 @@ const AddressForm = ({
     },
   });
 
-  // Fetch Provinces on Mount
+  // Fetch quận/huyện Hà Nội on Mount
   useEffect(() => {
-    const fetchProvinces = async () => {
+    const fetchDistricts = async () => {
       try {
         const response = await axios.get(
-          "https://provinces.open-api.vn/api/?depth=1",
+          "https://provinces.open-api.vn/api/p/1?depth=2",
         );
-        setProvinces(response.data);
+        setDistricts(response.data.districts);
       } catch (error) {
-        console.error("Failed to fetch provinces", error);
+        console.error("Failed to fetch Hanoi districts", error);
       }
     };
-    fetchProvinces();
+    fetchDistricts();
   }, []);
-
-  // Fetch Districts when Province changes
-  useEffect(() => {
-    if (selectedProvinceCode) {
-      const fetchDistricts = async () => {
-        try {
-          const response = await axios.get(
-            `https://provinces.open-api.vn/api/p/${selectedProvinceCode}?depth=2`,
-          );
-          setDistricts(response.data.districts);
-        } catch (error) {
-          console.error("Failed to fetch districts", error);
-        }
-      };
-      fetchDistricts();
-      setWards([]); // Reset wards
-    } else {
-      setDistricts([]);
-      setWards([]);
-    }
-  }, [selectedProvinceCode]);
 
   // Fetch Wards when District changes
   useEffect(() => {
@@ -170,7 +140,6 @@ const AddressForm = ({
           street: "",
           detail: "",
         });
-        setSelectedProvinceCode(null);
         setSelectedDistrictCode(null);
       }
     }
@@ -178,23 +147,13 @@ const AddressForm = ({
 
   // Sync Initial Data with Dropdowns (Reverse Lookup)
   useEffect(() => {
-    if (open && initialData && provinces.length > 0) {
-      const province = provinces.find((p) => p.name === initialData.city);
-      if (province) {
-        setSelectedProvinceCode(province.code);
-      }
-    }
-  }, [open, initialData, provinces]);
-
-  // Sync District after Districts load (for Edit mode)
-  useEffect(() => {
-    if (open && initialData && districts.length > 0 && selectedProvinceCode) {
-      const district = districts.find((d) => d.name === initialData.district);
+    if (open && initialData && districts.length > 0) {
+      const district = districts.find((d) => d.name === initialData.city);
       if (district) {
         setSelectedDistrictCode(district.code);
       }
     }
-  }, [open, initialData, districts, selectedProvinceCode]);
+  }, [open, initialData, districts]);
 
   const handleSubmit = async (values: AddressFormValues) => {
     try {
@@ -279,61 +238,15 @@ const AddressForm = ({
               )}
             />
 
-            {/* City, District, Ward - 3 columns in 1 row */}
-            <div className="grid grid-cols-3 gap-2 w-full">
+            {/* Quận/Huyện, Phường/Xã - 2 columns in 1 row */}
+            <div className="grid grid-cols-2 gap-2 w-full">
               <FormField
                 control={form.control}
                 name="city"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>City / Province</FormLabel>
+                    <FormLabel>Quận/Huyện</FormLabel>
                     <Select
-                      onValueChange={(value) => {
-                        field.onChange(value);
-                        const province = provinces.find(
-                          (p) => p.name === value,
-                        );
-                        if (province) {
-                          setSelectedProvinceCode(province.code);
-                          // Reset district and ward when province changes
-                          form.setValue("district", "");
-                          form.setValue("ward", "");
-                          setSelectedDistrictCode(null);
-                        }
-                      }}
-                      value={field.value}
-                    >
-                      <FormControl>
-                        <SelectTrigger className="rounded-md w-full cursor-pointer">
-                          <SelectValue placeholder="Select City" />
-                        </SelectTrigger>
-                      </FormControl>
-                      <SelectContent>
-                        {provinces.map((province) => (
-                          <SelectItem
-                            className="cursor-pointer"
-                            key={province.code}
-                            value={province.name}
-                          >
-                            {province.name}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-
-              {/* District */}
-              <FormField
-                control={form.control}
-                name="district"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>District</FormLabel>
-                    <Select
-                      disabled={!selectedProvinceCode}
                       onValueChange={(value) => {
                         field.onChange(value);
                         const district = districts.find(
@@ -341,7 +254,8 @@ const AddressForm = ({
                         );
                         if (district) {
                           setSelectedDistrictCode(district.code);
-                          // Reset ward when district changes
+                          // Reset district (ward level) and ward when quận changes
+                          form.setValue("district", "");
                           form.setValue("ward", "");
                         }
                       }}
@@ -349,7 +263,7 @@ const AddressForm = ({
                     >
                       <FormControl>
                         <SelectTrigger className="rounded-md w-full cursor-pointer">
-                          <SelectValue placeholder="Select District" />
+                          <SelectValue placeholder="Chọn Quận/Huyện" />
                         </SelectTrigger>
                       </FormControl>
                       <SelectContent>
@@ -369,21 +283,24 @@ const AddressForm = ({
                 )}
               />
 
-              {/* Ward */}
+              {/* Phường/Xã */}
               <FormField
                 control={form.control}
-                name="ward"
+                name="district"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Ward</FormLabel>
+                    <FormLabel>Phường/Xã</FormLabel>
                     <Select
                       disabled={!selectedDistrictCode}
-                      onValueChange={field.onChange}
+                      onValueChange={(value) => {
+                        field.onChange(value);
+                        form.setValue("ward", "");
+                      }}
                       value={field.value}
                     >
                       <FormControl>
                         <SelectTrigger className="rounded-md w-full cursor-pointer">
-                          <SelectValue placeholder="Select Ward" />
+                          <SelectValue placeholder="Chọn Phường/Xã" />
                         </SelectTrigger>
                       </FormControl>
                       <SelectContent>
@@ -402,6 +319,7 @@ const AddressForm = ({
                   </FormItem>
                 )}
               />
+
             </div>
 
             {/* Street - Full width */}

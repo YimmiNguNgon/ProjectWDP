@@ -95,6 +95,7 @@ const userSchema = new mongoose.Schema(
       refundRate: { type: Number, default: 0 }, // 0-100 (%)
       reportRate: { type: Number, default: 0 }, // 0-100 (%)
       isVerifiedSeller: { type: Boolean, default: false }, // Cached từ VerifiedBadge
+      shopAddress: { type: String, default: "" },
     },
 
     // ─── Shipper info ──────────────────────────────────────────────────────────
@@ -107,6 +108,7 @@ const userSchema = new mongoose.Schema(
         enum: ["available", "pending_acceptance", "shipping", "paused"],
         default: "available",
       },
+      assignedProvince: { type: String, default: "" }, // Tỉnh/thành phố phụ trách
     },
   },
   { timestamps: true },

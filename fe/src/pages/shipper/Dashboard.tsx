@@ -7,6 +7,7 @@ import {
   Clock,
   ArrowRight,
   PlayCircle,
+  MapPin,
 } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -23,6 +24,7 @@ export default function ShipperDashboard() {
     totalAccepted: 0,
     isAvailable: true,
     shipperStatus: "available",
+    assignedProvince: "",
   });
   const [loading, setLoading] = useState(true);
   const [resuming, setResuming] = useState(false);
@@ -57,6 +59,17 @@ export default function ShipperDashboard() {
         <h1 className="text-2xl font-bold text-gray-900">Shipper Dashboard</h1>
         <p className="text-gray-500 text-sm mt-1">Manage your deliveries</p>
       </div>
+
+      {/* Province Info */}
+      {!loading && stats.assignedProvince && (
+        <div className="mb-6 flex items-center gap-3 bg-blue-50 border border-blue-100 rounded-lg px-5 py-3">
+          <MapPin className="h-4 w-4 text-blue-500 shrink-0" />
+          <p className="text-sm text-blue-700">
+            Khu vực phụ trách:{" "}
+            <span className="font-semibold">{stats.assignedProvince}</span>
+          </p>
+        </div>
+      )}
 
       {/* Paused Banner */}
       {!loading && stats.shipperStatus === "paused" && (

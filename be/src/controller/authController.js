@@ -15,7 +15,7 @@ const RESEND_COOLDOWN = 60 * 1000;
 
 exports.register = async (req, res, next) => {
   try {
-    const { username, email, password, role, staffCode } = req.body;
+    const { username, email, password, role, staffCode, assignedProvince } = req.body;
 
     if (!email || !password) {
       return res
@@ -56,6 +56,9 @@ exports.register = async (req, res, next) => {
         role: "shipper",
         isEmailVerified: true,
         status: "active",
+        shipperInfo: {
+          assignedProvince: assignedProvince || "",
+        },
       });
       await newUser.save();
       return res
@@ -113,18 +116,16 @@ exports.login = async (req, res, next) => {
     const { username, password } = req.body;
 
     if (!username || !password) {
-      console.log(
-        "Missing fields - username:",
-        username,
-        "password:",
-        password ? "exists" : "missing",
-      );
       return res
         .status(400)
         .json({ message: "Username and password are required" });
     }
 
-    const user = await User.findOne({ username });
+    // Cho phép đăng nhập bằng username hoặc email
+    const isEmail = username.includes("@");
+    const user = isEmail
+      ? await User.findOne({ email: username.toLowerCase() })
+      : await User.findOne({ username });
 
     if (!user) {
       return res.status(401).json({ message: "Invalid username or password" });

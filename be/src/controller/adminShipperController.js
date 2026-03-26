@@ -44,6 +44,7 @@ exports.getAllShippers = async (req, res, next) => {
         isAvailable: s.shipperInfo?.isAvailable ?? true,
         shipperStatus: s.shipperInfo?.shipperStatus ?? "available",
         maxOrders: s.shipperInfo?.maxOrders ?? 3,
+        assignedProvince: s.shipperInfo?.assignedProvince ?? "",
         totalAccepted: st.totalAccepted,
         delivered: st.delivered,
         completed: st.completed,
@@ -83,6 +84,18 @@ exports.updateShipperStatus = async (req, res, next) => {
     }
 
     res.json({ message: "Shipper status updated", shipper });
+  } catch (err) {
+    next(err);
+  }
+};
+
+exports.getShipperProvinces = async (req, res, next) => {
+  try {
+    const provinces = await User.distinct("shipperInfo.assignedProvince", {
+      role: "shipper",
+      "shipperInfo.assignedProvince": { $ne: "" },
+    });
+    res.json({ provinces: provinces.sort() });
   } catch (err) {
     next(err);
   }

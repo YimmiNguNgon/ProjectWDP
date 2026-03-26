@@ -24,8 +24,8 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 
 const signInSchema = z.object({
-  username: z.string().min(3, "Username must be at least 3 characters"),
-  password: z.string().min(2, "Password must be at least 6 characters"),
+  username: z.string().min(1, "Please enter your username or email"),
+  password: z.string().min(1, "Please enter your password"),
 });
 
 type SignInValues = z.infer<typeof signInSchema>;
@@ -104,11 +104,11 @@ export function SignInForm({
           <form onSubmit={handleSubmit(onSubmit)}>
             <FieldGroup>
               <Field>
-                <FieldLabel htmlFor="email">Username</FieldLabel>
+                <FieldLabel htmlFor="identifier">Username or Email</FieldLabel>
                 <Input
-                  id="email"
+                  id="identifier"
                   type="text"
-                  placeholder="Enter your username"
+                  placeholder="Enter your username or email"
                   {...register("username")}
                 />
                 {errors.username && (

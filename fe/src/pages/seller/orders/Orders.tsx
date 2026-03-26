@@ -27,6 +27,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { toast } from "sonner";
 import { type Order, orderService } from "@/services/orderService";
+import ShippingTimeline from "@/components/shipping-timeline";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -644,6 +645,16 @@ function OrderDetailsPopup({
                   );
                 })()}
             </div>
+
+            {/* ── Lịch sử vận chuyển ── */}
+            {order.statusHistory && order.statusHistory.length > 0 && (
+              <div style={{ gridColumn: "1 / -1" }}>
+                <ShippingTimeline
+                  statusHistory={order.statusHistory}
+                  currentStatus={order.status}
+                />
+              </div>
+            )}
 
             {/* ── Products table ── */}
             <div>

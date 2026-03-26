@@ -17,6 +17,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Textarea } from "@/components/ui/textarea";
+import { Input } from "@/components/ui/input";
 import { useAuth } from "@/hooks/use-auth";
 import api from "@/lib/axios";
 import { toast } from "sonner";
@@ -24,7 +25,7 @@ import { toast } from "sonner";
 interface RecentOrder {
   _id: string;
   orderId: string;
-  customer: string;
+  customer: string | { _id: string; username: string; email: string };
   totalAmount: number;
   status: string;
   date: string;
@@ -89,6 +90,12 @@ export default function SellerOverview() {
   const [descDraft, setDescDraft] = useState("");
   const [savingDesc, setSavingDesc] = useState(false);
 
+  // Shop address state
+  const [shopAddress, setShopAddress] = useState("");
+  const [editingAddr, setEditingAddr] = useState(false);
+  const [addrDraft, setAddrDraft] = useState("");
+  const [savingAddr, setSavingAddr] = useState(false);
+
   useEffect(() => {
     const fetchAll = async () => {
       setLoading(true);
@@ -146,6 +153,8 @@ export default function SellerOverview() {
     api.get("/api/users/me").then((res) => {
       const desc = res.data?.user?.sellerInfo?.productDescription ?? res.data?.sellerInfo?.productDescription ?? "";
       setDescription(desc);
+      const addr = res.data?.user?.sellerInfo?.shopAddress ?? res.data?.sellerInfo?.shopAddress ?? "";
+      setShopAddress(addr);
     }).catch(() => {});
   }, []);
 
@@ -163,6 +172,23 @@ export default function SellerOverview() {
       toast.error("Failed to update description");
     } finally {
       setSavingDesc(false);
+    }
+  };
+
+  const handleSaveAddress = async () => {
+    setSavingAddr(true);
+    try {
+      await api.put("/api/users/update-user-profile", {
+        username: user?.username ?? "",
+        shopAddress: addrDraft,
+      });
+      setShopAddress(addrDraft);
+      setEditingAddr(false);
+      toast.success("Shop address updated");
+    } catch {
+      toast.error("Failed to update address");
+    } finally {
+      setSavingAddr(false);
     }
   };
 
@@ -416,6 +442,48 @@ export default function SellerOverview() {
         </CardContent>
       </Card>
 
+      {/* Shop Address */}
+      <Card>
+        <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+          <CardTitle className="text-sm font-medium">Shop Address</CardTitle>
+          {!editingAddr && (
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={() => { setAddrDraft(shopAddress); setEditingAddr(true); }}
+            >
+              <Pencil className="h-4 w-4" />
+            </Button>
+          )}
+        </CardHeader>
+        <CardContent>
+          {editingAddr ? (
+            <div className="space-y-2">
+              <Input
+                value={addrDraft}
+                onChange={(e) => setAddrDraft(e.target.value)}
+                placeholder="Enter your shop address..."
+                maxLength={200}
+              />
+              <div className="flex gap-2">
+                <Button size="sm" onClick={handleSaveAddress} disabled={savingAddr}>
+                  <Check className="h-4 w-4 mr-1" />
+                  Save
+                </Button>
+                <Button size="sm" variant="outline" onClick={() => setEditingAddr(false)}>
+                  <X className="h-4 w-4 mr-1" />
+                  Cancel
+                </Button>
+              </div>
+            </div>
+          ) : (
+            <p className="text-sm text-muted-foreground">
+              {shopAddress || "No address yet. Click the edit button to add one."}
+            </p>
+          )}
+        </CardContent>
+      </Card>
+
       {/* Recent orders */}
       <Card>
         <CardHeader>
@@ -452,7 +520,7 @@ export default function SellerOverview() {
                         `#${String(order._id).slice(-6).toUpperCase()}`}
                     </div>
                     <div className="text-xs text-muted-foreground">
-                      {order.customer}
+                      {typeof order.customer === "object" ? order.customer.username : order.customer}
                     </div>
                   </div>
                   <div className="text-right">

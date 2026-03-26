@@ -5,6 +5,7 @@
 require("dotenv").config({ path: require("path").resolve(__dirname, "../../.env") });
 const mongoose = require("mongoose");
 const bcrypt = require("bcryptjs");
+const axios = require("axios");
 
 // Models
 const User = require("../models/User");
@@ -75,6 +76,16 @@ function buildCombinations(variants) {
   });
 }
 
+function toSlug(str) {
+  return str
+    .toLowerCase()
+    .replace(/đ/g, "d")
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .replace(/[^a-z0-9]+/g, "_")
+    .replace(/^_|_$/g, "");
+}
+
 async function dropCollections(db) {
   const collections = [
     "users", "categories", "products", "orders", "ordergroups",
@@ -135,6 +146,7 @@ async function seed() {
     sellerInfo: {
       shopName: "TechStore VN",
       productDescription: "Genuine electronics accessories, fast nationwide delivery.",
+      shopAddress: "Quận Hoàn Kiếm",
       registeredAt: daysAgo(180),
       successOrders: 3,
       avgRating: 4.7,
@@ -156,6 +168,7 @@ async function seed() {
     sellerInfo: {
       shopName: "SportZone HCM",
       productDescription: "High-quality sports gear at the best prices. Authentic products guaranteed.",
+      shopAddress: "Quận Đống Đa",
       registeredAt: daysAgo(90),
       successOrders: 3,
       avgRating: 4.5,
@@ -216,28 +229,52 @@ async function seed() {
     avatarUrl: "https://api.dicebear.com/7.x/avataaars/svg?seed=buyer5",
   });
 
-  const shipper1 = await User.create({
-    username: "shipper_mike",
-    email: "shipper1@wdp.com",
-    passwordHash: password123,
-    role: "shipper",
-    isEmailVerified: true,
-    status: "active",
-    avatarUrl: "https://api.dicebear.com/7.x/avataaars/svg?seed=shipper1",
-    shipperInfo: { maxOrders: 5, isAvailable: true, shipperStatus: "available" },
-  });
-  const shipper2 = await User.create({
-    username: "shipper_jake",
-    email: "shipper2@wdp.com",
-    passwordHash: password123,
-    role: "shipper",
-    isEmailVerified: true,
-    status: "active",
-    avatarUrl: "https://api.dicebear.com/7.x/avataaars/svg?seed=shipper2",
-    shipperInfo: { maxOrders: 3, isAvailable: true, shipperStatus: "available" },
-  });
+  // ── Shippers: 2 per Hanoi district (fetched from API) ──────────────────────
+  console.log("\n🚚 Seeding shippers (Hanoi districts)…");
+  const districtRes = await axios.get("https://provinces.open-api.vn/api/p/1?depth=2");
+  const hanoiDistricts = districtRes.data.districts; // [{ code, name }]
+  console.log(`  Found ${hanoiDistricts.length} districts`);
 
-  console.log("  Created 10 users");
+  const shipperPassword = await hashPassword("123456");
+  let shipperCount = 0;
+
+  // Giữ reference tới 2 shipper đầu tiên để dùng trong seed orders bên dưới
+  let shipper1 = null;
+  let shipper2 = null;
+
+  for (const { name } of hanoiDistricts) {
+    const slug = toSlug(name);
+    for (let n = 1; n <= 2; n++) {
+      const email = `shipper_${slug}_${n}@system.com`;
+      const username = `shipper_${slug}_${n}`;
+      const doc = await User.findOneAndUpdate(
+        { email },
+        {
+          $setOnInsert: {
+            email,
+            role: "shipper",
+            isEmailVerified: true,
+            status: "active",
+            "shipperInfo.maxOrders": 3,
+            "shipperInfo.isAvailable": true,
+            "shipperInfo.shipperStatus": "available",
+          },
+          $set: {
+            username,
+            passwordHash: shipperPassword,
+            "shipperInfo.assignedProvince": name,
+          },
+        },
+        { upsert: true, new: true, setDefaultsOnInsert: true },
+      );
+      shipperCount++;
+      if (!shipper1) shipper1 = doc;
+      else if (!shipper2) shipper2 = doc;
+    }
+  }
+
+  console.log(`  Created/updated ${shipperCount} shippers (${hanoiDistricts.length} quận × 2)`);
+  console.log("  Created 8 non-shipper users + shippers above");
 
   // ── 2. CATEGORIES ──────────────────────────────────────────────────────────
   console.log("\n📂 Seeding categories…");
@@ -1150,8 +1187,9 @@ async function seed() {
   console.log("  Buyer  : buyer3@wdp.com      / password123");
   console.log("  Buyer  : buyer4@wdp.com      / password123");
   console.log("  Buyer  : buyer5@wdp.com      / password123");
-  console.log("  Shipper: shipper1@wdp.com    / password123");
-  console.log("  Shipper: shipper2@wdp.com    / password123");
+  console.log(`  Shipper: shipper_${toSlug(hanoiDistricts[0].name)}_1@system.com / 123456  (${hanoiDistricts[0].name})`);
+  console.log(`  Shipper: shipper_${toSlug(hanoiDistricts[0].name)}_2@system.com / 123456  (${hanoiDistricts[0].name})`);
+  console.log(`  ... + ${hanoiDistricts.length * 2 - 2} more shippers (2 per Hanoi district, password: 123456)`);
   console.log("─────────────────────────────────────────────────────");
 
   await mongoose.disconnect();

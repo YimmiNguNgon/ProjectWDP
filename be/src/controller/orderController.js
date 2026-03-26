@@ -941,8 +941,9 @@ getAllOrders = async (req, res) => {
     }
 
     const orders = await Order.find(filter)
-      .populate("buyer", "username email") // Giả sử User model có trường username và email
+      .populate("buyer", "username email")
       .populate("seller", "username")
+      .populate("shipper", "username email")
       .populate("items.productId", "title")
       .sort({ createdAt: -1 });
 
@@ -958,11 +959,12 @@ getAllOrders = async (req, res) => {
       const paymentMethod = order.paymentMethod || "Credit Card"; // Giả sử có trường này
 
       return {
-        _id: order._id, // Hoặc có thể tạo orderId format như #ORD001
-        // Nếu muốn format _id thành #ORD001:
-        //_id: `#ORD${String(order._id).slice(-6).toUpperCase()}`,
-        customer: order.buyer?.username || "Customer",
-        email: order.buyer?.email || "",
+        _id: order._id,
+        customer: {
+          _id: order.buyer?._id,
+          username: order.buyer?.username || "Customer",
+          email: order.buyer?.email || "",
+        },
         total: order.totalAmount,
         subtotal: order.subtotalAmount ?? order.totalAmount,
         discountAmount: order.discountAmount ?? 0,
@@ -974,10 +976,13 @@ getAllOrders = async (req, res) => {
           : null,
         status: order.status,
         paymentStatus: order.paymentStatus || "unpaid",
-        items: order.items, // Return the actual items array
-        itemCount: totalItems, // Số lượng items (tổng quantity)
+        items: order.items,
+        itemCount: totalItems,
         date: formatDate(order.createdAt),
+        createdAt: order.createdAt,
         paymentMethod: paymentMethod,
+        shippingAddress: order.shippingAddress,
+        shipper: order.shipper || null,
       };
     });
 
@@ -1207,8 +1212,11 @@ getOrders = async (req, res) => {
         buyer: order.buyer,
         seller: order.seller,
         shipper: order.shipper || null,
-        customer: order.buyer?.username || "Customer",
-        email: order.buyer?.email || "",
+        customer: {
+          _id: order.buyer?._id,
+          username: order.buyer?.username || "Customer",
+          email: order.buyer?.email || "",
+        },
         totalAmount: order.totalAmount,
         subtotalAmount: order.subtotalAmount ?? order.totalAmount,
         discountAmount: order.discountAmount ?? 0,

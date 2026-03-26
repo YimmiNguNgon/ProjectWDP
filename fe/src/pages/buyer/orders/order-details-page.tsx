@@ -38,6 +38,7 @@ import {
   buyerReportToAdmin,
   type DeliveryDispute,
 } from "@/api/deliveryDispute";
+import ShippingTimeline from "@/components/shipping-timeline";
 
 export default function OrderDetailsPage() {
   const { orderId } = useParams<{ orderId: string }>();
@@ -667,6 +668,15 @@ export default function OrderDetailsPage() {
                   </>
                 );
               })()}
+
+              {/* Lịch sử vận chuyển */}
+              {subOrder.statusHistory && subOrder.statusHistory.length > 0 && (
+                <ShippingTimeline
+                  statusHistory={subOrder.statusHistory}
+                  currentStatus={subOrder.status}
+                />
+              )}
+
               <div className="space-y-4 mt-4">
                 {subOrder.items.map((item, index) => (
                   <div

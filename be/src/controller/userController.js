@@ -232,7 +232,7 @@ exports.authMe = async (req, res) => {
 exports.updateProfile = async (req, res, next) => {
   try {
     const userId = req.user._id;
-    const { username, avatarUrl, productDescription } = req.body;
+    const { username, avatarUrl, productDescription, shopAddress } = req.body;
 
     if (!username) {
       return res.status(400).json({ message: "Username is required" });
@@ -252,6 +252,12 @@ exports.updateProfile = async (req, res, next) => {
     if (productDescription !== undefined && user.role === "seller") {
       user.sellerInfo = user.sellerInfo || {};
       user.sellerInfo.productDescription = productDescription;
+      user.markModified("sellerInfo");
+    }
+
+    if (shopAddress !== undefined && user.role === "seller") {
+      user.sellerInfo = user.sellerInfo || {};
+      user.sellerInfo.shopAddress = shopAddress;
       user.markModified("sellerInfo");
     }
 
