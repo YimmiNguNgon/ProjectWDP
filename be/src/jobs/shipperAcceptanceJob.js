@@ -19,36 +19,6 @@ const notify = (payload) =>
     console.error("[ShipperJob] Notification failed:", err.message);
   });
 
-// ─────────────────────────────────────────────────────────────────────────────
-// Deactivate shipper: set isAvailable = false và gửi thông báo
-// ─────────────────────────────────────────────────────────────────────────────
-async function deactivateShipper(shipperId, shortOrderId, reason) {
-  try {
-    const result = await User.findByIdAndUpdate(
-      shipperId,
-      { "shipperInfo.shipperStatus": "paused", "shipperInfo.isAvailable": false },
-      { new: true }
-    );
-    if (result) {
-      console.log(
-        `[ShipperJob] Shipper ${shipperId} paused. Reason: ${reason}`
-      );
-    } else {
-      console.warn(`[ShipperJob] Could not find shipper ${shipperId} to deactivate.`);
-    }
-  } catch (err) {
-    console.error(`[ShipperJob] Failed to deactivate shipper ${shipperId}:`, err.message);
-  }
-
-  await notify({
-    recipientId: shipperId,
-    type: "shipper_deactivated",
-    title: "You have been removed from the delivery rotation",
-    body: `${reason} Order #${shortOrderId}. Your account has been set to unavailable. Please re-enable availability from the shipper dashboard when you are ready to receive orders again.`,
-    link: `/shipper/dashboard`,
-    metadata: { reason },
-  });
-}
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Luồng 0: Seller không mark packaging trong SELLER_CONFIRM_TIMEOUT_MINUTES phút
@@ -184,43 +154,21 @@ async function expirePendingAcceptance() {
 
     console.log(`[ShipperAcceptance] Order ${order._id} returned to pool.`);
 
-    // 2. Deactivate shipper cũ + gửi notify
+    // 2. Reset shipper status về available + notify
     if (order.shipper) {
+      await User.findByIdAndUpdate(order.shipper, {
+        "shipperInfo.shipperStatus": "available",
+        "shipperInfo.isAvailable": true,
+      }).catch(() => {});
+
       await notify({
         recipientId: order.shipper,
         type: "order_unassigned",
-        title: "Order assignment cancelled",
-        body: `Order #${shortId} was unassigned because you did not respond within ${TIMEOUT_MINUTES} minutes.`,
+        title: "Order assignment expired",
+        body: `Order #${shortId} was unassigned due to no response. It has returned to the available pool.`,
         link: `/shipper/available`,
         metadata: { orderId: order._id },
       });
-
-      await deactivateShipper(
-        order.shipper,
-        shortId,
-        `You did not accept the order within ${TIMEOUT_MINUTES} minutes.`
-      );
-    }
-
-    // 3. Notify seller
-    if (order.seller) {
-      await notify({
-        recipientId: order.seller,
-        type: "order_reassigning",
-        title: "Finding a new shipper",
-        body: `Order #${shortId} shipper did not respond. The system is reassigning a new shipper.`,
-        link: `/seller/orders`,
-        metadata: { orderId: order._id },
-      });
-    }
-
-    // 4. Gán đơn cho shipper KHÁC (sau khi isAvailable = false đã được lưu)
-    console.log(`[ShipperAcceptance] Attempting to reassign order ${order._id} to a new shipper...`);
-    try {
-      await autoAssignOrder(reset, order.shipper);
-      console.log(`[ShipperAcceptance] autoAssignOrder completed for order ${order._id}`);
-    } catch (err) {
-      console.error(`[ShipperAcceptance] autoAssignOrder failed for order ${order._id}:`, err.message);
     }
   }
 }
@@ -271,43 +219,21 @@ async function expireShippingOrders() {
 
     console.log(`[ShipperShipping] Order ${order._id} unassigned, returned to pool.`);
 
-    // 2. Deactivate shipper cũ + gửi notify
+    // 2. Reset shipper status về available + notify
     if (order.shipper) {
+      await User.findByIdAndUpdate(order.shipper, {
+        "shipperInfo.shipperStatus": "available",
+        "shipperInfo.isAvailable": true,
+      }).catch(() => {});
+
       await notify({
         recipientId: order.shipper,
         type: "order_unassigned",
-        title: "Order unassigned — delivery timeout",
-        body: `Order #${shortId} was unassigned because you did not mark it as delivered within ${SHIPPING_TIMEOUT_MINUTES} minutes.`,
+        title: "Order unassigned — shipping timeout",
+        body: `Order #${shortId} was unassigned due to delivery timeout. It has returned to the available pool.`,
         link: `/shipper/available`,
         metadata: { orderId: order._id },
       });
-
-      await deactivateShipper(
-        order.shipper,
-        shortId,
-        `You did not deliver the order within ${SHIPPING_TIMEOUT_MINUTES} minutes.`
-      );
-    }
-
-    // 3. Notify seller
-    if (order.seller) {
-      await notify({
-        recipientId: order.seller,
-        type: "order_reassigning",
-        title: "Finding a new shipper",
-        body: `Order #${shortId} shipper did not confirm delivery. The system is reassigning a new shipper.`,
-        link: `/seller/orders`,
-        metadata: { orderId: order._id },
-      });
-    }
-
-    // 4. Gán đơn cho shipper KHÁC (sau khi isAvailable = false đã được lưu)
-    console.log(`[ShipperShipping] Attempting to reassign order ${order._id} to a new shipper...`);
-    try {
-      await autoAssignOrder(reset, order.shipper);
-      console.log(`[ShipperShipping] autoAssignOrder completed for order ${order._id}`);
-    } catch (err) {
-      console.error(`[ShipperShipping] autoAssignOrder failed for order ${order._id}:`, err.message);
     }
   }
 }
@@ -349,21 +275,19 @@ async function expirePendingDeliveryAcceptance() {
     if (!reset) continue;
 
     if (order.shipper) {
+      await User.findByIdAndUpdate(order.shipper, {
+        "shipperInfo.shipperStatus": "available",
+        "shipperInfo.isAvailable": true,
+      }).catch(() => {});
+
       await notify({
         recipientId: order.shipper,
         type: "order_unassigned",
-        title: "Delivery assignment cancelled",
-        body: `Order #${shortId} delivery was unassigned because you did not respond within ${TIMEOUT_MINUTES} minutes.`,
+        title: "Delivery assignment expired",
+        body: `Order #${shortId} delivery was unassigned due to no response. It has returned to the available pool.`,
         link: `/shipper/available`,
         metadata: { orderId: order._id },
       });
-      await deactivateShipper(order.shipper, shortId, `You did not accept the delivery within ${TIMEOUT_MINUTES} minutes.`);
-    }
-
-    try {
-      await autoAssignDeliveryShipper(reset, order.shipper);
-    } catch (err) {
-      console.error(`[DeliveryAcceptance] autoAssignDeliveryShipper failed:`, err.message);
     }
   }
 }
@@ -405,32 +329,19 @@ async function expireDeliveringOrders() {
     if (!reset) continue;
 
     if (order.shipper) {
+      await User.findByIdAndUpdate(order.shipper, {
+        "shipperInfo.shipperStatus": "available",
+        "shipperInfo.isAvailable": true,
+      }).catch(() => {});
+
       await notify({
         recipientId: order.shipper,
         type: "order_unassigned",
         title: "Order unassigned — delivery timeout",
-        body: `Order #${shortId} was unassigned because you did not deliver within ${SHIPPING_TIMEOUT_MINUTES} minutes.`,
+        body: `Order #${shortId} was unassigned due to delivery timeout. It has returned to the available pool.`,
         link: `/shipper/available`,
         metadata: { orderId: order._id },
       });
-      await deactivateShipper(order.shipper, shortId, `You did not deliver the order within ${SHIPPING_TIMEOUT_MINUTES} minutes.`);
-    }
-
-    if (order.seller) {
-      await notify({
-        recipientId: order.seller,
-        type: "order_reassigning",
-        title: "Finding a new delivery shipper",
-        body: `Order #${shortId} delivery shipper timed out. The system is reassigning.`,
-        link: `/seller/orders`,
-        metadata: { orderId: order._id },
-      });
-    }
-
-    try {
-      await autoAssignDeliveryShipper(reset, order.shipper);
-    } catch (err) {
-      console.error(`[DeliveringTimeout] autoAssignDeliveryShipper failed:`, err.message);
     }
   }
 }

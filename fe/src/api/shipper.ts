@@ -28,7 +28,7 @@ export interface ShipperStats {
   inTransit: number;
   totalAccepted: number;
   isAvailable: boolean;
-  shipperStatus: "available" | "shipping" | "paused";
+  shipperStatus: "available" | "shipping" | "pending_acceptance";
   assignedProvince?: string;
 }
 
@@ -60,8 +60,3 @@ export const markDelivered = (orderId: string): Promise<{ data: { ok: boolean; o
 export const getShipperStats = (): Promise<{ data: ShipperStats }> =>
   api.get("/api/shipper/stats");
 
-export const toggleAvailability = (isAvailable: boolean): Promise<{ data: { isAvailable: boolean } }> =>
-  api.patch("/api/shipper/availability", { isAvailable });
-
-export const resumeShipper = (): Promise<{ data: { ok: boolean; shipperStatus: string } }> =>
-  api.patch("/api/shipper/resume");

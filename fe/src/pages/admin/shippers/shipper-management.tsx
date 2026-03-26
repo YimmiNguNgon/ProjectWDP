@@ -8,7 +8,6 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import api from "@/lib/axios";
-import { toast } from "sonner";
 
 interface Shipper {
   _id: string;
@@ -39,9 +38,9 @@ interface ShipperOrder {
 type TabType = "shippers" | "orders";
 
 const SHIPPER_STATUS_CONFIG: Record<string, { label: string; cls: string }> = {
-  available: { label: "Available", cls: "bg-green-100 text-green-700 border-green-200" },
-  shipping:  { label: "Shipping",  cls: "bg-purple-100 text-purple-700 border-purple-200" },
-  paused:    { label: "Paused",    cls: "bg-orange-100 text-orange-700 border-orange-200" },
+  available:          { label: "Available",         cls: "bg-green-100 text-green-700 border-green-200" },
+  pending_acceptance: { label: "Pending Pickup",    cls: "bg-blue-100 text-blue-700 border-blue-200" },
+  shipping:           { label: "Shipping",          cls: "bg-purple-100 text-purple-700 border-purple-200" },
 };
 
 const ACCOUNT_STATUS_CONFIG: Record<string, { label: string; cls: string }> = {
@@ -68,7 +67,6 @@ export default function AdminShipperManagement() {
   const [orderStatus, setOrderStatus] = useState("all");
   const [shipperId, setShipperId] = useState("all");
   const [loading, setLoading] = useState(false);
-  const [updatingId, setUpdatingId] = useState<string | null>(null);
 
   const fetchShippers = () => {
     setLoading(true);
@@ -100,25 +98,6 @@ export default function AdminShipperManagement() {
         .finally(() => setLoading(false));
     }
   }, [activeTab, orderStatus, shipperId]);
-
-  const handleSetStatus = async (shipperId: string, shipperStatus: "available" | "paused") => {
-    setUpdatingId(shipperId);
-    try {
-      await api.patch(`/api/admin/shippers/${shipperId}/status`, { shipperStatus });
-      setShippers((prev) =>
-        prev.map((s) =>
-          s._id === shipperId
-            ? { ...s, shipperStatus, isAvailable: shipperStatus === "available" }
-            : s
-        )
-      );
-      toast.success(`Shipper set to ${shipperStatus}`);
-    } catch {
-      toast.error("Failed to update shipper status");
-    } finally {
-      setUpdatingId(null);
-    }
-  };
 
   const filteredShippers =
     provinceFilter === "all"
@@ -195,7 +174,6 @@ export default function AdminShipperManagement() {
                   ) : (
                     filteredShippers.map((s) => {
                       const acct = ACCOUNT_STATUS_CONFIG[s.status] ?? { label: s.status, cls: "bg-gray-100 text-gray-600" };
-                      const isUpdating = updatingId === s._id;
 
                       return (
                         <tr key={s._id} className="hover:bg-gray-50 transition-colors">

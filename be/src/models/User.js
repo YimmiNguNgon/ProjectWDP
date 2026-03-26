@@ -105,7 +105,7 @@ const userSchema = new mongoose.Schema(
       isAvailable: { type: Boolean, default: true }, // Legacy field (kept for compat)
       shipperStatus: {
         type: String,
-        enum: ["available", "pending_acceptance", "shipping", "paused"],
+        enum: ["available", "pending_acceptance", "shipping"],
         default: "available",
       },
       assignedProvince: { type: String, default: "" }, // Tỉnh/thành phố phụ trách

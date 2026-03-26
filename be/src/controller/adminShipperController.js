@@ -63,9 +63,8 @@ exports.updateShipperStatus = async (req, res, next) => {
     const { id } = req.params;
     const { shipperStatus } = req.body;
 
-    const allowed = ["available", "paused"];
-    if (!allowed.includes(shipperStatus)) {
-      return res.status(400).json({ message: "Invalid shipperStatus. Must be: available | paused" });
+    if (shipperStatus !== "available") {
+      return res.status(400).json({ message: "Invalid shipperStatus. Must be: available" });
     }
 
     const isAvailable = shipperStatus === "available";

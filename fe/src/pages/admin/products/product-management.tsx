@@ -347,11 +347,6 @@ export default function ProductManagement() {
                                     <TableCell>
                                         {product.images?.[0] ? (
                                             <div className="relative w-16 h-16">
-                                                {saleInfo.state === 'active' && (
-                                                    <span className="absolute left-0 top-0 z-10 rounded-br-md bg-gradient-to-r from-red-600 to-rose-500 px-1.5 py-0.5 text-[9px] font-extrabold tracking-wide text-white shadow">
-                                                        SALE
-                                                    </span>
-                                                )}
                                                 <img
                                                     src={product.images[0]}
                                                     alt={product.title}
@@ -366,9 +361,6 @@ export default function ProductManagement() {
                                     <TableCell className="font-medium max-w-[180px]">
                                         <div className="truncate flex items-center gap-2" title={product.title}>
                                             <span>{product.title}</span>
-                                            {saleInfo.state === 'active' && (
-                                                <Badge className="bg-red-600 hover:bg-red-600 text-white border-0">Sale</Badge>
-                                            )}
                                         </div>
                                     </TableCell>
                                     <TableCell>{product.sellerId?.username || 'N/A'}</TableCell>

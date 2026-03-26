@@ -21,12 +21,17 @@ exports.getAvailableOrders = async (req, res, next) => {
     const shipperDoc = await User.findById(req.user._id).select("shipperInfo").lean();
     const assignedProvince = shipperDoc?.shipperInfo?.assignedProvince || null;
 
+    // Filter pickup orders by shipper's province if assigned
+    const pickupFilter = assignedProvince
+      ? { status: { $in: ["ready_to_ship", "queued"] }, shipper: null, "shippingAddress.city": assignedProvince }
+      : { status: { $in: ["ready_to_ship", "queued"] }, shipper: null };
+
     const query = {
       $or: [
-        // Phase 1 pickup orders
-        { status: { $in: ["ready_to_ship", "queued"] }, shipper: null },
+        // Phase 1 pickup orders — same city as shipper
+        pickupFilter,
         { status: "pending_acceptance", shipper: req.user._id },
-        // Phase 2 delivery orders — hiển thị cho shipper cùng khu vực buyer
+        // Phase 2 delivery orders — same city as buyer
         ...(assignedProvince
           ? [{ status: "delivery_queued", shipper: null, "shippingAddress.city": assignedProvince }]
           : [{ status: "delivery_queued", shipper: null }]),
@@ -629,10 +634,6 @@ exports.resumeShipper = async (req, res, next) => {
   try {
     const shipperDoc = await User.findById(req.user._id).select("shipperInfo");
     if (!shipperDoc) return res.status(404).json({ message: "Shipper not found" });
-
-    if (shipperDoc.shipperInfo?.shipperStatus !== "paused") {
-      return res.status(400).json({ message: "Shipper is not in paused state" });
-    }
 
     shipperDoc.shipperInfo.shipperStatus = "available";
     shipperDoc.shipperInfo.isAvailable = true;

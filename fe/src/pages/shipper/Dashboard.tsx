@@ -6,14 +6,12 @@ import {
   Package,
   Clock,
   ArrowRight,
-  PlayCircle,
   MapPin,
 } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import {
   getShipperStats,
-  resumeShipper,
   type ShipperStats,
 } from "@/api/shipper";
 
@@ -27,72 +25,36 @@ export default function ShipperDashboard() {
     assignedProvince: "",
   });
   const [loading, setLoading] = useState(true);
-  const [resuming, setResuming] = useState(false);
 
-  const fetchStats = () => {
+  useEffect(() => {
     getShipperStats()
       .then((res) => setStats(res.data))
       .catch(() => {})
       .finally(() => setLoading(false));
-  };
-
-  useEffect(() => {
-    fetchStats();
   }, []);
 
-  const handleResume = async () => {
-    setResuming(true);
-    try {
-      await resumeShipper();
-      await fetchStats();
-    } catch {
-      // ignore
-    } finally {
-      setResuming(false);
-    }
-  };
-
   return (
-    <div className="p-6 max-w-5xl mx-auto">
+    <div className="space-y-6">
       {/* Header */}
-      <div className="mb-8">
+      <div>
         <h1 className="text-2xl font-bold text-gray-900">Shipper Dashboard</h1>
         <p className="text-gray-500 text-sm mt-1">Manage your deliveries</p>
       </div>
 
       {/* Province Info */}
       {!loading && stats.assignedProvince && (
-        <div className="mb-6 flex items-center gap-3 bg-blue-50 border border-blue-100 rounded-lg px-5 py-3">
+        <div className="flex items-center gap-3 bg-blue-50 border border-blue-100 rounded-xl px-5 py-3">
           <MapPin className="h-4 w-4 text-blue-500 shrink-0" />
           <p className="text-sm text-blue-700">
-            Khu vực phụ trách:{" "}
+            Assigned area:{" "}
             <span className="font-semibold">{stats.assignedProvince}</span>
           </p>
         </div>
       )}
 
-      {/* Paused Banner */}
-      {!loading && stats.shipperStatus === "paused" && (
-        <div className="mb-6 flex items-center justify-between bg-red-50 border border-red-200 rounded-lg px-5 py-4">
-          <div>
-            <p className="font-semibold text-red-700">Your account is paused</p>
-            <p className="text-sm text-red-500 mt-0.5">
-              You did not respond to an order assignment in time. Click "Ready to Ship" when you are ready to receive orders again.
-            </p>
-          </div>
-          <Button
-            onClick={handleResume}
-            disabled={resuming}
-            className="ml-4 shrink-0 bg-red-600 hover:bg-red-700 text-white"
-          >
-            <PlayCircle className="h-4 w-4 mr-1.5" />
-            {resuming ? "Resuming..." : "Ready to Ship"}
-          </Button>
-        </div>
-      )}
 
       {/* Stats Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-5 mb-8">
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
         <Card className="border-0 ring-1 ring-gray-100 shadow-sm">
           <CardHeader className="flex flex-row items-center justify-between pb-2">
             <CardTitle className="text-sm font-medium text-gray-500">In Transit</CardTitle>
@@ -140,7 +102,7 @@ export default function ShipperDashboard() {
       </div>
 
       {/* Quick Actions */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pb-2">
         <Card className="border-0 ring-1 ring-gray-100 shadow-sm hover:ring-orange-200 transition-all">
           <CardContent className="pt-6">
             <div className="flex items-center gap-4">

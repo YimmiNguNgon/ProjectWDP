@@ -12,25 +12,25 @@ interface ShippingTimelineProps {
 }
 
 const STATUS_INFO: Record<string, { label: string; description: string }> = {
-  created:                      { label: "Đơn hàng đã được tạo",          description: "Đơn hàng đã đặt thành công, chờ người bán xác nhận" },
-  packaging:                    { label: "Đang đóng gói",                  description: "Người bán đang chuẩn bị và đóng gói hàng" },
-  ready_to_ship:                { label: "Sẵn sàng giao",                  description: "Đơn hàng sẵn sàng, hệ thống đang tìm shipper" },
-  queued:                       { label: "Đang tìm shipper lấy hàng",      description: "Hệ thống đang tìm shipper khu vực người bán" },
-  pending_acceptance:           { label: "Chờ shipper xác nhận lấy hàng",  description: "Đã phân công shipper, chờ shipper xác nhận" },
-  shipping:                     { label: "Đang lấy hàng từ người bán",     description: "Shipper đang đến lấy hàng tại địa chỉ người bán" },
-  in_transit:                   { label: "Đang vận chuyển đến khu vực bạn",description: "Hàng đã đến khu vực giao hàng, đang bàn giao shipper địa phương" },
-  delivery_queued:              { label: "Chờ shipper giao hàng",          description: "Đang tìm shipper khu vực của bạn để giao hàng" },
-  pending_delivery_acceptance:  { label: "Chờ shipper giao xác nhận",      description: "Đã phân công shipper giao hàng, chờ xác nhận" },
-  delivering:                   { label: "Đang vận chuyển",                description: "Shipper đang trên đường giao hàng đến bạn, vui lòng chú ý điện thoại" },
-  delivered:                    { label: "Đã giao hàng",                   description: "Giao hàng thành công" },
-  completed:                    { label: "Hoàn tất",                       description: "Đơn hàng đã hoàn tất" },
-  cancelled:                    { label: "Đã hủy",                         description: "Đơn hàng đã bị hủy" },
-  cancel_requested:             { label: "Yêu cầu hủy đơn",               description: "Người mua yêu cầu hủy đơn hàng" },
-  failed:                       { label: "Giao hàng thất bại",             description: "Giao hàng không thành công, đang xử lý" },
-  waiting_return_shipment:      { label: "Chờ lấy hàng hoàn trả",         description: "Đang chờ shipper đến lấy hàng hoàn trả người bán" },
-  return_shipping:              { label: "Đang hoàn hàng",                 description: "Hàng đang được vận chuyển trả về người bán" },
-  delivered_to_seller:          { label: "Đã hoàn về người bán",           description: "Hàng đã được trả về người bán thành công" },
-  returned:                     { label: "Hoàn hàng thành công",           description: "Đơn hàng đã hoàn trả thành công" },
+  created:                      { label: "Order Placed",              description: "Order placed successfully, waiting for seller to confirm." },
+  packaging:                    { label: "Packaging",                 description: "Seller is preparing and packing your order." },
+  ready_to_ship:                { label: "Finding Shipper",           description: "Order is packed. The system is looking for an available shipper." },
+  queued:                       { label: "In Queue",                  description: "Waiting for an available shipper in the seller's area." },
+  pending_acceptance:           { label: "Shipper Assigned",          description: "A shipper has been assigned and is confirming the pickup." },
+  shipping:                     { label: "Out for Pickup",            description: "Shipper is heading to the seller's address to collect the package." },
+  in_transit:                   { label: "In Transit",                description: "Package is in transit to your area. Assigning a local delivery shipper." },
+  delivery_queued:              { label: "Awaiting Delivery Shipper", description: "Looking for a shipper in your area to handle last-mile delivery." },
+  pending_delivery_acceptance:  { label: "Delivery Shipper Assigned", description: "A delivery shipper has been assigned and is confirming." },
+  delivering:                   { label: "Out for Delivery",          description: "Shipper is on the way to your address. Please keep your phone available." },
+  delivered:                    { label: "Delivered",                 description: "Package delivered successfully." },
+  completed:                    { label: "Completed",                 description: "Order has been completed. Thank you for your purchase!" },
+  cancelled:                    { label: "Cancelled",                 description: "This order has been cancelled." },
+  cancel_requested:             { label: "Cancellation Requested",   description: "Buyer has requested to cancel this order." },
+  failed:                       { label: "Delivery Failed",           description: "Delivery was unsuccessful. The issue is being resolved." },
+  waiting_return_shipment:      { label: "Awaiting Return Pickup",    description: "Waiting for a shipper to collect the return package from the buyer." },
+  return_shipping:              { label: "Return In Transit",         description: "Return package is on its way back to the seller." },
+  delivered_to_seller:          { label: "Returned to Seller",        description: "Return package has been successfully delivered to the seller." },
+  returned:                     { label: "Return Completed",          description: "Order has been returned successfully." },
 };
 
 const TERMINAL_STATUSES = new Set(["delivered", "completed", "cancelled", "returned", "delivered_to_seller"]);
@@ -105,7 +105,7 @@ export default function ShippingTimeline({ statusHistory }: ShippingTimelineProp
   return (
     <div className="mt-4 mb-2">
       <h4 className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-3">
-        Lịch sử vận chuyển
+        Shipping History
       </h4>
 
       <div className="relative">

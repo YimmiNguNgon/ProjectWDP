@@ -377,7 +377,7 @@ async function dispatchNextFromQueue(shipperId) {
 async function toggleShipperAvailability(shipperId, isAvailable) {
     const updateFields = isAvailable
         ? { "shipperInfo.shipperStatus": "available", "shipperInfo.isAvailable": true }
-        : { "shipperInfo.shipperStatus": "paused", "shipperInfo.isAvailable": false };
+        : { "shipperInfo.isAvailable": false };
 
     const shipper = await User.findByIdAndUpdate(
         shipperId,

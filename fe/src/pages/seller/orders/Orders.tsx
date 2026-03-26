@@ -57,14 +57,14 @@ const STATUS_CONFIG = {
     border: "#BFDBFE",
   },
   ready_to_ship: {
-    label: "Waiting",
+    label: "Finding Shipper",
     dot: "#3B82F6",
     bg: "#EFF6FF",
     text: "#1E40AF",
     border: "#BFDBFE",
   },
   queued: {
-    label: "Waiting",
+    label: "In Queue",
     dot: "#F97316",
     bg: "#FFF7ED",
     text: "#9A3412",
@@ -120,7 +120,7 @@ const STATUS_CONFIG = {
     border: "#FDE68A",
   },
   pending_acceptance: {
-    label: "Waiting Shipper",
+    label: "Shipper Assigned",
     dot: "#F97316",
     bg: "#FFF7ED",
     text: "#9A3412",
@@ -646,7 +646,7 @@ function OrderDetailsPopup({
                 })()}
             </div>
 
-            {/* ── Lịch sử vận chuyển ── */}
+            {/* ── Shipping History ── */}
             {order.statusHistory && order.statusHistory.length > 0 && (
               <div style={{ gridColumn: "1 / -1" }}>
                 <ShippingTimeline

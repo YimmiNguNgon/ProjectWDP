@@ -379,20 +379,12 @@ export default function PurchaseHistoryPage() {
         textClass: "text-cyan-700",
       };
     }
-    if (normalized === "ready_to_ship") {
+    if (normalized === "ready_to_ship" || normalized === "queued" || normalized === "pending_acceptance") {
       return {
-        label: "Waiting",
-        note: "Seller has prepared your order and it's waiting for a shipper.",
+        label: "Processing",
+        note: "Your order is being arranged for delivery.",
         dotClass: "bg-yellow-500",
         textClass: "text-yellow-700",
-      };
-    }
-    if (normalized === "pending_acceptance") {
-      return {
-        label: "Waiting Shipper",
-        note: "Waiting for shipper to accept the delivery.",
-        dotClass: "bg-orange-400",
-        textClass: "text-orange-700",
       };
     }
     if (normalized === "shipping") {
@@ -444,9 +436,17 @@ export default function PurchaseHistoryPage() {
       };
     }
 
+    if (["in_transit", "delivery_queued", "pending_delivery_acceptance", "delivering"].includes(normalized)) {
+      return {
+        label: "On the Way",
+        note: "Your order is on its way to you.",
+        dotClass: "bg-amber-500",
+        textClass: "text-amber-700",
+      };
+    }
     return {
-      label: normalized ? normalized.toUpperCase() : "UNKNOWN",
-      note: "Order status updated.",
+      label: "Processing",
+      note: "Your order is being processed.",
       dotClass: "bg-gray-500",
       textClass: "text-gray-700",
     };
