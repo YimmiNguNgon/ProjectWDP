@@ -303,6 +303,9 @@ exports.updateOrderStatus = async (req, res, next) => {
 
     const isNowCompleted =
       status === "completed" && previousStatus !== "completed";
+      
+    const isNowReturned = 
+      status === "returned" && previousStatus !== "returned";
 
     // Update status
     order.status = status;
@@ -325,6 +328,12 @@ exports.updateOrderStatus = async (req, res, next) => {
     if (isNowCompleted) {
       const revenueService = require("../services/revenueService");
       await revenueService.processOrderCompletion(order._id);
+    }
+    
+    // Revert revenue if it's returned
+    if (isNowReturned) {
+      const revenueService = require("../services/revenueService");
+      await revenueService.revertOrderRevenue(order._id);
     }
 
     // Nếu seller set ready_to_ship, thử auto-assign cho shipper (fire-and-forget)

@@ -11,6 +11,7 @@ const {
   syncProductStockFromVariants,
 } = require("../utils/productInventory");
 const notificationService = require("./notificationService");
+const revenueService = require("./revenueService");
 
 const createHttpError = (message, status = 400) => {
   const error = new Error(message);
@@ -394,6 +395,9 @@ async function confirmReturnReceived(sellerId, refundId, condition = 'SELLABLE')
     },
     updatedAt: new Date(),
   });
+
+  // 4. Revert order revenue if it was previously processed
+  await revenueService.revertOrderRevenue(order._id);
 
   return refund;
 }

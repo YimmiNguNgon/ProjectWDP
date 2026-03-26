@@ -79,3 +79,16 @@ exports.processOrderCompletion = async (orderId) => {
     throw error;
   }
 };
+
+exports.revertOrderRevenue = async (orderId) => {
+  try {
+    const result = await Revenue.deleteMany({ order: orderId });
+    console.log(
+      `[RevenueService] Reverted revenue for order ${orderId}. Deleted ${result.deletedCount} records.`
+    );
+    return result;
+  } catch (error) {
+    console.error(`[RevenueService] Error reverting revenue for order ${orderId}:`, error.message);
+    throw error;
+  }
+};
