@@ -25,11 +25,28 @@ export default function ShipperLayout() {
   const socketCtx = useContext(SocketContext);
   const [shipperStatus, setShipperStatus] = useState<string>("available");
 
-  useEffect(() => {
+  const refreshStatus = () => {
     getShipperStats()
       .then((res) => setShipperStatus(res.data.shipperStatus ?? "available"))
       .catch(() => {});
-  }, [location.pathname]);
+  };
+
+  useEffect(() => {
+    refreshStatus();
+  }, [location.pathname]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Refresh when backend notifies status changed (e.g., after decline)
+  useEffect(() => {
+    const socket = socketCtx?.socket;
+    if (!socket) return;
+    const handler = (data: { type: string }) => {
+      if (data.type === "shipper_status_updated" || data.type === "order_assigned") {
+        refreshStatus();
+      }
+    };
+    socket.on("notification", handler);
+    return () => { socket.off("notification", handler); };
+  }, [socketCtx?.socket]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const currentNav = navigation.find(
     (nav) =>

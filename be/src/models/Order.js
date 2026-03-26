@@ -165,6 +165,7 @@ const orderSchema = new mongoose.Schema({
     street: String,
     detail: String,
   },
+  sellerCity: { type: String, default: "" }, // Seller's city for pickup shipper routing
   shippingPrice: { type: Number, default: 0 },
   paymentMethod: { type: String, default: "cod" },
   note: { type: String, default: "" },

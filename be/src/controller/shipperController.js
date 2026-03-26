@@ -6,6 +6,7 @@ const notificationService = require("../services/notificationService");
 const {
   dispatchNextFromQueue,
   dispatchNextDeliveryFromQueue,
+  autoAssignOrder,
   autoAssignDeliveryShipper,
   toggleShipperAvailability,
 } = require("../services/orderDispatchService");
@@ -21,9 +22,16 @@ exports.getAvailableOrders = async (req, res, next) => {
     const shipperDoc = await User.findById(req.user._id).select("shipperInfo").lean();
     const assignedProvince = shipperDoc?.shipperInfo?.assignedProvince || null;
 
-    // Filter pickup orders by shipper's province if assigned
+    // Filter pickup orders by seller's city (sellerCity field), fallback to unfiltered
     const pickupFilter = assignedProvince
-      ? { status: { $in: ["ready_to_ship", "queued"] }, shipper: null, "shippingAddress.city": assignedProvince }
+      ? {
+          status: { $in: ["ready_to_ship", "queued"] },
+          shipper: null,
+          $or: [
+            { sellerCity: assignedProvince },
+            { sellerCity: { $in: ["", null] }, "shippingAddress.city": assignedProvince },
+          ],
+        }
       : { status: { $in: ["ready_to_ship", "queued"] }, shipper: null };
 
     const query = {
@@ -293,12 +301,14 @@ exports.acceptOrder = async (req, res, next) => {
 
 exports.rejectOrder = async (req, res, next) => {
   try {
+    const rejectingShipperId = req.user._id;
+
     // Reject Shipper 1 pickup assignment
     let order = await Order.findOneAndUpdate(
       {
         _id: req.params.id,
         status: "pending_acceptance",
-        shipper: req.user._id,
+        shipper: rejectingShipperId,
       },
       {
         shipper: null,
@@ -307,46 +317,81 @@ exports.rejectOrder = async (req, res, next) => {
           statusHistory: {
             status: "ready_to_ship",
             timestamp: new Date(),
-            note: `Rejected by shipper ${req.user.username}. Available for reassignment.`,
+            note: `Rejected by shipper ${req.user.username}. Re-assigning to another shipper.`,
           },
         },
       },
       { new: true },
     );
 
+    if (order) {
+      // Reset shipper status về available
+      await User.findByIdAndUpdate(rejectingShipperId, {
+        "shipperInfo.shipperStatus": "available",
+        "shipperInfo.isAvailable": true,
+      });
+
+      // Notify shipper so frontend can refresh status
+      notificationService.sendNotification({
+        recipientId: rejectingShipperId,
+        type: "shipper_status_updated",
+        title: "You are now available",
+        body: "Order declined. You are available to accept new orders.",
+        link: `/shipper/available`,
+        metadata: {},
+      }).catch(() => {});
+
+      // Tìm ngay shipper khác ở cùng thành phố, loại trừ shipper vừa reject
+      setImmediate(() => autoAssignOrder(order, rejectingShipperId).catch(() => {}));
+
+      return res.json({ ok: true, message: "Order rejected. Reassigning to another shipper." });
+    }
+
     // Reject Shipper 2 delivery assignment → back to in_transit for re-assignment
-    if (!order) {
-      order = await Order.findOneAndUpdate(
-        {
-          _id: req.params.id,
-          status: "pending_delivery_acceptance",
-          shipper: req.user._id,
-        },
-        {
-          shipper: null,
-          status: "in_transit",
-          $push: {
-            statusHistory: {
-              status: "in_transit",
-              timestamp: new Date(),
-              note: `Delivery rejected by shipper ${req.user.username}. Re-queuing for delivery assignment.`,
-            },
+    order = await Order.findOneAndUpdate(
+      {
+        _id: req.params.id,
+        status: "pending_delivery_acceptance",
+        shipper: rejectingShipperId,
+      },
+      {
+        shipper: null,
+        status: "in_transit",
+        $push: {
+          statusHistory: {
+            status: "in_transit",
+            timestamp: new Date(),
+            note: `Delivery rejected by shipper ${req.user.username}. Re-assigning to another shipper.`,
           },
         },
-        { new: true },
-      );
+      },
+      { new: true },
+    );
 
-      // Trigger tìm Shipper 2 khác
-      if (order) {
-        setImmediate(() => autoAssignDeliveryShipper(order, req.user._id).catch(() => {}));
-      }
+    if (order) {
+      // Reset shipper status về available
+      await User.findByIdAndUpdate(rejectingShipperId, {
+        "shipperInfo.shipperStatus": "available",
+        "shipperInfo.isAvailable": true,
+      });
+
+      // Notify shipper so frontend can refresh status
+      notificationService.sendNotification({
+        recipientId: rejectingShipperId,
+        type: "shipper_status_updated",
+        title: "You are now available",
+        body: "Order declined. You are available to accept new orders.",
+        link: `/shipper/available`,
+        metadata: {},
+      }).catch(() => {});
+
+      // Tìm ngay shipper khác ở cùng thành phố
+      setImmediate(() => autoAssignDeliveryShipper(order, rejectingShipperId).catch(() => {}));
+
+      return res.json({ ok: true, message: "Delivery rejected. Reassigning to another shipper." });
     }
 
-    if (!order) {
-      return res.status(404).json({ message: "Order not found or cannot be rejected" });
-    }
-
-    res.json({ ok: true, message: "Order rejected and returned to available pool" });
+    return res.status(404).json({ message: "Order not found or cannot be rejected" });
   } catch (err) {
     next(err);
   }

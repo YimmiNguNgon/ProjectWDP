@@ -2,6 +2,7 @@ const Order = require("../models/Order");
 const OrderGroup = require("../models/OrderGroup");
 const Revenue = require("../models/Revenue");
 const Product = require("../models/Product");
+const User = require("../models/User");
 const mongoose = require("mongoose");
 // Trust Score trigger (non-blocking, fire-and-forget)
 const { evaluateSellerTrust } = require("../services/sellerTrustService");
@@ -315,6 +316,12 @@ exports.updateOrderStatus = async (req, res, next) => {
       order.deliveredAt = new Date();
     }
 
+    // Store seller's city for pickup shipper routing
+    if (status === "ready_to_ship" && !order.sellerCity) {
+      const sellerDoc = await User.findById(order.seller).select("sellerInfo.shopAddress").lean();
+      order.sellerCity = sellerDoc?.sellerInfo?.shopAddress || order.shippingAddress?.city || "";
+    }
+
     // Add to status history
     order.statusHistory.push({
       status,
@@ -329,7 +336,7 @@ exports.updateOrderStatus = async (req, res, next) => {
       const revenueService = require("../services/revenueService");
       await revenueService.processOrderCompletion(order._id);
     }
-    
+
     // Revert revenue if it's returned
     if (isNowReturned) {
       const revenueService = require("../services/revenueService");
