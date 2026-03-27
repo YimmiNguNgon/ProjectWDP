@@ -20,6 +20,7 @@ export interface ShipperOrder {
   seller?: { _id: string; username: string; sellerInfo?: { shopName?: string; shopAddress?: string } };
   sellerCity?: string;
   pickupShipper?: { _id: string; username: string };
+  returnPickupShipper?: { _id: string; username: string };
   shipper?: { _id: string; username: string; email: string };
   items?: { title: string; quantity: number; unitPrice: number }[];
 }
@@ -52,8 +53,11 @@ export const acceptOrder = (orderId: string): Promise<{ data: { ok: boolean; ord
 export const rejectOrder = (orderId: string): Promise<{ data: { ok: boolean } }> =>
   api.patch(`/api/shipper/orders/${orderId}/reject`);
 
-export const arrivedAtDestination = (orderId: string): Promise<{ data: { ok: boolean; order: ShipperOrder } }> =>
+export const arrivedAtDestination = (orderId: string): Promise<{ data: { ok: boolean; order: ShipperOrder; sameCity: boolean } }> =>
   api.patch(`/api/shipper/orders/${orderId}/arrived`);
+
+export const arrivedAtReturnDestination = (orderId: string): Promise<{ data: { ok: boolean; order: ShipperOrder; sameCity: boolean } }> =>
+  api.patch(`/api/shipper/orders/${orderId}/arrived-return`);
 
 export const markDelivered = (orderId: string): Promise<{ data: { ok: boolean; order: ShipperOrder } }> =>
   api.patch(`/api/shipper/orders/${orderId}/delivered`);

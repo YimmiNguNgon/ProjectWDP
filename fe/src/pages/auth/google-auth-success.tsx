@@ -43,9 +43,9 @@ export default function GoogleAuthSuccessPage() {
                         closeButton: true,
                     });
 
-                    if (user?.role === 'shipper') navigate('/shipper');
-                    else if (user?.role === 'admin') navigate('/admin');
-                    else if (user?.role === 'seller') navigate('/seller');
+                    if (user?.role === 'shipper') window.location.href = '/shipper';
+                    else if (user?.role === 'admin') window.location.href = '/admin';
+                    else if (user?.role === 'seller') window.location.href = '/seller';
                     else navigate('/');
                 } catch (error) {
                     hasProcessed.current = true;

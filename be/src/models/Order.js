@@ -59,6 +59,12 @@ const orderSchema = new mongoose.Schema({
     default: null,
     index: true,
   },
+  returnPickupShipper: {
+    // Return Shipper 1 — người lấy hàng từ buyer (lưu lại sau khi bàn giao)
+    type: mongoose.Schema.Types.ObjectId,
+    ref: "User",
+    default: null,
+  },
   items: [orderItemSchema],
   subtotalAmount: { type: Number, default: 0 },
   discountAmount: { type: Number, default: 0 },
@@ -132,7 +138,11 @@ const orderSchema = new mongoose.Schema({
       "cancel_requested",
       "failed",
       "waiting_return_shipment",
-      "return_shipping",
+      "return_shipping",                      // Return Shipper 1 đang lấy hàng từ buyer
+      "return_in_transit",                    // Return Shipper 1 đến khu vực seller, chờ Return Shipper 2
+      "return_delivery_queued",               // Chờ Return Shipper 2 (tất cả shipper khu vực seller đầy)
+      "return_pending_delivery_acceptance",   // Return Shipper 2 được assign, chờ chấp nhận
+      "return_delivering",                    // Return Shipper 2 đang giao đến seller
       "delivered_to_seller",
       "returned",
     ],
@@ -144,6 +154,8 @@ const orderSchema = new mongoose.Schema({
   queuedAt: { type: Date, default: null },
   // Thời điểm đưa vào delivery_queued – FIFO cho Shipper 2
   deliveryQueuedAt: { type: Date, default: null },
+  // Thời điểm đưa vào return_delivery_queued – FIFO cho Return Shipper 2
+  returnDeliveryQueuedAt: { type: Date, default: null },
   paymentStatus: {
     type: String,
     enum: ["unpaid", "paid", "failed", "refunded"],
@@ -196,6 +208,10 @@ const orderSchema = new mongoose.Schema({
           "failed",
           "waiting_return_shipment",
           "return_shipping",
+          "return_in_transit",
+          "return_delivery_queued",
+          "return_pending_delivery_acceptance",
+          "return_delivering",
           "delivered_to_seller",
           "returned",
         ],

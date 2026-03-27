@@ -3,7 +3,7 @@ import { toast } from "sonner";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { getMyOrders, markDelivered, arrivedAtDestination, type ShipperOrder } from "@/api/shipper";
+import { getMyOrders, markDelivered, arrivedAtDestination, arrivedAtReturnDestination, type ShipperOrder } from "@/api/shipper";
 
 const STATUS_CONFIG: Record<string, { label: string; className: string }> = {
   shipping: { label: "Picking Up", className: "text-purple-700 border-purple-300 bg-purple-50" },
@@ -11,7 +11,9 @@ const STATUS_CONFIG: Record<string, { label: string; className: string }> = {
   delivering: { label: "Delivering", className: "text-blue-700 border-blue-300 bg-blue-50" },
   delivered: { label: "Delivered", className: "text-green-700 border-green-300 bg-green-50" },
   completed: { label: "Completed", className: "text-emerald-700 border-emerald-300 bg-emerald-50" },
-  return_shipping: { label: "Returning to Seller", className: "text-orange-700 border-orange-300 bg-orange-50" },
+  return_shipping: { label: "Return: Picking Up", className: "text-orange-700 border-orange-300 bg-orange-50" },
+  return_in_transit: { label: "Return: In Transit", className: "text-amber-700 border-amber-300 bg-amber-50" },
+  return_delivering: { label: "Return: Delivering to Seller", className: "text-rose-700 border-rose-300 bg-rose-50" },
   delivered_to_seller: { label: "Returned to Seller", className: "text-teal-700 border-teal-300 bg-teal-50" },
 };
 
@@ -56,7 +58,7 @@ export default function ShipperMyOrders() {
     try {
       const order = orders.find((o) => o._id === orderId);
       const res = await markDelivered(orderId);
-      if (order?.status === "return_shipping") {
+      if (order?.status === "return_shipping" || order?.status === "return_delivering") {
         toast.success("Marked as returned to seller!");
       } else {
         toast.success("Order delivered successfully!");
@@ -75,10 +77,29 @@ export default function ShipperMyOrders() {
     setActionLoading(orderId);
     try {
       const res = await arrivedAtDestination(orderId);
-      if ((res.data as any).sameCity) {
+      if (res.data.sameCity) {
         toast.success("Picked up! Delivering directly to buyer.");
       } else {
         toast.success("Arrived at destination — handing off to local delivery shipper.");
+      }
+      setOrders((prev) =>
+        prev.map((o) => (o._id === orderId ? res.data.order : o)),
+      );
+    } catch (err: any) {
+      toast.error(err?.response?.data?.message || "Failed to update order");
+    } finally {
+      setActionLoading(null);
+    }
+  };
+
+  const handleArrivedAtReturnDestination = async (orderId: string) => {
+    setActionLoading(orderId);
+    try {
+      const res = await arrivedAtReturnDestination(orderId);
+      if (res.data.sameCity) {
+        toast.success("Picked up return! Delivering directly to seller.");
+      } else {
+        toast.success("Arrived at seller area — handing off to local shipper.");
       }
       setOrders((prev) =>
         prev.map((o) => (o._id === orderId ? res.data.order : o)),
@@ -155,6 +176,14 @@ export default function ShipperMyOrders() {
                     {order.status === "shipping" && order.seller?.sellerInfo?.shopAddress && (
                       <div>
                         <p className="text-gray-500">Pickup From (Seller)</p>
+                        <p className="font-medium">{order.seller.username}</p>
+                        <p className="text-xs text-gray-400">{order.seller.sellerInfo.shopAddress}</p>
+                      </div>
+                    )}
+                    {/* Return delivery: deliver TO seller */}
+                    {(order.status === "return_delivering") && order.seller?.sellerInfo?.shopAddress && (
+                      <div>
+                        <p className="text-gray-500">Deliver To (Seller)</p>
                         <p className="font-medium">{order.seller.username}</p>
                         <p className="text-xs text-gray-400">{order.seller.sellerInfo.shopAddress}</p>
                       </div>
@@ -236,8 +265,34 @@ export default function ShipperMyOrders() {
                         {busy ? "..." : "Mark Delivered"}
                       </Button>
                     )}
-                    {/* Return shipper */}
-                    {order.status === "return_shipping" && (
+                    {/* Return Shipper 1: đang lấy hàng từ buyer */}
+                    {order.status === "return_shipping" && (() => {
+                      const isSameCity =
+                        order.sellerCity &&
+                        order.shippingAddress?.city &&
+                        order.sellerCity === order.shippingAddress.city;
+                      return isSameCity ? (
+                        <Button
+                          size="sm"
+                          className="bg-green-600 hover:bg-green-700 text-white"
+                          disabled={busy}
+                          onClick={() => handleMarkDelivered(order._id)}
+                        >
+                          {busy ? "..." : "Mark Returned to Seller"}
+                        </Button>
+                      ) : (
+                        <Button
+                          size="sm"
+                          className="bg-rose-600 hover:bg-rose-700 text-white"
+                          disabled={busy}
+                          onClick={() => handleArrivedAtReturnDestination(order._id)}
+                        >
+                          {busy ? "..." : "Arrived at Seller Area"}
+                        </Button>
+                      );
+                    })()}
+                    {/* Return Shipper 2: đang giao đến seller */}
+                    {order.status === "return_delivering" && (
                       <Button
                         size="sm"
                         className="bg-green-600 hover:bg-green-700 text-white"

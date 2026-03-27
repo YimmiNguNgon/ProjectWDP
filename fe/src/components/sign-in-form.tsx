@@ -56,9 +56,9 @@ export function SignInForm({
         position: "top-center",
         closeButton: true,
       });
-      if (loginUser?.role === "shipper") navigate("/shipper");
-      else if (loginUser?.role === "admin") navigate("/admin");
-      else if (loginUser?.role === "seller") navigate("/seller");
+      if (loginUser?.role === "shipper") window.location.href = "/shipper";
+      else if (loginUser?.role === "admin") window.location.href = "/admin";
+      else if (loginUser?.role === "seller") window.location.href = "/seller";
       else navigate("/");
     } catch (error: any) {
       if (error.response?.status === 401) {

@@ -369,6 +369,144 @@ async function dispatchNextFromQueue(shipperId) {
 }
 
 /**
+ * Tự động phân đơn cho Return Shipper 2 (delivery về seller) khi Return Shipper 1 đến khu vực seller.
+ * Ưu tiên shipper phụ trách khu vực SELLER (sellerCity).
+ * Nếu không có shipper rảnh thì đưa đơn vào return_delivery_queued.
+ * @param {Object} order - Mongoose order document (đang ở return_in_transit)
+ * @param {string|ObjectId|null} excludeShipperId - Return Shipper 1 (bị loại trừ)
+ */
+async function autoAssignReturnDeliveryShipper(order, excludeShipperId = null) {
+    const province = order.sellerCity || null;
+    const shipper = await findBestShipper(excludeShipperId, province);
+
+    if (shipper) {
+        const updated = await Order.findOneAndUpdate(
+            { _id: order._id, status: "return_in_transit", returnShipper: null },
+            {
+                returnShipper: shipper._id,
+                status: "return_pending_delivery_acceptance",
+                returnDeliveryQueuedAt: null,
+                $push: {
+                    statusHistory: {
+                        status: "return_pending_delivery_acceptance",
+                        timestamp: new Date(),
+                        note: `Auto-assigned return delivery to shipper ${shipper.username} (area: ${province || "any"}), awaiting acceptance`,
+                    },
+                },
+            },
+            { new: true },
+        );
+
+        if (!updated) return;
+
+        await User.findByIdAndUpdate(shipper._id, {
+            "shipperInfo.shipperStatus": "pending_acceptance",
+            "shipperInfo.isAvailable": false,
+        }).catch(() => {});
+
+        notificationService
+            .sendNotification({
+                recipientId: shipper._id,
+                type: "order_assigned",
+                title: "New return delivery waiting for your acceptance",
+                body: `A return package arrived in your area and needs delivery to seller. Please accept or reject it.`,
+                link: `/shipper/available`,
+                metadata: { orderId: updated._id },
+            })
+            .catch(() => { });
+    } else {
+        await Order.findOneAndUpdate(
+            { _id: order._id, status: "return_in_transit", returnShipper: null },
+            {
+                status: "return_delivery_queued",
+                returnDeliveryQueuedAt: new Date(),
+                $push: {
+                    statusHistory: {
+                        status: "return_delivery_queued",
+                        timestamp: new Date(),
+                        note: `All shippers in seller area (${province || "any"}) are at full capacity. Waiting for return delivery shipper.`,
+                    },
+                },
+            },
+        );
+    }
+}
+
+/**
+ * Sau khi Return Shipper 2 hoàn thành đơn, lấy đơn return_delivery_queued cũ nhất (FIFO)
+ * trong cùng tỉnh/thành của shipper và gán.
+ * @param {string|ObjectId} shipperId
+ */
+async function dispatchNextReturnDeliveryFromQueue(shipperId) {
+    const shipper = await User.findById(shipperId)
+        .select("_id username shipperInfo status")
+        .lean();
+
+    if (!shipper || shipper.status !== "active") return;
+    if (shipper.shipperInfo?.shipperStatus !== "available") return;
+
+    const max = shipper.shipperInfo?.maxOrders ?? DEFAULT_MAX_ORDERS;
+    const activeCount = await Order.countDocuments({
+        returnShipper: shipperId,
+        status: { $in: ["return_shipping", "return_delivering", "return_pending_delivery_acceptance"] },
+    });
+
+    if (activeCount >= max) return;
+
+    const province = shipper.shipperInfo?.assignedProvince || null;
+
+    const assignFields = {
+        returnShipper: shipperId,
+        status: "return_pending_delivery_acceptance",
+        returnDeliveryQueuedAt: null,
+        $push: {
+            statusHistory: {
+                status: "return_pending_delivery_acceptance",
+                timestamp: new Date(),
+                note: `Auto-assigned return delivery from queue to shipper ${shipper.username}, awaiting acceptance`,
+            },
+        },
+    };
+
+    const sortOpts = { sort: { returnDeliveryQueuedAt: 1 }, new: true };
+
+    let nextOrder = null;
+    if (province) {
+        nextOrder = await Order.findOneAndUpdate(
+            { status: "return_delivery_queued", returnShipper: null, sellerCity: province },
+            assignFields,
+            sortOpts,
+        );
+    }
+
+    if (!nextOrder) {
+        nextOrder = await Order.findOneAndUpdate(
+            { status: "return_delivery_queued", returnShipper: null },
+            assignFields,
+            sortOpts,
+        );
+    }
+
+    if (!nextOrder) return;
+
+    await User.findByIdAndUpdate(shipperId, {
+        "shipperInfo.shipperStatus": "pending_acceptance",
+        "shipperInfo.isAvailable": false,
+    }).catch(() => {});
+
+    notificationService
+        .sendNotification({
+            recipientId: shipperId,
+            type: "order_assigned",
+            title: "New return delivery waiting for your acceptance",
+            body: `A queued return package is ready for delivery to seller in your area. Please accept or reject it.`,
+            link: `/shipper/available`,
+            metadata: { orderId: nextOrder._id },
+        })
+        .catch(() => { });
+}
+
+/**
  * Toggle trạng thái available của shipper.
  * Khi bật lại (isAvailable = true), tự động dispatch đơn từ queue nếu còn slot.
  * @param {string|ObjectId} shipperId
@@ -398,8 +536,10 @@ async function toggleShipperAvailability(shipperId, isAvailable) {
 module.exports = {
     autoAssignOrder,
     autoAssignDeliveryShipper,
+    autoAssignReturnDeliveryShipper,
     dispatchNextFromQueue,
     dispatchNextDeliveryFromQueue,
+    dispatchNextReturnDeliveryFromQueue,
     toggleShipperAvailability,
     findBestShipper,
 };

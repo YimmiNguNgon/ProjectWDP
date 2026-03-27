@@ -80,8 +80,16 @@ export default function ShipperAvailableOrders() {
     }
   };
 
-  const pendingOrders = orders.filter((o) => o.status === "pending_acceptance" || o.status === "pending_delivery_acceptance");
-  const openOrders = orders.filter((o) => o.status !== "pending_acceptance" && o.status !== "pending_delivery_acceptance");
+  const pendingOrders = orders.filter((o) =>
+    o.status === "pending_acceptance" ||
+    o.status === "pending_delivery_acceptance" ||
+    o.status === "return_pending_delivery_acceptance"
+  );
+  const openOrders = orders.filter((o) =>
+    o.status !== "pending_acceptance" &&
+    o.status !== "pending_delivery_acceptance" &&
+    o.status !== "return_pending_delivery_acceptance"
+  );
 
   const renderOrderCard = (order: ShipperOrder, isPending: boolean) => {
     const addr = order.shippingAddress;
@@ -93,7 +101,11 @@ export default function ShipperAvailableOrders() {
             <CardTitle className="text-sm font-mono text-gray-600">
               #{order._id.slice(-8).toUpperCase()}
             </CardTitle>
-            {order.status === "pending_delivery_acceptance" ? (
+            {order.status === "return_pending_delivery_acceptance" ? (
+              <Badge className="bg-rose-100 text-rose-700 border border-rose-300">
+                Return Delivery — Awaiting Acceptance
+              </Badge>
+            ) : order.status === "pending_delivery_acceptance" ? (
               <Badge className="bg-cyan-100 text-cyan-700 border border-cyan-300">
                 Delivery — Awaiting Acceptance
               </Badge>
@@ -104,6 +116,10 @@ export default function ShipperAvailableOrders() {
             ) : order.status === "delivery_queued" ? (
               <Badge variant="outline" className="text-cyan-700 border-cyan-300 bg-cyan-50">
                 Delivery — In Your Area
+              </Badge>
+            ) : order.status === "return_delivery_queued" ? (
+              <Badge variant="outline" className="text-rose-700 border-rose-300 bg-rose-50">
+                Return Delivery — To Seller
               </Badge>
             ) : order.status === "waiting_return_shipment" ? (
               <Badge variant="outline" className="text-purple-700 border-purple-300 bg-purple-50">
@@ -128,6 +144,13 @@ export default function ShipperAvailableOrders() {
                 order.seller?.sellerInfo?.shopAddress && (
                 <p className="text-xs text-orange-600 font-medium mt-0.5">
                   📦 Pickup: {order.seller.sellerInfo.shopAddress}
+                </p>
+              )}
+              {/* Return delivery: deliver to seller */}
+              {(order.status === "return_delivery_queued" || order.status === "return_pending_delivery_acceptance") &&
+                order.seller?.sellerInfo?.shopAddress && (
+                <p className="text-xs text-rose-600 font-medium mt-0.5">
+                  📦 Deliver to: {order.seller.sellerInfo.shopAddress}
                 </p>
               )}
             </div>
@@ -179,7 +202,7 @@ export default function ShipperAvailableOrders() {
             >
               {busy ? "..." : "Accept"}
             </Button>
-            {(order.status === "pending_acceptance" || order.status === "pending_delivery_acceptance") && (
+            {(order.status === "pending_acceptance" || order.status === "pending_delivery_acceptance" || order.status === "return_pending_delivery_acceptance") && (
               <Button
                 size="sm"
                 variant="outline"

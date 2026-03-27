@@ -6,8 +6,10 @@ const notificationService = require("../services/notificationService");
 const {
   dispatchNextFromQueue,
   dispatchNextDeliveryFromQueue,
+  dispatchNextReturnDeliveryFromQueue,
   autoAssignOrder,
   autoAssignDeliveryShipper,
+  autoAssignReturnDeliveryShipper,
   toggleShipperAvailability,
 } = require("../services/orderDispatchService");
 
@@ -34,6 +36,15 @@ exports.getAvailableOrders = async (req, res, next) => {
         }
       : { status: { $in: ["ready_to_ship", "queued"] }, shipper: null };
 
+    // Filter return pickup orders by buyer's city (shippingAddress.city)
+    const returnPickupFilter = assignedProvince
+      ? {
+          status: "waiting_return_shipment",
+          returnShipper: null,
+          "shippingAddress.city": assignedProvince,
+        }
+      : { status: "waiting_return_shipment", returnShipper: null };
+
     const query = {
       $or: [
         // Phase 1 pickup orders — same city as shipper
@@ -44,8 +55,13 @@ exports.getAvailableOrders = async (req, res, next) => {
           ? [{ status: "delivery_queued", shipper: null, "shippingAddress.city": assignedProvince }]
           : [{ status: "delivery_queued", shipper: null }]),
         { status: "pending_delivery_acceptance", shipper: req.user._id },
-        // Return orders
-        { status: "waiting_return_shipment", returnShipper: null },
+        // Return pickup orders — same city as buyer
+        returnPickupFilter,
+        // Return Phase 2 delivery orders — same city as seller
+        ...(assignedProvince
+          ? [{ status: "return_delivery_queued", returnShipper: null, sellerCity: assignedProvince }]
+          : [{ status: "return_delivery_queued", returnShipper: null }]),
+        { status: "return_pending_delivery_acceptance", returnShipper: req.user._id },
       ],
     };
 
@@ -105,7 +121,7 @@ exports.acceptOrder = async (req, res, next) => {
       Order.countDocuments({
         $or: [
           { shipper: req.user._id, status: { $in: ["shipping", "delivering"] } },
-          { returnShipper: req.user._id, status: "return_shipping" },
+          { returnShipper: req.user._id, status: { $in: ["return_shipping", "return_delivering"] } },
         ],
       }),
       User.findById(req.user._id).select("shipperInfo").lean(),
@@ -214,6 +230,53 @@ exports.acceptOrder = async (req, res, next) => {
           returnShipper: null,
         },
         returnUpdate,
+        { new: true },
+      );
+    }
+
+    // Accept return_delivery_queued (open, no return shipper 2)
+    if (!order) {
+      order = await Order.findOneAndUpdate(
+        {
+          _id: req.params.id,
+          status: "return_delivery_queued",
+          returnShipper: null,
+        },
+        {
+          status: "return_delivering",
+          returnShipper: req.user._id,
+          returnDeliveryQueuedAt: null,
+          $push: {
+            statusHistory: {
+              status: "return_delivering",
+              timestamp: new Date(),
+              note: `Return delivery accepted by shipper ${req.user.username}`,
+            },
+          },
+        },
+        { new: true },
+      );
+    }
+
+    // Accept return_pending_delivery_acceptance assigned to this shipper (Return Shipper 2)
+    if (!order) {
+      order = await Order.findOneAndUpdate(
+        {
+          _id: req.params.id,
+          status: "return_pending_delivery_acceptance",
+          returnShipper: req.user._id,
+        },
+        {
+          status: "return_delivering",
+          returnDeliveryQueuedAt: null,
+          $push: {
+            statusHistory: {
+              status: "return_delivering",
+              timestamp: new Date(),
+              note: `Return delivery accepted by shipper ${req.user.username}`,
+            },
+          },
+        },
         { new: true },
       );
     }
@@ -391,6 +454,47 @@ exports.rejectOrder = async (req, res, next) => {
       return res.json({ ok: true, message: "Delivery rejected. Reassigning to another shipper." });
     }
 
+    // Reject Return Shipper 2 assignment → back to return_in_transit
+    order = await Order.findOneAndUpdate(
+      {
+        _id: req.params.id,
+        status: "return_pending_delivery_acceptance",
+        returnShipper: rejectingShipperId,
+      },
+      {
+        returnShipper: null,
+        status: "return_in_transit",
+        $push: {
+          statusHistory: {
+            status: "return_in_transit",
+            timestamp: new Date(),
+            note: `Return delivery rejected by shipper ${req.user.username}. Re-assigning to another shipper.`,
+          },
+        },
+      },
+      { new: true },
+    );
+
+    if (order) {
+      await User.findByIdAndUpdate(rejectingShipperId, {
+        "shipperInfo.shipperStatus": "available",
+        "shipperInfo.isAvailable": true,
+      });
+
+      notificationService.sendNotification({
+        recipientId: rejectingShipperId,
+        type: "shipper_status_updated",
+        title: "You are now available",
+        body: "Return delivery declined. You are available to accept new orders.",
+        link: `/shipper/available`,
+        metadata: {},
+      }).catch(() => {});
+
+      setImmediate(() => autoAssignReturnDeliveryShipper(order, rejectingShipperId).catch(() => {}));
+
+      return res.json({ ok: true, message: "Return delivery rejected. Reassigning to another shipper." });
+    }
+
     return res.status(404).json({ message: "Order not found or cannot be rejected" });
   } catch (err) {
     next(err);
@@ -402,9 +506,10 @@ exports.markDelivered = async (req, res, next) => {
     const order = await Order.findOne({
       _id: req.params.id,
       $or: [
-        { shipper: req.user._id, status: "shipping" },     // Shipper 1 không có relay (same area)
-        { shipper: req.user._id, status: "delivering" },   // Shipper 2 giao hàng
-        { returnShipper: req.user._id, status: "return_shipping" }
+        { shipper: req.user._id, status: "shipping" },       // Shipper 1 same city, giao thẳng
+        { shipper: req.user._id, status: "delivering" },     // Shipper 2 giao đến buyer
+        { returnShipper: req.user._id, status: "return_shipping" },   // Return Shipper 1 same city, giao thẳng
+        { returnShipper: req.user._id, status: "return_delivering" }, // Return Shipper 2 giao đến seller
       ]
     });
 
@@ -412,7 +517,7 @@ exports.markDelivered = async (req, res, next) => {
       return res.status(404).json({ message: "Order not found or not yours" });
     }
 
-    const isReturn = order.status === "return_shipping";
+    const isReturn = order.status === "return_shipping" || order.status === "return_delivering";
     const nextStatus = isReturn ? "delivered_to_seller" : "delivered";
 
     order.status = nextStatus;
@@ -432,7 +537,7 @@ exports.markDelivered = async (req, res, next) => {
         const activeCount = await Order.countDocuments({
           $or: [
             { shipper: req.user._id, status: { $in: ["shipping", "pending_acceptance", "delivering", "pending_delivery_acceptance"] } },
-            { returnShipper: req.user._id, status: "return_shipping" },
+            { returnShipper: req.user._id, status: { $in: ["return_shipping", "return_delivering"] } },
           ],
         });
         if (activeCount === 0) {
@@ -441,9 +546,9 @@ exports.markDelivered = async (req, res, next) => {
             "shipperInfo.isAvailable": true,
           });
         }
-        // Thử dispatch cả 2 loại queue
         await dispatchNextFromQueue(req.user._id);
         await dispatchNextDeliveryFromQueue(req.user._id);
+        await dispatchNextReturnDeliveryFromQueue(req.user._id);
       } catch (e) { /* ignore */ }
     });
 
@@ -640,6 +745,118 @@ exports.arrivedAtDestination = async (req, res, next) => {
   }
 };
 
+/**
+ * Return Shipper 1 báo đã đến khu vực seller → bàn giao cho Return Shipper 2 (nếu khác khu vực).
+ * Cùng khu vực → Return Shipper 1 tự giao thẳng đến seller.
+ */
+exports.arrivedAtReturnDestination = async (req, res, next) => {
+  try {
+    const order = await Order.findOne({
+      _id: req.params.id,
+      returnShipper: req.user._id,
+      status: "return_shipping",
+    });
+
+    if (!order) {
+      return res.status(404).json({ message: "Order not found or not in return_shipping status" });
+    }
+
+    const isSameCity =
+      order.sellerCity &&
+      order.shippingAddress?.city &&
+      order.sellerCity === order.shippingAddress.city;
+
+    if (isSameCity) {
+      // ── Same city: Return Shipper 1 giao thẳng đến seller ──
+      order.status = "return_delivering";
+      order.statusHistory.push({
+        status: "return_delivering",
+        timestamp: new Date(),
+        note: `Shipper ${req.user.username} picked up return and is delivering directly to seller (same city: ${order.sellerCity}).`,
+      });
+      await order.save();
+
+      setImmediate(async () => {
+        try {
+          await dispatchNextReturnDeliveryFromQueue(req.user._id);
+        } catch (e) { /* ignore */ }
+      });
+
+      notificationService.sendNotification({
+        recipientId: order.seller,
+        type: "order_return_delivering",
+        title: "Return package on its way to you",
+        body: `Shipper ${req.user.username} is delivering the returned item directly to you.`,
+        link: `/seller/orders`,
+        metadata: { orderId: order._id },
+      }).catch(() => {});
+
+      notificationService.sendNotification({
+        recipientId: order.buyer,
+        type: "order_return_delivering",
+        title: "Return package heading to seller",
+        body: `The return package is being delivered to the seller.`,
+        link: `/purchases/${order._id}`,
+        metadata: { orderId: order._id },
+      }).catch(() => {});
+
+      return res.json({ ok: true, order, sameCity: true });
+    }
+
+    // ── Different city: hand off to Return Shipper 2 ──
+    order.returnPickupShipper = req.user._id;
+    order.returnShipper = null;
+    order.status = "return_in_transit";
+    order.statusHistory.push({
+      status: "return_in_transit",
+      timestamp: new Date(),
+      note: `Shipper ${req.user.username} arrived at seller area. Handoff to local return delivery shipper.`,
+    });
+    await order.save();
+
+    setImmediate(async () => {
+      try {
+        const activeCount = await Order.countDocuments({
+          $or: [
+            { shipper: req.user._id, status: { $in: ["shipping", "pending_acceptance", "delivering", "pending_delivery_acceptance"] } },
+            { returnShipper: req.user._id, status: { $in: ["return_shipping", "return_delivering"] } },
+          ],
+        });
+        if (activeCount === 0) {
+          await User.findByIdAndUpdate(req.user._id, {
+            "shipperInfo.shipperStatus": "available",
+            "shipperInfo.isAvailable": true,
+          });
+        }
+        await dispatchNextReturnDeliveryFromQueue(req.user._id);
+        await autoAssignReturnDeliveryShipper(order, req.user._id);
+      } catch (e) { /* ignore */ }
+    });
+
+    notificationService.sendNotification({
+      recipientId: order.seller,
+      type: "order_return_in_transit",
+      title: "Return package almost there!",
+      body: `The return package has arrived in your area and is being assigned to a local shipper.`,
+      link: `/seller/orders`,
+      metadata: { orderId: order._id },
+    }).catch(() => {});
+
+    notificationService.sendNotification({
+      recipientId: order.buyer,
+      type: "order_return_in_transit",
+      title: "Return package in transit",
+      body: `Shipper ${req.user.username} has arrived at the seller's area. Awaiting local shipper.`,
+      link: `/purchases/${order._id}`,
+      metadata: { orderId: order._id },
+    }).catch(() => {});
+
+    res.json({ ok: true, order, sameCity: false });
+  } catch (err) {
+    next(err);
+  }
+};
+
 exports.getShipperStats = async (req, res, next) => {
   try {
     const shipperId = req.user._id;
@@ -654,7 +871,7 @@ exports.getShipperStats = async (req, res, next) => {
       Order.countDocuments({
         $or: [
           { shipper: shipperId, status: { $in: ["shipping", "delivering"] } },
-          { returnShipper: shipperId, status: "return_shipping" }
+          { returnShipper: shipperId, status: { $in: ["return_shipping", "return_delivering"] } },
         ]
       }),
       Order.countDocuments({
