@@ -35,10 +35,6 @@ const CartSubtotal = ({
           <p>Shipping:</p>
           <p>Free</p>
         </div> */}
-        <div className="flex items-center justify-between text-xl">
-          <p>Discount:</p>
-          <p>$0</p>
-        </div>
       </div>
       <div className="border border-gray-300 my-6"></div>
       <div className="flex flex-col gap-4">
