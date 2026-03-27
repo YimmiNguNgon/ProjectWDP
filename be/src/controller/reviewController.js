@@ -4,6 +4,7 @@ const Review = require("../models/Review");
 const Product = require("../models/Product");
 const Order = require("../models/Order");
 const User = require("../models/User");
+const { evaluateSellerTrust } = require("../services/sellerTrustService");
 
 const ALLOWED_TYPES = ["positive", "neutral", "negative"];
 
@@ -208,6 +209,13 @@ exports.createReview = async (req, res, next) => {
       .populate("reviewer", "username")
       .populate("seller", "username")
       .lean();
+
+    // Background: recalculate SellerTrustScore so reviewCount & avgRating stay fresh
+    if (sellerId) {
+      evaluateSellerTrust(sellerId, "REVIEW_SUBMITTED").catch((e) =>
+        console.error("[TrustScore] Auto-recalculate after review failed:", e.message)
+      );
+    }
 
     return res.status(201).json({ data: populated });
   } catch (err) {

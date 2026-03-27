@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useContext } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -24,10 +24,12 @@ import { Clock, CheckCircle, XCircle, AlertCircle, Star } from 'lucide-react';
 import { toast } from 'sonner';
 import { getBuyerRequests, respondToRequest, applyRevision } from '@/api/feedbackRevision';
 import { formatDateTime } from '@/lib/utils';
+import { SocketContext } from '@/hooks/use-socket';
 
 export default function BuyerFeedbackRequestsPage() {
     const [requests, setRequests] = useState<any[]>([]);
     const [loading, setLoading] = useState(true);
+    const socketCtx = useContext(SocketContext);
 
     // Dialog state
     const [selectedRequest, setSelectedRequest] = useState<any>(null);
@@ -40,10 +42,6 @@ export default function BuyerFeedbackRequestsPage() {
     const [newRating, setNewRating] = useState(5);
     const [newComment, setNewComment] = useState('');
 
-    useEffect(() => {
-        loadRequests();
-    }, []);
-
     const loadRequests = async () => {
         try {
             const res = await getBuyerRequests();
@@ -55,6 +53,29 @@ export default function BuyerFeedbackRequestsPage() {
             setLoading(false);
         }
     };
+
+    useEffect(() => {
+        loadRequests();
+    }, []);
+
+    // Listen for realtime feedback_revision_request notification to auto-reload
+    useEffect(() => {
+        const socket = socketCtx?.socket;
+        if (!socket) return;
+
+        const handleNotification = (notif: any) => {
+            if (notif.type === 'feedback_revision_request') {
+                loadRequests();
+                toast.info('You have a new feedback revision request!');
+            }
+        };
+
+        socket.on('notification', handleNotification);
+        return () => {
+            socket.off('notification', handleNotification);
+        };
+    }, [socketCtx?.socket]);
+
 
     const handleViewRequest = (request: any) => {
         setSelectedRequest(request);
@@ -213,7 +234,7 @@ export default function BuyerFeedbackRequestsPage() {
                                                 {request.seller?.username || 'Unknown'}
                                             </TableCell>
                                             <TableCell className="capitalize">
-                                                {request.reason.replace('_', ' ')}
+                                                {request.reason?.replace('_', ' ') ?? '-'}
                                             </TableCell>
                                             <TableCell>
                                                 {getStatusBadge(request.status)}
@@ -222,10 +243,12 @@ export default function BuyerFeedbackRequestsPage() {
                                                 {formatDateTime(request.createdAt)}
                                             </TableCell>
                                             <TableCell className="text-sm text-gray-600">
-                                                {new Date(request.expiresAt) > new Date() ? (
+                                                {request.expiresAt && new Date(request.expiresAt) > new Date() ? (
                                                     formatDateTime(request.expiresAt)
-                                                ) : (
+                                                ) : request.expiresAt ? (
                                                     <span className="text-red-600">Expired</span>
+                                                ) : (
+                                                    <span className="text-muted-foreground">-</span>
                                                 )}
                                             </TableCell>
                                             <TableCell>
@@ -272,7 +295,7 @@ export default function BuyerFeedbackRequestsPage() {
                         <div className="space-y-4">
                             <div>
                                 <Label>Reason</Label>
-                                <p className="text-sm capitalize">{selectedRequest.reason.replace('_', ' ')}</p>
+                                <p className="text-sm capitalize">{selectedRequest.reason?.replace('_', ' ') ?? '-'}</p>
                             </div>
 
                             <div>
