@@ -45,6 +45,7 @@ export default function GoogleAuthSuccessPage() {
 
                     if (user?.role === 'shipper') navigate('/shipper');
                     else if (user?.role === 'admin') navigate('/admin');
+                    else if (user?.role === 'seller') navigate('/seller');
                     else navigate('/');
                 } catch (error) {
                     hasProcessed.current = true;

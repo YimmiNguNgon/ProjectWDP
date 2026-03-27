@@ -58,6 +58,7 @@ export function SignInForm({
       });
       if (loginUser?.role === "shipper") navigate("/shipper");
       else if (loginUser?.role === "admin") navigate("/admin");
+      else if (loginUser?.role === "seller") navigate("/seller");
       else navigate("/");
     } catch (error: any) {
       if (error.response?.status === 401) {
