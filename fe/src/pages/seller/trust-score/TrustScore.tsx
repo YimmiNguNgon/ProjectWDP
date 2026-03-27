@@ -110,8 +110,8 @@ export default function SellerTrustScorePage() {
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
 
-  const fetchScore = useCallback(async (silent = false) => {
-    if (!silent) setLoading(true);
+  const fetchScore = useCallback(async () => {
+    setLoading(true);
     try {
       const res = await api.get("/api/trust-score/my-score");
       setScore(res.data?.data || null);
@@ -119,7 +119,20 @@ export default function SellerTrustScorePage() {
       console.error("Failed to load trust score", error);
       setScore(null);
     } finally {
-      if (!silent) setLoading(false);
+      setLoading(false);
+    }
+  }, []);
+
+  const refreshScore = useCallback(async () => {
+    setRefreshing(true);
+    try {
+      // Force live recalculation on the server, return fresh data directly
+      const res = await api.post("/api/trust-score/my-score/refresh");
+      setScore(res.data?.data || null);
+    } catch (error) {
+      console.error("Failed to refresh trust score", error);
+    } finally {
+      setRefreshing(false);
     }
   }, []);
 
@@ -318,11 +331,7 @@ export default function SellerTrustScorePage() {
             <Button
               variant="outline"
               className="cursor-pointer"
-              onClick={async () => {
-                setRefreshing(true);
-                await fetchScore(true);
-                setRefreshing(false);
-              }}
+              onClick={refreshScore}
               disabled={refreshing}
             >
               <RefreshCw

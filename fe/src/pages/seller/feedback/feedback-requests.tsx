@@ -1,5 +1,4 @@
 import { useEffect, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -17,7 +16,6 @@ import { getSellerRequests, cancelRevisionRequest } from '@/api/feedbackRevision
 import { formatDateTime } from '@/lib/utils';
 
 export default function SellerFeedbackRequestsPage() {
-    const navigate = useNavigate();
     const [requests, setRequests] = useState<any[]>([]);
     const [loading, setLoading] = useState(true);
 
@@ -118,7 +116,7 @@ export default function SellerFeedbackRequestsPage() {
                                                 {request.buyer?.username || 'Unknown'}
                                             </TableCell>
                                             <TableCell className="capitalize">
-                                                {request.reason.replace('_', ' ')}
+                                                {request.reason?.replace('_', ' ') ?? '-'}
                                             </TableCell>
                                             <TableCell className="max-w-xs">
                                                 <div className="truncate" title={request.message}>
@@ -132,10 +130,12 @@ export default function SellerFeedbackRequestsPage() {
                                                 {formatDateTime(request.createdAt)}
                                             </TableCell>
                                             <TableCell className="text-sm text-gray-600">
-                                                {new Date(request.expiresAt) > new Date() ? (
+                                                {request.expiresAt && new Date(request.expiresAt) > new Date() ? (
                                                     formatDateTime(request.expiresAt)
-                                                ) : (
+                                                ) : request.expiresAt ? (
                                                     <span className="text-red-600">Expired</span>
+                                                ) : (
+                                                    <span className="text-muted-foreground">-</span>
                                                 )}
                                             </TableCell>
                                             <TableCell>

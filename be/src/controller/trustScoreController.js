@@ -97,46 +97,65 @@ exports.recalculateAllSellers = async (req, res, next) => {
 
 /**
  * GET /api/trust-score/my-score
- * Protected (seller): View own trust score
+ * Protected (seller): View own trust score (reads cached doc)
  */
 exports.getMyTrustScore = async (req, res, next) => {
     try {
         const sellerId = req.user._id;
         let trustDoc = await SellerTrustScore.findOne({ seller: sellerId }).lean();
 
+        // First time: compute on the fly
         if (!trustDoc) {
-            trustDoc = await evaluateSellerTrust(sellerId, "CRON_JOB");
+            trustDoc = await evaluateSellerTrust(sellerId, "INITIAL");
         }
 
-        return res.json({
-            data: {
-                finalScore: trustDoc.finalScore,
-                tier: trustDoc.tier,
-                badge: getBadgeLabel(trustDoc.tier, trustDoc.riskFlagged),
-                riskFlagged: trustDoc.riskFlagged,
-                productModerationMode: trustDoc.productModerationMode,
-                breakdown: {
-                    ratingScore: trustDoc.ratingScore,
-                    completionRateScore: trustDoc.completionRateScore,
-                    responseRateScore: trustDoc.responseRateScore,
-                    disputeScore: trustDoc.disputeScore,
-                    stabilityScore: trustDoc.stabilityScore,
-                },
-                metrics: {
-                    avgRating: trustDoc.avgRating,
-                    reviewCount: trustDoc.reviewCount,
-                    completionRate: (trustDoc.completionRate * 100).toFixed(1) + "%",
-                    responseRate: (trustDoc.responseRate * 100).toFixed(1) + "%",
-                    disputeRate: (trustDoc.disputeRate * 100).toFixed(1) + "%",
-                    accountAgeMonths: trustDoc.accountAgeMonths,
-                },
-                lastCalculatedAt: trustDoc.lastCalculatedAt,
-            },
-        });
+        return res.json({ data: formatTrustDoc(trustDoc) });
     } catch (err) {
         next(err);
     }
 };
+
+/**
+ * POST /api/trust-score/my-score/refresh
+ * Protected (seller): Force live recalculation of own trust score.
+ * Called when seller clicks "Refresh score" on the dashboard.
+ */
+exports.refreshMyTrustScore = async (req, res, next) => {
+    try {
+        const sellerId = req.user._id;
+        const trustDoc = await evaluateSellerTrust(sellerId, "SELLER_REFRESH");
+        return res.json({ message: "Trust score refreshed", data: formatTrustDoc(trustDoc) });
+    } catch (err) {
+        next(err);
+    }
+};
+
+// ── Shared response formatter ─────────────────────────────────────────────────
+function formatTrustDoc(trustDoc) {
+    return {
+        finalScore: trustDoc.finalScore,
+        tier: trustDoc.tier,
+        badge: getBadgeLabel(trustDoc.tier, trustDoc.riskFlagged),
+        riskFlagged: trustDoc.riskFlagged,
+        productModerationMode: trustDoc.productModerationMode,
+        breakdown: {
+            ratingScore: trustDoc.ratingScore,
+            completionRateScore: trustDoc.completionRateScore,
+            responseRateScore: trustDoc.responseRateScore,
+            disputeScore: trustDoc.disputeScore,
+            stabilityScore: trustDoc.stabilityScore,
+        },
+        metrics: {
+            avgRating: trustDoc.avgRating,
+            reviewCount: trustDoc.reviewCount,
+            completionRate: (trustDoc.completionRate * 100).toFixed(1) + "%",
+            responseRate: (trustDoc.responseRate * 100).toFixed(1) + "%",
+            disputeRate: (trustDoc.disputeRate * 100).toFixed(1) + "%",
+            accountAgeMonths: trustDoc.accountAgeMonths,
+        },
+        lastCalculatedAt: trustDoc.lastCalculatedAt,
+    };
+}
 
 // ── Helper ────────────────────────────────────────────────────────────────────
 function getBadgeLabel(tier, riskFlagged) {

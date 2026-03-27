@@ -9,6 +9,9 @@ router.get("/seller/:sellerId", trustScoreController.getSellerTrustScore);
 // Seller: Xem điểm của chính mình
 router.get("/my-score", protectedRoute, trustScoreController.getMyTrustScore);
 
+// Seller: Force recalculate điểm của chính mình (khi nhấn "Refresh score")
+router.post("/my-score/refresh", protectedRoute, trustScoreController.refreshMyTrustScore);
+
 
 
 // Admin: Trigger recalculate
