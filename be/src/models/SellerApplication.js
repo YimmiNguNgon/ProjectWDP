@@ -9,8 +9,16 @@ const sellerApplicationSchema = new mongoose.Schema(
             index: true,
         },
         shopName: { type: String, required: true, trim: true },
+        phone: { type: String, default: "" },
+        shopAddress: {
+            city: { type: String, default: "" },
+            district: { type: String, default: "" },
+            ward: { type: String, default: "" },
+            street: { type: String, default: "" },
+            detail: { type: String, default: "" },
+        },
         productDescription: { type: String, required: true, trim: true },
-        // status luôn là "approved" vì hệ thống tự động duyệt
+        businessImages: [{ type: String }], // array of 2 Cloudinary URLs
         status: {
             type: String,
             enum: ["pending", "approved", "rejected"],

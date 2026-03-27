@@ -216,6 +216,27 @@ router.post(
     }
 });
 
+// Report / warn seller
+router.post("/users/:id/report", async (req, res, next) => {
+  try {
+    const { reason, message } = req.body;
+    if (!reason) return res.status(400).json({ message: "Reason is required" });
+    const seller = await User.findById(req.params.id).lean();
+    if (!seller) return res.status(404).json({ message: "User not found" });
+    await notificationService.sendNotification({
+      recipientId: seller._id,
+      type: "seller_warning",
+      title: `[Admin Warning] Account Violation`,
+      body: `Reason: ${reason}${message ? ". " + message : ""}`,
+      link: "/seller",
+      metadata: { fromAdmin: req.user.username, reason },
+    });
+    return res.json({ ok: true, message: "Warning sent to seller" });
+  } catch (err) {
+    next(err);
+  }
+});
+
 // Seller application management routes
 router.get("/seller-applications", sellerApplicationController.getAllApplications);
 router.post(

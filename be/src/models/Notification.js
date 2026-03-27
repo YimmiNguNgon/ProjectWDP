@@ -47,7 +47,8 @@ const notificationSchema = new mongoose.Schema(
                 "refund_resolved",
                 "refund_receipt_confirmed",
                 "feedback_revision_request",
-                "order_assigned"
+                "order_assigned",
+                "seller_warning"
             ],
             required: true,
         },

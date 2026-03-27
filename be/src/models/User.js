@@ -96,6 +96,9 @@ const userSchema = new mongoose.Schema(
       reportRate: { type: Number, default: 0 }, // 0-100 (%)
       isVerifiedSeller: { type: Boolean, default: false }, // Cached từ VerifiedBadge
       shopAddress: { type: String, default: "" },
+      shopAddressDetail: { type: String, default: "" },
+      phone: { type: String, default: "" },
+      businessImages: [{ type: String }],
     },
 
     // ─── Shipper info ──────────────────────────────────────────────────────────

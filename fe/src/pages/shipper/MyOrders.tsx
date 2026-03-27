@@ -54,8 +54,13 @@ export default function ShipperMyOrders() {
   const handleMarkDelivered = async (orderId: string) => {
     setActionLoading(orderId);
     try {
+      const order = orders.find((o) => o._id === orderId);
       const res = await markDelivered(orderId);
-      toast.success("Order marked as delivered!");
+      if (order?.status === "return_shipping") {
+        toast.success("Marked as returned to seller!");
+      } else {
+        toast.success("Order delivered successfully!");
+      }
       setOrders((prev) =>
         prev.map((o) => (o._id === orderId ? res.data.order : o)),
       );
@@ -70,7 +75,11 @@ export default function ShipperMyOrders() {
     setActionLoading(orderId);
     try {
       const res = await arrivedAtDestination(orderId);
-      toast.success("Marked arrived — handing off to local delivery shipper");
+      if ((res.data as any).sameCity) {
+        toast.success("Picked up! Delivering directly to buyer.");
+      } else {
+        toast.success("Arrived at destination — handing off to local delivery shipper.");
+      }
       setOrders((prev) =>
         prev.map((o) => (o._id === orderId ? res.data.order : o)),
       );
@@ -191,16 +200,31 @@ export default function ShipperMyOrders() {
 
                   <div className="flex gap-2 flex-wrap">
                     {/* Shipper 1: đang lấy hàng từ seller */}
-                    {order.status === "shipping" && (
-                      <Button
-                        size="sm"
-                        className="bg-cyan-600 hover:bg-cyan-700 text-white"
-                        disabled={busy}
-                        onClick={() => handleArrivedAtDestination(order._id)}
-                      >
-                        {busy ? "..." : "Arrived at Destination"}
-                      </Button>
-                    )}
+                    {order.status === "shipping" && (() => {
+                      const isSameCity =
+                        order.sellerCity &&
+                        order.shippingAddress?.city &&
+                        order.sellerCity === order.shippingAddress.city;
+                      return isSameCity ? (
+                        <Button
+                          size="sm"
+                          className="bg-green-600 hover:bg-green-700 text-white"
+                          disabled={busy}
+                          onClick={() => handleMarkDelivered(order._id)}
+                        >
+                          {busy ? "..." : "Mark Delivered"}
+                        </Button>
+                      ) : (
+                        <Button
+                          size="sm"
+                          className="bg-cyan-600 hover:bg-cyan-700 text-white"
+                          disabled={busy}
+                          onClick={() => handleArrivedAtDestination(order._id)}
+                        >
+                          {busy ? "..." : "Arrived at Destination"}
+                        </Button>
+                      );
+                    })()}
                     {/* Shipper 2: đang giao đến buyer */}
                     {order.status === "delivering" && (
                       <Button

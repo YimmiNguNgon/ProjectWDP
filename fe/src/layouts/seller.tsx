@@ -11,6 +11,7 @@ import {
   TicketPercent,
   RefreshCcw,
   AlertTriangle,
+  UserCircle,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useAuth } from "@/hooks/use-auth";
@@ -20,6 +21,7 @@ import NotificationBell from "@/components/notification-bell";
 
 const navigation = [
   { name: "Overview", href: "/seller", icon: LayoutDashboard },
+  { name: "Profile", href: "/seller/profile", icon: UserCircle },
   { name: "Seller Score", href: "/seller/trust-score", icon: ShieldCheck },
   { name: "Product Management", href: "/seller/products", icon: Package },
   { name: "Order Management", href: "/seller/orders", icon: ShoppingBag },

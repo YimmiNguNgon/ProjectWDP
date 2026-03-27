@@ -232,7 +232,7 @@ exports.authMe = async (req, res) => {
 exports.updateProfile = async (req, res, next) => {
   try {
     const userId = req.user._id;
-    const { username, avatarUrl, productDescription, shopAddress } = req.body;
+    const { username, avatarUrl, productDescription, shopAddress, shopAddressDetail, phone, businessImages } = req.body;
 
     if (!username) {
       return res.status(400).json({ message: "Username is required" });
@@ -249,15 +249,20 @@ exports.updateProfile = async (req, res, next) => {
       user.avatarUrl = avatarUrl;
     }
 
-    if (productDescription !== undefined && user.role === "seller") {
+    if (user.role === "seller") {
       user.sellerInfo = user.sellerInfo || {};
-      user.sellerInfo.productDescription = productDescription;
-      user.markModified("sellerInfo");
-    }
-
-    if (shopAddress !== undefined && user.role === "seller") {
-      user.sellerInfo = user.sellerInfo || {};
-      user.sellerInfo.shopAddress = shopAddress;
+      if (shopAddress !== undefined) {
+        user.sellerInfo.shopAddress = shopAddress;
+        if (shopAddressDetail !== undefined) user.sellerInfo.shopAddressDetail = shopAddressDetail;
+      }
+      if (phone !== undefined) {
+        if (phone !== "" && !/^(0[35789][0-9]{8}$|^\+84[35789][0-9]{8})$/.test(phone.trim())) {
+          return res.status(400).json({ message: "Invalid phone number format" });
+        }
+        user.sellerInfo.phone = phone.trim();
+      }
+      if (productDescription !== undefined) user.sellerInfo.productDescription = productDescription;
+      if (businessImages !== undefined) user.sellerInfo.businessImages = businessImages;
       user.markModified("sellerInfo");
     }
 

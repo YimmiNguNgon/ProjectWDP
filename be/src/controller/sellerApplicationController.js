@@ -24,7 +24,7 @@ exports.submitApplication = async (req, res, next) => {
             return res.status(400).json({ message: "You have already applied for seller" });
         }
 
-        const { shopName, productDescription } = req.body;
+        const { shopName, phone, shopAddress, productDescription, businessImages } = req.body;
 
         if (!shopName || !productDescription) {
             return res.status(400).json({ message: "Please fill in all required information" });
@@ -39,7 +39,10 @@ exports.submitApplication = async (req, res, next) => {
         const application = await SellerApplication.create({
             user: userId,
             shopName,
+            phone: phone || "",
+            shopAddress: shopAddress || {},
             productDescription,
+            businessImages: businessImages || [],
             status: "approved",
             reviewedAt: now,
         });
@@ -49,6 +52,7 @@ exports.submitApplication = async (req, res, next) => {
             role: "seller",
             sellerStage: "PROBATION",
             "sellerInfo.shopName": shopName,
+            "sellerInfo.shopAddress": shopAddress?.city || "",
             "sellerInfo.productDescription": productDescription,
             "sellerInfo.registeredAt": now,
             "sellerInfo.lastStageChangedAt": now,
@@ -101,7 +105,7 @@ exports.getAllApplications = async (req, res, next) => {
         const skip = (Number(page) - 1) * Number(limit);
         const [applications, total] = await Promise.all([
             SellerApplication.find(filter)
-                .populate("user", "username email sellerStage")
+                .populate("user", "username email sellerStage status sellerInfo")
                 .populate("reviewedBy", "username")
                 .sort({ createdAt: -1 })
                 .skip(skip)
@@ -138,6 +142,9 @@ exports.approveApplication = async (req, res, next) => {
             "sellerInfo.shopName": application.shopName,
             "sellerInfo.registeredAt": now,
             "sellerInfo.lastStageChangedAt": now,
+            "sellerInfo.phone": application.shopAddress?.phone || "",
+            "sellerInfo.shopAddress": application.shopAddress?.city || "",
+            "sellerInfo.businessImages": application.businessImages || [],
         });
 
         try {

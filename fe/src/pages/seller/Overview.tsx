@@ -6,21 +6,14 @@ import {
   DollarSign,
   Star,
   TrendingUp,
-  AlertTriangle,
   RefreshCw,
   ShieldCheck,
-  Pencil,
-  Check,
-  X,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Textarea } from "@/components/ui/textarea";
-import { Input } from "@/components/ui/input";
 import { useAuth } from "@/hooks/use-auth";
 import api from "@/lib/axios";
-import { toast } from "sonner";
 
 interface RecentOrder {
   _id: string;
@@ -84,18 +77,6 @@ export default function SellerOverview() {
   });
   const [loading, setLoading] = useState(true);
 
-  // Description state
-  const [description, setDescription] = useState("");
-  const [editingDesc, setEditingDesc] = useState(false);
-  const [descDraft, setDescDraft] = useState("");
-  const [savingDesc, setSavingDesc] = useState(false);
-
-  // Shop address state
-  const [shopAddress, setShopAddress] = useState("");
-  const [editingAddr, setEditingAddr] = useState(false);
-  const [addrDraft, setAddrDraft] = useState("");
-  const [savingAddr, setSavingAddr] = useState(false);
-
   useEffect(() => {
     const fetchAll = async () => {
       setLoading(true);
@@ -107,35 +88,22 @@ export default function SellerOverview() {
           api.get("/api/revenue/seller"),
         ]);
 
-        // Xử lý orders (This is just for the Recent Orders list)
         if (ordersRes.status === "fulfilled") {
           const data = ordersRes.value.data;
-          const orders: RecentOrder[] = (data.data ?? []).slice(0, 5);
-          setRecentOrders(orders);
+          setRecentOrders((data.data ?? []).slice(0, 5));
         }
 
-        // Xử lý Dashboard Stats
-        let pending = 0;
-        let completed = 0;
-        let revenue = 0;
-
+        let pending = 0, completed = 0, revenue = 0;
         if (orderStatsRes.status === "fulfilled") {
           const sData = orderStatsRes.value.data.data;
           pending = sData?.pendingOrders ?? 0;
           completed = sData?.completedOrders ?? 0;
         }
-
         if (revenueRes.status === "fulfilled") {
           revenue = revenueRes.value.data.totalNet ?? 0;
         }
+        setStats({ pendingOrders: pending, completedOrders: completed, totalRevenue: revenue });
 
-        setStats({
-          pendingOrders: pending,
-          completedOrders: completed,
-          totalRevenue: revenue,
-        });
-
-        // Xử lý inventory
         if (inventoryRes.status === "fulfilled") {
           setInventory(inventoryRes.value.data.data);
         }
@@ -145,52 +113,8 @@ export default function SellerOverview() {
         setLoading(false);
       }
     };
-
     fetchAll();
   }, []);
-
-  useEffect(() => {
-    api.get("/api/users/me").then((res) => {
-      const desc = res.data?.user?.sellerInfo?.productDescription ?? res.data?.sellerInfo?.productDescription ?? "";
-      setDescription(desc);
-      const addr = res.data?.user?.sellerInfo?.shopAddress ?? res.data?.sellerInfo?.shopAddress ?? "";
-      setShopAddress(addr);
-    }).catch(() => {});
-  }, []);
-
-  const handleSaveDescription = async () => {
-    setSavingDesc(true);
-    try {
-      await api.put("/api/users/update-user-profile", {
-        username: user?.username ?? "",
-        productDescription: descDraft,
-      });
-      setDescription(descDraft);
-      setEditingDesc(false);
-      toast.success("Description updated");
-    } catch {
-      toast.error("Failed to update description");
-    } finally {
-      setSavingDesc(false);
-    }
-  };
-
-  const handleSaveAddress = async () => {
-    setSavingAddr(true);
-    try {
-      await api.put("/api/users/update-user-profile", {
-        username: user?.username ?? "",
-        shopAddress: addrDraft,
-      });
-      setShopAddress(addrDraft);
-      setEditingAddr(false);
-      toast.success("Shop address updated");
-    } catch {
-      toast.error("Failed to update address");
-    } finally {
-      setSavingAddr(false);
-    }
-  };
 
   const isProbation = user?.sellerStage === "PROBATION";
   const avgRating = user?.sellerInfo?.avgRating ?? 0;
@@ -202,21 +126,15 @@ export default function SellerOverview() {
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-2xl font-bold text-gray-900">Overview</h1>
-          <p className="text-gray-600">
-            Shop: <strong>{shopName}</strong>
-          </p>
+          <p className="text-gray-600">Shop: <strong>{shopName}</strong></p>
         </div>
-        <Button
-          variant="outline"
-          size="sm"
-          onClick={() => window.location.reload()}
-        >
+        <Button variant="outline" size="sm" onClick={() => window.location.reload()}>
           <RefreshCw className="h-4 w-4 mr-2" />
           Refresh
         </Button>
       </div>
 
-
+      {/* Seller Score banner */}
       <Card className="border-blue-200 bg-gradient-to-r from-blue-50 via-cyan-50 to-white">
         <CardContent className="py-5">
           <div className="flex flex-wrap items-center justify-between gap-4">
@@ -225,9 +143,7 @@ export default function SellerOverview() {
                 <ShieldCheck className="h-5 w-5 text-blue-600" />
               </div>
               <div>
-                <p className="font-semibold text-gray-900">
-                  Seller Score Center
-                </p>
+                <p className="font-semibold text-gray-900">Seller Score Center</p>
                 <p className="text-xs text-gray-600 mt-1">
                   View score breakdown, moderation impact, and warning signals.
                 </p>
@@ -248,16 +164,10 @@ export default function SellerOverview() {
             <DollarSign className="h-4 w-4 text-green-600" />
           </CardHeader>
           <CardContent>
-            {loading ? (
-              <div className="h-7 w-24 bg-muted animate-pulse rounded" />
-            ) : (
+            {loading ? <div className="h-7 w-24 bg-muted animate-pulse rounded" /> : (
               <>
-                <div className="text-2xl font-bold">
-                  ${stats.totalRevenue.toFixed(2)}
-                </div>
-                <div className="text-xs text-muted-foreground">
-                  From {stats.completedOrders} completed orders
-                </div>
+                <div className="text-2xl font-bold">${stats.totalRevenue.toFixed(2)}</div>
+                <div className="text-xs text-muted-foreground">From {stats.completedOrders} completed orders</div>
               </>
             )}
           </CardContent>
@@ -265,20 +175,14 @@ export default function SellerOverview() {
 
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">
-              Pending Orders
-            </CardTitle>
+            <CardTitle className="text-sm font-medium">Pending Orders</CardTitle>
             <ShoppingBag className="h-4 w-4 text-orange-600" />
           </CardHeader>
           <CardContent>
-            {loading ? (
-              <div className="h-7 w-16 bg-muted animate-pulse rounded" />
-            ) : (
+            {loading ? <div className="h-7 w-16 bg-muted animate-pulse rounded" /> : (
               <>
                 <div className="text-2xl font-bold">{stats.pendingOrders}</div>
-                <div className="text-xs text-muted-foreground">
-                  Orders awaiting processing
-                </div>
+                <div className="text-xs text-muted-foreground">Orders awaiting processing</div>
               </>
             )}
           </CardContent>
@@ -286,22 +190,14 @@ export default function SellerOverview() {
 
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">
-              Active Products
-            </CardTitle>
+            <CardTitle className="text-sm font-medium">Active Products</CardTitle>
             <Package className="h-4 w-4 text-blue-600" />
           </CardHeader>
           <CardContent>
-            {loading || !inventory ? (
-              <div className="h-7 w-20 bg-muted animate-pulse rounded" />
-            ) : (
+            {loading || !inventory ? <div className="h-7 w-20 bg-muted animate-pulse rounded" /> : (
               <>
-                <div className="text-2xl font-bold">
-                  {inventory.activeProducts}/{inventory.totalProducts}
-                </div>
-                <div className="text-xs text-muted-foreground">
-                  Active Products
-                </div>
+                <div className="text-2xl font-bold">{inventory.activeProducts}/{inventory.totalProducts}</div>
+                <div className="text-xs text-muted-foreground">Active Products</div>
               </>
             )}
           </CardContent>
@@ -309,23 +205,17 @@ export default function SellerOverview() {
 
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">
-              Average Rating
-            </CardTitle>
+            <CardTitle className="text-sm font-medium">Average Rating</CardTitle>
             <Star className="h-4 w-4 text-yellow-600 fill-yellow-600" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">
-              {avgRating > 0 ? avgRating.toFixed(1) : "--"}/5
-            </div>
-            <div className="text-xs text-muted-foreground">
-              {avgRating > 0 ? "Average Rating" : "No Ratings Yet"}
-            </div>
+            <div className="text-2xl font-bold">{avgRating > 0 ? avgRating.toFixed(1) : "--"}/5</div>
+            <div className="text-xs text-muted-foreground">{avgRating > 0 ? "Average Rating" : "No Ratings Yet"}</div>
           </CardContent>
         </Card>
       </div>
 
-      {/* Seller stage progress (nếu PROBATION) */}
+      {/* Seller stage progress */}
       {isProbation && user?.sellerInfo && (
         <Card>
           <CardHeader>
@@ -337,49 +227,17 @@ export default function SellerOverview() {
           <CardContent>
             <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
               {[
-                {
-                  label: "Completed Orders",
-                  value: user.sellerInfo.successOrders ?? 0,
-                  target: 20,
-                  unit: "",
-                  suffix: "/20",
-                },
-                {
-                  label: "Average Rating",
-                  value: avgRating,
-                  target: 4.5,
-                  unit: "⭐",
-                  suffix: "/4.5",
-                },
-                {
-                  label: "Refund rate",
-                  value: user.sellerInfo.refundRate ?? 0,
-                  target: 5,
-                  unit: "%",
-                  suffix: "< 5%",
-                  lowerIsBetter: true,
-                },
+                { label: "Completed Orders", value: user.sellerInfo.successOrders ?? 0, target: 20, unit: "", suffix: "/20" },
+                { label: "Average Rating", value: avgRating, target: 4.5, unit: "⭐", suffix: "/4.5" },
+                { label: "Refund rate", value: user.sellerInfo.refundRate ?? 0, target: 5, unit: "%", suffix: "< 5%", lowerIsBetter: true },
               ].map((item) => {
-                const ok = item.lowerIsBetter
-                  ? item.value < item.target
-                  : item.value >= item.target;
+                const ok = item.lowerIsBetter ? item.value < item.target : item.value >= item.target;
                 return (
-                  <div
-                    key={item.label}
-                    className="flex flex-col gap-1 p-3 rounded-lg border bg-muted/30"
-                  >
-                    <span className="text-xs text-muted-foreground">
-                      {item.label}
-                    </span>
+                  <div key={item.label} className="flex flex-col gap-1 p-3 rounded-lg border bg-muted/30">
+                    <span className="text-xs text-muted-foreground">{item.label}</span>
                     <div className="flex items-center gap-1.5">
-                      <span
-                        className={`text-lg font-bold ${ok ? "text-green-600" : "text-amber-600"}`}
-                      >
-                        {typeof item.value === "number"
-                          ? item.value % 1 === 0
-                            ? item.value
-                            : item.value.toFixed(1)
-                          : item.value}
+                      <span className={`text-lg font-bold ${ok ? "text-green-600" : "text-amber-600"}`}>
+                        {typeof item.value === "number" ? (item.value % 1 === 0 ? item.value : item.value.toFixed(1)) : item.value}
                         {item.unit}
                       </span>
                       <Badge
@@ -397,93 +255,6 @@ export default function SellerOverview() {
         </Card>
       )}
 
-      {/* Shop Description */}
-      <Card>
-        <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-          <CardTitle className="text-sm font-medium">Shop Description</CardTitle>
-          {!editingDesc && (
-            <Button
-              variant="ghost"
-              size="icon"
-              onClick={() => { setDescDraft(description); setEditingDesc(true); }}
-            >
-              <Pencil className="h-4 w-4" />
-            </Button>
-          )}
-        </CardHeader>
-        <CardContent>
-          {editingDesc ? (
-            <div className="space-y-2">
-              <Textarea
-                value={descDraft}
-                onChange={(e) => setDescDraft(e.target.value)}
-                placeholder="Describe your shop to buyers..."
-                rows={4}
-                className="resize-none"
-                maxLength={500}
-              />
-              <p className="text-xs text-muted-foreground text-right">{descDraft.length}/500</p>
-              <div className="flex gap-2">
-                <Button size="sm" onClick={handleSaveDescription} disabled={savingDesc}>
-                  <Check className="h-4 w-4 mr-1" />
-                  Save
-                </Button>
-                <Button size="sm" variant="outline" onClick={() => setEditingDesc(false)}>
-                  <X className="h-4 w-4 mr-1" />
-                  Cancel
-                </Button>
-              </div>
-            </div>
-          ) : (
-            <p className="text-sm text-muted-foreground whitespace-pre-line">
-              {description || "No description yet. Click the edit button to add one."}
-            </p>
-          )}
-        </CardContent>
-      </Card>
-
-      {/* Shop Address */}
-      <Card>
-        <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-          <CardTitle className="text-sm font-medium">Shop Address</CardTitle>
-          {!editingAddr && (
-            <Button
-              variant="ghost"
-              size="icon"
-              onClick={() => { setAddrDraft(shopAddress); setEditingAddr(true); }}
-            >
-              <Pencil className="h-4 w-4" />
-            </Button>
-          )}
-        </CardHeader>
-        <CardContent>
-          {editingAddr ? (
-            <div className="space-y-2">
-              <Input
-                value={addrDraft}
-                onChange={(e) => setAddrDraft(e.target.value)}
-                placeholder="Enter your shop address..."
-                maxLength={200}
-              />
-              <div className="flex gap-2">
-                <Button size="sm" onClick={handleSaveAddress} disabled={savingAddr}>
-                  <Check className="h-4 w-4 mr-1" />
-                  Save
-                </Button>
-                <Button size="sm" variant="outline" onClick={() => setEditingAddr(false)}>
-                  <X className="h-4 w-4 mr-1" />
-                  Cancel
-                </Button>
-              </div>
-            </div>
-          ) : (
-            <p className="text-sm text-muted-foreground">
-              {shopAddress || "No address yet. Click the edit button to add one."}
-            </p>
-          )}
-        </CardContent>
-      </Card>
-
       {/* Recent orders */}
       <Card>
         <CardHeader>
@@ -492,53 +263,35 @@ export default function SellerOverview() {
         <CardContent>
           {loading ? (
             <div className="space-y-3">
-              {[...Array(3)].map((_, i) => (
-                <div
-                  key={i}
-                  className="h-14 bg-muted animate-pulse rounded-lg"
-                />
-              ))}
+              {[...Array(3)].map((_, i) => <div key={i} className="h-14 bg-muted animate-pulse rounded-lg" />)}
             </div>
           ) : recentOrders.length === 0 ? (
             <div className="text-center py-10 text-muted-foreground">
               <ShoppingBag className="h-10 w-10 mx-auto mb-2 opacity-30" />
               <p className="text-sm">No orders yet</p>
-              <p className="text-xs mt-1">
-                Orders will appear here when customers purchase your products
-              </p>
+              <p className="text-xs mt-1">Orders will appear here when customers purchase your products</p>
             </div>
           ) : (
             <div className="space-y-3">
               {recentOrders.map((order) => (
-                <div
-                  key={order._id}
-                  className="flex items-center justify-between p-3 border rounded-lg hover:bg-muted/30 transition-colors"
-                >
+                <div key={order._id} className="flex items-center justify-between p-3 border rounded-lg hover:bg-muted/30 transition-colors">
                   <div>
                     <div className="font-medium text-sm">
-                      {order.orderId ||
-                        `#${String(order._id).slice(-6).toUpperCase()}`}
+                      {order.orderId || `#${String(order._id).slice(-6).toUpperCase()}`}
                     </div>
                     <div className="text-xs text-muted-foreground">
                       {typeof order.customer === "object" ? order.customer.username : order.customer}
                     </div>
                   </div>
                   <div className="text-right">
-                    <div className="font-medium text-sm">
-                      ${(order.totalAmount ?? 0).toFixed(2)}
-                    </div>
-                    <span
-                      className={`text-xs px-2 py-0.5 rounded-full inline-block ${STATUS_STYLE[order.status] ?? "bg-gray-100 text-gray-700"}`}
-                    >
+                    <div className="font-medium text-sm">${(order.totalAmount ?? 0).toFixed(2)}</div>
+                    <span className={`text-xs px-2 py-0.5 rounded-full inline-block ${STATUS_STYLE[order.status] ?? "bg-gray-100 text-gray-700"}`}>
                       {STATUS_LABEL[order.status] ?? order.status}
                     </span>
                   </div>
                 </div>
               ))}
-              <Link
-                to="/seller/orders"
-                className="block text-center text-primary hover:text-primary/80 text-sm mt-2"
-              >
+              <Link to="/seller/orders" className="block text-center text-primary hover:text-primary/80 text-sm mt-2">
                 View All Orders →
               </Link>
             </div>

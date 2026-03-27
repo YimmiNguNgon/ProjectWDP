@@ -45,6 +45,7 @@ import ProtectedRoute from "@/components/ProtectedRoute";
 import { RoleGuard } from "@/components/RoleGuard";
 import SellerLayout from "@/layouts/seller";
 import SellerOverview from "@/pages/seller/Overview";
+import SellerProfile from "@/pages/seller/Profile";
 import SellerOrders from "@/pages/seller/orders/Orders";
 import SellerProducts from "@/pages/seller/products/Products";
 import SellerRefunds from "@/pages/seller/orders/Refunds";
@@ -337,6 +338,10 @@ export const AppRouter = () => {
         {
           index: true,
           element: <SellerOverview />,
+        },
+        {
+          path: "profile",
+          element: <SellerProfile />,
         },
         {
           path: "orders",

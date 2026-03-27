@@ -51,7 +51,8 @@
       "Bash(cd \"C:\\\\Users\\\\Administrator\\\\Documents\\\\WDP\\\\fe\" && npm install react-icons --save 2>&1 | tail -5)",
       "Bash(npm run:*)",
       "Bash(grep -rn \"[À-ỹàáâãèéêìíòóôõùúăđơưạảấầẩẫậắằẳẵặẹẻẽếềểễệỉịọỏốồổỗộớờởỡợụủứừửữựỳỵỷỹ]\" \"C:\\\\Users\\\\Administrator\\\\Documents\\\\WDP\\\\fe\\\\src\\\\components\\\\shipping-timeline.tsx\" 2>/dev/null | head -20)",
-      "Bash(grep -rn \"[À-ỹàáâãèéêìíòóôõùúăđơưạảấầẩẫậắằẳẵặẹẻẽếềểễệỉịọỏốồổỗộớờởỡợụủứừửữựỳỵỷỹ]\" \"C:\\\\Users\\\\Administrator\\\\Documents\\\\WDP\\\\fe\\\\src\\\\pages\\\\seller\\\\products\\\\Products.tsx\" 2>/dev/null | head -20)"
+      "Bash(grep -rn \"[À-ỹàáâãèéêìíòóôõùúăđơưạảấầẩẫậắằẳẵặẹẻẽếềểễệỉịọỏốồổỗộớờởỡợụủứừửữựỳỵỷỹ]\" \"C:\\\\Users\\\\Administrator\\\\Documents\\\\WDP\\\\fe\\\\src\\\\pages\\\\seller\\\\products\\\\Products.tsx\" 2>/dev/null | head -20)",
+      "Bash(find /c/Users/Administrator/Documents/WDP/be/src -name \"*.js\" | xargs grep -l \"notification\\\\|Notification\" | grep -i model)"
     ]
   }
 }

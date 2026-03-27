@@ -18,6 +18,7 @@ export interface ShipperOrder {
   };
   buyer?: { _id: string; username: string; email: string };
   seller?: { _id: string; username: string; sellerInfo?: { shopName?: string; shopAddress?: string } };
+  sellerCity?: string;
   pickupShipper?: { _id: string; username: string };
   shipper?: { _id: string; username: string; email: string };
   items?: { title: string; quantity: number; unitPrice: number }[];

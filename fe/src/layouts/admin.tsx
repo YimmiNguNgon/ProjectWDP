@@ -1,5 +1,5 @@
 import { Link, Outlet, useLocation } from 'react-router-dom';
-import { LayoutDashboard, Users, ShoppingBag, MessageCircle, TicketPercent, Tags, FileSearch, Truck, AlertTriangle, PackageSearch, RefreshCcw, Home, Flag, DollarSign } from 'lucide-react';
+import { LayoutDashboard, Users, Store, ShoppingBag, MessageCircle, TicketPercent, Tags, FileSearch, Truck, AlertTriangle, PackageSearch, RefreshCcw, Home, DollarSign } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import AdminBroadcast from '@/components/admin-broadcast';
 import NotificationBell from '@/components/notification-bell';
@@ -9,6 +9,7 @@ import { SocketContext } from '@/hooks/use-socket';
 const navigation = [
   { name: 'Dashboard', href: '/admin', icon: LayoutDashboard },
   { name: 'User Management', href: '/admin/users', icon: Users },
+  { name: 'Seller Management', href: '/admin/seller-applications', icon: Store },
   { name: 'Product Management', href: '/admin/products', icon: ShoppingBag },
   { name: 'Category Management', href: '/admin/categories', icon: Tags },
   { name: 'Shipper Management', href: '/admin/shippers', icon: Truck },

@@ -538,7 +538,52 @@ exports.arrivedAtDestination = async (req, res, next) => {
       return res.status(404).json({ message: "Order not found or not in shipping status" });
     }
 
-    // Ghi lại Shipper 1, reset shipper field để Shipper 2 có thể nhận
+    const isSameCity =
+      order.sellerCity &&
+      order.shippingAddress?.city &&
+      order.sellerCity === order.shippingAddress.city;
+
+    if (isSameCity) {
+      // ── Same city: Shipper 1 delivers directly, no handoff ──
+      order.status = "delivering";
+      order.statusHistory.push({
+        status: "delivering",
+        timestamp: new Date(),
+        note: `Shipper ${req.user.username} picked up and is delivering directly (same city: ${order.sellerCity}).`,
+      });
+      await order.save();
+
+      // Dispatch next queued order for Shipper 1
+      setImmediate(async () => {
+        try {
+          await dispatchNextFromQueue(req.user._id);
+        } catch (e) { /* ignore */ }
+      });
+
+      // Notify buyer
+      notificationService.sendNotification({
+        recipientId: order.buyer,
+        type: "order_delivering",
+        title: "Your order is on the way!",
+        body: `Shipper ${req.user.username} has picked up your order and is heading to you now.`,
+        link: `/purchases/${order._id}`,
+        metadata: { orderId: order._id },
+      }).catch(() => {});
+
+      // Notify seller
+      notificationService.sendNotification({
+        recipientId: order.seller,
+        type: "order_delivering",
+        title: "Order out for delivery",
+        body: `Shipper ${req.user.username} picked up order and is delivering directly to buyer.`,
+        link: `/seller/orders`,
+        metadata: { orderId: order._id },
+      }).catch(() => {});
+
+      return res.json({ ok: true, order, sameCity: true });
+    }
+
+    // ── Different city: hand off to Shipper 2 ──
     order.pickupShipper = req.user._id;
     order.shipper = null;
     order.status = "in_transit";
@@ -549,7 +594,7 @@ exports.arrivedAtDestination = async (req, res, next) => {
     });
     await order.save();
 
-    // Cập nhật Shipper 1: giải phóng slot
+    // Cập nhật Shipper 1: giải phóng slot, dispatch queue, assign Shipper 2
     setImmediate(async () => {
       try {
         const activeCount = await Order.countDocuments({
@@ -564,38 +609,32 @@ exports.arrivedAtDestination = async (req, res, next) => {
             "shipperInfo.isAvailable": true,
           });
         }
-        // Dispatch đơn tiếp từ queue cho Shipper 1
         await dispatchNextFromQueue(req.user._id);
-        // Assign Shipper 2 cho đơn này
         await autoAssignDeliveryShipper(order, req.user._id);
       } catch (e) { /* ignore */ }
     });
 
     // Notify buyer
-    notificationService
-      .sendNotification({
-        recipientId: order.buyer,
-        type: "order_in_transit",
-        title: "Your order is almost there!",
-        body: `The package has arrived in your area and is being assigned to a local delivery shipper.`,
-        link: `/purchases/${order._id}`,
-        metadata: { orderId: order._id },
-      })
-      .catch(() => { });
+    notificationService.sendNotification({
+      recipientId: order.buyer,
+      type: "order_in_transit",
+      title: "Your order is almost there!",
+      body: `The package has arrived in your area and is being assigned to a local delivery shipper.`,
+      link: `/purchases/${order._id}`,
+      metadata: { orderId: order._id },
+    }).catch(() => {});
 
     // Notify seller
-    notificationService
-      .sendNotification({
-        recipientId: order.seller,
-        type: "order_in_transit",
-        title: "Order in transit",
-        body: `Shipper ${req.user.username} has arrived at the buyer's area. Awaiting local delivery shipper.`,
-        link: `/seller/orders`,
-        metadata: { orderId: order._id },
-      })
-      .catch(() => { });
+    notificationService.sendNotification({
+      recipientId: order.seller,
+      type: "order_in_transit",
+      title: "Order in transit",
+      body: `Shipper ${req.user.username} has arrived at the buyer's area. Awaiting local delivery shipper.`,
+      link: `/seller/orders`,
+      metadata: { orderId: order._id },
+    }).catch(() => {});
 
-    res.json({ ok: true, order });
+    res.json({ ok: true, order, sameCity: false });
   } catch (err) {
     next(err);
   }
