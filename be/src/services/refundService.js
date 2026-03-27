@@ -3,6 +3,7 @@ const Order = require("../models/Order");
 const Complaint = require("../models/Complaint");
 const User = require("../models/User");
 const Product = require("../models/Product"); // Import Product model
+const Revenue = require("../models/Revenue");
 const mongoose = require("mongoose");
 const { evaluateSellerTrust } = require("./sellerTrustService");
 const {
@@ -398,6 +399,20 @@ async function confirmReturnReceived(sellerId, refundId, condition = 'SELLABLE')
 
   // 4. Revert order revenue if it was previously processed
   await revenueService.revertOrderRevenue(order._id);
+
+  // 5. Ghi nhận thêm 5$ phí vận chuyển trả hàng cho hệ thống
+  try {
+    await Revenue.create({
+      type: "system_shipping",
+      order: order._id,
+      orderGroup: order.orderGroup || null,
+      seller: null,
+      amount: 5
+    });
+    console.log(`[confirmReturnReceived] Added $5 return shipping fee for system on order ${order._id}`);
+  } catch (err) {
+    console.error(`[confirmReturnReceived] Failed to add return shipping fee:`, err);
+  }
 
   return refund;
 }
