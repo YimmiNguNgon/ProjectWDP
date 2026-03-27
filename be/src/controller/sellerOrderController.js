@@ -258,12 +258,21 @@ exports.updateOrderStatus = async (req, res, next) => {
       "created",
       "packaging",
       "ready_to_ship",
+      "queued",
+      "pending_acceptance",
       "shipping",
+      "in_transit",
+      "delivery_queued",
+      "pending_delivery_acceptance",
+      "delivering",
       "delivered",
       "completed",
       "cancelled",
       "cancel_requested",
       "failed",
+      "waiting_return_shipment",
+      "return_shipping",
+      "delivered_to_seller",
       "returned",
     ];
 
@@ -386,12 +395,21 @@ exports.updateOrderStatus = async (req, res, next) => {
         created: `Your order for "${productLabel}" has been placed`,
         packaging: `"${productLabel}" is being packaged`,
         ready_to_ship: `"${productLabel}" is ready to ship`,
-        shipping: `"${productLabel}" is on the way`,
+        queued: `"${productLabel}" is finding a shipper`,
+        pending_acceptance: `Shipper is assigned for "${productLabel}"`,
+        shipping: `Shipper is picking up "${productLabel}"`,
+        in_transit: `"${productLabel}" is in transit`,
+        delivery_queued: `"${productLabel}" is queued for final delivery`,
+        pending_delivery_acceptance: `Delivery shipper assigned for "${productLabel}"`,
+        delivering: `"${productLabel}" is out for delivery`,
         delivered: `"${productLabel}" has been delivered`,
         completed: `Order for "${productLabel}" completed`,
         cancelled: `Order for "${productLabel}" cancelled`,
         cancel_requested: `Cancellation requested for "${productLabel}"`,
         failed: `Order for "${productLabel}" failed`,
+        waiting_return_shipment: `Waiting for return shipment of "${productLabel}"`,
+        return_shipping: `"${productLabel}" is being returned`,
+        delivered_to_seller: `"${productLabel}" has been returned to seller`,
         returned: `Order for "${productLabel}" returned`,
       };
       const notificationBody = `Status: ${status.replace(/_/g, " ")}${
@@ -419,14 +437,32 @@ exports.updateOrderStatus = async (req, res, next) => {
             "Your cancel request has been sent to the seller. Please wait for the seller to response.",
           ready_to_ship:
             "Your order is packed and waiting for the shipping carrier.",
+          queued:
+            "Your order is in queue to find a shipping carrier.",
+          pending_acceptance:
+            "A shipping carrier has been assigned and we are waiting for their acceptance.",
           shipping:
-            "Your order is on the way! It has been handed over to the shipping carrier.",
+            "Your order is being picked up by the shipping carrier.",
+          in_transit:
+            "Your order is in transit to your area.",
+          delivery_queued:
+            "Your order is in queue for final delivery.",
+          pending_delivery_acceptance:
+            "A delivery carrier has been assigned and we are waiting for their acceptance.",
+          delivering:
+            "Your order is out for delivery!",
           delivered:
             "Your order has been successfully delivered. We hope you enjoy it!",
           completed: "Your order is marked as completed.",
           cancelled: "Your order has been cancelled.",
           failed:
             "There was an issue fulfilling your order. It has been marked as failed.",
+          waiting_return_shipment:
+            "We are waiting for your return shipment.",
+          return_shipping:
+            "Your return is on its way back to the seller.",
+          delivered_to_seller:
+            "Your return has been delivered back to the seller.",
           returned: "Your order has been returned.",
         };
         const statusMessage =

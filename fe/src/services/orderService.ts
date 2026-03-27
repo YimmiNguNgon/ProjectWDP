@@ -55,11 +55,18 @@ export interface Order {
   | "pending_acceptance"
   | "queued"
   | "shipping"
+  | "in_transit"
+  | "delivery_queued"
+  | "pending_delivery_acceptance"
+  | "delivering"
   | "delivered"
   | "completed"
   | "cancelled"
   | "cancel_requested"
   | "failed"
+  | "waiting_return_shipment"
+  | "return_shipping"
+  | "delivered_to_seller"
   | "returned";
   paymentStatus: "unpaid" | "paid" | "failed" | "refunded";
   items: number;
@@ -101,12 +108,26 @@ const mapStatus = (status: string): Order["status"] => {
     case "shipped":
     case "shipping":
       return "shipping";
+    case "in_transit":
+      return "in_transit";
+    case "delivery_queued":
+      return "delivery_queued";
+    case "pending_delivery_acceptance":
+      return "pending_delivery_acceptance";
+    case "delivering":
+      return "delivering";
     case "delivered":
       return "delivered";
     case "completed":
       return "completed";
     case "returned":
       return "returned";
+    case "waiting_return_shipment":
+      return "waiting_return_shipment";
+    case "return_shipping":
+      return "return_shipping";
+    case "delivered_to_seller":
+      return "delivered_to_seller";
     case "cancelled":
     case "canceled":
       return "cancelled";
@@ -316,9 +337,16 @@ export const orderService = {
         pending_acceptance: "pending_acceptance",
         queued: "queued",
         shipping: "shipping",
+        in_transit: "in_transit",
+        delivery_queued: "delivery_queued",
+        pending_delivery_acceptance: "pending_delivery_acceptance",
+        delivering: "delivering",
         delivered: "delivered",
         completed: "completed",
         returned: "returned",
+        waiting_return_shipment: "waiting_return_shipment",
+        return_shipping: "return_shipping",
+        delivered_to_seller: "delivered_to_seller",
         cancelled: "cancelled",
         cancel_requested: "cancel_requested",
         failed: "failed",

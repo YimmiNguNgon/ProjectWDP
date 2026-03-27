@@ -1161,6 +1161,10 @@ getOrders = async (req, res) => {
     if (status && status !== "all") {
       if (status === "ready_to_ship") {
         filter.status = { $in: ["ready_to_ship", "queued", "pending_acceptance"] };
+      } else if (status === "shipping") {
+        filter.status = { $in: ["shipping", "in_transit", "delivery_queued", "pending_delivery_acceptance", "delivering"] };
+      } else if (status === "returned") {
+        filter.status = { $in: ["waiting_return_shipment", "return_shipping", "delivered_to_seller", "returned"] };
       } else {
         filter.status = status;
       }
@@ -1303,10 +1307,19 @@ getOrderStats = async (req, res) => {
       "queued",
       "pending_acceptance",
       "shipping",
+      "in_transit",
+      "delivery_queued",
+      "pending_delivery_acceptance",
+      "delivering",
       "delivered",
-      "cancelled",
-      "failed",
       "completed",
+      "cancelled",
+      "cancel_requested",
+      "failed",
+      "waiting_return_shipment",
+      "return_shipping",
+      "delivered_to_seller",
+      "returned",
     ];
     allStatuses.forEach((s) => (counts[s] = 0));
 
