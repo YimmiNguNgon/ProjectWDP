@@ -127,12 +127,8 @@ exports.updateOrderStatus = async (req, res, next) => {
       if (isBuyer) {
         if (order.status === "created") {
           // Immediate cancellation for 'created' status
-          for (const item of order.items) {
-            const Product = require("../models/Product");
-            await Product.findByIdAndUpdate(item.productId, {
-              $inc: { stock: item.quantity, quantity: item.quantity },
-            });
-          }
+          const { restoreStockForOrderItems } = require("../utils/productInventory");
+          await restoreStockForOrderItems(order.items);
 
           order.status = "cancelled";
           order.statusHistory.push({
@@ -304,11 +300,8 @@ exports.updateOrderStatus = async (req, res, next) => {
       previousStatus !== "cancelled" &&
       previousStatus !== "returned"
     ) {
-      for (const item of order.items) {
-        await Product.findByIdAndUpdate(item.productId, {
-          $inc: { quantity: item.quantity },
-        });
-      }
+      const { restoreStockForOrderItems } = require("../utils/productInventory");
+      await restoreStockForOrderItems(order.items);
     }
 
     const isNowCompleted =
