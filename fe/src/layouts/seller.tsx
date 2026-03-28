@@ -27,7 +27,11 @@ const navigation = [
   { name: "Order Management", href: "/seller/orders", icon: ShoppingBag },
   { name: "Revenue Management", href: "/seller/revenue", icon: DollarSign },
   { name: "Customer Reviews", href: "/seller/reviews", icon: Star },
-  { name: "Feedback Management", href: "/seller/feedback", icon: MessageSquare },
+  {
+    name: "Feedback Management",
+    href: "/seller/feedback",
+    icon: MessageSquare,
+  },
   { name: "Complaints", href: "/seller/complaints", icon: AlertTriangle },
   { name: "Refund Requests", href: "/seller/refunds", icon: RefreshCcw },
   { name: "Voucher", href: "/seller/vouchers", icon: TicketPercent },
@@ -48,7 +52,9 @@ export default function SellerLayout() {
                 <span className="text-green-600 font-bold">S</span>
               </div>
               <div className="flex-1">
-                <h1 className="text-xl font-bold text-gray-900">Seller Panel</h1>
+                <h1 className="text-xl font-bold text-gray-900">
+                  Seller Panel
+                </h1>
                 <p className="text-sm text-gray-600">
                   {user?.username || user?.email?.split("@")[0]}
                 </p>
@@ -62,7 +68,8 @@ export default function SellerLayout() {
               const Icon = item.icon;
               const isActive =
                 location.pathname === item.href ||
-                (item.href !== "/seller" && location.pathname.startsWith(item.href));
+                (item.href !== "/seller" &&
+                  location.pathname.startsWith(item.href));
 
               return (
                 <Link
@@ -78,7 +85,9 @@ export default function SellerLayout() {
                   <Icon
                     className={cn(
                       "h-5 w-5",
-                      isActive ? "text-green-600" : "text-gray-400 group-hover:text-gray-600",
+                      isActive
+                        ? "text-green-600"
+                        : "text-gray-400 group-hover:text-gray-600",
                     )}
                   />
                   <div className="flex flex-col">
@@ -109,14 +118,17 @@ export default function SellerLayout() {
                     {navigation.find(
                       (nav) =>
                         nav.href === location.pathname ||
-                        (nav.href !== "/seller" && location.pathname.startsWith(nav.href)),
+                        (nav.href !== "/seller" &&
+                          location.pathname.startsWith(nav.href)),
                     )?.name || "Overview"}
                   </h2>
                 </div>
               </div>
             </div>
           </div>
-          <Outlet />
+          <div className="p-2">
+            <Outlet />
+          </div>
         </div>
       </div>
     </div>
