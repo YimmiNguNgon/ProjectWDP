@@ -1,26 +1,53 @@
-import { Link, Outlet, useLocation } from 'react-router-dom';
-import { LayoutDashboard, Users, Store, ShoppingBag, MessageCircle, TicketPercent, Tags, FileSearch, Truck, AlertTriangle, PackageSearch, RefreshCcw, Home, DollarSign } from 'lucide-react';
-import { cn } from '@/lib/utils';
-import AdminBroadcast from '@/components/admin-broadcast';
-import NotificationBell from '@/components/notification-bell';
-import { useContext } from 'react';
-import { SocketContext } from '@/hooks/use-socket';
+import { Link, Outlet, useLocation } from "react-router-dom";
+import {
+  LayoutDashboard,
+  Users,
+  Store,
+  ShoppingBag,
+  MessageCircle,
+  TicketPercent,
+  Tags,
+  FileSearch,
+  Truck,
+  AlertTriangle,
+  PackageSearch,
+  RefreshCcw,
+  Home,
+  DollarSign,
+} from "lucide-react";
+import { cn } from "@/lib/utils";
+import AdminBroadcast from "@/components/admin-broadcast";
+import NotificationBell from "@/components/notification-bell";
+import { useContext } from "react";
+import { SocketContext } from "@/hooks/use-socket";
 
 const navigation = [
-  { name: 'Dashboard', href: '/admin', icon: LayoutDashboard },
-  { name: 'User Management', href: '/admin/users', icon: Users },
-  { name: 'Seller Management', href: '/admin/seller-applications', icon: Store },
-  { name: 'Product Management', href: '/admin/products', icon: ShoppingBag },
-  { name: 'Category Management', href: '/admin/categories', icon: Tags },
-  { name: 'Shipper Management', href: '/admin/shippers', icon: Truck },
-  { name: 'Feedback Revision', href: '/admin/feedback', icon: MessageCircle },
-  { name: 'Voucher Requests', href: '/admin/voucher-requests', icon: TicketPercent },
-  { name: 'Global Vouchers', href: '/admin/global-vouchers', icon: TicketPercent },
-  { name: 'Order Management', href: '/admin/orders', icon: PackageSearch },
-  { name: 'Refund Disputes', href: '/admin/refunds', icon: RefreshCcw },
-  { name: 'Reports', href: '/admin/complaints', icon: AlertTriangle },
-  { name: 'Revenue', href: '/admin/revenue', icon: DollarSign },
-  { name: 'Audit Logs', href: '/admin/audit-logs', icon: FileSearch },
+  { name: "Dashboard", href: "/admin", icon: LayoutDashboard },
+  { name: "User Management", href: "/admin/users", icon: Users },
+  {
+    name: "Seller Management",
+    href: "/admin/seller-applications",
+    icon: Store,
+  },
+  { name: "Product Management", href: "/admin/products", icon: ShoppingBag },
+  { name: "Category Management", href: "/admin/categories", icon: Tags },
+  { name: "Shipper Management", href: "/admin/shippers", icon: Truck },
+  { name: "Feedback Revision", href: "/admin/feedback", icon: MessageCircle },
+  {
+    name: "Voucher Requests",
+    href: "/admin/voucher-requests",
+    icon: TicketPercent,
+  },
+  {
+    name: "Global Vouchers",
+    href: "/admin/global-vouchers",
+    icon: TicketPercent,
+  },
+  { name: "Order Management", href: "/admin/orders", icon: PackageSearch },
+  { name: "Refund Disputes", href: "/admin/refunds", icon: RefreshCcw },
+  { name: "Reports", href: "/admin/complaints", icon: AlertTriangle },
+  { name: "Revenue", href: "/admin/revenue", icon: DollarSign },
+  { name: "Audit Logs", href: "/admin/audit-logs", icon: FileSearch },
 ];
 
 export default function AdminLayout() {
@@ -38,15 +65,20 @@ export default function AdminLayout() {
           <nav className="px-3 space-y-1">
             {navigation.map((item) => {
               const Icon = item.icon;
-              const isActive = location.pathname === item.href || (item.href !== '/admin' && location.pathname.startsWith(item.href));
+              const isActive =
+                location.pathname === item.href ||
+                (item.href !== "/admin" &&
+                  location.pathname.startsWith(item.href));
 
               return (
                 <Link
                   key={item.name}
                   to={item.href}
                   className={cn(
-                    'flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium transition-colors',
-                    isActive ? 'bg-blue-50 text-blue-700' : 'text-gray-700 hover:bg-gray-100',
+                    "flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium transition-colors",
+                    isActive
+                      ? "bg-blue-50 text-blue-700"
+                      : "text-gray-700 hover:bg-gray-100",
                   )}
                 >
                   <Icon className="h-5 w-5" />
@@ -71,7 +103,7 @@ export default function AdminLayout() {
           </div>
         </div>
 
-        <div className="flex-1">
+        <div className="flex-1 p-2">
           <Outlet />
         </div>
       </div>

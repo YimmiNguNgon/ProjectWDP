@@ -66,10 +66,18 @@ function CardCountdown({ endDate }: { endDate?: string | null }) {
       {slots.map((slot, i) => (
         <div key={slot.label} className="flex items-center gap-0.5">
           <div className="flex flex-col items-center min-w-[30px]">
-            <span className="text-white font-mono text-xs font-bold">{fmt(slot.val)}</span>
-            <span className="text-slate-400 text-[9px] leading-none mt-0.5">{slot.label}</span>
+            <span className="text-white font-mono text-xs font-bold">
+              {fmt(slot.val)}
+            </span>
+            <span className="text-slate-400 text-[9px] leading-none mt-0.5">
+              {slot.label}
+            </span>
           </div>
-          {i < 3 && <span className="text-slate-500 font-bold text-xs mb-2 mx-0.5">:</span>}
+          {i < 3 && (
+            <span className="text-slate-500 font-bold text-xs mb-2 mx-0.5">
+              :
+            </span>
+          )}
         </div>
       ))}
     </div>
@@ -104,7 +112,13 @@ function HeaderCountdown({ endDate }: { endDate?: string | null }) {
   );
 }
 
-function StarRating({ rating = 0, count = 0 }: { rating?: number; count?: number }) {
+function StarRating({
+  rating = 0,
+  count = 0,
+}: {
+  rating?: number;
+  count?: number;
+}) {
   return (
     <div className="flex items-center gap-1">
       <div className="flex items-center gap-0.5">
@@ -115,7 +129,9 @@ function StarRating({ rating = 0, count = 0 }: { rating?: number; count?: number
           />
         ))}
       </div>
-      {count > 0 && <span className="text-xs text-muted-foreground">({count})</span>}
+      {count > 0 && (
+        <span className="text-xs text-muted-foreground">({count})</span>
+      )}
     </div>
   );
 }
@@ -153,10 +169,11 @@ export function SaleTimeShowcase() {
   if (products.length === 0) return null;
 
   // Use earliest dealEndDate as the global countdown date
-  const globalEndDate = products
-    .map((p) => p.dealEndDate)
-    .filter(Boolean)
-    .sort()[0] ?? null;
+  const globalEndDate =
+    products
+      .map((p) => p.dealEndDate)
+      .filter(Boolean)
+      .sort()[0] ?? null;
 
   return (
     <section className="rounded-2xl bg-sky-50 p-6 space-y-5">
@@ -165,9 +182,13 @@ export function SaleTimeShowcase() {
         <div>
           <div className="flex items-center gap-2 mb-1">
             <FaBolt className="w-5 h-5 text-amber-400" />
-            <h2 className="text-2xl font-black text-slate-800 tracking-tight">SHOCKING DEAL</h2>
+            <h2 className="text-2xl font-black text-slate-800 tracking-tight">
+              SHOCKING DEAL
+            </h2>
           </div>
-          <p className="text-sm text-muted-foreground">The opportunity will quickly pass. Take it!</p>
+          <p className="text-sm text-muted-foreground">
+            The opportunity will quickly pass. Take it!
+          </p>
         </div>
 
         <div className="flex items-center gap-4 bg-white rounded-2xl px-5 py-3 shadow-sm border border-sky-100">
@@ -175,7 +196,9 @@ export function SaleTimeShowcase() {
             <FaClock className="w-4 h-4 text-amber-500" />
             <div>
               <p className="text-xs font-semibold text-slate-700">Hurry up!</p>
-              <p className="text-[11px] text-muted-foreground">Offers end in:</p>
+              <p className="text-[11px] text-muted-foreground">
+                Offers end in:
+              </p>
             </div>
           </div>
           <HeaderCountdown endDate={globalEndDate} />
@@ -222,22 +245,28 @@ export function SaleTimeShowcase() {
 
               {/* Info */}
               <div className="px-3 pb-4 flex flex-col gap-1.5 flex-1">
-                <p className="text-[11px] text-amber-500 font-semibold truncate">{sellerName}</p>
+                <p className="text-[11px] text-amber-500 font-semibold truncate">
+                  {sellerName}
+                </p>
                 <p className="text-xs font-semibold text-slate-800 line-clamp-2 leading-snug">
                   {product.title}
                 </p>
-                <StarRating rating={product.averageRating} count={product.ratingCount} />
+                <StarRating
+                  rating={product.averageRating}
+                  count={product.ratingCount}
+                />
 
                 {/* Price */}
                 <div className="flex items-baseline gap-2 mt-0.5">
                   <span className="text-base font-black text-slate-800">
-                    {product.price.toLocaleString("vi-VN")}₫
+                    ${product.price.toLocaleString("vi-VN")}
                   </span>
-                  {product.originalPrice && product.originalPrice > product.price && (
-                    <span className="text-xs text-muted-foreground line-through">
-                      {product.originalPrice.toLocaleString("vi-VN")}₫
-                    </span>
-                  )}
+                  {product.originalPrice &&
+                    product.originalPrice > product.price && (
+                      <span className="text-xs text-muted-foreground line-through">
+                        ${product.originalPrice.toLocaleString("vi-VN")}
+                      </span>
+                    )}
                 </div>
 
                 {/* Progress bar */}
@@ -251,10 +280,16 @@ export function SaleTimeShowcase() {
                     </div>
                     <div className="flex justify-between mt-0.5">
                       <span className="text-[10px] text-muted-foreground">
-                        Available <span className="font-semibold text-slate-600">{product.quantity ?? 0}</span>
+                        Available{" "}
+                        <span className="font-semibold text-slate-600">
+                          {product.quantity ?? 0}
+                        </span>
                       </span>
                       <span className="text-[10px] text-muted-foreground">
-                        Sold <span className="font-semibold text-slate-600">{sold}</span>
+                        Sold{" "}
+                        <span className="font-semibold text-slate-600">
+                          {sold}
+                        </span>
                       </span>
                     </div>
                   </div>

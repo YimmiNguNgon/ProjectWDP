@@ -25,7 +25,10 @@ export function RecentlyViewedSection({
   const [loading, setLoading] = useState(true);
 
   const load = useCallback(async () => {
-    if (!accessToken) { setLoading(false); return; }
+    if (!accessToken) {
+      setLoading(false);
+      return;
+    }
     try {
       setLoading(true);
       const res = await getRecentlyViewed(20);
@@ -37,7 +40,9 @@ export function RecentlyViewedSection({
     }
   }, [accessToken]);
 
-  useEffect(() => { load(); }, [load]);
+  useEffect(() => {
+    load();
+  }, [load]);
 
   const handleRemove = async (productId: string, e: React.MouseEvent) => {
     e.preventDefault();
@@ -45,14 +50,18 @@ export function RecentlyViewedSection({
     try {
       await removeRecentlyViewed(productId);
       setItems((prev) => prev.filter((i) => i.product._id !== productId));
-    } catch { /* ignore */ }
+    } catch {
+      /* ignore */
+    }
   };
 
   const handleClearAll = async () => {
     try {
       await clearRecentlyViewed();
       setItems([]);
-    } catch { /* ignore */ }
+    } catch {
+      /* ignore */
+    }
   };
 
   if (!accessToken || (!loading && items.length === 0)) return null;
@@ -66,9 +75,13 @@ export function RecentlyViewedSection({
         <div>
           <div className="flex items-center gap-2 mb-1">
             <FaClockRotateLeft className="w-5 h-5 text-violet-500" />
-            <h2 className="text-2xl font-black text-slate-800 tracking-tight">Recently Viewed</h2>
+            <h2 className="text-2xl font-black text-slate-800 tracking-tight">
+              Recently Viewed
+            </h2>
           </div>
-          <p className="text-sm text-muted-foreground">Products you recently looked at</p>
+          <p className="text-sm text-muted-foreground">
+            Products you recently looked at
+          </p>
         </div>
         {showClearAll && items.length > 0 && (
           <button
@@ -97,9 +110,10 @@ export function RecentlyViewedSection({
               p.isOnSale && p.discountPercent
                 ? v * (1 - p.discountPercent / 100)
                 : v;
-            const variantPrices = p.variantCombinations
-              ?.map((c) => c.price)
-              .filter((v): v is number => v !== undefined) ?? [];
+            const variantPrices =
+              p.variantCombinations
+                ?.map((c) => c.price)
+                .filter((v): v is number => v !== undefined) ?? [];
             const finalPrice = applyDiscount(
               variantPrices.length > 0 ? Math.min(...variantPrices) : p.price,
             );
@@ -107,7 +121,8 @@ export function RecentlyViewedSection({
               variantPrices.length > 0
                 ? applyDiscount(Math.max(...variantPrices))
                 : finalPrice;
-            const isPriceRange = variantPrices.length > 0 && finalPrice !== maxVariantPrice;
+            const isPriceRange =
+              variantPrices.length > 0 && finalPrice !== maxVariantPrice;
 
             return (
               <Link
@@ -139,13 +154,24 @@ export function RecentlyViewedSection({
                       alt={p.title}
                       className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
                       onError={(e) => {
-                        (e.currentTarget as HTMLImageElement).style.display = "none";
+                        (e.currentTarget as HTMLImageElement).style.display =
+                          "none";
                       }}
                     />
                   ) : (
                     <div className="w-full h-full flex items-center justify-center bg-muted">
-                      <svg className="h-10 w-10 text-muted-foreground/30" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2zm6-8a2 2 0 100-4 2 2 0 000 4z" />
+                      <svg
+                        className="h-10 w-10 text-muted-foreground/30"
+                        fill="none"
+                        stroke="currentColor"
+                        viewBox="0 0 24 24"
+                      >
+                        <path
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          strokeWidth={1.5}
+                          d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2zm6-8a2 2 0 100-4 2 2 0 000 4z"
+                        />
                       </svg>
                     </div>
                   )}
@@ -157,14 +183,16 @@ export function RecentlyViewedSection({
                     {p.title}
                   </p>
                   <div className="flex items-baseline gap-1.5 flex-wrap mt-auto pt-1">
-                    <span className={`text-sm font-black ${p.isOnSale ? "text-red-600" : "text-slate-800"}`}>
+                    <span
+                      className={`text-sm font-black ${p.isOnSale ? "text-red-600" : "text-slate-800"}`}
+                    >
                       {isPriceRange
-                        ? `${Math.round(finalPrice).toLocaleString("vi-VN")}₫ – ${Math.round(maxVariantPrice).toLocaleString("vi-VN")}₫`
-                        : `${Math.round(finalPrice).toLocaleString("vi-VN")}₫`}
+                        ? `$${Math.round(finalPrice).toLocaleString("vi-VN")} – ${Math.round(maxVariantPrice).toLocaleString("vi-VN")}₫`
+                        : `$${Math.round(finalPrice).toLocaleString("vi-VN")}`}
                     </span>
                     {p.isOnSale && p.originalPrice && !isPriceRange && (
                       <span className="text-[10px] text-muted-foreground line-through">
-                        {Math.round(p.originalPrice).toLocaleString("vi-VN")}₫
+                        ${Math.round(p.originalPrice).toLocaleString("vi-VN")}
                       </span>
                     )}
                   </div>
