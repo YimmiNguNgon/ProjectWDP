@@ -78,6 +78,7 @@ export function AuthProvider({ children }: PropsWithChildren) {
   const signUp = async (
     username: string,
     email: string,
+    email2: string,
     password: string,
     role: string = "buyer",
   ) => {

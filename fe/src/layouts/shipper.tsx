@@ -33,7 +33,7 @@ export default function ShipperLayout() {
 
   useEffect(() => {
     refreshStatus();
-  }, [location.pathname]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [location.pathname]);  
 
   // Refresh when backend notifies status changed (e.g., after decline)
   useEffect(() => {
@@ -46,7 +46,7 @@ export default function ShipperLayout() {
     };
     socket.on("notification", handler);
     return () => { socket.off("notification", handler); };
-  }, [socketCtx?.socket]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [socketCtx?.socket]);  
 
   const currentNav = navigation.find(
     (nav) =>

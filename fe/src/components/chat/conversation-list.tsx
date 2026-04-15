@@ -112,7 +112,7 @@ export default function ConversationList() {
   };
 
   const handleConversationClick = (conversation: Conversation) => {
-    // Set new participants → triggers fetch in Messages component
+    // Set new participants â†’ triggers fetch in Messages component
     setParticipants(conversation.participants.map((p) => p._id));
 
     // Immediately clear unread count in local state for instant feedback
@@ -342,4 +342,3 @@ export default function ConversationList() {
     </>
   );
 }
-
