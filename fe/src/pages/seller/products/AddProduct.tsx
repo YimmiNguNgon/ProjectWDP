@@ -44,9 +44,29 @@ const MAX_IMAGES = 5;
 const numericInputClass =
   "h-12 text-lg font-semibold tracking-wide transition-[box-shadow,border-color,background-color] duration-200 focus-visible:shadow-sm focus-visible:ring-2 focus-visible:ring-blue-200";
 
+const getErrorMessage = (error: unknown, fallback: string) => {
+  if (
+    typeof error === "object" &&
+    error !== null &&
+    "response" in error &&
+    typeof error.response === "object" &&
+    error.response !== null &&
+    "data" in error.response &&
+    typeof error.response.data === "object" &&
+    error.response.data !== null &&
+    "message" in error.response.data &&
+    typeof error.response.data.message === "string"
+  ) {
+    return error.response.data.message;
+  }
+
+  return fallback;
+};
+
 export default function AddProduct() {
   const navigate = useNavigate();
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const imageFilesRef = useRef<ImageFile[]>([]);
 
   const [loading, setLoading] = useState(false);
   const [categories, setCategories] = useState<Category[]>([]);
@@ -82,10 +102,15 @@ export default function AddProduct() {
         setCategories(list);
       })
       .catch(() => {});
+  }, []);
 
-    // Cleanup preview URLs khi unmount
+  useEffect(() => {
+    imageFilesRef.current = imageFiles;
+  }, [imageFiles]);
+
+  useEffect(() => {
     return () => {
-      imageFiles.forEach((img) => URL.revokeObjectURL(img.previewUrl));
+      imageFilesRef.current.forEach((img) => URL.revokeObjectURL(img.previewUrl));
     };
   }, []);
 
@@ -261,9 +286,8 @@ export default function AddProduct() {
 
       toast.success("Product add successfully!");
       navigate("/seller/products");
-    } catch (error: any) {
-      const msg =
-        error?.response?.data?.message || "Error occur when adding product.";
+    } catch (error: unknown) {
+      const msg = getErrorMessage(error, "Error occur when adding product.");
       toast.error(msg);
       // Nếu lỗi xảy ra sau upload thì reset uploading state
       setImageFiles((prev) =>

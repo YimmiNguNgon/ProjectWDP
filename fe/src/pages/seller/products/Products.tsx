@@ -34,10 +34,18 @@ import {
 } from '@/api/seller-products';
 import ProductVariantsManager from '@/components/seller/product-variants-manager';
 import api from '@/lib/axios';
+import { useCallback } from 'react';
 
 interface Category {
   _id: string;
   name: string;
+}
+
+interface ListingQueryParams {
+  status?: string;
+  search?: string;
+  page?: number;
+  limit?: number;
 }
 
 const toInputDateTime = (value?: string | null) => {
@@ -110,6 +118,25 @@ const formatCountdown = (target: Date) => {
 
 const numericInputClass =
   'h-12 text-base font-semibold tracking-wide transition-[box-shadow,border-color,background-color] duration-200 focus-visible:shadow-sm focus-visible:ring-2 focus-visible:ring-blue-200';
+
+const getErrorMessage = (error: unknown, fallback: string) => {
+  if (
+    typeof error === 'object' &&
+    error !== null &&
+    'response' in error &&
+    typeof error.response === 'object' &&
+    error.response !== null &&
+    'data' in error.response &&
+    typeof error.response.data === 'object' &&
+    error.response.data !== null &&
+    'message' in error.response.data &&
+    typeof error.response.data.message === 'string'
+  ) {
+    return error.response.data.message;
+  }
+
+  return fallback;
+};
 
 const resolveSaleInfo = (product: Product): SaleInfo => {
   const basePrice = Number(product.basePrice ?? product.originalPrice ?? product.price ?? 0);
@@ -206,10 +233,10 @@ export default function SellerProducts() {
     }).catch(() => { });
   }, []);
 
-  const fetchProducts = async () => {
+  const fetchProducts = useCallback(async () => {
     setLoading(true);
     try {
-      const params: any = { page, limit: 10 };
+      const params: ListingQueryParams = { page, limit: 10 };
       if (search) params.search = search;
       if (statusFilter) params.status = statusFilter;
       const res = await getMyListings(params);
@@ -221,11 +248,11 @@ export default function SellerProducts() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [page, search, statusFilter]);
 
   useEffect(() => {
     fetchProducts();
-  }, [page, statusFilter]);
+  }, [fetchProducts]);
 
   const handleSearch = () => {
     setPage(1);
@@ -342,8 +369,8 @@ export default function SellerProducts() {
       toast.success('Product updated successfully');
       setIsDialogOpen(false);
       fetchProducts();
-    } catch (err: any) {
-      toast.error(err?.response?.data?.message || 'Failed to update product');
+    } catch (error: unknown) {
+      toast.error(getErrorMessage(error, 'Failed to update product'));
     } finally {
       setSaving(false);
     }
@@ -979,9 +1006,6 @@ export default function SellerProducts() {
     </div>
   );
 }
-
-
-
 
 
 

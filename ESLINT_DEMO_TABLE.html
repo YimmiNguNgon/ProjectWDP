@@ -1,0 +1,217 @@
+<!doctype html>
+<html lang="vi">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>ESLint Demo Table</title>
+  <style>
+    :root {
+      --border: #d0d7de;
+      --header: #f6f8fa;
+      --text: #1f2328;
+      --muted: #59636e;
+      --bg: #ffffff;
+    }
+
+    body {
+      margin: 32px;
+      font-family: "Segoe UI", Arial, sans-serif;
+      color: var(--text);
+      background: var(--bg);
+      line-height: 1.45;
+    }
+
+    h1, h2 {
+      margin: 0 0 12px;
+    }
+
+    p {
+      margin: 0 0 16px;
+      color: var(--muted);
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin: 0 0 24px;
+      table-layout: fixed;
+    }
+
+    th, td {
+      border: 1px solid var(--border);
+      padding: 10px 12px;
+      vertical-align: top;
+      text-align: left;
+      word-wrap: break-word;
+    }
+
+    th {
+      background: var(--header);
+    }
+
+    code {
+      font-family: Consolas, "Courier New", monospace;
+      font-size: 0.95em;
+    }
+
+    .small {
+      width: 56px;
+    }
+
+    .level-low {
+      color: #0a7a33;
+      font-weight: 600;
+    }
+
+    .level-mid {
+      color: #9a6700;
+      font-weight: 600;
+    }
+
+    .level-high {
+      color: #cf222e;
+      font-weight: 600;
+    }
+
+    .cmd {
+      margin-top: 8px;
+      padding: 12px;
+      border: 1px solid var(--border);
+      background: #f6f8fa;
+      white-space: pre-wrap;
+    }
+  </style>
+</head>
+<body>
+  <h1>ESLint Demo Table</h1>
+  <p>Dung trong thu muc <code>fe</code>.</p>
+
+  <h2>Bang Tong Hop</h2>
+  <table>
+    <thead>
+      <tr>
+        <th class="small">#</th>
+        <th>Loai loi</th>
+        <th>Y nghia</th>
+        <th>Do phuc tap</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr><td>1</td><td><code>Parsing error</code></td><td>File parse khong qua, de hong build</td><td><span class="level-high">Cao</span></td></tr>
+      <tr><td>2</td><td><code>react-hooks/exhaustive-deps</code></td><td>Hook thieu dependency</td><td><span class="level-high">Cao</span></td></tr>
+      <tr><td>3</td><td><code>react-refresh/only-export-components</code></td><td>Export khong dung mau Fast Refresh</td><td><span class="level-mid">Trung binh</span></td></tr>
+      <tr><td>4</td><td><code>no-useless-catch</code></td><td><code>try/catch</code> du thua</td><td><span class="level-low">Thap</span></td></tr>
+      <tr><td>5</td><td><code>no-explicit-any</code></td><td>Mat an toan type</td><td><span class="level-mid">Trung binh</span></td></tr>
+      <tr><td>6</td><td><code>no-unused-vars</code></td><td>Bien khai bao nhung khong dung</td><td><span class="level-low">Thap</span></td></tr>
+      <tr><td>7</td><td><code>no-unsafe-function-type</code></td><td>Dung kieu <code>Function</code> qua chung</td><td><span class="level-mid">Trung binh</span></td></tr>
+      <tr><td>8</td><td><code>no-irregular-whitespace</code></td><td>Co ky tu trang bat thuong</td><td><span class="level-low">Thap</span></td></tr>
+      <tr><td>9</td><td><code>no-unused-expressions</code></td><td>Bieu thuc khong co tac dung</td><td><span class="level-mid">Trung binh</span></td></tr>
+      <tr><td>10</td><td><code>no-empty</code></td><td>Co block rong</td><td><span class="level-low">Thap</span></td></tr>
+      <tr><td>11</td><td><code>unused eslint-disable</code></td><td>Co <code>eslint-disable</code> thua</td><td><span class="level-low">Thap</span></td></tr>
+      <tr><td>12</td><td><code>no-alert</code></td><td>Dung <code>alert()</code> trong UI</td><td><span class="level-low">Thap</span></td></tr>
+      <tr><td>13</td><td><code>no-console</code></td><td>Con log debug trong code</td><td><span class="level-low">Thap</span></td></tr>
+      <tr><td>14</td><td><code>no-nested-ternary</code></td><td>Toan tu 3 ngoi long nhau</td><td><span class="level-mid">Trung binh</span></td></tr>
+      <tr><td>15</td><td><code>complexity</code></td><td>Do phuc tap logic qua cao</td><td><span class="level-high">Cao</span></td></tr>
+      <tr><td>16</td><td><code>max-lines-per-function</code></td><td>Ham qua dai</td><td><span class="level-mid">Trung binh</span></td></tr>
+      <tr><td>17</td><td><code>max-statements</code></td><td>Ham co qua nhieu lenh</td><td><span class="level-high">Cao</span></td></tr>
+    </tbody>
+  </table>
+
+  <h2>File Demo</h2>
+  <table>
+    <thead>
+      <tr>
+        <th>Loai loi</th>
+        <th>File demo</th>
+        <th>Lenh chay</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr><td><code>Parsing error</code></td><td><code>src/services/api.js</code></td><td><code>eslint src/services/api.js</code></td></tr>
+      <tr><td><code>react-hooks/exhaustive-deps</code></td><td><code>src/components/ProtectedRoute.tsx</code></td><td><code>eslint src/components/ProtectedRoute.tsx</code></td></tr>
+      <tr><td><code>react-refresh/only-export-components</code></td><td><code>src/components/PermissionGate.tsx</code></td><td><code>eslint src/components/PermissionGate.tsx</code></td></tr>
+      <tr><td><code>no-useless-catch</code></td><td><code>src/api/user.ts</code></td><td><code>eslint src/api/user.ts</code></td></tr>
+      <tr><td><code>no-explicit-any</code></td><td><code>src/api/orders.ts</code></td><td><code>eslint src/api/orders.ts</code></td></tr>
+      <tr><td><code>no-unused-vars</code></td><td><code>src/components/address-form.tsx</code></td><td><code>eslint src/components/address-form.tsx</code></td></tr>
+      <tr><td><code>no-unsafe-function-type</code></td><td><code>src/components/notification-bell.tsx</code></td><td><code>eslint src/components/notification-bell.tsx</code></td></tr>
+      <tr><td><code>no-irregular-whitespace</code></td><td><code>src/components/user-profile.tsx</code></td><td><code>eslint src/components/user-profile.tsx</code></td></tr>
+      <tr><td><code>no-unused-expressions</code></td><td><code>src/pages/public/products.tsx</code></td><td><code>eslint src/pages/public/products.tsx</code></td></tr>
+      <tr><td><code>no-empty</code></td><td><code>src/pages/buyer/become-seller/seller-apply.tsx</code></td><td><code>eslint src/pages/buyer/become-seller/seller-apply.tsx</code></td></tr>
+      <tr><td><code>unused eslint-disable</code></td><td><code>src/layouts/shipper.tsx</code></td><td><code>eslint src/layouts/shipper.tsx</code></td></tr>
+      <tr><td><code>no-alert</code></td><td><code>src/components/chat/conversation-list.tsx</code></td><td><code>eslint src/components/chat/conversation-list.tsx</code></td></tr>
+      <tr><td><code>no-console</code></td><td><code>src/components/chat/conversation-list.tsx</code></td><td><code>eslint src/components/chat/conversation-list.tsx</code></td></tr>
+      <tr><td><code>no-nested-ternary</code></td><td><code>src/components/cart/cart-dropdown.tsx</code></td><td><code>eslint src/components/cart/cart-dropdown.tsx</code></td></tr>
+      <tr><td><code>complexity</code></td><td><code>src/api/search.ts</code></td><td><code>eslint src/api/search.ts</code></td></tr>
+      <tr><td><code>max-lines-per-function</code></td><td><code>src/components/address-form.tsx</code></td><td><code>eslint src/components/address-form.tsx</code></td></tr>
+      <tr><td><code>max-statements</code></td><td><code>src/components/seller/seller-information.tsx</code></td><td><code>eslint src/components/seller/seller-information.tsx</code></td></tr>
+    </tbody>
+  </table>
+
+  <h2>Lenh Chung</h2>
+  <div class="cmd">cd fe
+.\node_modules\.bin\eslint.cmd src</div>
+
+  <h2>20 Test Cases</h2>
+  <table>
+    <thead>
+      <tr>
+        <th class="small">ID</th>
+        <th>File</th>
+        <th>Buoc thuc hien</th>
+        <th>Ket qua mong doi</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr><td>TC01</td><td><code>src</code></td><td><code>eslint src</code></td><td>ESLint quet toan bo <code>src</code> va hien danh sach loi/warning</td></tr>
+      <tr><td>TC02</td><td><code>src/services/api.js</code></td><td><code>eslint src/services/api.js</code></td><td>Bao <code>Parsing error: Duplicate export 'productAPI'</code></td></tr>
+      <tr><td>TC03</td><td><code>src/components/ProtectedRoute.tsx</code></td><td><code>eslint src/components/ProtectedRoute.tsx</code></td><td>Bao <code>react-hooks/exhaustive-deps</code></td></tr>
+      <tr><td>TC04</td><td><code>src/components/PermissionGate.tsx</code></td><td><code>eslint src/components/PermissionGate.tsx</code></td><td>Bao <code>react-refresh/only-export-components</code></td></tr>
+      <tr><td>TC05</td><td><code>src/api/user.ts</code></td><td><code>eslint src/api/user.ts</code></td><td>Bao <code>no-useless-catch</code></td></tr>
+      <tr><td>TC06</td><td><code>src/api/user.ts</code></td><td><code>eslint src/api/user.ts</code></td><td>Hien them <code>no-explicit-any</code> trong cung file</td></tr>
+      <tr><td>TC07</td><td><code>src/api/orders.ts</code></td><td><code>eslint src/api/orders.ts</code></td><td>Bao <code>@typescript-eslint/no-explicit-any</code></td></tr>
+      <tr><td>TC08</td><td><code>src/components/address-form.tsx</code></td><td><code>eslint src/components/address-form.tsx</code></td><td>Bao <code>@typescript-eslint/no-unused-vars</code></td></tr>
+      <tr><td>TC09</td><td><code>src/components/address-form.tsx</code></td><td><code>eslint src/components/address-form.tsx</code></td><td>Hien them <code>max-lines-per-function</code></td></tr>
+      <tr><td>TC10</td><td><code>src/components/notification-bell.tsx</code></td><td><code>eslint src/components/notification-bell.tsx</code></td><td>Bao <code>@typescript-eslint/no-unsafe-function-type</code></td></tr>
+      <tr><td>TC11</td><td><code>src/components/user-profile.tsx</code></td><td><code>eslint src/components/user-profile.tsx</code></td><td>Bao <code>no-irregular-whitespace</code></td></tr>
+      <tr><td>TC12</td><td><code>src/pages/public/products.tsx</code></td><td><code>eslint src/pages/public/products.tsx</code></td><td>Bao <code>@typescript-eslint/no-unused-expressions</code></td></tr>
+      <tr><td>TC13</td><td><code>src/pages/buyer/become-seller/seller-apply.tsx</code></td><td><code>eslint src/pages/buyer/become-seller/seller-apply.tsx</code></td><td>Bao <code>no-empty</code></td></tr>
+      <tr><td>TC14</td><td><code>src/layouts/shipper.tsx</code></td><td><code>eslint src/layouts/shipper.tsx</code></td><td>Bao <code>Unused eslint-disable directive</code></td></tr>
+      <tr><td>TC15</td><td><code>src/components/chat/conversation-list.tsx</code></td><td><code>eslint src/components/chat/conversation-list.tsx</code></td><td>Bao <code>no-alert</code></td></tr>
+      <tr><td>TC16</td><td><code>src/components/chat/conversation-list.tsx</code></td><td><code>eslint src/components/chat/conversation-list.tsx</code></td><td>Hien them <code>no-console</code></td></tr>
+      <tr><td>TC17</td><td><code>src/components/cart/cart-dropdown.tsx</code></td><td><code>eslint src/components/cart/cart-dropdown.tsx</code></td><td>Bao <code>no-nested-ternary</code></td></tr>
+      <tr><td>TC18</td><td><code>src/api/search.ts</code></td><td><code>eslint src/api/search.ts</code></td><td>Bao <code>complexity</code></td></tr>
+      <tr><td>TC19</td><td><code>src/components/seller/seller-information.tsx</code></td><td><code>eslint src/components/seller/seller-information.tsx</code></td><td>Bao <code>max-statements</code></td></tr>
+      <tr><td>TC20</td><td><code>src/components/chat/conversation-list.tsx</code></td><td><code>eslint src/components/chat/conversation-list.tsx</code></td><td>Mot file hien nhieu rule moi nhu <code>no-alert</code>, <code>no-console</code> va cac loi khac neu co</td></tr>
+    </tbody>
+  </table>
+
+  <h2>Nhom Test Theo File</h2>
+  <table>
+    <thead>
+      <tr>
+        <th>File</th>
+        <th>Test case</th>
+        <th>Rule chinh</th>
+        <th>Lenh chay</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr><td><code>src/services/api.js</code></td><td>TC02</td><td><code>Parsing error</code></td><td><code>eslint src/services/api.js</code></td></tr>
+      <tr><td><code>src/components/ProtectedRoute.tsx</code></td><td>TC03</td><td><code>react-hooks/exhaustive-deps</code></td><td><code>eslint src/components/ProtectedRoute.tsx</code></td></tr>
+      <tr><td><code>src/components/PermissionGate.tsx</code></td><td>TC04</td><td><code>react-refresh/only-export-components</code></td><td><code>eslint src/components/PermissionGate.tsx</code></td></tr>
+      <tr><td><code>src/api/user.ts</code></td><td>TC05, TC06</td><td><code>no-useless-catch</code>, <code>no-explicit-any</code></td><td><code>eslint src/api/user.ts</code></td></tr>
+      <tr><td><code>src/api/orders.ts</code></td><td>TC07</td><td><code>no-explicit-any</code></td><td><code>eslint src/api/orders.ts</code></td></tr>
+      <tr><td><code>src/components/address-form.tsx</code></td><td>TC08, TC09</td><td><code>no-unused-vars</code>, <code>max-lines-per-function</code></td><td><code>eslint src/components/address-form.tsx</code></td></tr>
+      <tr><td><code>src/components/notification-bell.tsx</code></td><td>TC10</td><td><code>no-unsafe-function-type</code></td><td><code>eslint src/components/notification-bell.tsx</code></td></tr>
+      <tr><td><code>src/components/user-profile.tsx</code></td><td>TC11</td><td><code>no-irregular-whitespace</code></td><td><code>eslint src/components/user-profile.tsx</code></td></tr>
+      <tr><td><code>src/pages/public/products.tsx</code></td><td>TC12</td><td><code>no-unused-expressions</code></td><td><code>eslint src/pages/public/products.tsx</code></td></tr>
+      <tr><td><code>src/pages/buyer/become-seller/seller-apply.tsx</code></td><td>TC13</td><td><code>no-empty</code></td><td><code>eslint src/pages/buyer/become-seller/seller-apply.tsx</code></td></tr>
+      <tr><td><code>src/layouts/shipper.tsx</code></td><td>TC14</td><td><code>unused eslint-disable</code></td><td><code>eslint src/layouts/shipper.tsx</code></td></tr>
+      <tr><td><code>src/components/chat/conversation-list.tsx</code></td><td>TC15, TC16, TC20</td><td><code>no-alert</code>, <code>no-console</code></td><td><code>eslint src/components/chat/conversation-list.tsx</code></td></tr>
+      <tr><td><code>src/components/cart/cart-dropdown.tsx</code></td><td>TC17</td><td><code>no-nested-ternary</code></td><td><code>eslint src/components/cart/cart-dropdown.tsx</code></td></tr>
+      <tr><td><code>src/api/search.ts</code></td><td>TC18</td><td><code>complexity</code></td><td><code>eslint src/api/search.ts</code></td></tr>
+      <tr><td><code>src/components/seller/seller-information.tsx</code></td><td>TC19</td><td><code>max-statements</code></td><td><code>eslint src/components/seller/seller-information.tsx</code></td></tr>
+    </tbody>
+  </table>
+</body>
+</html>

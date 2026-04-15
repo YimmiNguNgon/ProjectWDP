@@ -43,6 +43,25 @@ const MAX_IMAGES = 5;
 const numericInputClass =
     "h-12 text-lg font-semibold tracking-wide transition-[box-shadow,border-color,background-color] duration-200 focus-visible:shadow-sm focus-visible:ring-2 focus-visible:ring-blue-200";
 
+const getErrorMessage = (error: unknown, fallback: string) => {
+    if (
+        typeof error === "object" &&
+        error !== null &&
+        "response" in error &&
+        typeof error.response === "object" &&
+        error.response !== null &&
+        "data" in error.response &&
+        typeof error.response.data === "object" &&
+        error.response.data !== null &&
+        "message" in error.response.data &&
+        typeof error.response.data.message === "string"
+    ) {
+        return error.response.data.message;
+    }
+
+    return fallback;
+};
+
 const toInputDateTime = (value?: string | null) => {
     if (!value) return "";
     const date = new Date(value);
@@ -56,6 +75,7 @@ export default function EditProduct() {
     const navigate = useNavigate();
     const { id } = useParams<{ id: string }>();
     const fileInputRef = useRef<HTMLInputElement>(null);
+    const newImageFilesRef = useRef<NewImageFile[]>([]);
 
     const [pageLoading, setPageLoading] = useState(true);
     const [saving, setSaving] = useState(false);
@@ -92,9 +112,15 @@ export default function EditProduct() {
         api.get('/api/categories').then((res) => {
             setCategories(res.data?.data ?? res.data ?? []);
         }).catch(() => { });
+    }, []);
 
+    useEffect(() => {
+        newImageFilesRef.current = newImageFiles;
+    }, [newImageFiles]);
+
+    useEffect(() => {
         return () => {
-            newImageFiles.forEach((img) => URL.revokeObjectURL(img.previewUrl));
+            newImageFilesRef.current.forEach((img) => URL.revokeObjectURL(img.previewUrl));
         };
     }, []);
 
@@ -130,7 +156,7 @@ export default function EditProduct() {
                 navigate('/seller/products');
             })
             .finally(() => setPageLoading(false));
-    }, [id]);
+    }, [id, navigate]);
 
     const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
         const { name, value } = e.target;
@@ -301,11 +327,11 @@ export default function EditProduct() {
                 images: allImages,
                 variants,
                 variantCombinations,
-            } as any);
+            });
             toast.success('Product updated successfully!');
             navigate('/seller/products');
-        } catch (err: any) {
-            toast.error(err?.response?.data?.message || 'Failed to update product');
+        } catch (error: unknown) {
+            toast.error(getErrorMessage(error, 'Failed to update product'));
             setNewImageFiles((prev) => prev.map((img) => ({ ...img, uploading: false })));
         } finally {
             setSaving(false);
