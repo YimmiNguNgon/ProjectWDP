@@ -242,7 +242,7 @@ const transformOrder = (apiOrder: ApiOrder): Order => {
 };
 
 export const orderService = {
-  // Láº¥y táº¥t cáº£ orders
+  // Lấy tất cả orders
   async getAllOrders(): Promise<Order[]> {
     try {
       const response = await api.get(`${API_URL}/all`);
@@ -254,7 +254,7 @@ export const orderService = {
     }
   },
 
-  // Láº¥y orders vá»›i filter vÃ  pagination
+  // Lấy orders với filter và pagination
   async getOrders(params?: {
     status?: string;
     page?: number;
@@ -277,7 +277,7 @@ export const orderService = {
     }
   },
 
-  // Láº¥y chi tiáº¿t order theo ID
+  // Lấy chi tiết order theo ID
   async getOrderById(id: string): Promise<Order | null> {
     try {
       const response = await api.get(`${API_URL}/${id}`);
@@ -303,7 +303,7 @@ export const orderService = {
           url: error.config?.url,
         });
 
-        // Log URL Ä‘ang gá»i
+        // Log URL đang gọi
         console.error("Request URL:", error.config?.url);
       }
 
@@ -311,7 +311,7 @@ export const orderService = {
     }
   },
 
-  // Láº¥y thá»‘ng kÃª
+  // Lấy thống kê
   async getOrderStats() {
     try {
       const response = await api.get(`${API_URL}/stats`);
@@ -329,7 +329,7 @@ export const orderService = {
     note?: string,
   ): Promise<boolean> {
     try {
-      // Map status ngÆ°á»£c láº¡i tá»« FE sang BE
+      // Map status ngược lại từ FE sang BE
       const statusMapToBackend: Record<Order["status"], string> = {
         created: "created",
         packaging: "packaging",
@@ -368,7 +368,7 @@ export const orderService = {
     }
   },
 
-  // Helper functions export náº¿u cáº§n
+  // Export helper functions nếu cần
   mapStatus,
   mapPaymentStatus,
   formatDate,

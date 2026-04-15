@@ -57,7 +57,7 @@ export function Messages({
   const viewportRef = useRef<HTMLDivElement>(null);
   const typingTimeout = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  // Scroll xuá»‘ng khi cÃ³ tin nháº¯n má»›i
+  // Scroll xuống khi có tin nhắn mới
   useEffect(() => {
     if (!viewportRef.current) return;
     const viewport = viewportRef.current.querySelector(
@@ -135,17 +135,17 @@ export function Messages({
   }, [participants, payload?.userId]);
 
 
-  // Láº¯ng nghe socket events
+  // Lắng nghe socket events
   useEffect(() => {
     if (!payload?.userId || !conversation?._id) return;
 
     const { userId } = payload;
     const conversationId = conversation._id;
 
-    // --- Káº¿t ná»‘i socket ---
+    // --- Kết nối socket ---
     if (!socket.connected) socket.connect();
 
-    // Gá»­i auth ngay khi connect
+    // Gửi auth ngay khi connect
     const handleConnect = () => {
       socket.emit('auth', { userId });
       socket.emit(
@@ -160,7 +160,7 @@ export function Messages({
     socket.on('connect', handleConnect);
     if (socket.connected) handleConnect(); // reconnect case
 
-    // --- Nháº­n tin nháº¯n má»›i ---
+    // --- Nhận tin nhắn mới ---
     const handleNewMessage = (msg: Message) => {
       if (msg.conversationId !== conversationId) return;
       setMessages((prev) => [msg, ...prev!]);
@@ -180,7 +180,7 @@ export function Messages({
 
     socket.on('new_message', handleNewMessage);
 
-    // --- Khi user khÃ¡c Ä‘ang gÃµ ---
+    // --- Khi user khác đang gõ ---
     const handleTyping = (data: { conversationId: string; userId: string }) => {
       if (data.conversationId !== conversationId || data.userId === userId)
         return;
@@ -203,7 +203,7 @@ export function Messages({
       }
     );
 
-    // --- Khi tin nháº¯n bá»‹ cháº·n ---
+    // --- Khi tin nhắn bị chặn ---
     const handleMessageBlocked = (data: { violations: string[]; reason: string }) => {
       setModerationError(data.reason);
       // Auto-hide error after 8 seconds
@@ -212,7 +212,7 @@ export function Messages({
 
     socket.on('message_blocked', handleMessageBlocked);
 
-    // --- Khi cÃ³ enforcement action (eBay-style) ---
+    // --- Khi có enforcement action (eBay-style) ---
     const handleEnforcementAction = (data: {
       action: string;
       message: string;
@@ -299,7 +299,7 @@ export function Messages({
     }
   };
 
-  // Gá»­i tin nháº¯n
+  // Gửi tin nhắn
   const handleSendMessage = async () => {
     const text = input.trim();
     if ((!text && !selectedImage) || !payload?.userId || !conversation?._id) return;
@@ -357,7 +357,7 @@ export function Messages({
     }
   };
 
-  // Gá»­i sá»± kiá»‡n typing
+  // Gửi sự kiện typing
   const handleTyping = () => {
     if (!conversation?._id || !payload?.userId) return;
 
@@ -368,7 +368,7 @@ export function Messages({
 
     if (typingTimeout.current) clearTimeout(typingTimeout.current);
     typingTimeout.current = setTimeout(() => {
-      // stop typing logic náº¿u cáº§n
+      // Stop typing logic nếu cần
     }, 1000);
   };
 

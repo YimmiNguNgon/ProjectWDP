@@ -140,7 +140,7 @@ export default function LeaveFeedbackPage() {
     fetchOrder();
   }, [orderId, productId]);
 
-  // ===== CHECK ĐÃ REVIEW CHƯA =====
+  // ===== CHECK ĐA REVIEW CHUA =====
   useEffect(() => {
     const checkExistingReview = async () => {
       if (!productId || !orderId || !userId) return;

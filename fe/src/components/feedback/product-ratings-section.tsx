@@ -22,7 +22,7 @@ type ReviewApi = {
   username?: string;
 };
 
-// 2 kiá»ƒu response backend cÃ³ thá»ƒ tráº£:
+// 2 kiểu response backend có thể trả:
 // 1) { data: ReviewApi[] }
 // 2) { data: { reviews: ReviewApi[] } }
 type ReviewsApiResponse =
@@ -38,7 +38,7 @@ type ProductRatingsSectionProps = {
   productId: string;
 };
 
-// map 1 review tá»« backend -> FeedbackItem dÃ¹ng cho UI
+// Map 1 review từ backend -> FeedbackItem dùng cho UI
 function mapReviewToFeedbackItem(r: ReviewApi): FeedbackItem {
   return {
     id: r._id,
@@ -84,7 +84,7 @@ export function ProductRatingsSection({
 
         const mapped: FeedbackItem[] = raw.map(mapReviewToFeedbackItem);
 
-        // tÃ­nh phÃ¢n bá»‘ 1â€“5 sao
+        // Tính phân bố 1-5 sao
         const base: Record<number, number> = { 1: 0, 2: 0, 3: 0, 4: 0, 5: 0 };
         mapped.forEach((r) => {
           const key = Math.min(5, Math.max(1, Math.round(r.rating))) as
@@ -177,7 +177,7 @@ export function ProductRatingsSection({
               ))}
             </div>
 
-            {/* 3 circle stats â€“ táº¡m mock */}
+            {/* 3 circle stats - tạm mock */}
             <div className="flex items-center justify-end gap-6">
               {[
                 { label: "Would recommend", value: 100 },

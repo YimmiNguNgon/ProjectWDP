@@ -108,7 +108,7 @@ export function UserProfile({ user }: UserProfileProps) {
     try {
       setLoading(true);
       const res = await getAddresses();
-      // náº¿u API return { message, data }
+      // Nếu API trả về { message, data }
       setAddresses(res.data);
     } catch (error) {
       console.error("Failed to fetch addresses", error);
@@ -185,7 +185,7 @@ export function UserProfile({ user }: UserProfileProps) {
   const handleAvatarChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
-      // Kiá»ƒm tra kÃ­ch thÆ°á»›c file (5MB max)
+      // Kiểm tra kích thước file (5MB max)
       if (file.size > 5 * 1024 * 1024) {
         toast.error("File size exceeds 5MB limit");
         return;
@@ -210,18 +210,18 @@ export function UserProfile({ user }: UserProfileProps) {
       setLoading(true);
       let uploadedAvatarUrl = avatarPreview;
 
-      // Náº¿u cÃ³ áº£nh má»›i, upload lÃªn Cloudinary
+      // Nếu có ảnh mới, upload lên Cloudinary
       if (avatarFile) {
         uploadedAvatarUrl = await uploadImageToCloudinary(avatarFile);
       }
 
-      // Update profile vá»›i username vÃ  avatar URL
+      // Update profile với username và avatar URL
       await updateUserProfile({
         username: newUsername,
         avatarUrl: uploadedAvatarUrl,
       });
 
-      // Refresh user data tá»« backend
+      // Refresh user data từ backend
       await fetchMe();
 
       setEditProfileOpen(false);
