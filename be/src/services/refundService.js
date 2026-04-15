@@ -3,12 +3,14 @@ const Order = require("../models/Order");
 const Complaint = require("../models/Complaint");
 const User = require("../models/User");
 const Product = require("../models/Product"); // Import Product model
+const Revenue = require("../models/Revenue");
 const mongoose = require("mongoose");
 const { evaluateSellerTrust } = require("./sellerTrustService");
 const {
   normalizeSelectedVariants,
   buildVariantKey,
   syncProductStockFromVariants,
+  restoreStockForOrderItems,
 } = require("../utils/productInventory");
 const notificationService = require("./notificationService");
 const revenueService = require("./revenueService");
@@ -342,45 +344,7 @@ async function confirmReturnReceived(sellerId, refundId, condition = 'SELLABLE')
 
   // 2. Restore stock ONLY if condition is SELLABLE
   if (condition === 'SELLABLE' && order.items && order.items.length > 0) {
-    for (const item of order.items) {
-      if (!item.productId) continue;
-
-      const incAmount = parseInt(item.quantity) || 1;
-      const product = await Product.findById(item.productId);
-      if (!product) {
-        console.warn(`[confirmReturnReceived] Product not found: ${item.productId}`);
-        continue;
-      }
-
-      const normalizedVariants = normalizeSelectedVariants(item.selectedVariants || []);
-      const hasVariantCombos =
-        Array.isArray(product.variantCombinations) &&
-        product.variantCombinations.length > 0 &&
-        normalizedVariants.length > 0;
-
-      if (hasVariantCombos) {
-        // Has variants – find the matching combo and increment its quantity
-        const key = buildVariantKey(normalizedVariants);
-        const combo = product.variantCombinations.find((c) => c.key === key);
-        if (combo) {
-          combo.quantity = (Number(combo.quantity) || 0) + incAmount;
-          syncProductStockFromVariants(product); // recalculates product.stock + product.quantity from all combos
-          console.log(`[confirmReturnReceived] +${incAmount} to variant [${key}] of product ${product._id}`);
-        } else {
-          // Variant combo not found - fallback: increment top-level stock
-          product.quantity = (Number(product.quantity) || 0) + incAmount;
-          product.stock = (Number(product.stock) || 0) + incAmount;
-          console.warn(`[confirmReturnReceived] Variant combo key "${key}" not found, incrementing top-level stock for product ${product._id}`);
-        }
-      } else {
-        // No variants – increment top-level stock directly
-        product.quantity = (Number(product.quantity) || 0) + incAmount;
-        product.stock = (Number(product.stock) || 0) + incAmount;
-        console.log(`[confirmReturnReceived] +${incAmount} to stock of product ${product._id} (${product.title}). New stock: ${product.stock}`);
-      }
-
-      await product.save();
-    }
+    await restoreStockForOrderItems(order.items);
   }
 
   // 3. Update Order status to "returned"
@@ -398,6 +362,20 @@ async function confirmReturnReceived(sellerId, refundId, condition = 'SELLABLE')
 
   // 4. Revert order revenue if it was previously processed
   await revenueService.revertOrderRevenue(order._id);
+
+  // 5. Ghi nhận thêm 5$ phí vận chuyển trả hàng cho hệ thống
+  try {
+    await Revenue.create({
+      type: "system_shipping",
+      order: order._id,
+      orderGroup: order.orderGroup || null,
+      seller: null,
+      amount: 5
+    });
+    console.log(`[confirmReturnReceived] Added $5 return shipping fee for system on order ${order._id}`);
+  } catch (err) {
+    console.error(`[confirmReturnReceived] Failed to add return shipping fee:`, err);
+  }
 
   return refund;
 }

@@ -1,4 +1,4 @@
-﻿const {
+const {
   resolveProductPricing,
   applyPercentDiscount,
 } = require("./productPricing");
@@ -213,11 +213,53 @@ const findVariantOption = (product, selectedVariants) => {
   };
 };
 
+const restoreStockForOrderItems = async (items) => {
+  const Product = require("../models/Product");
+
+  for (const item of items) {
+    if (!item.productId) continue;
+
+    const incAmount = parseInt(item.quantity) || 1;
+    const product = await Product.findById(item.productId);
+    if (!product) {
+      console.warn(`[restoreStockForOrderItems] Product not found: ${item.productId}`);
+      continue;
+    }
+
+    const normalizedVariants = normalizeSelectedVariants(item.selectedVariants || []);
+    const hasVariantCombos =
+      Array.isArray(product.variantCombinations) &&
+      product.variantCombinations.length > 0 &&
+      normalizedVariants.length > 0;
+
+    if (hasVariantCombos) {
+      const key = buildVariantKey(normalizedVariants);
+      const combo = product.variantCombinations.find((c) => c.key === key);
+      if (combo) {
+        combo.quantity = (Number(combo.quantity) || 0) + incAmount;
+        syncProductStockFromVariants(product);
+        console.log(`[restoreStockForOrderItems] +${incAmount} to variant [${key}] of product ${product._id}`);
+      } else {
+        product.quantity = (Number(product.quantity) || 0) + incAmount;
+        product.stock = (Number(product.stock) || 0) + incAmount;
+        console.warn(`[restoreStockForOrderItems] Variant combo key "${key}" not found, incrementing top-level stock for product ${product._id}`);
+      }
+    } else {
+      product.quantity = (Number(product.quantity) || 0) + incAmount;
+      product.stock = (Number(product.stock) || 0) + incAmount;
+      console.log(`[restoreStockForOrderItems] +${incAmount} to stock of product ${product._id} (${product.title}). New stock: ${product.stock}`);
+    }
+
+    await product.save();
+  }
+};
+
 module.exports = {
   normalizeSelectedVariants,
   normalizeVariantCombinations,
   buildVariantKey,
   syncProductStockFromVariants,
   findVariantOption,
+  restoreStockForOrderItems,
 };
 

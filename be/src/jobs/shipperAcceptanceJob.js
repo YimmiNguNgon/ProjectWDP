@@ -64,13 +64,10 @@ async function expireNewOrders() {
     console.log(`[SellerConfirm] Order ${order._id} cancelled (seller timeout).`);
 
     // 2. Hoàn lại stock sản phẩm
-    for (const item of order.items || []) {
-      if (item.productId && item.quantity) {
-        await Product.findByIdAndUpdate(item.productId, {
-          $inc: { stock: item.quantity, quantity: item.quantity },
-        }).catch(() => {});
-      }
-    }
+    const { restoreStockForOrderItems } = require("../utils/productInventory");
+    await restoreStockForOrderItems(order.items || []).catch(err => {
+      console.warn(`[SellerConfirm] Failed to restore stock for order ${order._id}:`, err);
+    });
 
     // 3. Xóa revenue records liên quan (chưa hoàn tiền thực tế nên xóa luôn)
     await Revenue.deleteMany({ order: order._id }).catch(() => {});

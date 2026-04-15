@@ -126,6 +126,55 @@ const STATUS_CONFIG = {
     text: "#9A3412",
     border: "#FED7AA",
   },
+  in_transit: {
+    label: "In Transit",
+    dot: "#8B5CF6",
+    bg: "#F5F3FF",
+    text: "#4C1D95",
+    border: "#DDD6FE",
+  },
+  delivery_queued: {
+    label: "Delivery Queued",
+    dot: "#F97316",
+    bg: "#FFF7ED",
+    text: "#9A3412",
+    border: "#FED7AA",
+  },
+  pending_delivery_acceptance: {
+    label: "Delivering Assigned",
+    dot: "#F97316",
+    bg: "#FFF7ED",
+    text: "#9A3412",
+    border: "#FED7AA",
+  },
+  delivering: {
+    label: "Delivering",
+    dot: "#8B5CF6",
+    bg: "#F5F3FF",
+    text: "#4C1D95",
+    border: "#DDD6FE",
+  },
+  waiting_return_shipment: {
+    label: "Waiting Return",
+    dot: "#F59E0B",
+    bg: "#FFFBEB",
+    text: "#92400E",
+    border: "#FDE68A",
+  },
+  return_shipping: {
+    label: "Return Shipping",
+    dot: "#8B5CF6",
+    bg: "#F5F3FF",
+    text: "#4C1D95",
+    border: "#DDD6FE",
+  },
+  delivered_to_seller: {
+    label: "Returned to Seller",
+    dot: "#059669",
+    bg: "#D1FAE5",
+    text: "#064E3B",
+    border: "#6EE7B7",
+  },
 } as const;
 
 const PAYMENT_STATUS_CONFIG = {
@@ -220,7 +269,7 @@ function InfoBlock({
 
 function StatusPill({ status }: { status: Order["status"] }) {
   const cfg = STATUS_CONFIG[status] ?? {
-    label: "Cancelled",
+    label: "Unknown",
     dot: "#EF4444",
     bg: "#FEF2F2",
     text: "#7F1D1D",
@@ -1047,6 +1096,7 @@ export default function SellerOrders() {
     { value: "ready_to_ship", label: "Waiting", icon: Package },
     { value: "shipping", label: "Shipping", icon: Truck },
     { value: "delivered", label: "Delivered", icon: CheckCircle },
+    { value: "returned", label: "Returned", icon: CheckCircle },
     { value: "cancelled", label: "Cancelled", icon: XCircle },
     { value: "completed", label: "Completed", icon: CheckCircle },
     { value: "failed", label: "Failed", icon: XCircle },
@@ -1172,6 +1222,28 @@ export default function SellerOrders() {
             Waiting
           </Badge>
         );
+      case "in_transit":
+      case "delivering":
+      case "return_shipping":
+        return (
+          <Badge variant="outline" className="border-purple-300 text-purple-800 bg-purple-50">
+            {STATUS_CONFIG[status]?.label || "Shipping"}
+          </Badge>
+        );
+      case "delivery_queued":
+      case "pending_delivery_acceptance":
+      case "waiting_return_shipment":
+        return (
+          <Badge variant="outline" className="border-orange-300 text-orange-800 bg-orange-50">
+            {STATUS_CONFIG[status]?.label || "Waiting"}
+          </Badge>
+        );
+      case "delivered_to_seller":
+        return (
+          <Badge variant="outline" className="border-green-300 text-green-800 bg-green-50">
+            {STATUS_CONFIG[status]?.label || "Returned to Seller"}
+          </Badge>
+        );
       default:
         return <Badge variant="outline">Unknown</Badge>;
     }
@@ -1286,9 +1358,14 @@ export default function SellerOrders() {
       <div className="grid grid-cols-2 md:grid-cols-5 gap-4 mb-6">
         {statuses.slice(1).map((status) => {
           const Icon = status.icon;
-          const count = status.value === "ready_to_ship"
-            ? (stats?.counts?.ready_to_ship || 0) + (stats?.counts?.queued || 0) + (stats?.counts?.pending_acceptance || 0)
-            : stats?.counts?.[status.value] || 0;
+          let count = stats?.counts?.[status.value] || 0;
+          if (status.value === "ready_to_ship") {
+            count = (stats?.counts?.ready_to_ship || 0) + (stats?.counts?.queued || 0) + (stats?.counts?.pending_acceptance || 0);
+          } else if (status.value === "shipping") {
+            count = (stats?.counts?.shipping || 0) + (stats?.counts?.in_transit || 0) + (stats?.counts?.delivery_queued || 0) + (stats?.counts?.pending_delivery_acceptance || 0) + (stats?.counts?.delivering || 0);
+          } else if (status.value === "returned") {
+            count = (stats?.counts?.returned || 0) + (stats?.counts?.waiting_return_shipment || 0) + (stats?.counts?.return_shipping || 0) + (stats?.counts?.delivered_to_seller || 0);
+          }
           return (
             <Card key={status.value}>
               <CardContent className="p-4">
