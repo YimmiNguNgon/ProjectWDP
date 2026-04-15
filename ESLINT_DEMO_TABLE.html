@@ -159,29 +159,30 @@
         <th>File</th>
         <th>Buoc thuc hien</th>
         <th>Ket qua mong doi</th>
+        <th>Note sua lai nhu nao</th>
       </tr>
     </thead>
     <tbody>
-      <tr><td>TC01</td><td><code>src</code></td><td><code>eslint src</code></td><td>ESLint quet toan bo <code>src</code> va hien danh sach loi/warning</td></tr>
-      <tr><td>TC02</td><td><code>src/services/api.js</code></td><td><code>eslint src/services/api.js</code></td><td>Bao <code>Parsing error: Duplicate export 'productAPI'</code></td></tr>
-      <tr><td>TC03</td><td><code>src/components/ProtectedRoute.tsx</code></td><td><code>eslint src/components/ProtectedRoute.tsx</code></td><td>Bao <code>react-hooks/exhaustive-deps</code></td></tr>
-      <tr><td>TC04</td><td><code>src/components/PermissionGate.tsx</code></td><td><code>eslint src/components/PermissionGate.tsx</code></td><td>Bao <code>react-refresh/only-export-components</code></td></tr>
-      <tr><td>TC05</td><td><code>src/api/user.ts</code></td><td><code>eslint src/api/user.ts</code></td><td>Bao <code>no-useless-catch</code></td></tr>
-      <tr><td>TC06</td><td><code>src/api/user.ts</code></td><td><code>eslint src/api/user.ts</code></td><td>Hien them <code>no-explicit-any</code> trong cung file</td></tr>
-      <tr><td>TC07</td><td><code>src/api/orders.ts</code></td><td><code>eslint src/api/orders.ts</code></td><td>Bao <code>@typescript-eslint/no-explicit-any</code></td></tr>
-      <tr><td>TC08</td><td><code>src/components/address-form.tsx</code></td><td><code>eslint src/components/address-form.tsx</code></td><td>Bao <code>@typescript-eslint/no-unused-vars</code></td></tr>
-      <tr><td>TC09</td><td><code>src/components/address-form.tsx</code></td><td><code>eslint src/components/address-form.tsx</code></td><td>Hien them <code>max-lines-per-function</code></td></tr>
-      <tr><td>TC10</td><td><code>src/components/notification-bell.tsx</code></td><td><code>eslint src/components/notification-bell.tsx</code></td><td>Bao <code>@typescript-eslint/no-unsafe-function-type</code></td></tr>
-      <tr><td>TC11</td><td><code>src/components/user-profile.tsx</code></td><td><code>eslint src/components/user-profile.tsx</code></td><td>Bao <code>no-irregular-whitespace</code></td></tr>
-      <tr><td>TC12</td><td><code>src/pages/public/products.tsx</code></td><td><code>eslint src/pages/public/products.tsx</code></td><td>Bao <code>@typescript-eslint/no-unused-expressions</code></td></tr>
-      <tr><td>TC13</td><td><code>src/pages/buyer/become-seller/seller-apply.tsx</code></td><td><code>eslint src/pages/buyer/become-seller/seller-apply.tsx</code></td><td>Bao <code>no-empty</code></td></tr>
-      <tr><td>TC14</td><td><code>src/layouts/shipper.tsx</code></td><td><code>eslint src/layouts/shipper.tsx</code></td><td>Bao <code>Unused eslint-disable directive</code></td></tr>
-      <tr><td>TC15</td><td><code>src/components/chat/conversation-list.tsx</code></td><td><code>eslint src/components/chat/conversation-list.tsx</code></td><td>Bao <code>no-alert</code></td></tr>
-      <tr><td>TC16</td><td><code>src/components/chat/conversation-list.tsx</code></td><td><code>eslint src/components/chat/conversation-list.tsx</code></td><td>Hien them <code>no-console</code></td></tr>
-      <tr><td>TC17</td><td><code>src/components/cart/cart-dropdown.tsx</code></td><td><code>eslint src/components/cart/cart-dropdown.tsx</code></td><td>Bao <code>no-nested-ternary</code></td></tr>
-      <tr><td>TC18</td><td><code>src/api/search.ts</code></td><td><code>eslint src/api/search.ts</code></td><td>Bao <code>complexity</code></td></tr>
-      <tr><td>TC19</td><td><code>src/components/seller/seller-information.tsx</code></td><td><code>eslint src/components/seller/seller-information.tsx</code></td><td>Bao <code>max-statements</code></td></tr>
-      <tr><td>TC20</td><td><code>src/components/chat/conversation-list.tsx</code></td><td><code>eslint src/components/chat/conversation-list.tsx</code></td><td>Mot file hien nhieu rule moi nhu <code>no-alert</code>, <code>no-console</code> va cac loi khac neu co</td></tr>
+      <tr><td>TC01</td><td><code>src</code></td><td><code>eslint src</code></td><td>ESLint quet toan bo <code>src</code> va hien danh sach loi/warning</td><td>Doc output tong quan, sau do uu tien sua cac loi parse, hook, va file co nhieu loi truoc.</td></tr>
+      <tr><td>TC02</td><td><code>src/services/api.js</code></td><td><code>eslint src/services/api.js</code></td><td>Bao <code>Parsing error: Duplicate export 'productAPI'</code></td><td>Xoa export trung lap, chi giu mot lan export cho <code>productAPI</code>.</td></tr>
+      <tr><td>TC03</td><td><code>src/components/ProtectedRoute.tsx</code></td><td><code>eslint src/components/ProtectedRoute.tsx</code></td><td>Bao <code>react-hooks/exhaustive-deps</code></td><td>Them dependency bi thieu vao <code>useEffect</code> hoac chuyen <code>init</code> thanh callback/on mount phu hop.</td></tr>
+      <tr><td>TC04</td><td><code>src/components/PermissionGate.tsx</code></td><td><code>eslint src/components/PermissionGate.tsx</code></td><td>Bao <code>react-refresh/only-export-components</code></td><td>Tach hook/helper sang file khac, de file nay chi export component.</td></tr>
+      <tr><td>TC05</td><td><code>src/api/user.ts</code></td><td><code>eslint src/api/user.ts</code></td><td>Bao <code>no-useless-catch</code></td><td>Bo <code>try/catch</code> neu chi bat roi <code>throw</code> lai ma khong them xu ly gi.</td></tr>
+      <tr><td>TC06</td><td><code>src/api/user.ts</code></td><td><code>eslint src/api/user.ts</code></td><td>Hien them <code>no-explicit-any</code> trong cung file</td><td>Thay <code>any</code> bang interface/type cu the cho response va error.</td></tr>
+      <tr><td>TC07</td><td><code>src/api/orders.ts</code></td><td><code>eslint src/api/orders.ts</code></td><td>Bao <code>@typescript-eslint/no-explicit-any</code></td><td>Tao type cho du lieu order, tranh dung <code>any</code> o tham so va gia tri tra ve.</td></tr>
+      <tr><td>TC08</td><td><code>src/components/address-form.tsx</code></td><td><code>eslint src/components/address-form.tsx</code></td><td>Bao <code>@typescript-eslint/no-unused-vars</code></td><td>Xoa bien/import khong dung, hoac dung thuc su neu no can cho logic.</td></tr>
+      <tr><td>TC09</td><td><code>src/components/address-form.tsx</code></td><td><code>eslint src/components/address-form.tsx</code></td><td>Hien them <code>max-lines-per-function</code></td><td>Tach ham lon thanh nhieu ham nho hoac custom hook rieng.</td></tr>
+      <tr><td>TC10</td><td><code>src/components/notification-bell.tsx</code></td><td><code>eslint src/components/notification-bell.tsx</code></td><td>Bao <code>@typescript-eslint/no-unsafe-function-type</code></td><td>Thay <code>Function</code> bang kieu ham co tham so va return type ro rang.</td></tr>
+      <tr><td>TC11</td><td><code>src/components/user-profile.tsx</code></td><td><code>eslint src/components/user-profile.tsx</code></td><td>Bao <code>no-irregular-whitespace</code></td><td>Xoa ky tu an/ky tu la, go lai dong loi hoac format lai file.</td></tr>
+      <tr><td>TC12</td><td><code>src/pages/public/products.tsx</code></td><td><code>eslint src/pages/public/products.tsx</code></td><td>Bao <code>@typescript-eslint/no-unused-expressions</code></td><td>Doi expression thanh lenh ro rang nhu gan gia tri, goi ham, hoac <code>if</code>.</td></tr>
+      <tr><td>TC13</td><td><code>src/pages/buyer/become-seller/seller-apply.tsx</code></td><td><code>eslint src/pages/buyer/become-seller/seller-apply.tsx</code></td><td>Bao <code>no-empty</code></td><td>Bo block rong hoac them xu ly/co chu thich neu co ly do giu lai.</td></tr>
+      <tr><td>TC14</td><td><code>src/layouts/shipper.tsx</code></td><td><code>eslint src/layouts/shipper.tsx</code></td><td>Bao <code>Unused eslint-disable directive</code></td><td>Xoa dong <code>eslint-disable</code> da khong con can dung.</td></tr>
+      <tr><td>TC15</td><td><code>src/components/chat/conversation-list.tsx</code></td><td><code>eslint src/components/chat/conversation-list.tsx</code></td><td>Bao <code>no-alert</code></td><td>Thay <code>alert()</code> bang toast, modal, hoac dialog de UI de kiem soat hon.</td></tr>
+      <tr><td>TC16</td><td><code>src/components/chat/conversation-list.tsx</code></td><td><code>eslint src/components/chat/conversation-list.tsx</code></td><td>Hien them <code>no-console</code></td><td>Xoa log debug hoac doi sang logger co dieu kien cho moi truong dev.</td></tr>
+      <tr><td>TC17</td><td><code>src/components/cart/cart-dropdown.tsx</code></td><td><code>eslint src/components/cart/cart-dropdown.tsx</code></td><td>Bao <code>no-nested-ternary</code></td><td>Doi nested ternary thanh <code>if/else</code> hoac bien trung gian de de doc.</td></tr>
+      <tr><td>TC18</td><td><code>src/api/search.ts</code></td><td><code>eslint src/api/search.ts</code></td><td>Bao <code>complexity</code></td><td>Tach logic filter/re nhanh thanh cac helper function nho hon.</td></tr>
+      <tr><td>TC19</td><td><code>src/components/seller/seller-information.tsx</code></td><td><code>eslint src/components/seller/seller-information.tsx</code></td><td>Bao <code>max-statements</code></td><td>Chia component lon thanh nhieu phan UI, hook, va helper rieng.</td></tr>
+      <tr><td>TC20</td><td><code>src/components/chat/conversation-list.tsx</code></td><td><code>eslint src/components/chat/conversation-list.tsx</code></td><td>Mot file hien nhieu rule moi nhu <code>no-alert</code>, <code>no-console</code> va cac loi khac neu co</td><td>Sua tung nhom loi theo thu tu: bo alert, xoa console, sau do xu ly type/logic con lai.</td></tr>
     </tbody>
   </table>
 
