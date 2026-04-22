@@ -30,6 +30,8 @@ describe("Buyer cart and checkout flows", () => {
 
   it("shows place-order flow with a guaranteed buyer address", () => {
     cy.ensureBuyerAddress();
+    cy.ensureBuyerCartHasItem();
+    cy.visit("/cart");
 
     cy.get("#select-all-global", { timeout: 10000 }).should("exist").check({
       force: true,

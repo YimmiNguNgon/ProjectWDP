@@ -112,3 +112,46 @@ Cypress.Commands.add("ensureBuyerAddress", (address = DEFAULT_ADDRESS) => {
     });
   });
 });
+
+Cypress.Commands.add("ensureBuyerCartHasItem", () => {
+  cy.window().then((win) => {
+    const token = win.localStorage.getItem("token");
+    expect(token, "buyer access token").to.be.a("string").and.not.be.empty;
+    const apiUrl = getApiUrl();
+
+    cy.request({
+      method: "GET",
+      url: `${apiUrl}/api/cart`,
+      headers: {
+        Authorization: `Bearer ${token}`,
+      },
+    }).then((cartResponse) => {
+      const cart = cartResponse.body?.cart;
+      const items = cart?.items || [];
+      const activeItems = items.filter((item) => !item.savedForLater);
+
+      if (activeItems.length > 0) return;
+
+      cy.request({
+        method: "GET",
+        url: `${apiUrl}/api/products?search=${encodeURIComponent("7-in-1 USB-C Hub Aluminum")}`,
+      }).then((productResponse) => {
+        const products = productResponse.body?.data || [];
+        const product = products[0];
+        expect(product, "seed product for buyer cart test").to.exist;
+
+        cy.request({
+          method: "POST",
+          url: `${apiUrl}/api/cart`,
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+          body: {
+            productId: product._id,
+            quantity: 1,
+          },
+        });
+      });
+    });
+  });
+});
