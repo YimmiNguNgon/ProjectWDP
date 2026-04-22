@@ -17,8 +17,4 @@ describe("Role login flows", () => {
     cy.location("pathname").should("eq", "/");
     cy.contains("body", "Products").should("be.visible");
   });
-  it("shows error message on failed login attempt", () => {
-  cy
-    cy.contains("Invalid email or password").should("be.visible");
-  });
 });

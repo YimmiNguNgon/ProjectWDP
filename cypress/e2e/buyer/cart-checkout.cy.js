@@ -16,14 +16,9 @@ describe("Buyer cart and checkout flows", () => {
   });
 
   it("moves from cart to checkout when cart items exist", () => {
-    cy.get("body").then(($body) => {
-      expect(
-        $body.find("#select-all-global").length,
-        "cart seed data for buyer3",
-      ).to.be.greaterThan(0);
+    cy.get("#select-all-global", { timeout: 10000 }).should("exist").check({
+      force: true,
     });
-
-    cy.get("#select-all-global").check({ force: true });
     cy.contains("button", "Go to Checkout").should("not.be.disabled").click();
 
     cy.location("pathname").should("eq", "/checkout");
@@ -36,14 +31,9 @@ describe("Buyer cart and checkout flows", () => {
   it("shows place-order flow with a guaranteed buyer address", () => {
     cy.ensureBuyerAddress();
 
-    cy.get("body").then(($body) => {
-      expect(
-        $body.find("#select-all-global").length,
-        "cart seed data for buyer3",
-      ).to.be.greaterThan(0);
+    cy.get("#select-all-global", { timeout: 10000 }).should("exist").check({
+      force: true,
     });
-
-    cy.get("#select-all-global").check({ force: true });
     cy.contains("button", "Go to Checkout").click();
 
     cy.location("pathname").should("eq", "/checkout");
