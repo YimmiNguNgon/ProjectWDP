@@ -9,6 +9,7 @@
     "pdfkit": "^0.17.2"
   },
   "devDependencies": {
+    "cypress": "^15.14.1",
     "iconv-lite": "^0.7.2"
   }
 }
